@@ -1,0 +1,19 @@
+{
+  "query": "\"Piano Sonata No. 16 in C Major, K. 545\" \"Sonata facile\": II. Andante by Wolfgang Amadeus Mozart, Khatia Buniatishvili and Academy of St. Martin in the Fields, song",
+  "type": "lite",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante Wolfgang Amadeus Mozart Khatia Buniatishvili Academy of St. Martin in the Fields",
+      "maxCharacters": 300
+    }
+  }
+}

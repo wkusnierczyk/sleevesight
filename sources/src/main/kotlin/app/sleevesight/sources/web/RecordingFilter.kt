@@ -9,7 +9,11 @@ import app.sleevesight.core.normalizer.AccentFolder
  * and punctuation, in the result's title and snippet together. A result is kept when:
  *
  * - it names the song: the track's title, and the work it is from when the player gave one
- *   ([NormalizedTrack.from]: `Theme` from Coronation Street, not any London Music Works theme);
+ *   ([NormalizedTrack.from]: `Theme` from Coronation Street, not any London Music Works theme). A
+ *   title that leads with its composer is named as it is searched, without the lead
+ *   ([NormalizedTrack.searchTitle], #1179), or by its work part ([NormalizedTrack.searchWork]:
+ *   `Piano Sonata No. 16 in C Major, K. 545` for its `II. Andante`), since a page on the music
+ *   names the work and seldom the movement as the player titles it;
  * - it names a credited artist, a *distinctive* one when the track has one ([requiredArtists]:
  *   Van Morrison for Them and Van Morrison, since "them" is in any text);
  * - its own title does not name such an artist without the song. A page titled after the artist
@@ -43,7 +47,12 @@ class RecordingFilter(
         snippet: String,
         url: String,
         wholeWords: Boolean = true,
-    ): Boolean = names(listOfNotNull(track.title, track.from), requiredArtists(track), title, snippet, url, wholeWords)
+    ): Boolean = names(song(track), requiredArtists(track), title, snippet, url, wholeWords)
+
+    // What a result about [track] must name, each given as its alternatives: the title as searched or
+    // its work part (#1179), and the work it is from.
+    private fun song(track: NormalizedTrack): List<List<String>> =
+        listOfNotNull(listOfNotNull(track.searchTitle, track.searchWork), track.from?.let(::listOf))
 
     /**
      * Whether a result with [title], [snippet] and [url] is about the [album] by [artist] (#885,
@@ -65,7 +74,7 @@ class RecordingFilter(
         snippet: String,
         url: String,
         performers: List<String> = emptyList(),
-    ): Boolean = names(listOf(album), albumArtists(artist, performers), title, snippet, url)
+    ): Boolean = names(listOf(listOf(album)), albumArtists(artist, performers), title, snippet, url)
 
     /**
      * Whether a result with [title], [snippet] and [url] is about the [artist] (#912,
@@ -87,11 +96,12 @@ class RecordingFilter(
     /** Whether the [artist] can be checked at all: its name folds to something. Else it is not searched. */
     fun canCheckArtist(artist: String): Boolean = fold(artist).isNotEmpty()
 
-    // Whether the result names each of [song] (the title, and the work it is from) and one of
-    // [artists] (folded), and its title does not name such an artist without the song.
+    // Whether the result names each of [song] (the title, and the work it is from), one of its
+    // alternatives each, and one of [artists] (folded), and its title does not name such an artist
+    // without the song.
     @Suppress("LongParameterList") // What it must name, the result's three parts, and how.
     private fun names(
-        song: List<String>,
+        song: List<List<String>>,
         artists: List<String>,
         title: String?,
         snippet: String,
@@ -102,20 +112,21 @@ class RecordingFilter(
         val words: (String) -> String = if (wholeWords) ::padded else ::fold
         val heading = words(title.orEmpty())
         val text = words("${title.orEmpty()} $snippet")
-        val phrases = song.map(words)
+        val phrases = song.map { alternatives -> alternatives.map(words).filter { it.isNotBlank() } }
         val required = artists.map { if (wholeWords) " $it " else it }
-        val namesSong = phrases.none { it.isBlank() } && phrases.all { it in text }
+        val namesSong = phrases.none { it.isEmpty() } && phrases.all { named -> named.any { it in text } }
         val namesArtist = required.any { it in text }
-        val titledAfterOther = required.any { it in heading } && !phrases.all { it in heading }
+        val titledAfterOther = required.any { it in heading } && !phrases.all { named -> named.any { it in heading } }
         return namesSong && namesArtist && !titledAfterOther
     }
 
     /**
-     * Whether [track] can be checked at all: its title, its work when it has one, and at least one
-     * credited artist fold to something. A track that cannot be checked is not searched.
+     * Whether [track] can be checked at all: its title as searched ([NormalizedTrack.searchTitle]),
+     * its work when it has one, and at least one credited artist fold to something. A track that
+     * cannot be checked is not searched.
      */
     fun canCheck(track: NormalizedTrack): Boolean =
-        fold(track.title).isNotEmpty() &&
+        fold(track.searchTitle).isNotEmpty() &&
             track.from?.let { fold(it).isNotEmpty() } != false &&
             requiredArtists(track).isNotEmpty()
 

@@ -66,10 +66,12 @@ fun slug(
 
 /**
  * The Genius search for [track]'s title and primary artist, as the sources name them (#728:
- * "2006 Remaster" and the like already removed by the normalizer): `https://genius.com/search?q=`
- * and the two, a space between, percent-encoded ([percentEncoded]).
+ * "2006 Remaster" and the like already removed by the normalizer; a composer's lead too, #1179:
+ * [NormalizedTrack.searchTitle]): `https://genius.com/search?q=` and the two, a space between,
+ * percent-encoded ([percentEncoded]).
  */
-fun searchUrl(track: NormalizedTrack): String = GENIUS_SEARCH + percentEncoded("${track.title} ${track.primary}".trim())
+fun searchUrl(track: NormalizedTrack): String =
+    GENIUS_SEARCH + percentEncoded("${track.searchTitle} ${track.primary}".trim())
 
 /**
  * [text] percent-encoded as a URL's query value: every character but the unreserved ones of RFC 3986

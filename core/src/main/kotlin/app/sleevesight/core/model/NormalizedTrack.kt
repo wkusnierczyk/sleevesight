@@ -1,5 +1,7 @@
 package app.sleevesight.core.model
 
+import app.sleevesight.core.text.JS_WHITESPACE_CLASS
+
 /**
  * A track as sources name it: the song's plain title and its credited artists, with what
  * normalization removed kept as [from], [variant] and [notes] (`design/design.md`, *Normalizer*).
@@ -33,8 +35,10 @@ data class NormalizedTrack(
     val titleArtists: List<String> = emptyList(),
 ) {
     /**
-     * The title MusicBrainz is searched by: without a leading [composer] (`Mozart: `), which
-     * MusicBrainz's titles do not have and a phrase search would need (#1129); else [title].
+     * The title the sources are searched by: without a leading [composer] (`Mozart: `), which
+     * MusicBrainz's titles and the pages on the music do not have and a phrase search would need
+     * (#1129, #1179); else [title]. Last.fm and LRCLIB are asked by [title] still: they keep the
+     * names the players send, the composer's lead included (`design/classical.md`).
      */
     val searchTitle: String
         get() =
@@ -42,6 +46,37 @@ data class NormalizedTrack(
                 ?.let { title.removePrefix(it.prefix) }
                 ?.takeIf { it.length < title.length && it.isNotBlank() }
                 ?: title
+
+    /**
+     * The work a [searchTitle] of the shape `<work>: <movement>` names (#1179): the part before its
+     * first colon that whitespace follows, without a nickname in double quotes at its end
+     * (`Piano Sonata No. 16 in C Major, K. 545` of `… K. 545 "Sonata facile": II. Andante`), so that
+     * a page on the work, which names no movement, can be told to be about the track. Only for a
+     * title searched without its [composer] ([searchTitle] is not [title]); null for any other, for
+     * one with no such colon, and for a work part that is blank.
+     */
+    val searchWork: String?
+        get() {
+            val search = searchTitle
+            val work = WORK.find(search)?.takeIf { search != title && it.value.length < search.length }
+            return work
+                ?.groupValues
+                ?.get(1)
+                ?.replace(NICKNAME, "")
+                ?.trim()
+                ?.trimEnd(',')
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+        }
+
+    /**
+     * The key of what a search by [searchTitle] found and is kept (#1179: a song's web lines): for a
+     * title searched without its [composer], the [lookupKey] and a mark of that after a line break,
+     * which no lookup key has, so what a search by the whole title found is not served for it; else
+     * the lookup key itself, so no other track's kept results change.
+     */
+    val searchKey: String
+        get() = if (searchTitle == title) lookupKey else "$lookupKey\n$SEARCH_TITLE_MARK"
 
     /**
      * The performers (#1129): with a [composer] the title names, the credited artists the title does
@@ -61,6 +96,18 @@ data class NormalizedTrack(
      */
     val subjectNames: List<String>
         get() = listOfNotNull(title, from) + artists
+
+    private companion object {
+        // The work part of a search title: the text before its first colon that whitespace and more
+        // title follow. No braces: ICU reads the pattern as the JVM does.
+        val WORK = Regex("^([^:]+):$JS_WHITESPACE_CLASS+")
+
+        // A nickname in double quotes, straight or curly, at the end of a work: ` "Sonata facile"`.
+        val NICKNAME =
+            Regex("$JS_WHITESPACE_CLASS*[\"\u201C\u201E][^\"\u201C\u201D\u201E]*[\"\u201D]$JS_WHITESPACE_CLASS*$")
+
+        const val SEARCH_TITLE_MARK = "search-title"
+    }
 }
 
 /**

@@ -1,0 +1,91 @@
+package app.sleevesight.core.model
+
+import app.sleevesight.core.lyrics.LibraryQuery
+import app.sleevesight.core.lyrics.searchUrl
+import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.platform.JvmAccentFolder
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.time.Duration.Companion.seconds
+
+/**
+ * What a title that leads with its credited composer is searched by (#1179): its work part, and the
+ * key its search's findings are kept under; any other title as before. Genius's search leaves the
+ * lead out; LRCLIB keeps it, as the players' names do.
+ */
+class SearchTitleTest {
+    private val normalizer = Normalizer(JvmAccentFolder)
+    private val performers = "Khatia Buniatishvili, Academy of St. Martin in the Fields"
+
+    private fun mozart(title: String) = normalizer.normalize(title, "Wolfgang Amadeus Mozart, $performers")
+
+    private val k545 = mozart("Mozart: Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante")
+
+    @Test
+    fun `the work is the searched title before its first colon, a quoted nickname left out`() {
+        assertEquals("Piano Sonata No. 16 in C Major, K. 545", k545.searchWork)
+        assertEquals(
+            "Piano Concerto No. 20 in D Minor, K.466",
+            mozart("Mozart: Piano Concerto No. 20 in D Minor, K.466: II. Romance").searchWork,
+        )
+        assertEquals(
+            "Symphony No. 41 in C Major, K. 551",
+            mozart("Mozart: Symphony No. 41 in C Major, K. 551, “Jupiter”: I. Allegro vivace").searchWork,
+        )
+        val franck =
+            normalizer.normalize(
+                "Franck: Violin Sonata in A Major, FWV 8: I. Allegretto ben moderato",
+                "César Franck, Renaud Capuçon",
+            )
+        assertEquals("Violin Sonata in A Major, FWV 8", franck.searchWork)
+    }
+
+    @Test
+    fun `no work without a movement, without the composer's lead, or in a title the lead is not left out of`() {
+        assertNull(normalizer.normalize("Allegri: Miserere mei, Deus", "Gregorio Allegri, Stephen Cleobury").searchWork)
+        assertNull(normalizer.normalize("Star Wars: Main Title", "John Williams, London Symphony Orchestra").searchWork)
+        assertNull(normalizer.normalize("Interlude: Reprise", "Some Band, Other Artist").searchWork)
+        // A title in another script the lead is not found in (the language search's native title).
+        assertNull(k545.copy(title = "Моцарт: Соната для фортепиано № 16: II. Анданте").searchWork)
+    }
+
+    @Test
+    fun `the search key marks only a title searched without its composer's lead`() {
+        assertNotEquals(k545.lookupKey, k545.searchKey)
+        val pop = normalizer.normalize("Star Wars: Main Title", "John Williams")
+        assertEquals(pop.lookupKey, pop.searchKey)
+        val sundown = normalizer.normalize("Sundown", "Gordon Lightfoot")
+        assertEquals(sundown.lookupKey, sundown.searchKey)
+    }
+
+    @Test
+    fun `Genius's search leaves out the composer's lead, any other title as before`() {
+        assertEquals(
+            "https://genius.com/search?q=Piano%20Sonata%20No.%2016%20in%20C%20Major%2C%20K.%20545" +
+                "%20%22Sonata%20facile%22%3A%20II.%20Andante%20Wolfgang%20Amadeus%20Mozart",
+            searchUrl(k545),
+        )
+        assertEquals(
+            "https://genius.com/search?q=Star%20Wars%3A%20Main%20Title%20John%20Williams",
+            searchUrl(normalizer.normalize("Star Wars: Main Title", "John Williams")),
+        )
+    }
+
+    @Test
+    fun `LRCLIB is asked by the whole title, as the players name the track`() {
+        val playing =
+            NowPlaying(
+                title = k545.title,
+                artists = "Wolfgang Amadeus Mozart, $performers",
+                album = "Mozart: Piano Concertos Nos. 20 & 23",
+                duration = 457.seconds,
+                player = "com.spotify.music",
+            )
+        assertEquals(
+            LibraryQuery("Wolfgang Amadeus Mozart", k545.title, "Mozart: Piano Concertos Nos. 20 & 23", 457),
+            LibraryQuery.of(normalizer.normalize(playing), playing),
+        )
+    }
+}

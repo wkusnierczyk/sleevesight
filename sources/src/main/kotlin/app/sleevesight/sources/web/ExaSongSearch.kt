@@ -97,9 +97,9 @@ class ExaSongSearch(
         val language = song.language
         val body =
             if (language == null) {
-                ExaSearchRequest.ofSongReview(song.track.title, song.track.primary)
+                ExaSearchRequest.ofSongReview(song.track.searchTitle, song.track.primary)
             } else {
-                ExaSearchRequest.ofSongInLanguage(native.title, native.primary, language.song)
+                ExaSearchRequest.ofSongInLanguage(native.searchTitle, native.primary, language.song)
             }
         return ExaWebSearch.request(body, key)
     }
