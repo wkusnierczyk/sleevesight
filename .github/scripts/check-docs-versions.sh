@@ -5,7 +5,10 @@
 # `release-notes/<version>.txt`, so it is a release and not a typo. The site's layout
 # (`_includes/docs-version.html`) shows it, and puts a banner on a page whose version is behind the
 # newest release notes'; a page without one would show neither, so it fails here instead. `ci.yml`
-# runs it in every CI run, from the repository's root. Every failing page is reported.
+# runs it in every CI run, from the repository's root. Every failing page is reported. The site's
+# other pages that name the version they were last brought up to in their footer (#1156; the product
+# page, the privacy policy, the README page and the two tool pages) are checked the same way: a
+# release, not a typo; they have no banner, so being behind is not checked.
 #
 # Usage: check-docs-versions.sh
 set -euo pipefail
@@ -53,7 +56,7 @@ docs_version() {
 status=0
 pages=0
 while IFS= read -r -d '' page; do
-  pages=$((pages + 1))
+  [[ $page == docs/* ]] && pages=$((pages + 1))
   version=$(docs_version "$page")
   if [ -z "$version" ]; then
     error "$page" "$page names no release: its front matter, closed by \`---\`, needs exactly one \`docs_version: <version>\`, the release it was last brought up to (design/release.md, Documentation versions)"
@@ -65,7 +68,8 @@ while IFS= read -r -d '' page; do
     error "$page" "$page: docs_version $version has no release notes (release-notes/$version.txt), so it is no release"
     status=1
   fi
-done < <(find docs -type f \( -name '*.md' -o -name '*.html' \) -print0)
+done < <(find docs -type f \( -name '*.md' -o -name '*.html' \) -print0
+  printf '%s\0' index.html privacy.md readme-page.html api-keys.html keyboard.html)
 
 if [ "$pages" -eq 0 ]; then
   echo "::error::No documentation pages found under docs/: run from the repository's root"

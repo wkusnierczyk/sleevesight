@@ -1,5 +1,6 @@
 ---
 layout: null
+docs_version: 0.6.3
 ---
 <!doctype html>
 <html lang="en">
@@ -7,14 +8,14 @@ layout: null
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sleevesight: insights on what's playing</title>
-<meta name="description" content="Facts and stories about the song, artist and album you’re listening to, each linked to its source.">
+<meta name="description" content="Facts and stories about the song, artist and album you’re listening to, linked to their sources.">
 <link rel="canonical" href="https://sleevesight.app/">
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
 <meta name="color-scheme" content="light dark">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sleevesight">
 <meta property="og:title" content="Sleevesight: insights on what's playing">
-<meta property="og:description" content="Facts and stories about the song, artist and album you’re listening to, each linked to its source.">
+<meta property="og:description" content="Facts and stories about the song, artist and album you’re listening to, linked to their sources.">
 <meta property="og:url" content="https://sleevesight.app/">
 <!-- The link preview: the stacked logo and the tagline on the label's red, 1200 x 630, built from the
      logo's sources by `assets/logo/src/make_og_image.py` (the brand sheet, *Link preview*). Open
@@ -108,11 +109,9 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
 /* The players it works with, a line of its own under the lede (#577): the lede's size, muted. */
 .players{font-size:20px;color:var(--muted);margin:12px 0 0}
 
-/* The home screen in a phone frame, at the end of its column so the phone's right edge lines up with
-   the header menu's. */
-figure.mock{margin:0;justify-self:end;width:100%;max-width:400px}
-.phone{background:#f8f8fa;border:10px solid #101318;border-radius:40px;padding:8px 0 10px;overflow:hidden;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
-.phone img{display:block;width:100%;height:auto}
+/* The slideshow, at the end of its column so the phone's right edge lines up with the header
+   menu's. */
+figure.mock{margin:0;justify-self:end}
 .cite{display:inline-grid;place-items:center;min-width:20px;height:16px;padding:0 4px;margin-left:2px;border-radius:999px;font-family:var(--f-mono);font-size:9.5px;font-weight:500;color:var(--cite-ink);vertical-align:2px}
 .cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.S{background:var(--src-s)} .cite.MB{background:var(--src-mb)}
 
@@ -174,7 +173,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
-  figure.mock{justify-self:center;max-width:360px}
+  figure.mock{justify-self:center}
   .tiles,.two,.ex,.steps{grid-template-columns:minmax(0,1fr)}
   .two{row-gap:32px}
   .two>div{grid-row:auto;display:block}
@@ -186,6 +185,63 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
   .players{font-size:17px}
   section{padding:36px 0}
 }
+/* What it shows: six tiles as You choose's, then the examples. */
+.shows{margin-bottom:40px}
+#shows .intro{margin-bottom:24px}
+#shows .note{margin-top:8px}
+/* The examples alternate: text left and box right, then box left and text right. Only the look moves;
+   a screen reader still reads the text before its box. */
+.examples>.ex:nth-child(even){grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+.examples>.ex:nth-child(even) .box{order:-1}
+.more-list{margin:0 0 12px;padding-left:1.2em}
+.more-list li{margin:0 0 4px}
+/* The phone: a Galaxy S25 Ultra at its own proportions. Body 77.6 x 162.8 mm, screen 1440 x 3120
+   (9:19.5); 320 px wide, so 4.12 px a millimetre: a 2 px titanium rim, an 8 px black bezel, a
+   300 x 650 px screen, corners of about 7 mm, a punch-hole camera at the middle of the top, and the
+   volume and power keys on the right. */
+.carousel{width:320px;margin:0 auto}
+.s25{position:relative;width:320px;height:670px;padding:2px;border-radius:30px;
+  background:linear-gradient(135deg,#b8bcc2,#6e7379 45%,#a4a8ae);box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
+.s25 .screen{position:relative;width:316px;height:666px;border:8px solid #050608;border-radius:28px;overflow:hidden;background:#f8f8fa}
+.s25 .key{position:absolute;right:-3px;width:3px;border-radius:0 2px 2px 0;background:#8b9096}
+.s25 .vol{top:150px;height:62px}
+.s25 .pwr{top:230px;height:38px}
+.cam{position:absolute;top:8px;left:50%;width:11px;height:11px;margin-left:-5.5px;border-radius:50%;background:#050608;z-index:3}
+.slides{position:absolute;inset:0}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease}
+.slide.on{opacity:1}
+.slide img{display:block;width:100%;height:auto}
+/* Under the phone: play or pause, then a dot for each screen, each 24 px to tap. */
+.ctl{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px}
+.ctl button{appearance:none;border:0;background:none;padding:0;cursor:pointer;color:var(--muted)}
+.pp{display:grid;place-items:center;width:32px;height:32px;border-radius:50%}
+.pp:hover{color:var(--ink);background:var(--surface)}
+.pp svg path{fill:currentColor}
+.carousel.paused .i-pause,.carousel:not(.paused) .i-play{display:none}
+.dots{display:flex}
+.dot{display:grid;place-items:center;width:24px;height:24px}
+/* The dots in the muted text colour (at least 3:1, as a control must be); the current one a longer
+   pill in the text colour, so it differs by shape as well. */
+.dot::before{content:"";width:8px;height:8px;border-radius:4px;background:var(--muted);transition:width .2s,background .2s}
+.dot[aria-current=true]::before{width:18px;background:var(--ink)}
+.dot[aria-current=true]{width:30px}
+.ctl button:focus-visible{outline:3px solid var(--accent);outline-offset:1px;border-radius:999px}
+@media (prefers-reduced-motion:reduce){.slide{transition:none}}
+/* You choose: the players, sources and AI services named on tinted chips, each a link to its site:
+   players green, sources orange, AI services blue. */
+.ch{display:inline-block;padding:0 .5em;border-radius:999px;font-family:var(--f-ui);font-weight:500;font-size:.92em;line-height:1.55;white-space:nowrap;text-decoration:none;background:var(--chb);color:var(--chf)}
+a.ch:hover{background:color-mix(in srgb,var(--chb),var(--chf) 14%)}
+a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#choose{--pl-b:hsl(140 45% 91%);--pl-f:hsl(140 55% 22%);--so-b:hsl(30 90% 91%);--so-f:hsl(25 75% 28%);--ai-b:hsl(220 85% 94%);--ai-f:hsl(225 60% 33%)}
+@media (prefers-color-scheme: dark){#choose{--pl-b:hsl(140 30% 20%);--pl-f:hsl(140 55% 82%);--so-b:hsl(28 40% 21%);--so-f:hsl(32 85% 80%);--ai-b:hsl(222 35% 24%);--ai-f:hsl(222 85% 86%)}}
+.ch.pl{--chb:var(--pl-b);--chf:var(--pl-f)} .ch.so{--chb:var(--so-b);--chf:var(--so-f)} .ch.ai{--chb:var(--ai-b);--chf:var(--ai-f)}
+@media (max-width:880px){
+  .examples>.ex:nth-child(even){grid-template-columns:minmax(0,1fr)}
+  .examples>.ex:nth-child(even) .box{order:0}
+}
+/* Narrower than the phone and the page's gutters (320 + 2 x 16 px): the slideshow at 90 %, its box
+   too. */
+@media (max-width:351px){.carousel{zoom:.9}}
 </style>
 {% include site-intro-head.html %}
 </head>
@@ -197,17 +253,47 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 <main id="main">
 <div class="hero">
   <div>
-    <h1>Insights on what’s playing.</h1>
-    <p class="lede">Facts and stories about the song, artist and album you’re listening to, each linked to its source.</p>
-    <p class="players">Works with <a href="https://www.spotify.com/">Spotify</a>, <a href="https://music.youtube.com/">YouTube Music</a>, <a href="https://www.qobuz.com/">Qobuz</a>, <a href="https://tidal.com/">Tidal</a>, and more.</p>
+    <h1>Insights on what’s playing</h1>
+    <p class="lede">Facts and stories about the song, artist and album you’re listening to, linked to their sources.</p>
+    <p class="players">Sleevesight is a music insight companion to <a href="https://www.spotify.com/">Spotify</a>, <a href="https://music.youtube.com/">YouTube Music</a>, <a href="https://www.qobuz.com/">Qobuz</a>, <a href="https://tidal.com/">Tidal</a>, or another player of your choice.</p>
   </div>
 
-  <!-- The app's home screen while Spotify plays Already Forgiven by Basia Bulat, scrolled to the key
-       insight, from the Sleevesight header to the end of the insight's text, with the phone's top
-       status bar cropped out; a real capture from Sleevesight 0.1.15 (#775). -->
+  <!-- The app's screens in a slideshow (#1156): a Galaxy S25 Ultra drawn at its own proportions, a
+       screen every 5 seconds, the dots to pick one and a button to pause (`.carousel`, its script at
+       the end of the page). The screens are full-screen captures from a Galaxy S25 Ultra running
+       0.6.3, status bar and all, scaled from 1080 x 2340 to 600 x 1300 (`assets/hero/`). -->
   <figure class="mock">
-    <div class="phone">
-      <img src="assets/home-screen.webp" width="800" height="1244" alt="Sleevesight showing Already Forgiven by Basia Bulat from Are You in Love?, 2020, with the Dates, Genres and Lyrics buttons, and a three-sentence key insight by Claude Haiku 5.5 cited to the player, MusicBrainz and web search.">
+    <div class="carousel" role="region" aria-roledescription="carousel" aria-label="Sleevesight's screens">
+      <div class="s25">
+        <span class="key vol" aria-hidden="true"></span><span class="key pwr" aria-hidden="true"></span>
+        <div class="screen">
+          <span class="cam" aria-hidden="true"></span>
+          <div class="slides">
+          <div class="slide on" role="group" aria-roledescription="slide" aria-label="1 of 8: Home"><img src="assets/hero/1-home.webp" width="600" height="1300" alt="Thriller by Michael Jackson, from Thriller, 1982, playing in Spotify: its cover, and the Dates, Genres and Lyrics buttons."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="2 of 8: Key insight" aria-hidden="true"><img src="assets/hero/2-key-insight.webp" width="600" height="1300" alt="The key insight for Broken Wings by Mr. Mister, by Gemini 3.5 Flash Lite: the Kahlil Gibran novel behind it, who wrote and produced it, and its first number one in the US, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="3 of 8: Song" aria-hidden="true"><img src="assets/hero/3-song.webp" width="600" height="1300" alt="The Song panel for It’s a Sin (2018 Remaster): who wrote and produced it, who plays on it, and when it was first released, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="4 of 8: Lyrics" aria-hidden="true"><img src="assets/hero/4-lyrics.webp" width="600" height="1300" alt="The Lyrics panel for True Colors by Cyndi Lauper: a search for the lyrics, Find the lyrics, and what the song is about, from pages about it, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="5 of 8: Sources" aria-hidden="true"><img src="assets/hero/5-sources.webp" width="600" height="1300" alt="The Sources panel for Material Girl: what the player, MusicBrainz, Wikipedia, Last.fm and web search found, and MusicBrainz’s entries on who wrote, produced and played on it."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="6 of 8: Explain the song" aria-hidden="true"><img src="assets/hero/6-explain-the-song.webp" width="600" height="1300" alt="What Golden Brown by The Stranglers is about, from pages about it, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="7 of 8: Tracklist" aria-hidden="true"><img src="assets/hero/7-tracklist.webp" width="600" height="1300" alt="The cover turned over for Englishman In New York by Sting: the tracklist of …Nothing Like The Sun, the playing track marked."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="8 of 8: Settings" aria-hidden="true"><img src="assets/hero/8-settings.webp" width="600" height="1300" alt="Settings: Players, Sources, AI services, Secrets, Genres, Insights, History, Appearance and About, each with what it holds."></div>
+          </div>
+        </div>
+      </div>
+      <p class="said vh" role="status"></p>
+      <div class="ctl">
+        <button type="button" class="pp" aria-label="Pause the slideshow"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path class="i-pause" d="M4 3h3v10H4zM9 3h3v10H9z"/><path class="i-play" d="M4 2.5v11l9-5.5z"/></svg></button>
+        <div class="dots">
+          <button type="button" class="dot" aria-label="Show Home" aria-current="true"></button>
+          <button type="button" class="dot" aria-label="Show Key insight"></button>
+          <button type="button" class="dot" aria-label="Show Song"></button>
+          <button type="button" class="dot" aria-label="Show Lyrics"></button>
+          <button type="button" class="dot" aria-label="Show Sources"></button>
+          <button type="button" class="dot" aria-label="Show Explain the song"></button>
+          <button type="button" class="dot" aria-label="Show Tracklist"></button>
+          <button type="button" class="dot" aria-label="Show Settings"></button>
+        </div>
+      </div>
     </div>
   </figure>
 </div>
@@ -216,14 +302,22 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
   <h2 id="how-h">How it works</h2>
   <ol class="steps" role="list">
     <li class="track"><h3>Track</h3><div><p>Sleevesight is notified when your music player starts a track, and knows its title, artists, album and cover.</p><p>Audio never touched.</p></div></li>
-    <li class="trace"><h3>Trace</h3><div><p>Sleevesight finds the track's traces across the sources you choose.</p><p>Nothing made up.</p></div></li>
-    <li class="tell"><h3>Tell</h3><div><p>Sleevesight shares what makes the artist, song and album worth knowing, in a few lines written by the AI service you choose, to read or to listen to in the phone's own voice.</p><p>Every fact cited.</p></div></li>
+    <li class="trace"><h3>Trace</h3><div><p>Sleevesight finds for you information about the track across the external sources you choose.</p><p>Nothing made up.</p></div></li>
+    <li class="tell"><h3>Tell</h3><div><p>Sleevesight shares with you what makes the artist, song and album worth knowing, in a few lines written by the AI service you enable, to read or to listen to in the phone's own voice.</p><p>Every fact cited.</p></div></li>
   </ol>
 </section>
 
-<section id="next" aria-labelledby="next-h">
-  <h2 id="next-h">Coming soon: beyond the basics</h2>
-  <p class="intro">Read further details for the song, artists, and the album, each with an evidence-based insight. Ask follow-up questions about what is playing, answered by an AI service you enable with your own API key. Export the playlist history, with insights.</p>
+<section id="shows" aria-labelledby="shows-h">
+  <h2 id="shows-h">What it shows</h2>
+  <p class="intro">Sleevesight shows the playing track with its cover, and a key insight: a few lines on why the track is worth knowing. The rest opens on a tap.</p>
+  <ul class="tiles shows">
+    <li><h3>Song, Artist, Album</h3><p>Each with an insight of its own, written from what the sources say about it. The artist and album insights are written once and shown again on each of their tracks.</p></li>
+    <li><h3>Dates</h3><p>When the track and its album first came out. For a remaster or a later edition, the original release first, then the edition’s own.</p></li>
+    <li><h3>Genres</h3><p>The track’s genres, each with a description, and, on a tap, why the track is of a specific genre.</p></li>
+    <li><h3>Lyrics</h3><p>Links to the lyrics and, on a tap, what the song is about, written from pages about it, each sentence citing its source.</p></li>
+    <li><h3>The cover’s back</h3><p>A tap flips the cover over to show the album’s tracklist, from MusicBrainz.</p></li>
+    <li><h3>Sources</h3><p>What each source found, and where. When a source could not be reached, Sleevesight says so, with an option to retry the search.</p></li>
+  </ul>
   <!-- The boxes were written for the page in #230. Each citation marker in them has a visually hidden
        ", source" before it, so a screen reader reads "…during the session., source W1." rather than
        running the marker into the text (#372), and a hidden full stop after it, so the next sentence
@@ -234,16 +328,16 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
        VoiceOver read "sourceW2His" (#468). The chat's speakers have a hidden colon, and its credit
        line is a grid item of its own, for the same reason. The `.about` text names its markers itself,
        so has none. -->
-  <p class="note">The examples are illustrations, written for this page from the sources named beside them.</p>
+  <p class="note">The following examples are illustrations, written for this page from actual sources named beside them.</p>
   <ul class="examples">
     <li class="ex">
       <h3 class="vh">Song</h3>
-      <div class="about"><p><b>The story of the song</b>, how it was made, and how it was received.</p><p>Your AI service writes it from the evidence your sources found, and cites each piece where it uses it.</p><p>This example insight is based on two passages of Wikipedia's article on the song: <span class="cite W">W1</span> and <span class="cite W">W2</span>.</p></div>
+      <div class="about"><p><b>The story of the song</b>, how it was made, and how it was received.</p><p>Your AI service writes it from the evidence your sources found, and cites each piece where it uses it, with a link to the original.</p><p>This example insight is based on two passages of Wikipedia's article on the song: <span class="cite W">W1</span> and <span class="cite W">W2</span>.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Song</p><p class="what">Michelle</p><p>George Martin recalled composing the melody of the guitar solo, and showed Harrison the notes during the session.<span class="vh">, source&nbsp;</span><span class="cite W">W1</span><span class="vh">.&nbsp;</span> It topped the charts in Italy for eight weeks, and in France for five, as the lead track of an EP.<span class="vh">, source&nbsp;</span><span class="cite W">W2</span><span class="vh">.&nbsp;</span></p></div>
     </li>
     <li class="ex">
       <h3 class="vh">Artist</h3>
-      <div class="about"><p><b>Who the artist is</b>, and why they matter, for each artist on the track.</p><p>This example insight is based on three lines of Last.fm's biography of the band: <span class="cite L">L1</span>, <span class="cite L">L2</span> and <span class="cite L">L3</span>.</p></div>
+      <div class="about"><p><b>Who the artist is</b>, and why they matter, for the track's first artist.</p><p>This example insight is based on three lines of Last.fm's biography of the band: <span class="cite L">L1</span>, <span class="cite L">L2</span> and <span class="cite L">L3</span>.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Artist</p><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="vh">, source&nbsp;</span><span class="cite L">L1</span><span class="vh">, source&nbsp;</span><span class="cite L">L2</span><span class="vh">.&nbsp;</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the development of 1960s counterculture.<span class="vh">, source&nbsp;</span><span class="cite L">L3</span><span class="vh">.&nbsp;</span></p></div>
     </li>
     <li class="ex">
@@ -251,6 +345,14 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
       <div class="about"><p><b>The album's release</b>, and how it fared.</p><p>This example insight is based on two passages of the band's own page on the album, found by web search: <span class="cite S">S1</span> and <span class="cite S">S2</span>.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Album</p><p class="what">Rubber Soul, 1965</p><p>Released on 3 December 1965, just two weeks after its final mixing.<span class="vh">, source&nbsp;</span><span class="cite S">S1</span><span class="vh">.&nbsp;</span> It topped the album chart in the UK, and spent six weeks at number one in the US from early January 1966.<span class="vh">, source&nbsp;</span><span class="cite S">S2</span><span class="vh">.&nbsp;</span></p></div>
     </li>
+  </ul>
+</section>
+
+<section id="next" aria-labelledby="next-h">
+  <h2 id="next-h">Coming soon</h2>
+  <p class="intro">The languages a song is sung in. Your listening history, exported with its insights. Questions of your own about what is playing, answered by the AI service you enable.</p>
+  <p class="note">As above, the following examples are illustrations, written for this page from actual sources named beside them.</p>
+  <ul class="examples">
     <li class="ex">
       <h3 class="vh">Language</h3>
       <div class="about"><p><b>The languages a song is sung in</b>, or none for an instrumental, and the story behind them.</p><p>In this example insight, the languages come from MusicBrainz's entry for the song: <span class="cite MB">MB1</span>. The story is based on two passages of Wikipedia's article on it: <span class="cite W">W1</span> and <span class="cite W">W2</span>.</p></div>
@@ -272,16 +374,17 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 <section id="choose" aria-labelledby="choose-h">
   <h2 id="choose-h">You choose</h2>
   <ul class="tiles">
-    <li><h3>Your player</h3><p>Sleevesight supports a variety of players, including Spotify and YouTube Music in the initial release, with more coming soon. It reads what is playing from the phone itself, so following Spotify takes no Spotify developer app and no Spotify login, whichever plan you have.</p></li>
-    <li><h3>Your sources</h3><p>MusicBrainz, Wikipedia and Wikidata, Last.fm, and the Exa web search, with others coming soon. You provide your API keys where a source needs one.</p></li>
-    <li><h3>Your AI service</h3><p>The AI service of your choice with the model and effort you select. You provide your API keys. Initial release supports Anthropic, OpenAI and Google, more providers coming soon. Each service's own terms apply, and may set a minimum age beyond Sleevesight's own (it is not directed at children under 13): Google's requires 18 or older.</p></li>
+    <li><h3>Your players</h3><p>Sleevesight follows <a class="ch pl" href="https://www.spotify.com/">Spotify</a> by default, and any other music player on the phone you switch on. It reads information about what is being played from the phone, not the player. Sleevesight does not talk to your player directly, and does not require you to have a premium account.</p></li>
+    <li><h3>Your sources</h3><p><a class="ch so" href="https://musicbrainz.org/">MusicBrainz</a>, <a class="ch so" href="https://www.wikipedia.org/">Wikipedia</a> and <a class="ch so" href="https://www.wikidata.org/">Wikidata</a>, <a class="ch so" href="https://www.last.fm/">Last.fm</a>, <a class="ch so" href="https://lrclib.net/">LRCLIB</a> and the <a class="ch so" href="https://exa.ai/">Exa</a> web search, each enabled if you choose to. Last.fm and Exa need an API key of your own; the others need none.</p></li>
+    <li><h3>Your AI services</h3><p><a class="ch ai" href="https://www.anthropic.com/">Anthropic</a>, <a class="ch ai" href="https://openai.com/">OpenAI</a> or <a class="ch ai" href="https://ai.google.dev/">Google</a>, with the model and reasoning effort you select, on your own API key. Each service's own terms apply, and may set a minimum age different from what Sleevesight expects (Sleevesight is not directed at children under 13).</p></li>
   </ul>
 </section>
 
 <section id="cost" aria-labelledby="cost-h">
   <h2 id="cost-h">What it costs</h2>
-  <p class="intro">Sleevesight is free and open-source, and charges nothing: no price, no subscription, no usage charge. The services you switch on bill you directly, on your own keys and your own accounts with them. MusicBrainz, Wikipedia and Wikidata, and Last.fm cost nothing; Exa's web search and Google's Gemini API have free tiers.</p>
-  <p class="small"><a href="docs/costs/">What it costs you</a> lists each service's prices and free tier, and what a track costs with the defaults.</p>
+  <p class="intro">Sleevesight is <b>free</b> and <b>open-source</b>: <b>no price</b>, <b>no subscription</b>, <b>no usage charge</b>.<br>
+  The services you enable bill you directly, on your own keys and your own accounts with them. MusicBrainz, Wikipedia and Wikidata, Last.fm and LRCLIB cost nothing; Exa's web search and Google's Gemini API have free tiers.</p>
+  <p class="small">See <a href="docs/costs/">What it costs you</a> for each service's prices and free tiers, and what a track costs with the defaults.</p>
 </section>
 
 <section id="privacy" aria-labelledby="privacy-h">
@@ -290,22 +393,23 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
     <div>
       <div>
         <p class="lead">Nothing reaches the developer unless you send it</p>
-        <p>Sleevesight does not require you to create a user account. It has no telemetry, crash reporting or analytics of its own; if any is added, it will never carry your data. It does not show ads, and does not send any usage data for personalized marketing.</p>
+        <p>Sleevesight does not require you to create a user account. It has no telemetry, crash reporting or analytics of its own; if any is added at a later time, it will never carry your data. It does not show ads, and does not send any usage data for personalized marketing.</p>
         <p>Your API keys are stored encrypted on the phone and never logged.</p>
       </div>
-      <p class="small">The <a href="privacy.html">privacy policy</a> says what each service receives, and what you can switch off.</p>
+      <p class="small">The <a href="privacy.html">Privacy policy</a> clarifies what each service receives, and what you can switch off.</p>
     </div>
     <div>
       <div>
         <p class="lead">What leaves the phone, and to whom</p>
-        <p>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</p>
-        <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight, and each explanation of a genre you ask for, is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
+        <p>To the sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if proactive sourcing is enabled.</p>
+        <p>To the AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight, and each explanation you ask for, is a request of its own (or a few, when it searches the web), with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
         <!-- Every address the app calls is `https`, and Android blocks unencrypted connections for it
              on every supported version: the manifest says `usesCleartextTraffic="false"`, which
              Android 8 needs (#696), and has no network security config. -->
-        <p>All of it travels encrypted (HTTPS), your API keys included, each only to the service it belongs to.</p>
+        <p>All information travels encrypted (HTTPS), your API keys included, each only to the service it belongs to.</p>
       </div>
-      <p class="small">Nothing else leaves the phone, unless you export your diagnostics to a file yourself, send a report from your mail app, have an insight read aloud by a text-to-speech engine that speaks through its server, or type a key on a computer, when the phone advertises itself over Bluetooth to devices nearby. Your listening history stays on the device.</p>
+      <p class="small">Nothing else leaves the phone, unless you export your diagnostics to a file, send a report from your mail app, or have an insight read aloud by a text-to-speech engine that speaks through its server. While you type a key on a computer instead of on the phone, the phone announces itself over Bluetooth so that the computer can find it: devices nearby can see that it is there, but not the key, which travels encrypted.<br>
+      Your listening history stays on the device.</p>
     </div>
   </div>
 </section>
@@ -315,18 +419,76 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
   <!-- The Google Play badge goes here once the app is listed (Phase 1.5). -->
   <p>Initial release of Sleevesight supports Android only, and is distributed on Google Play.<br>
   An iOS version may be released at a later time.</p>
-  <p>Sleevesight is in closed testing on Google Play, by invitation. Refer to the <a href="mailto:support@sleevesight.app">developer</a> for further details.</p>
+  <p>Sleevesight is in <b>closed testing</b> on Google Play, available at this time <b>by invitation only</b>.<br>
+  See <a href="mailto:support@sleevesight.app">Developer</a> for further details.</p>
 </section>
 
 <section id="more" aria-labelledby="more-h">
   <h2 id="more-h">More</h2>
-  <p>The <a href="docs/">documentation</a> says how to use the app and how it works: <a href="docs/journey/">a typical journey</a>, from installing to everyday use; <a href="docs/tutorials/usage/">usage</a> and <a href="docs/tutorials/settings/">settings</a> in detail; the <a href="docs/architecture/">architecture</a>, the <a href="docs/dependencies/">dependencies</a>, the <a href="docs/solutions/">solutions</a> found on the way, and the <a href="docs/process/">process</a> it is made by.</p>
-  <p>The code and the design documents are at <a href="https://github.com/wkusnierczyk/sleevesight">github.com/wkusnierczyk/sleevesight</a>.</p>
+  <p>See the <a href="docs/">Documentation</a> for how to use Sleevesight and how it works:</p>
+  <ul class="more-list">
+    <li><a href="docs/journey/">a typical journey</a>, from installing to everyday use</li>
+    <li><a href="docs/tutorials/usage/">usage</a> and <a href="docs/tutorials/settings/">settings</a> in detail</li>
+    <li>the <a href="docs/architecture/">architecture</a>, the <a href="docs/dependencies/">dependencies</a>, the <a href="docs/solutions/">solutions</a> invented to build the app, and the <a href="docs/process/">development process</a> that brought it to you</li>
+  </ul>
+  <p>The code and the design documents are open sourced at <a href="https://github.com/wkusnierczyk/sleevesight">github.com/wkusnierczyk/sleevesight</a>.</p>
 </section>
 </main>
 
 {% include site-footer.html source="index.html" made_in=true %}
 </div>
 {% include site-header-script.html %}
+<script>
+// The hero's slideshow: a screen every few seconds, the dots to pick one, and a button to pause.
+// It stops while a mouse pointer is over it or the keyboard's focus is in it (not a tap's or a
+// click's focus, which would hold it after Play), and starts paused when the system asks for reduced
+// motion. A screen picked by hand (a dot, or the arrow keys) is announced;
+// the turning by itself is not.
+(function () {
+  const c = document.querySelector('.carousel');
+  if (!c) return;
+  const slides = [...c.querySelectorAll('.slide')];
+  const dots = [...c.querySelectorAll('.dot')];
+  const pp = c.querySelector('.pp');
+  const said = c.querySelector('.said');
+  let i = 0, timer = null, hovered = false, focused = false;
+  let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const every = 5000;
+
+  function go(n, byHand) {
+    i = (n + slides.length) % slides.length;
+    slides.forEach((s, k) => {
+      s.classList.toggle('on', k === i);
+      if (k === i) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true');
+    });
+    dots.forEach((d, k) => { if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+    if (byHand) said.textContent = slides[i].getAttribute('aria-label');
+  }
+  function arm() {
+    clearInterval(timer);
+    timer = playing && !hovered && !focused ? setInterval(() => go(i + 1), every) : null;
+  }
+  function set(p) {
+    playing = p;
+    c.classList.toggle('paused', !p);
+    pp.setAttribute('aria-label', p ? 'Pause the slideshow' : 'Play the slideshow');
+    arm();
+  }
+  pp.addEventListener('click', () => set(!playing));
+  dots.forEach((d, k) => d.addEventListener('click', () => { go(k, true); arm(); }));
+  c.addEventListener('keydown', e => {
+    if (e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+    go(i + (e.key === 'ArrowRight' ? 1 : -1), true);
+    if (dots.includes(e.target)) dots[i].focus();
+    arm();
+  });
+  c.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { hovered = true; arm(); } });
+  c.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { hovered = false; arm(); } });
+  c.addEventListener('focusin', e => { if (e.target.matches(':focus-visible')) { focused = true; arm(); } });
+  c.addEventListener('focusout', e => { if (!c.contains(e.relatedTarget)) { focused = false; arm(); } });
+  go(0);
+  set(playing);
+})();
+</script>
 </body>
 </html>

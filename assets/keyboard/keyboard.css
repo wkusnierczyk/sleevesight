@@ -22,9 +22,15 @@ main {
   border: 1px solid var(--line); border-radius: 16px;
 }
 @media (max-width: 700px) { main { margin: 0; border-radius: 0; border: 0; padding: 16px; } }
-/* The footer line every page of the site carries. */
+/* The site's footer (`_includes/site-footer.html`): where Sleevesight is made, the licence and the
+   source, what the site does not do and the version the page was last brought up to. */
 footer { max-width: 640px; margin: 0 auto 32px; padding: 0 24px; font-size: 14px; color: var(--muted); }
 footer a { color: inherit; }
+footer p { margin: 0 0 4px; }
+footer .made-in { margin-bottom: 12px; }
+/* A link off the site: an arrow, and "(external site)" for a screen reader (`made-in.html`). */
+.ext { vertical-align: -.02em; margin-left: .15em; }
+.ext-vh { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 700px) { footer { margin: 0; padding: 16px; border-top: 1px solid var(--line); } }
 h1 { font-size: 28px; line-height: 1.2; margin: 0 0 12px; }
 ol { padding-left: 1.4em; }

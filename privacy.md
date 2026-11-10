@@ -3,6 +3,7 @@
 # `design/design.md` (*Privacy and security*) and the app's first-run screen; a change to what leaves
 # the phone changes all three together.
 layout: default
+docs_version: 0.6.3
 title: Privacy policy
 permalink: /privacy.html
 ---

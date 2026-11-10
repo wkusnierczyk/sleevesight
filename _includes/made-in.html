@@ -8,7 +8,10 @@
   systems show as the letters "CH": the Swiss flag in its official proportions (a square of 32, the
   cross's arms 6 wide and 7 long), as high as a capital letter of the site's fonts (0.71 em), on the
   baseline; hidden from screen readers, since the text names the country. The donate link is the
-  platform in `.github/FUNDING.yml`.
+  platform in `.github/FUNDING.yml`; the charity link is swissdonations.ch's list of Swiss charities
+  (#1156), for those who would rather give to a good cause. Both lead off the site, so each ends in
+  an arrow (`.ext`, part of the link, in its colour), and a screen reader hears "(external site)"
+  (`.ext-vh`); their style is in each layout's footer or byline style, and in `keyboard.css`.
 {% endcomment -%}
 <p class="made-in">Made in Switzerland&nbsp;<svg class="made-in-flag" viewBox="0 0 32 32" width="0.71em" height="0.71em" aria-hidden="true" focusable="false"><path fill="#da291c" d="M0 0h32v32H0z"/><path fill="#fff" d="M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z"/></svg> in personal time, at private expense.<br>
-<a href="https://buymeacoffee.com/wkusnierczyk">Donate</a> to help cover development costs.</p>
+<a href="https://buymeacoffee.com/wkusnierczyk">Donate<span class="ext-vh"> (external site)</span><svg class="ext" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true" focusable="false"><path d="M4.5 2.5h5v5M9.5 2.5 3 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a> to help cover development costs, or <a href="https://swissdonations.ch/en/charities">support a charity<span class="ext-vh"> (external site)</span><svg class="ext" viewBox="0 0 12 12" width="0.72em" height="0.72em" aria-hidden="true" focusable="false"><path d="M4.5 2.5h5v5M9.5 2.5 3 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>.</p>

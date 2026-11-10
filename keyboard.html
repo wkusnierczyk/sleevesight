@@ -1,3 +1,7 @@
+---
+layout: null
+docs_version: 0.6.3
+---
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,7 +10,8 @@
 <!-- Type on a computer (#394). The page connects to nothing: it fetches only its own script and
      style sheet, and the policy below forbids any other request, so the browser's network panel
      shows that nothing is sent. The text goes to the phone over Bluetooth alone, sealed with a key
-     made here and shown only in the QR code. No front matter, so the site copies it as it is. -->
+     made here and shown only in the QR code. Its front matter is there only for the site's footer
+     (`site-footer.html`, #1156), styled from `keyboard.css`, since the policy forbids inline styles. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
@@ -44,6 +49,6 @@
   <p class="note">What you type goes from your computer to your phone alone, over Bluetooth, encrypted; nothing goes through a server. The code holds a key made for this visit alone; the phone forgets it when you close its dialog. Reload the page for a new one.</p>
   <p class="note">While the phone waits for the computer, it advertises over Bluetooth, and devices nearby that scan for Bluetooth can see that advertisement: a random identifier made for this visit, and, only with <i>Share phone’s name with Type on a computer</i> on, the phone’s Bluetooth name.</p>
 </main>
-<footer><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/keyboard.html">Source</a> · <a href="design/brand.html#fonts">Fonts</a></footer>
+{% include site-footer.html source="keyboard.html" made_in=true %}
 </body>
 </html>
