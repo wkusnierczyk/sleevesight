@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -108,6 +109,33 @@ class ItemKeptOpenScreenTest {
             scenario.moveToState(Lifecycle.State.RESUMED)
             compose.waitForIdle()
             assertEquals(listOf(ItemAsk.OPENED, ItemAsk.KEPT_OPEN), notes.asks)
+        }
+    }
+
+    @Test
+    fun aPanelLeftOpenThroughARotationDoesNotAskAsAnOpeningAgain() {
+        val shown = state(track(evidence = EvidenceSet.of(listOf(musicBrainzLine), JvmHasher)))
+        val content: (ComponentActivity) -> Unit = {
+            it.setContent {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    NowPlayingContent(shown, NowPlayingActions(normalizer::normalize, itemNotes = notes))
+                }
+            }
+        }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity(content)
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemRowTag(InsightItem.ALBUM)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(listOf(ItemAsk.OPENED), notes.asks)
+
+            // Rotated: the panel restored open, but not as an opening again (#1187), which a *Retry*
+            // would not hold. Which taps opened the panels is not kept through a rotation (`ItemFolds`),
+            // so it asks as unfolded by itself, which the hold refuses as it refuses a panel kept open.
+            scenario.recreate()
+            scenario.onActivity(content)
+            compose.waitForIdle()
+            assertEquals(listOf(ItemAsk.OPENED, ItemAsk.BY_ITSELF), notes.asks)
         }
     }
 }

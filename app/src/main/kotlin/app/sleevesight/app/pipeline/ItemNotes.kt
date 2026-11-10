@@ -722,28 +722,37 @@ class AppItemNotes(
      * Gathers the items a *Retry* asked again with the track's own sources ([gatherAgain]'s `afterRun`,
      * #1187) once the run asking them has landed on [tracks] (the track playing as it changes): a state
      * of the same track, every source landed, after one still asking or with sources other than those
-     * it was tapped beside; from that state, whether a panel or page follows the item then or not. One
-     * for another track is dropped. Until cancelled.
+     * it was tapped beside; from that state, whether a panel or page follows the item then or not; while
+     * the parts or the settings are not there (a rebuild), once they are. One for another track is
+     * dropped. Until cancelled.
      */
     suspend fun gatherAfterRuns(tracks: Flow<TrackState?>) {
-        tracks.collect { track -> track?.let { landed(it) } }
+        // Again as the parts or the settings come back (a rebuild), for a run that landed meanwhile.
+        combine(tracks, parts, settings) { track, _, _ -> track }.collect { track -> track?.let { landed(it) } }
     }
 
     // [track] as [gatherAfterRuns] sees it: the items waiting for its run gathered once it landed.
     private fun landed(track: TrackState) {
         val lookupKey = track.normalized.lookupKey
         val offered = ItemInsights.offered(track)
+        val made = parts.value
+        val now = settings.value?.takeIf { it.writeInsights }
         val due =
             synchronized(afterRuns) {
                 val waiting = afterRuns[lookupKey]
                 afterRuns.keys.retainAll(setOf(lookupKey))
+                // The taps on other tracks than the one playing are let go (#1187).
+                asked.keys.removeIf { it.second != lookupKey }
                 when {
                     waiting == null -> {
                         null
                     }
 
-                    !offered -> {
-                        afterRuns[lookupKey] = AfterRun(waiting.track, waiting.items, asking = true)
+                    // Still asking, or landed while it cannot be gathered (the parts rebuilt, insights
+                    // off): kept, gathered once it can be.
+                    !offered || made == null || now == null -> {
+                        val asking = waiting.asking || !offered
+                        afterRuns[lookupKey] = AfterRun(waiting.track, waiting.items, asking)
                         null
                     }
 
@@ -757,8 +766,6 @@ class AppItemNotes(
                     }
                 }
             }
-        val made = parts.value
-        val now = settings.value?.takeIf { it.writeInsights }
         if (due == null || made == null || now == null) return
         val insights = insightsOf(made)
         due.items.forEach { item -> gather(insights, track, item, now, gatheredFor(insights, track, item, now)) }
@@ -1720,6 +1727,7 @@ class AppItemNotes(
             looked.clear()
         }
         synchronized(afterRuns) { afterRuns.clear() }
+        asked.clear()
         // What was gathering, reading or writing goes: nothing it found is kept or shown, and no call
         // it would have made is made.
         pending.toList().forEach { it.cancel() }

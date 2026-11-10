@@ -309,14 +309,55 @@ class AppItemNothingNotesTest {
             notes.write(before, InsightItem.ALBUM)
             advanceUntilIdle()
             val asked = albumLookups
+            val tracks = MutableStateFlow<TrackState?>(before)
+            val following = launch { notes.gatherAfterRuns(tracks) }
+            advanceUntilIdle()
+
             notes.gatherAgain(before, InsightItem.ALBUM, afterRun = true)
-            // The same state again: what was gathered before the *Retry* is not taken as it is.
+            tracks.value = before.copy(sources = before.sources + (SourceId.MUSICBRAINZ to SourceState.Pending))
+            advanceUntilIdle()
+            assertEquals(asked, albumLookups)
+
+            // The run lands as the one before it did, MusicBrainz unreachable again: a state equal to
+            // the one tapped beside, the same key. Gathered afresh, once, with nothing following it.
             album =
                 AlbumFound(
                     listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Mezzanine is an album.", scope = Scope.RELEASE)),
                 )
             val again = track(reached = false)
-            assertEquals(ItemShown.Offered, notes.item(again, InsightItem.ALBUM).first { it is ItemShown.Offered })
+            assertEquals(before.sources, again.sources)
+            tracks.value = again
+            advanceUntilIdle()
             assertEquals(asked + 1, albumLookups)
+            assertEquals(ItemShown.Offered, notes.item(again, InsightItem.ALBUM).first { it !is ItemShown.Gathering })
+            assertEquals(asked + 1, albumLookups)
+            following.cancel()
+        }
+
+    @Test
+    fun `a run that lands while the parts are rebuilt gathers the album once they are back`() =
+        runTest {
+            album = AlbumFound(emptyList(), unanswered = listOf(SourceId.WIKIPEDIA))
+            val notes = notes()
+            val before = track(reached = false)
+            notes.write(before, InsightItem.ALBUM)
+            advanceUntilIdle()
+            val asked = albumLookups
+            val tracks = MutableStateFlow<TrackState?>(before)
+            val following = launch { notes.gatherAfterRuns(tracks) }
+            notes.gatherAgain(before, InsightItem.ALBUM, afterRun = true)
+            tracks.value = before.copy(sources = before.sources + (SourceId.MUSICBRAINZ to SourceState.Pending))
+            advanceUntilIdle()
+
+            // Landed during a rebuild: kept, not lost.
+            val made = parts.value
+            parts.value = null
+            tracks.value = track(reached = false, notFound = true)
+            advanceUntilIdle()
+            assertEquals(asked, albumLookups)
+            parts.value = made
+            advanceUntilIdle()
+            assertEquals(asked + 1, albumLookups)
+            following.cancel()
         }
 }
