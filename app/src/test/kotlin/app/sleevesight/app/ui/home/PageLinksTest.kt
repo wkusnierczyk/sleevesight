@@ -321,7 +321,7 @@ class PageLinksTest {
             compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[1].assert(hasText("Funk"))
             assertEquals("Artist, Soul, selected", compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "0")[1].reading())
             assertEquals(
-                "Artist, Soul, selected, Funk",
+                "Artist, Funk, Soul, selected",
                 compose.onAllNodesWithTag(GENRES_ROW_PREFIX + "1")[1].reading(),
             )
             compose
