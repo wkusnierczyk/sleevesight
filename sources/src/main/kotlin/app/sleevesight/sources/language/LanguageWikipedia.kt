@@ -168,8 +168,13 @@ class LanguageWikipedia(
                 else -> Outcome.None
             }
 
-        /** [extractionVersion]: raised when what the adapter makes of the articles changes. */
-        const val EXTRACTION_VERSION: Int = 1
+        /**
+         * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
+         * resolution it checks them against. 2: a classical track filed under its composer, or one
+         * whose first artist MusicBrainz does not credit, resolves on MusicBrainz (#1129), so a result
+         * kept against the earlier resolution's miss is looked up again, as the English adapter's is.
+         */
+        const val EXTRACTION_VERSION: Int = 2
 
         /**
          * The song's title in the language's script: the track's own, when written in a script other

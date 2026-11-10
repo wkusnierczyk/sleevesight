@@ -104,6 +104,13 @@ class LanguageWikipediaTest {
         )
 
     @Test
+    fun `results kept against the resolution before #1129 are not served`() {
+        // The pages are checked against the resolution, which #1129 changed: results kept under 1,
+        // against an earlier miss, are asked again.
+        assertEquals(2, adapter.extractionVersion)
+    }
+
+    @Test
     fun `the language's Wikipedia is asked, on its own host`() =
         runTest {
             adapter.lookup(query, items)
