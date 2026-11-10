@@ -335,4 +335,24 @@ class LyricsAiScreenTest {
             compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("by Claude Haiku 5.5")
             assertTrue(bounds(explainTag(AI_SEARCH_BY_TAG)).top >= bounds(lyricsCitedPageTag("S2")).bottom)
         }
+
+    @Test
+    fun aCitedPageTitleShowsItsReferencesAsCharacters() =
+        show {
+            // #1165: titles kept with HTML character references, as kept before it: shown decoded.
+            val pages =
+                listOf(
+                    CitedPage("S1", "https://a.example/1", "Massive Attack&#039;s 'Teardrop'"),
+                    CitedPage("S2", "https://a.example/2", "Massive Attack&#8217;s &#8216;Teardrop&#8217;"),
+                    CitedPage("S3", "https://a.example/3", "Massive Attack&rsquo;s &amp; Fraser"),
+                )
+            val reply = "It is about loss. [S1] It is a lullaby. [S2] It was sung by Fraser. [S3]"
+            val checked = GroundingCheck.check(reply, setOf("S1", "S2", "S3"), allowModel = false)
+            val grounded = (checked as InsightReply.Written).grounded
+            val answer = SearchAnswer.Explanation(grounded, pages)
+            set(SearchKind.EXPLAIN, AiSearch.Answered(answer, model, SearchWay(web = true)))
+            assertTrue(shows("Massive Attack's 'Teardrop'"))
+            assertTrue(shows("Massive Attack\u2019s \u2018Teardrop\u2019"))
+            assertTrue(shows("Massive Attack\u2019s & Fraser"))
+        }
 }
