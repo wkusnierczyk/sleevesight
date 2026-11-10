@@ -96,8 +96,8 @@ class SourceTextTest {
         for (range in SourceText.LATER_FORMATS) {
             for (point in range) {
                 val character = String(Character.toChars(point))
-                assertEquals(Character.FORMAT.toInt(), Character.getType(point), "U+%04X".format(point))
-                assertEquals("ab", SourceText.clean("a${character}b"), "U+%04X".format(point))
+                assertEquals(Character.FORMAT.toInt(), Character.getType(point), name(point))
+                assertEquals("ab", SourceText.clean("a${character}b"), name(point))
             }
         }
     }
@@ -109,8 +109,11 @@ class SourceTextTest {
             (0..Character.MAX_CODE_POINT).filter { point ->
                 Character.getType(point) == Character.FORMAT.toInt() && known.none { point in it }
             }
-        assertEquals(emptyList(), unlisted.map { "U+%04X".format(it) }, "add them to SourceText.LATER_FORMATS")
+        assertEquals(emptyList(), unlisted.map { name(it) }, "add them to SourceText.LATER_FORMATS")
     }
+
+    // [point] as Unicode names a code point: `U+0890`.
+    private fun name(point: Int): String = "U+" + point.toString(HEX).uppercase().padStart(4, '0')
 
     // [text] spelled in the tag block, as an "ASCII smuggling" payload is.
     private fun tagged(text: String): String =
@@ -118,6 +121,7 @@ class SourceTextTest {
 
     private companion object {
         const val TAG_BASE = 0xE0000
+        const val HEX = 16
 
         // Unicode 13's format characters (Cf), which Android 12, the oldest the app runs on, knows.
         val UNICODE_13_FORMATS: List<IntRange> =
