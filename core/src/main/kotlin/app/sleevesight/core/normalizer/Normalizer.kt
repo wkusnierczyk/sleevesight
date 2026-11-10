@@ -202,10 +202,18 @@ class Normalizer(
         val NOT_S = "[^" + S.removeSurrounding("[", "]") + "]"
         val NOT_DASH = "[^" + S.removeSurrounding("[", "]") + "\\u2010-\\u2015\\u2212-]"
 
+        const val YEAR = "[0-9]{4}"
+        const val MORE_WORDS = 4
+        val MASTERING = "(?:${ci("remaster")}(?:${ci("ed")})?|${ci("mono")}|${ci("stereo")})"
+
         val SUFFIX =
             Regex(
-                "$S+-$S+((?:[0-9]{4}$S+)?${ci("remaster")}(?:${ci("ed")})?(?:$S+[0-9]{4})?|" +
-                    "${ci("demo")}|${ci("live")}|${ci("mono")}|" +
+                // A remaster, mono or stereo, alone or together, with years (#1161): "2011 Remaster",
+                // "Remastered 2009", "Mono Remastered", "2019 Mono Remaster", "Stereo". Words and years
+                // are whole and only whitespace parts them, so each is matched once, and there are at
+                // most six: an unbounded repeat recurses once per word in the JVM's engine.
+                "$S+-$S+((?:$YEAR$S+)?$MASTERING(?:$S+(?:$MASTERING|$YEAR)){0,$MORE_WORDS}|" +
+                    "${ci("demo")}|${ci("live")}|" +
                     // Any edit (#1060): "Radio Edit", "Promo 7" Edit", "Edit": the word `edit` last and
                     // on its own, after words none of which starts or ends with a dash, so a second
                     // part ("2011 Remaster - Radio Edit", "Part 2 – Radio Edit", "Part 2- Radio Edit")
