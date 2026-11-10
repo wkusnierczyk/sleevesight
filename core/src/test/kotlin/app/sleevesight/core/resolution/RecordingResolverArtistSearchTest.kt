@@ -4,10 +4,12 @@
 package app.sleevesight.core.resolution
 
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.platform.JvmAccentFolder
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The search by title and artist (#1129): without a leading composer, which MusicBrainz's titles do
@@ -192,5 +194,35 @@ class RecordingResolverArtistSearchTest {
             val stripped = recording("stripped", "Song", "Band", 200, "1970")
             val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(stripped))), track("Band: Song", "Band"))
             assertEquals("stripped", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `a recording whose title is the one as written is weighed against every credited artist`() =
+        runTest {
+            // `Band` is taken for a composer, but the recording titled `Band: Song` is read as written,
+            // so Band's credit counts; Guest's older `Song`, read without the lead, does not beat it.
+            val exact = recording("exact", "Band: Song", "Band", 200, "1990")
+            val guests = recording("guests", "Song", "Guest", 200, "1970")
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(listOf(guests, exact)))
+            assertEquals("exact", resolve(musicBrainz, track("Band: Song", "Band, Guest")).recordingMbid)
+            val alone = FakeMusicBrainz(Lookup.Found(listOf(exact)))
+            assertEquals("exact", resolve(alone, track("Band: Song", "Band, Guest")).recordingMbid)
+        }
+
+    @Test
+    fun `a long title as written beats an earlier recording of it without the lead, however close the two`() =
+        runTest {
+            val written = "Band: A Very Long Song Title With Several Words"
+            val stripped = "A Very Long Song Title With Several Words"
+            // The premise: without the lead, the title still fits the one as written.
+            assertTrue(
+                NameMatcher(
+                    JvmAccentFolder,
+                ).titleSimilarity(written, stripped) >= ResolutionThresholds.TITLE_SIMILARITY,
+            )
+            val older = recording("older", stripped, "Band", 200, "1970")
+            val exact = recording("exact", written, "Band", 200, "1990")
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(older, exact))), track(written, "Band"))
+            assertEquals("exact", resolution.recordingMbid)
         }
 }
