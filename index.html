@@ -206,10 +206,8 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .s25 .key{position:absolute;right:-3px;width:3px;border-radius:0 2px 2px 0;background:#8b9096}
 .s25 .vol{top:150px;height:62px}
 .s25 .pwr{top:230px;height:38px}
-.statusbar{position:absolute;inset:0 0 auto;height:27px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 22px;
-  font:600 11.5px/1 var(--f-ui);color:#1b1d21;z-index:2}
 .cam{position:absolute;top:8px;left:50%;width:11px;height:11px;margin-left:-5.5px;border-radius:50%;background:#050608;z-index:3}
-.slides{position:absolute;top:27px;left:0;right:0;bottom:0}
+.slides{position:absolute;inset:0}
 .slide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease}
 .slide.on{opacity:1}
 .slide img{display:block;width:100%;height:auto}
@@ -262,21 +260,23 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
   <!-- The app's screens in a slideshow (#1156): a Galaxy S25 Ultra drawn at its own proportions, a
        screen every 5 seconds, the dots to pick one and a button to pause (`.carousel`, its script at
-       the end of the page). The screens are captures from the phone; until the 0.6.3 ones replace
-       them, the documentation's from 0.1.15, whose status bar was cropped, so the frame draws one. -->
+       the end of the page). The screens are full-screen captures from a Galaxy S25 Ultra running
+       0.6.3, status bar and all, scaled from 1080 x 2340 to 600 x 1300 (`assets/hero/`). -->
   <figure class="mock">
     <div class="carousel" role="region" aria-roledescription="carousel" aria-label="Sleevesight's screens">
       <div class="s25">
         <span class="key vol" aria-hidden="true"></span><span class="key pwr" aria-hidden="true"></span>
         <div class="screen">
-          <div class="statusbar" aria-hidden="true"><span>12:30</span><svg viewBox="0 0 40 12" width="40" height="12"><path d="M1 9.5a8 8 0 0 1 12 0M3.5 7a4.5 4.5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="10" r="1.2" fill="currentColor"/><rect x="20" y="2.5" width="16" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="21.8" y="4.3" width="10" height="4.4" rx="1" fill="currentColor"/><rect x="36.6" y="5" width="1.6" height="3" rx=".6" fill="currentColor"/></svg></div>
           <span class="cam" aria-hidden="true"></span>
           <div class="slides">
-          <div class="slide on" role="group" aria-roledescription="slide" aria-label="1 of 5: Home"><img src="assets/screenshots/home-playing.webp" width="540" height="1122" alt="Home: the playing track with its cover, and the Dates, Genres and Lyrics buttons."></div>
-          <div class="slide" role="group" aria-roledescription="slide" aria-label="2 of 5: Key insight" aria-hidden="true"><img src="assets/screenshots/key-insights.webp" width="540" height="1122" alt="Key insight: a few lines on why the track is worth knowing, each fact cited."></div>
-          <div class="slide" role="group" aria-roledescription="slide" aria-label="3 of 5: Genres" aria-hidden="true"><img src="assets/screenshots/genres-ai-genre.webp" width="540" height="1122" alt="Genres: the track's genres, and why it has each one."></div>
-          <div class="slide" role="group" aria-roledescription="slide" aria-label="4 of 5: Dates" aria-hidden="true"><img src="assets/screenshots/dates-ask-ai-web.webp" width="540" height="1122" alt="Dates: when the track and its album first came out."></div>
-          <div class="slide" role="group" aria-roledescription="slide" aria-label="5 of 5: Sources" aria-hidden="true"><img src="assets/screenshots/sources-unfolded.webp" width="540" height="1122" alt="Sources: what each source found, and where."></div>
+          <div class="slide on" role="group" aria-roledescription="slide" aria-label="1 of 8: Home"><img src="assets/hero/1-home.webp" width="600" height="1300" alt="Thriller by Michael Jackson, from Thriller, 1982, playing in Spotify: its cover, and the Dates, Genres and Lyrics buttons."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="2 of 8: Key insight" aria-hidden="true"><img src="assets/hero/2-key-insight.webp" width="600" height="1300" alt="The key insight for Broken Wings by Mr. Mister, by Gemini 3.5 Flash Lite: the Kahlil Gibran novel behind it, who wrote and produced it, and its first number one in the US, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="3 of 8: Song" aria-hidden="true"><img src="assets/hero/3-song.webp" width="600" height="1300" alt="The Song panel for It’s a Sin (2018 Remaster): who wrote and produced it, who plays on it, and when it was first released, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="4 of 8: Lyrics" aria-hidden="true"><img src="assets/hero/4-lyrics.webp" width="600" height="1300" alt="The Lyrics panel for True Colors by Cyndi Lauper: a search for the lyrics, Find the lyrics, and what the song is about, from pages about it, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="5 of 8: Sources" aria-hidden="true"><img src="assets/hero/5-sources.webp" width="600" height="1300" alt="The Sources panel for Material Girl: what the player, MusicBrainz, Wikipedia, Last.fm and web search found, and MusicBrainz’s entries on who wrote, produced and played on it."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="6 of 8: Explain the song" aria-hidden="true"><img src="assets/hero/6-explain-the-song.webp" width="600" height="1300" alt="What Golden Brown by The Stranglers is about, from pages about it, each sentence cited."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="7 of 8: Tracklist" aria-hidden="true"><img src="assets/hero/7-tracklist.webp" width="600" height="1300" alt="The cover turned over for Englishman In New York by Sting: the tracklist of …Nothing Like The Sun, the playing track marked."></div>
+          <div class="slide" role="group" aria-roledescription="slide" aria-label="8 of 8: Settings" aria-hidden="true"><img src="assets/hero/8-settings.webp" width="600" height="1300" alt="Settings: Players, Sources, AI services, Secrets, Genres, Insights, History, Appearance and About, each with what it holds."></div>
           </div>
         </div>
       </div>
@@ -286,9 +286,12 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
         <div class="dots">
           <button type="button" class="dot" aria-label="Show Home" aria-current="true"></button>
           <button type="button" class="dot" aria-label="Show Key insight"></button>
-          <button type="button" class="dot" aria-label="Show Genres"></button>
-          <button type="button" class="dot" aria-label="Show Dates"></button>
+          <button type="button" class="dot" aria-label="Show Song"></button>
+          <button type="button" class="dot" aria-label="Show Lyrics"></button>
           <button type="button" class="dot" aria-label="Show Sources"></button>
+          <button type="button" class="dot" aria-label="Show Explain the song"></button>
+          <button type="button" class="dot" aria-label="Show Tracklist"></button>
+          <button type="button" class="dot" aria-label="Show Settings"></button>
         </div>
       </div>
     </div>
