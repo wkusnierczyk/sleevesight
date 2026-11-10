@@ -10,13 +10,15 @@ import app.sleevesight.sources.lastfm.Lru
 
 /**
  * Web lines found by a paid search for one thing, an artist (#912, `ArtistWebSource`) or a song (#958,
- * `SongWebSource`), kept under [part] by its key in [kept], "found nothing" included; with a [kept]
+ * `SongWebSource`), kept under [part] by its key in [kept], "found nothing" included, or carried over
+ * from [before], the part before Exa's references were decoded ([getCarried], #1165); with a [kept]
  * that keeps nothing ([ArtistResults.persists] false: the CLI, tests), in memory for the most recent
  * [REMEMBERED]. One search at a time per key: a second while one is under way takes its outcome.
  */
 internal class KeptWebLines(
     private val part: ArtistPart,
     private val kept: ArtistResults,
+    private val before: ArtistPart,
 ) {
     // The web's lines by key, while [kept] keeps nothing.
     private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
@@ -26,7 +28,11 @@ internal class KeptWebLines(
 
     /** The lines kept for [key], none included; null when none is kept. */
     suspend fun kept(key: String): List<EvidenceDraft>? =
-        if (kept.persists) kept.get(part, key)?.let { KeptDrafts.decode(it.value) } else remembered.get(key)
+        if (kept.persists) {
+            kept.getCarried(part, before, key)?.let { KeptDrafts.decode(it.value) }
+        } else {
+            remembered.get(key)
+        }
 
     /** [lines] kept for [key], none included. */
     suspend fun keep(
@@ -39,7 +45,7 @@ internal class KeptWebLines(
     /** What is kept for [key] kept again, from now; nothing when none is. */
     suspend fun renew(key: String) {
         if (kept.persists) {
-            kept.get(part, key)?.let { kept.keep(part, key, it.value) }
+            kept.getCarried(part, before, key)?.let { kept.keep(part, key, it.value) }
         } else {
             remembered.get(key)?.let { remembered.put(key, it) }
         }

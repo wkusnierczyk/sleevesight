@@ -22,7 +22,7 @@ class SongWebSource(
     private val web: SongWebSearch?,
     kept: ArtistResults = ArtistResults.None,
 ) : SongWebLookup {
-    private val lines = KeptWebLines(PART, kept)
+    private val lines = KeptWebLines(PART, kept, BEFORE_DECODING)
 
     override suspend fun kept(song: SongWebQuery): List<EvidenceDraft>? = lines.kept(song.track.lookupKey)
 
@@ -52,8 +52,13 @@ class SongWebSource(
          * app's or the AI service's, none included, kept whatever *Keep what sources said about each
          * artist* says (`PipelineWiring.TRACK_ONLY_PARTS`), and as long as the song's insight written from
          * them ([ArtistPart.keptAsHistory]: *Keep history for*), so its card's key stays the same across days.
+         * Extraction 2 (#1165): Exa's text with its HTML character references decoded
+         * (`ExaWebSearch.EXTRACTION_VERSION` 4), so a song's lines kept before are searched again.
          */
         val PART: ArtistPart =
-            ArtistPart("song.web", extraction = 1, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+            ArtistPart("song.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+
+        /** [PART] before Exa's references were decoded (#1165), whose lines are carried over without one. */
+        internal val BEFORE_DECODING: ArtistPart = PART.copy(extraction = 1)
     }
 }

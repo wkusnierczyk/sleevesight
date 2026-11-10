@@ -102,6 +102,50 @@ class ExaPageSearchTest {
         }
 
     @Test
+    fun `a page's title keeps its apostrophes and quotes as the page writes them, its references decoded`() =
+        runTest {
+            // #1165: Far Out's page gives "Massive Attack s" in its own `<title>`, `og:title` and
+            // `twitter:title` (its headline has "Massive Attack’s"); a title is shown as the page gives it.
+            val titles =
+                listOf(
+                    "The moving story behind Massive Attack s \u2018Teardrop\u2019",
+                    "The moving story behind Massive Attack's 'Teardrop'",
+                    "The moving story behind Massive Attack\u2019s \u2018Teardrop\u2019",
+                    "The moving story behind Massive Attack&#039;s &#8216;Teardrop&rsquo;",
+                )
+            val body =
+                ExaWebSearch.JSON.encodeToString(
+                    ExaSearchResponse(
+                        titles.mapIndexed { i, title ->
+                            ExaResult("https://a.example/$i", title, listOf("Fraser&#039;s vocal."))
+                        },
+                    ),
+                )
+            assertEquals(
+                listOf(
+                    "The moving story behind Massive Attack s \u2018Teardrop\u2019",
+                    "The moving story behind Massive Attack's 'Teardrop'",
+                    "The moving story behind Massive Attack\u2019s \u2018Teardrop\u2019",
+                    "The moving story behind Massive Attack's \u2018Teardrop\u2019",
+                ),
+                pagesIn(body, subject = null).map { it.title },
+            )
+            // A passage's references too, once: what the page shows.
+            val passages = pagesIn(body, subject = null).map { it.text }
+            assertEquals(List(titles.size) { "Fraser's vocal." }, passages)
+        }
+
+    @Test
+    fun `lines the searches kept before references were decoded are not served`() {
+        // The retrieval cache misses an entry kept under another extraction version
+        // (`RetrievalCacheTest`); Exa's lines kept before #1165 were made at version 3.
+        val search = ExaWebSearch(ReplayNetClient.ok("{}"), Secret("exa-key"), JvmAccentFolder)
+        assertEquals(4, search.extractionVersion)
+        val language = ExaLanguageSearch(ReplayNetClient.ok("{}"), Secret("exa-key"), JvmAccentFolder)
+        assertEquals(4, language.extractionVersion)
+    }
+
+    @Test
     fun aFailureIsFailed() =
         runTest {
             assertEquals(
