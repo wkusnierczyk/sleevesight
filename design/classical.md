@@ -19,7 +19,8 @@ Line numbers are those of `dev-0.6.4` at `227d7fef`, before #1129's PR (#1176), 
 | Area | Where | What the composer does there | Issue |
 |---|---|---|---|
 | MusicBrainz search | `RecordingResolver.kt:57`, date search `:742` | Searched as the artist; the recording credits the performers | #1129 |
-| Album search and filter | `ItemInsights.kt:235` → `AlbumQuery.artist` (`AlbumLookup.kt:76`) → `ExaWebSearch.kt:456-463`; `RecordingFilter.kt:54-60`; `AlbumSource.kt:361` | A page naming the album title and the composer passes, whoever plays | #1130 |
+| Album, web | `ItemInsights.kt:235` → `AlbumQuery.artist` (`AlbumLookup.kt:76`) → `ExaWebSearch.kt:456-463`; `RecordingFilter.kt:54-60` | A page naming the album title and the composer passes, whoever plays | #1130 |
+| Album, Wikidata | `AlbumSource.kt:361` (`byName`) | The album item's performers must include the composer, so the right item is dropped | #1130 |
 | Album card key, unresolved | `CardEntity.Album` (`CardEntity.kt:50-75`), `ItemLanguageLines.kt:55` | Title + composer: two recordings of *Piano Concertos Nos. 20 & 23* share a key | #1130 |
 | Artist insight | `ItemInsights.kt:212`, `:226-231` (entity), `:427-430` (web query), `:960-977` (lines kept) | A Mozart biography; nothing on the soloist | #1181 |
 | Artist row and page name | `ItemFolds.kt:40`, `ItemRows.kt:303`, `NowPlayingPages.kt:174` | The row reads "Wolfgang Amadeus Mozart" | #1181 |
@@ -39,7 +40,8 @@ and its filter, which needs the whole title as a phrase in the page (`ExaWebSear
 `RecordingFilter.kt:40-46`, `:99`), Wikipedia's song titles, Last.fm's track lookup, LRCLIB,
 Genius and the song review search (#1179). That alone likely explains the empty track-level web lines
 behind #1131. Catalogue numbers differ between services too (Spotify `FWV 8`, MusicBrainz `M. 8`
-for Franck's sonata), which a title-similarity match should tolerate.
+for Franck's sonata), which a title-similarity match should tolerate; not filed, and out of #1179's
+scope.
 
 ### Work and recording: the cover/original logic
 
@@ -53,25 +55,30 @@ originally recorded by …" (`DatesModel.kt:136-138`), the evidence "This record
 (`MusicBrainzEvidence.kt:83-96`). A performance of a composed work is not a cover. Signals, both free
 (no extra request): the work's composer (`workCredits`, the work lookup the resolution already makes,
 `RecordingResolver.kt:255-256`) is a credited artist of the track but not of the recording; or the
-work's parent is of a classical form (MusicBrainz work type `Sonata`, `Concerto`, `Symphony`,
-`Opera`, `Aria`, `Mass`, …), which adding `work-rels` to `WORK_INC` (`MusicBrainzClient.kt:330`)
-returns in the same answer (K. 545's movement has no type; its parent, *Sonata for Piano no. 16*, is
-`Sonata`). Then keep only MusicBrainz's own cover mark, and name no original. The composer
-relationship's `begin` (`1788` for K. 545) is the composition date #1132 needs, also free. Filed as #1178.
+work's own type, else its parent's, is of a classical form (MusicBrainz work type `Sonata`,
+`Concerto`, `Symphony`, `Opera`, `Aria`, `Mass`, …), the parent's given in the same answer by adding
+`work-rels` to `WORK_INC` (`MusicBrainzClient.kt:330`) (K. 545's movement has no type; its parent,
+*Sonata for Piano no. 16*, is `Sonata`). Then keep only MusicBrainz's own cover mark, and name no
+original and no `earliest`. The composer
+relationship's `begin` (`1788` for K. 545) is the composition date #1132 needs, also free. Filed as
+#1178.
 
 ## 2. Telling the composer from the performers
 
 | Signal | When available | Cost | Catches | Misses |
 |---|---|---|---|---|
 | **A. Title prefix** naming a credited artist (`ComposerPrefix`, #1176) | Before any request | 0 | `Mozart:`, `Franck:`, `Allegri:` (King's), `Puccini: Turandot …` | No prefix (*Nessun Dorma* by Puccini, Mehta, Pavarotti …; Richter's *Four Seasons Recomposed*); a prefix naming an uncredited composer (Tallis Scholars' `Allegri: Miserere …`) |
-| **B. MusicBrainz work** composer relationship vs the recording's own credit | After resolution | 0 extra: the work lookup is made already; reaching the recording costs at most 2 more searches (#1176's retry by each artist) | Resolved tracks whose work and its composer MusicBrainz gives, prefix or not; also gives the composition date | Unresolved tracks; a resolution with no work, a work lookup that failed, or a work with no composer relationship (`RecordingResolver.kt:255-270`) |
+| **B. MusicBrainz work** composer relationship vs the recording's own credit | After resolution | 0 extra: the work lookup is made already; reaching the recording costs at most 2 more searches (#1176's retry by each artist) | Resolved tracks whose work and its composer MusicBrainz gives, prefix or not; also gives the composition date | Unresolved tracks, among them most composer-first tracks with no prefix: #1176 searches by the first artist, the composer, first and stops at the first non-empty answer, which a composer's name usually gives, so the performer's recording is rarely reached; a resolution with no work, a work lookup that failed, or a work with no composer relationship (`RecordingResolver.kt:255-270`) |
 | **C. Wikidata occupation** (P106 = composer, Q36834) | Once each artist's item is known | 1 batched `wbgetentities`, plus finding the items (about 1 request per artist) | Composers with no prefix and no resolution | Unreliable: pianist-composers (Richter), conductor-composers (Bernstein), singer-songwriters all carry *composer* |
 
 **Recommendation: A then B, not C.** Before resolution, the prefix (A) decides and the search order
-puts a titled composer last (#1176). After resolution, B refines A where the work data is there: a credited
-artist who is the work's composer and absent from the recording's credit is the composer, and the
-other credited artists are performers. Where it is not (no work, the work lookup failed, no composer
-relationship), A's result stands: a composer the prefix found stays the composer. The roles go on the resolution (composers, performers), and everything in the table above
+puts a titled composer last (#1176). After resolution, B refines A where the work data is there: a
+credited artist who is the work's composer and absent from the recording's credit is the composer,
+and the other credited artists are performers. Where it is not (no work, the work lookup failed, no
+composer relationship), A's result stands: a composer the prefix found stays the composer. A
+composer-first track with no prefix (*Nessun Dorma*, Richter) stays as today unless the search order
+changes, since its search by the composer rarely reaches the performers' recording (tracked in
+#1180). The roles go on the resolution (composers, performers), and everything in the table above
 reads "the first performer" where it reads `primary` today, falling back to `primary` when nothing
 tells. C adds requests for a signal that is wrong for many performers; not worth it.
 
@@ -85,8 +92,11 @@ tells. C adds requests for a signal that is wrong for many performers; not worth
 | d. Performers under Artist (as b, others as chips per c), the composer with the music (#1133's work part) | Mirrors the work/recording split; nothing lost | Depends on #1133's mock-up |
 
 **Proposed: d.** The Artist panel is about the lead performer, chosen by MusicBrainz's recording
-relationships when resolved (`vocal`/`instrument` before `performing orchestra` before `conductor`,
-`RecordingResolver.kt:537-538`), else the first performer in the player's order; the other credited
+relationships when resolved, in an order this proposal sets: `vocal`/`instrument`, then `performer`,
+then `performing orchestra`, then `conductor`. `PERFORMER_TYPES` (`RecordingResolver.kt:537-538`) is
+an unordered set, and `recordingCredits` (`:655-658`) folds every type into `CreditRole.PERFORMER`,
+so the relationship type must be kept on the credit first. Else the first performer in the player's
+order; the other credited
 performers are chips that open their own insight in place, on tap only. The composer belongs to the
 music: #1133's part on the work, with a chip there. Where nothing tells the roles apart, the panel is
 as today. If the choice stays a judgement call, a setting (*Artist for classical tracks: Performer
@@ -103,7 +113,7 @@ same day.
 | Concerto | `Mozart: Piano Concerto No. 20 in D Minor, K.466: II. Romance` | Wolfgang Amadeus Mozart, Khatia Buniatishvili, Academy of St. Martin in the Fields | same | `76547831-c881-49f6-8a79-ee1d1acfa60e` | Soloist and ensemble; the album's other track |
 | Chamber | `Franck: Violin Sonata in A Major, FWV 8: I. Allegretto ben moderato` | César Franck, Renaud Capuçon, Khatia Buniatishvili | *Franck, Grieg, Dvorak: Sonatas for violin & piano* | `aa8100ab-d414-4ade-a4b3-237ac5103a84` | Catalogue `FWV 8` vs MusicBrainz `M. 8`; two soloists. Another release of it credits the composers last |
 | Opera | `Puccini: Turandot, Act 3: "Nessun dorma" (Live)` | Giacomo Puccini, Luciano Pavarotti, Zubin Mehta, Los Angeles Philharmonic | *The Three Tenors in Concert, 1994 (Live)* | `38e73992-38de-43b1-ba07-420c9e2e9cc1` | Vocal work (lyrics); MusicBrainz credits Pavarotti alone; conductor and orchestra |
-| Choral | `Allegri: Miserere mei, Deus` | Gregorio Allegri, Choir of King's College, Cambridge, Gerald Finley, Timothy Beasley-Murray, Stephen Cleobury | *The Renaissance of Italian Music (National Gallery)* | `e48f58ac-ba2d-4766-82af-5f642f6c4a36` | Choir, soloists, conductor; MusicBrainz credits the choir alone |
+| Choral | `Allegri: Miserere mei, Deus` | Gregorio Allegri, Choir of King's College, Cambridge, Gerald Finley, Timothy Beasley-Murray, Stephen Cleobury | *The Renaissance of Italian Music (National Gallery)* | `e48f58ac-ba2d-4766-82af-5f642f6c4a36` | Choir, soloists, conductor; MusicBrainz credits the choir alone; no work on MusicBrainz: the title prefix alone decides |
 | Choral, composer uncredited | `Allegri: Miserere - 01. Miserere Mei, Deus` | The Tallis Scholars, Peter Phillips | *Allegri: Miserere; Palestrina: Missa Papae Marcelli; Mundy: Vox Patris Caelestis* | none matched; nearest `0c646f60-a809-4dd7-b473-d628a7625216` (68 s vs 72 s, another release) | Prefix naming no credited artist; a work split into sections |
 | Crossover | `The Four Seasons Recomposed, Spring (After A. Vivaldi): I. —` | Max Richter, Francisco Fullana, City of Birmingham Symphony Orchestra, Carlos Izcaray | *Through the Lens of Time* | `3b70f90c-5c41-45b8-8d2e-1fcabcc09ce8` (`The Four Seasons Recomposed: Spring: I`) | Composer first with no prefix, not on the recording; an arrangement of another composer's work; title shape differs |
 
@@ -114,5 +124,6 @@ credited artist (#1176's `Star Wars: Main Title` case).
 
 - #1178: a performance of a composed work is called a cover of its earliest recording by someone else.
 - #1179: every source but MusicBrainz searches with the composer and the movement in the title.
-- #1180: tell the composer from the performers once resolved (section 2), and search and prompt by the performers.
+- #1180: tell the composer from the performers once resolved (section 2), and search and prompt by
+  the performers.
 - #1181: which artist the Artist panel is about (section 3; a decision).
