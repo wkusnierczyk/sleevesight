@@ -189,7 +189,7 @@ class GenresScreenTest {
             assertEquals(1, panels())
             compose.onNodeWithTag(GENRE_PREFIX + "track:ballad").assertIsSelected()
             assertEquals(
-                "Track, Baroque Pop, Ballad, selected",
+                "Track, Ballad, selected, Baroque Pop",
                 compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading(),
             )
         }
@@ -213,7 +213,7 @@ class GenresScreenTest {
             compose.onNodeWithTag(baroque).assertIsNotSelected()
             compose.onNodeWithTag(ballad).assertIsSelected()
             assertEquals(
-                "Track, Baroque Pop, Ballad, selected",
+                "Track, Ballad, selected, Baroque Pop",
                 compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading(),
             )
 
@@ -238,10 +238,10 @@ class GenresScreenTest {
             assertEquals("Genre tags", text(R.string.home_genre_tags))
             assertEquals("Tag sources", text(R.string.home_genre_tag_sources))
             // Each row one item: its name, then its chips (not buttons), or its sources.
-            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist, Rock, Pop", "Album, Folk Rock, Pop"), rows())
+            assertEquals(listOf("Track, Ballad, Baroque Pop", "Artist, Pop, Rock", "Album, Folk Rock, Pop"), rows())
             assertEquals(listOf("Track, Last.fm", "Artist, Last.fm", "Album, Last.fm"), sources())
-            assertEquals(listOf("Baroque Pop", "Ballad"), cells(GenreLevel.TRACK))
-            assertEquals(listOf("Rock", "Pop"), cells(GenreLevel.ARTIST))
+            assertEquals(listOf("Ballad", "Baroque Pop"), cells(GenreLevel.TRACK))
+            assertEquals(listOf("Pop", "Rock"), cells(GenreLevel.ARTIST))
             assertEquals(listOf("Folk Rock", "Pop"), cells(GenreLevel.ALBUM))
             // The tags above the sources, each under its heading.
             assertTrue(bounds(GENRES_ROW_PREFIX + "2").bottom <= bounds(GENRE_SOURCES_ROW_PREFIX + "0").top)
@@ -252,7 +252,7 @@ class GenresScreenTest {
     fun albumShowsOnlyWithAlbumTags() {
         show(TrackGenres(listOf(track, beatles))) {
             tap(GENRE_PREFIX + "track:baroquepop")
-            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist, Rock, Pop"), rows())
+            assertEquals(listOf("Track, Ballad, Baroque Pop", "Artist, Pop, Rock"), rows())
             assertEquals(
                 0,
                 compose
@@ -274,7 +274,7 @@ class GenresScreenTest {
             // Every row's right column starts at the same place: the first chip of each row of tags,
             // and each row's sources.
             val starts =
-                listOf("track:baroquepop", "artist:The Beatles:rock", "album:folkrock").map {
+                listOf("track:ballad", "artist:The Beatles:pop", "album:folkrock").map {
                     bounds(GENRE_CELL_PREFIX + it).left
                 } +
                     listOf(0, 1, 2).map {
@@ -314,7 +314,7 @@ class GenresScreenTest {
             // selected, which would not say which tag is.
             assertEquals("Rock, selected", text(R.string.home_genre_tag_selected, "Rock"))
             assertEquals(
-                listOf("Track, Pop, selected", "Artist, Rock, Pop, selected", "Album, Folk Rock, Pop, selected"),
+                listOf("Track, Pop, selected", "Artist, Pop, selected, Rock", "Album, Folk Rock, Pop, selected"),
                 (0..2).map { compose.onNodeWithTag(GENRES_ROW_PREFIX + it).reading() },
             )
             for (index in 0..2) {
@@ -447,7 +447,7 @@ class GenresScreenTest {
         val preston = row(GenreLevel.ARTIST, "soul", artist = "Billy Preston")
         show(TrackGenres(listOf(track, beatles, preston)), playing = two) {
             tap(GENRE_PREFIX + "track:baroquepop")
-            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist 1, Rock, Pop", "Artist 2, Soul"), rows())
+            assertEquals(listOf("Track, Ballad, Baroque Pop", "Artist 1, Pop, Rock", "Artist 2, Soul"), rows())
             assertEquals(
                 listOf("Track, Last.fm", "Artist 1, The Beatles, Last.fm", "Artist 2, Billy Preston, Last.fm"),
                 sources(),
@@ -472,7 +472,7 @@ class GenresScreenTest {
         val preston = row(GenreLevel.ARTIST, "soul", artist = "Billy Preston")
         show(TrackGenres(listOf(track, preston)), playing = two) {
             tap(GENRE_PREFIX + "track:baroquepop")
-            assertEquals(listOf("Track, Baroque Pop, Ballad", "Artist 2, Soul"), rows())
+            assertEquals(listOf("Track, Ballad, Baroque Pop", "Artist 2, Soul"), rows())
             assertEquals(listOf("Track, Last.fm", "Artist 2, Billy Preston, Last.fm"), sources())
         }
     }
@@ -484,8 +484,8 @@ class GenresScreenTest {
             // The artists' together, each genre once, in alphabetical order.
             assertEquals(listOf("Jazz", "Pop", "Rock"), chips(GenreLevel.ARTIST))
             tap(GENRE_PREFIX + "artist:The Beatles:rock")
-            assertEquals(listOf("Artist, Rock, Pop", "Artist, Rock, Jazz"), rows())
-            assertEquals("Artist, Rock, selected, Jazz", compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").reading())
+            assertEquals(listOf("Artist, Pop, Rock", "Artist, Jazz, Rock"), rows())
+            assertEquals("Artist, Jazz, Rock, selected", compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").reading())
         }
     }
 
@@ -514,8 +514,8 @@ class GenresScreenTest {
                 genres.value = TrackGenres(listOf(beatles, album))
                 compose.waitForIdle()
                 assertEquals(listOf("Folk Rock"), chips(GenreLevel.ALBUM))
-                assertEquals("Artist, Rock, selected, Pop", compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading())
-                assertEquals(listOf("Artist, Rock, Pop", "Album, Folk Rock, Pop"), rows())
+                assertEquals("Artist, Pop, Rock, selected", compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading())
+                assertEquals(listOf("Artist, Pop, Rock", "Album, Folk Rock, Pop"), rows())
 
                 // A new track: its first backed genre open, no longer the one tapped (#875).
                 playing.value = track(HomeFixtures.carefree)
