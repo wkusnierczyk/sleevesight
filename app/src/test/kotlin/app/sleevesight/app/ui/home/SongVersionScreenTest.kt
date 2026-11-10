@@ -204,8 +204,8 @@ class SongVersionScreenTest {
                 actions,
             ) {}
         }) {
-            assertEquals(listOf("Sundown"), compose.onNodeWithTag(ITEM_PAGE_HEAD_TAG).texts())
-            assertEquals(0, tagged(ITEM_PAGE_VERSION_TAG))
+            assertEquals(listOf("Sundown"), compose.onNodeWithTag(ITEM_PAGE_NAME_TAG, useUnmergedTree = true).texts())
+            assertEquals(0, count("Version:"))
         }
 
     private fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
