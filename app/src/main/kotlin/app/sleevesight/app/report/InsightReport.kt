@@ -84,8 +84,10 @@ internal fun StringBuilder.appendMusicBrainz(track: TrackState) {
     appendResolved(resolution)
 }
 
+// Each artist's name as MusicBrainz gave it, kept from before or not, cleaned and on one line
+// ([InsightPrompt.oneLine], #1041), as the prompt shows a source's text.
 private fun StringBuilder.appendArtists(artists: List<ResolvedArtist>) {
-    for (artist in artists) appendLine("Artist: ${artist.name}: ${artist.mbid ?: NOT_RESOLVED}")
+    for (artist in artists) appendLine("Artist: ${InsightPrompt.oneLine(artist.name)}: ${artist.mbid ?: NOT_RESOLVED}")
 }
 
 private fun StringBuilder.appendResolved(resolution: Resolution) {

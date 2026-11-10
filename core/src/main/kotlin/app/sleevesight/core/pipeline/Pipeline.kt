@@ -213,15 +213,18 @@ class Pipeline(
      * sources that were unreachable then (back online, #192): the others are kept as they landed,
      * and a resolution made then is used again, not asked for. With [lookAgain] (#617), it looks
      * every source up afresh, past the caches, keeping what the run before found of a source it
-     * cannot reach now ([LookAgain]).
+     * cannot reach now ([LookAgain]). With [items], the lines the song's, the artist's and the
+     * album's evidence holds beyond the track's own (#1131, [ItemLines]), its evidence takes them
+     * after its own.
      */
     suspend fun run(
         nowPlaying: NowPlaying,
         control: RunControl,
         again: Gathered? = null,
         lookAgain: LookAgain? = null,
+        items: ItemLines = ItemLines(),
     ): TrackState =
-        start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control, again, lookAgain).run()
+        start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control, again, lookAgain, items).run()
 
     /**
      * Prepares [next], the next item in the player's queue, ahead of its play (D13, *Evidence*):
@@ -260,6 +263,7 @@ class Pipeline(
         control: RunControl,
         again: Gathered? = null,
         lookAgain: LookAgain? = null,
+        items: ItemLines = ItemLines(),
     ): TrackRun {
         val token = runs.updateAndGetValue()
         val since = shown.forgets
@@ -278,7 +282,16 @@ class Pipeline(
         return TrackRun(
             parts = parts,
             time = time,
-            input = RunInput(current, nowPlaying, track, again, lookAgain, LabelsBefore(genresBefore, laterKept)),
+            input =
+                RunInput(
+                    current,
+                    nowPlaying,
+                    track,
+                    again,
+                    lookAgain,
+                    LabelsBefore(genresBefore, laterKept),
+                    items,
+                ),
             control = control,
             onEvent = { if (shown.forgets == since) eventFlow.tryEmit(it) },
             publish = { state -> shown.publish(state, since) { runs.value == token } },

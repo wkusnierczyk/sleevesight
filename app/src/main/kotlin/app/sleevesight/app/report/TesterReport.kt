@@ -5,6 +5,7 @@ import app.sleevesight.app.diagnostics.LoggedEvent
 import app.sleevesight.app.diagnostics.PageResult
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
+import app.sleevesight.app.session.SessionMapping
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.outcomeKey
 import app.sleevesight.core.pipeline.InsightState
@@ -261,7 +262,7 @@ private fun StringBuilder.appendPlaying(playing: NowPlaying) {
     appendLine("Artists: ${playing.artists}")
     appendLine("Album: ${playing.album ?: NOT_REPORTED}")
     appendLine("Length: ${playing.duration?.let(::length) ?: NOT_REPORTED}")
-    appendLine("Media id: ${playing.mediaId ?: NOT_REPORTED}")
+    appendLine("Media id: ${playing.mediaId?.let(SessionMapping::shownMediaId) ?: NOT_REPORTED}")
 }
 
 // The pipeline's view: what it offers, and its track, which may not be the one playing (the next

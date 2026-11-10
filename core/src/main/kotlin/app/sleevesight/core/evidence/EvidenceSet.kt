@@ -3,6 +3,7 @@ package app.sleevesight.core.evidence
 import app.sleevesight.core.language.Language
 import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.text.withoutLoneSurrogates
 
 /**
  * A track's evidence, with ids assigned and a fingerprint (`design/architecture.md`, *Evidence*).

@@ -63,8 +63,9 @@ import app.sleevesight.core.settings.Layout
  * and the insight is kept when it comes.
  *
  * Under *Expandable boxes* ([pages] false) a button opens its item in a panel in its row's place
- * ([Panel]: the kind as its title, the name under it, *Read aloud* once written and *Close* on the
- * kind's line), the row hidden while it is open;
+ * ([Panel]: the kind as its title, the name under it, for the song the version its title named and
+ * the row leaves out on a line of its own under that ("Version: 2024 Remaster", #1160), read with the
+ * heading, *Read aloud* once written and *Close* on the kind's line), the row hidden while it is open;
  * several may be open, in the rows' order; *Close* folds it back into its row. Which are open is
  * [folds]', so *Song, Artist and Album on a new track* applies. Under *Separate pages* a button opens
  * its page ([openPage]) and stays, "double-tap to open page".
@@ -148,7 +149,8 @@ internal fun ItemRows(
     }
 }
 
-// [row]'s panel, open in its place: [kind] as its title, the name under it, [actions] (*Read aloud*)
+// [row]'s panel, open in its place: [kind] as its title, the name under it, then the version the
+// player names, if any ("Version: 2024 Remaster", #1160), [actions] (*Read aloud*)
 // beside *Close*; told whether the input focus is in it ([focused]); its *Close*, under
 // [closeModifier] (a focus requester), [close]s it.
 @Suppress("LongParameterList") // What the panel shows, and its focus and close.
@@ -169,6 +171,7 @@ private fun ItemPanel(
             onClose = close,
             closeModifier = closeModifier,
             subtitle = row.name,
+            note = row.version?.let { stringResource(R.string.home_item_version, it) },
             actions = actions,
         ) { content() }
     }
@@ -300,7 +303,7 @@ internal fun HomeItems(
             sourcesLines(actions.itemNotes, shown.track).evidence,
             onReport,
         )
-    val rows = itemRows(header, actions.normalize(header).primary)
+    val rows = itemRows(header, actions.normalize(header))
     ItemRows(rows, pages, folds, context) { item -> actions.openPage(HomePage.Item(item.name)) }
 }
 

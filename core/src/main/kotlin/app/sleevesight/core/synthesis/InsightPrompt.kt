@@ -9,6 +9,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.text.DateForm
 import app.sleevesight.core.text.DateWords
+import app.sleevesight.core.text.SourceText
 
 /**
  * The prompt for the home insight (`design/design.md`, *Appendix. Prompt contracts*, *Insight*),
@@ -502,10 +503,12 @@ object InsightPrompt {
      * [text] on one line, and without a tag: every control character and Unicode line or paragraph
      * separator becomes a space, so a field cannot start a line of its own inside a fence, and every
      * `<` becomes `\u2039` (single left-pointing angle quotation mark), so a field cannot write a
-     * fence's tag (`</evidence>`) anywhere, in any case or spelling.
+     * fence's tag (`</evidence>`) anywhere, in any case or spelling. First cleaned as all text from
+     * players and sources is ([SourceText]): no invisible characters, and the fullwidth `＜` as `<`.
      */
     fun oneLine(text: String): String =
-        text
+        SourceText
+            .clean(text)
             .map {
                 when {
                     breaksLine(it) -> ' '
