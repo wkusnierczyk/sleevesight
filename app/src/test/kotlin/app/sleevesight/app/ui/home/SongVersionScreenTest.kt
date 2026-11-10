@@ -9,10 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -127,7 +127,7 @@ class SongVersionScreenTest {
             assertTrue(SemanticsProperties.Heading in node.config)
             // On a line of its own under the name.
             val name = bounds(itemPanelTag(InsightItem.SONG) + ":subtitle")
-            val note = bounds(itemPanelTag(InsightItem.SONG) + ":note")
+            val note = textBounds(VERSION)
             assertTrue("$name $note", name.bottom <= note.top)
             assertEquals(1, count(VERSION))
         }
@@ -176,7 +176,6 @@ class SongVersionScreenTest {
             )
             openSong()
             assertEquals(listOf("Song", "Sundown"), heading.texts())
-            assertEquals(0, tagged(itemPanelTag(InsightItem.SONG) + ":note"))
             assertEquals(0, count("Version:"))
         }
 
@@ -189,9 +188,13 @@ class SongVersionScreenTest {
                 actions,
             ) {}
         }) {
-            assertEquals(listOf("Material Girl", VERSION), compose.onNodeWithTag(ITEM_PAGE_HEAD_TAG).texts())
+            // The node the name is read in, by its text: the name and the version, as one stop.
+            assertEquals(
+                listOf("Material Girl", VERSION),
+                compose.onNodeWithText("Material Girl", substring = true).texts(),
+            )
             val name = bounds(ITEM_PAGE_NAME_TAG)
-            val note = bounds(ITEM_PAGE_VERSION_TAG)
+            val note = textBounds(VERSION)
             assertTrue("$name $note", name.bottom <= note.top)
         }
 
@@ -210,8 +213,8 @@ class SongVersionScreenTest {
 
     private fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
-    private fun tagged(tag: String) =
-        compose.onAllNodes(hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().size
+    private fun textBounds(text: String) =
+        compose.onNodeWithText(text, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
     private companion object {
         val materialGirl =
