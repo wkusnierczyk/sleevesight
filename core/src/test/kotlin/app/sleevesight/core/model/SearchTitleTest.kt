@@ -43,6 +43,34 @@ class SearchTitleTest {
     }
 
     @Test
+    fun `the work is cut at the first colon whatever follows it`() {
+        assertEquals(
+            "Piano Sonata No. 16 in C Major, K. 545",
+            mozart("Mozart: Piano Sonata No. 16 in C Major, K. 545:II. Andante").searchWork,
+        )
+        assertNull(mozart("Mozart: Piano Sonata No. 16 in C Major, K. 545:  ").searchWork)
+    }
+
+    @Test
+    fun `a nickname in any of the usual pairs of quotes is left out of the work`() {
+        val nicknames =
+            listOf(
+                "\"Jupiter\"",
+                "\u201CJupiter\u201D",
+                "\u201EJupiter\u201C",
+                "\u201EJupiter\u201D",
+                "\u201AJupiter\u2018",
+                "\u2018Jupiter\u2019",
+                "\u00ABJupiter\u00BB",
+                "\u00BBJupiter\u00AB",
+            )
+        for (nickname in nicknames) {
+            val track = mozart("Mozart: Sinfonie Nr. 41 in C-Dur, KV 551 $nickname: I. Allegro vivace")
+            assertEquals("Sinfonie Nr. 41 in C-Dur, KV 551", track.searchWork, nickname)
+        }
+    }
+
+    @Test
     fun `no work without a movement, without the composer's lead, or in a title the lead is not left out of`() {
         assertNull(normalizer.normalize("Allegri: Miserere mei, Deus", "Gregorio Allegri, Stephen Cleobury").searchWork)
         assertNull(normalizer.normalize("Star Wars: Main Title", "John Williams, London Symphony Orchestra").searchWork)

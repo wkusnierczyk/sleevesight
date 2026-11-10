@@ -49,16 +49,21 @@ data class NormalizedTrack(
 
     /**
      * The work a [searchTitle] of the shape `<work>: <movement>` names (#1179): the part before its
-     * first colon that whitespace follows, without a nickname in double quotes at its end
-     * (`Piano Sonata No. 16 in C Major, K. 545` of `… K. 545 "Sonata facile": II. Andante`), so that
-     * a page on the work, which names no movement, can be told to be about the track. Only for a
-     * title searched without its [composer] ([searchTitle] is not [title]); null for any other, for
-     * one with no such colon, and for a work part that is blank.
+     * first colon, whatever follows it (`K. 545: II. Andante`, `K. 545:II. Andante`), without a
+     * nickname in quotes at its end, in any of the usual pairs (`"…"`, `“…”`, `„…“`, `‚…‘`, `‘…’`,
+     * `«…»`, `»…«`): `Piano Sonata No. 16 in C Major, K. 545` of `… K. 545 "Sonata facile": II.
+     * Andante`, so that a page on the work, which names no movement, can be told to be about the
+     * track. Only for a title searched without its [composer] ([searchTitle] is not [title]); null
+     * for any other, for one with no colon or nothing but whitespace after it, and for a work part
+     * that is blank.
      */
     val searchWork: String?
         get() {
             val search = searchTitle
-            val work = WORK.find(search)?.takeIf { search != title && it.value.length < search.length }
+            val work =
+                WORK.find(search)?.takeIf {
+                    search != title && search.substring(it.range.last + 1).isNotBlank()
+                }
             return work
                 ?.groupValues
                 ?.get(1)
@@ -98,13 +103,26 @@ data class NormalizedTrack(
         get() = listOfNotNull(title, from) + artists
 
     private companion object {
-        // The work part of a search title: the text before its first colon that whitespace and more
-        // title follow. No braces: ICU reads the pattern as the JVM does.
-        val WORK = Regex("^([^:]+):$JS_WHITESPACE_CLASS+")
+        // The work part of a search title: the text before its first colon. No braces: ICU reads
+        // the patterns as the JVM does.
+        val WORK = Regex("^([^:]+):")
 
-        // A nickname in double quotes, straight or curly, at the end of a work: ` "Sonata facile"`.
-        val NICKNAME =
-            Regex("$JS_WHITESPACE_CLASS*[\"\u201C\u201E][^\"\u201C\u201D\u201E]*[\"\u201D]$JS_WHITESPACE_CLASS*$")
+        // A quoted nickname, each opening mark with the closing marks its languages pair it with:
+        // straight; English “…” and ‘…’; German and Polish „…“ (or „…”) and ‚…‘; French «…»; and
+        // the reversed »…« of German and Danish.
+        val QUOTED =
+            listOf(
+                "\"[^\"]*\"",
+                "\u201C[^\u201C\u201D]*\u201D",
+                "\u201E[^\u201C\u201D\u201E]*[\u201C\u201D]",
+                "\u201A[^\u2018\u2019\u201A]*[\u2018\u2019]",
+                "\u2018[^\u2018\u2019]*\u2019",
+                "\u00AB[^\u00AB\u00BB]*\u00BB",
+                "\u00BB[^\u00AB\u00BB]*\u00AB",
+            ).joinToString("|")
+
+        // A quoted nickname at the end of a work: ` "Sonata facile"`, ` „Jupiter“`.
+        val NICKNAME = Regex("$JS_WHITESPACE_CLASS*(?:$QUOTED)$JS_WHITESPACE_CLASS*$")
 
         const val SEARCH_TITLE_MARK = "search-title"
     }

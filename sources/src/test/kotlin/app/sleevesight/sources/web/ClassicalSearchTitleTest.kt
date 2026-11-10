@@ -164,10 +164,64 @@ class ClassicalSearchTitleTest {
                     "Wolfgang Amadeus Mozart review interview",
                 sent["query"]?.jsonPrimitive?.content,
             )
-            val portuguese = Languages.ofCode("pt")!!
-            val language = ExaLanguageQuery.of(LanguageQuery(k545, Resolution.NONE, portuguese), LanguageItems.NONE)
-            assertTrue(language.query.startsWith("\"Piano Sonata No. 16 in C Major"), language.query)
         }
+
+    @Test
+    fun `the song's search in the track's language leaves out the composer's lead`() =
+        runTest {
+            val portuguese = Languages.ofCode("pt")!!
+            val net = ReplayNetClient.ok("""{"results":[]}""")
+            ExaSongSearch(net, Secret("k"), JvmAccentFolder, { LanguageItems.NONE }, clock)
+                .search(SongWebQuery(k545, portuguese, Resolution.NONE))
+            val sent =
+                Json
+                    .parseToJsonElement(
+                        net.sent
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            val title = "Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante"
+            assertEquals(
+                "\"$title\" Wolfgang Amadeus Mozart, ${portuguese.song}",
+                sent["query"]?.jsonPrimitive?.content,
+            )
+            assertEquals(
+                "$title Wolfgang Amadeus Mozart",
+                sent["contents"]
+                    ?.jsonObject
+                    ?.get("highlights")
+                    ?.jsonObject
+                    ?.get("query")
+                    ?.jsonPrimitive
+                    ?.content,
+            )
+            // The track's own search in the language (`ExaLanguageSearch`) as well.
+            val language = ExaLanguageQuery.of(LanguageQuery(k545, Resolution.NONE, portuguese), LanguageItems.NONE)
+            assertEquals(
+                "\"$title\" Wolfgang Amadeus Mozart Khatia Buniatishvili Academy of St. Martin in the Fields, " +
+                    portuguese.song,
+                language.query,
+            )
+        }
+
+    @Test
+    fun `a work's German nickname is left out, and a page on the work is kept`() {
+        val jupiter =
+            normalizer.normalize(
+                "Mozart: Sinfonie Nr. 41 in C-Dur, KV 551 \u201EJupiter\u201C: I. Allegro vivace",
+                "Wolfgang Amadeus Mozart, Wiener Philharmoniker, Karl B\u00F6hm",
+            )
+        assertEquals(
+            "\"Sinfonie Nr. 41 in C-Dur, KV 551\" \u201EJupiter\u201C: I. Allegro vivace by Wolfgang Amadeus Mozart, " +
+                "Wiener Philharmoniker and Karl B\u00F6hm, song",
+            ExaSearchRequest.of(jupiter).query,
+        )
+        assertTrue(about(jupiter, "Mozart-Sinfonien", "Karl B\u00F6hm dirigiert die Sinfonie Nr. 41 in C-Dur, KV 551."))
+        assertFalse(
+            about(jupiter, "Mozart-Sinfonien", "Karl B\u00F6hm dirigiert die Sinfonie Nr. 40 in g-Moll, KV 550."),
+        )
+    }
 
     private companion object {
         const val RECORDING = "1179-k545-andante"
