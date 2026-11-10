@@ -27,9 +27,10 @@ class NormalizerTest {
         }
     }
 
-    // #1161: a remaster, mono and stereo together, with years, are one suffix.
+    // #1161: a remaster, mono and stereo together, with years, are one suffix; the words in a title
+    // of its own are not.
     @Test
-    fun `a mono or stereo remaster suffix is stripped and noted`() {
+    fun `a mono or stereo remaster suffix is stripped and noted, and the title's own words are kept`() {
         val track = normalizer.normalize("Time of the Season - Mono Remastered", "The Zombies")
         assertEquals("Time of the Season", track.title)
         assertEquals("Mono Remastered", track.dropped)
@@ -55,10 +56,6 @@ class NormalizerTest {
         // Only the last " - " part goes, as with an edit.
         assertEquals("Song - Mono Remastered", normalizer.normalize("Song - Mono Remastered - Live", "A").title)
         assertEquals("Song - Live", normalizer.normalize("Song - Live - Mono Remastered", "A").title)
-    }
-
-    @Test
-    fun `mono or stereo as part of the title is kept`() {
         for (title in listOf(
             "Mono",
             "Stereo",
