@@ -6,6 +6,7 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.text.SourceText
 import java.time.ZoneOffset
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
@@ -28,6 +29,10 @@ object SessionMapping {
      * the repository settles it with the metadata. The year is `YEAR`, else the year `DATE` begins
      * with (`20260320T000000`, `2026-03-20`), absent when neither holds a plausible one by [clock]'s
      * date ([year]).
+     *
+     * The title, the artists and the album are cleaned as all text from players and sources is
+     * ([SourceText], #1041: no invisible characters) and cut to at most [TITLE_MAX], [ARTISTS_MAX] and
+     * [ALBUM_MAX] characters ([field]), a value left blank by the cleaning absent.
      */
     fun nowPlaying(
         player: String,
@@ -39,8 +44,8 @@ object SessionMapping {
         return title(metadata)?.let {
             NowPlaying(
                 title = it,
-                artists = metadata.text(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
-                album = metadata.text(MediaMetadata.METADATA_KEY_ALBUM),
+                artists = metadata.field(MediaMetadata.METADATA_KEY_ARTIST, ARTISTS_MAX).orEmpty(),
+                album = metadata.field(MediaMetadata.METADATA_KEY_ALBUM, ALBUM_MAX),
                 duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION).takeIf { ms -> ms > 0 }?.milliseconds,
                 player = player,
                 mediaId = metadata.text(MediaMetadata.METADATA_KEY_MEDIA_ID),
@@ -57,7 +62,7 @@ object SessionMapping {
      * call (a caller as its title, no artist) and most video apps never report it.
      */
     fun reportsMusic(metadata: MediaMetadata?): Boolean =
-        title(metadata) != null && metadata?.text(MediaMetadata.METADATA_KEY_ARTIST) != null
+        title(metadata) != null && metadata?.field(MediaMetadata.METADATA_KEY_ARTIST, ARTISTS_MAX) != null
 
     /**
      * The release's year as the player sends it: `YEAR`, else the four digits `DATE` begins with;
@@ -91,7 +96,29 @@ object SessionMapping {
 
     /** The track's title as [nowPlaying] reads it. */
     fun title(metadata: MediaMetadata?): String? =
-        metadata?.let { it.text(MediaMetadata.METADATA_KEY_TITLE) ?: it.text(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) }
+        metadata?.let {
+            it.field(MediaMetadata.METADATA_KEY_TITLE, TITLE_MAX)
+                ?: it.field(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, TITLE_MAX)
+        }
+
+    /**
+     * The most characters (UTF-16 units) of a title or an album the app keeps (#1041, from #217): a
+     * player can send a field of any length, which would go whole into every prompt, search, the
+     * history and reports. Real titles rarely pass 200, a classical movement with its catalogue
+     * number and tempo markings among the longest; 300 leaves room for those, and is what a web line
+     * is cut to. The cap also comes before the normalizer (`Normalizer.normalize`), whose patterns
+     * overflow the JVM's stack on a title of some 20,000 words after " - ".
+     */
+    const val TITLE_MAX: Int = 300
+
+    /** The most characters of an album's name ([TITLE_MAX]). */
+    const val ALBUM_MAX: Int = TITLE_MAX
+
+    /**
+     * The most characters of the artists, sent as one string: more than a title, since a classical
+     * recording can credit an orchestra, its conductor, a choir and several soloists.
+     */
+    const val ARTISTS_MAX: Int = 500
 
     /**
      * Whether [next] falls back to the start of a track (within [AT_START]) from a position
@@ -182,7 +209,11 @@ object SessionMapping {
     /** Whether [state] is playing or about to, which makes its player the one shown. */
     fun isActive(state: PlaybackState?): Boolean = state?.state in ACTIVE
 
-    /** The published queue, or null when the player publishes neither a queue nor its title. */
+    /**
+     * The published queue, or null when the player publishes neither a queue nor its title. Each
+     * item's title and subtitle (its artists) are cleaned and cut as [nowPlaying]'s, since the item
+     * after an ad is prepared as a track.
+     */
     fun queue(
         items: List<MediaSession.QueueItem>?,
         title: CharSequence?,
@@ -195,8 +226,8 @@ object SessionMapping {
                 items.orEmpty().map {
                     QueueEntry(
                         id = it.queueId,
-                        title = it.description.title?.toString(),
-                        subtitle = it.description.subtitle?.toString(),
+                        title = field(it.description.title?.toString(), TITLE_MAX),
+                        subtitle = field(it.description.subtitle?.toString(), ARTISTS_MAX),
                         mediaId = it.description.mediaId,
                     )
                 },
@@ -255,6 +286,33 @@ object SessionMapping {
 private fun String.scheme(): String = substringBefore("://", missingDelimiterValue = "").lowercase()
 
 private fun MediaMetadata.text(key: String): String? = getString(key)?.trim()?.takeIf { it.isNotEmpty() }
+
+// The text at [key] as a field ([field]).
+private fun MediaMetadata.field(
+    key: String,
+    max: Int,
+): String? = field(getString(key), max)
+
+// [text] cleaned ([SourceText]) and cut to at most [max] characters, never inside a surrogate pair,
+// then trimmed; null when nothing is left.
+private fun field(
+    text: String?,
+    max: Int,
+): String? {
+    text ?: return null
+    return SourceText
+        .clean(text)
+        .trim()
+        .capped(max)
+        .trim()
+        .takeIf { it.isNotEmpty() }
+}
+
+private fun String.capped(max: Int): String {
+    if (length <= max) return this
+    val end = if (this[max - 1].isHighSurrogate()) max - 1 else max
+    return substring(0, end)
+}
 
 /** One place the art can come from (see [SessionMapping.artSources]). */
 sealed interface ArtSource {

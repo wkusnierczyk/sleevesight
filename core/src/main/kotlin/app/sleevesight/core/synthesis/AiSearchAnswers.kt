@@ -6,6 +6,7 @@ import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.lyrics.LyricsLink
 import app.sleevesight.core.lyrics.pages
 import app.sleevesight.core.normalizer.AccentFolder
+import app.sleevesight.core.text.SourceText
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -499,9 +500,13 @@ private fun JsonObject.name(key: String): String? =
     text(key)?.let(::oneLine)?.takeIf { it.length <= AiSearchAnswers.NAME_MAX }
 
 // [text] on one line: every control character and line or paragraph separator, and each run of
-// spaces, one space.
+// spaces, one space; cleaned as text from sources is ([SourceText], #1041).
 private fun oneLine(text: String): String =
-    text.map { if (InsightPrompt.breaksLine(it)) ' ' else it }.joinToString("").replace(SPACES, " ")
+    SourceText
+        .clean(text)
+        .map { if (InsightPrompt.breaksLine(it)) ' ' else it }
+        .joinToString("")
+        .replace(SPACES, " ")
 
 private val SPACES = Regex(" {2,}")
 
