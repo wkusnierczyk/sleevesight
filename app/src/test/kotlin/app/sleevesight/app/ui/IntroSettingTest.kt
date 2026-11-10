@@ -10,7 +10,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.AppGraph
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
@@ -85,8 +87,16 @@ class IntroSettingTest {
         }
     }
 
+    /**
+     * The graph's settings in memory ([MemoryStore]), read and changed on the test's thread, the main
+     * one (#1140), as [FontSettingsTest] has them for *Font* (#606): over their file, the mirror waited
+     * on threads the main looper does not drive (DataStore's write, and the settings' collection on
+     * `Dispatchers.IO`) within [idleUntil]'s real-time limit, and twice in CI it was not reached.
+     * The file's own reads and writes are `SettingsStoreTest`'s.
+     */
     @Test
     fun theSettingIsKeptForTheNextColdStartsFirstFrame() {
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
         assertTrue("on by default", LastIntro(app).value)
         assertTrue(app.graph.introAtStart.value)
         runBlocking { app.graph.settings.update { it.copy(introAtStart = false) } }
