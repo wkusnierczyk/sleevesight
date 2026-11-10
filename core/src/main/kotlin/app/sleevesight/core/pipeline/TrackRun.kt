@@ -30,8 +30,11 @@ import kotlin.time.Instant
 /**
  * What one run is about: the track as the player reports it and normalized, and its settings;
  * [again], what an earlier run of the track gathered, when it asks again the sources that were
- * unreachable then (#192); [lookAgain], when it looks every source up afresh (#617).
+ * unreachable then (#192); [lookAgain], when it looks every source up afresh (#617); [items], the
+ * lines the song's, the artist's and the album's evidence holds beyond the track's own (#1131,
+ * [linesBeyond]), which its evidence takes after its own.
  */
+@Suppress("LongParameterList") // What the run is about, and what it starts with.
 internal class RunInput(
     val settings: Settings,
     val nowPlaying: NowPlaying,
@@ -39,6 +42,7 @@ internal class RunInput(
     val again: Gathered? = null,
     val lookAgain: LookAgain? = null,
     val before: LabelsBefore = LabelsBefore(),
+    val items: ItemLines = ItemLines(),
 )
 
 /**
@@ -400,25 +404,31 @@ internal class TrackRun(
 
     // The cited lines: the player's release, then each enabled source's evidence lines (verified,
     // or web search's kept ones), in the adapters' order, so the same retrieval gives the same ids
-    // whatever order the sources land in.
+    // whatever order the sources land in; then the lines the song's, the artist's and the album's
+    // evidence brought (#1131), those the run has not already, numbered on from its own, as *Sources*
+    // lists them.
     // The genre labels: those of the label sources switched on, combined; never evidence.
     private fun assemble(): EvidenceSet {
         val results =
             parts.adapters.mapNotNull { (state.value.sources[it.id] as? SourceState.Done)?.result }
         // The lines found in the track's language after the English ones (#902), so the English ids stay.
-        val drafts =
+        val own =
             playerLines(nowPlaying, time.clock.now()) +
                 (results.flatMap { it.evidence } + state.value.languageDrafts()).filter {
                     settings.isEnabled(
                         it.source,
                     )
                 }
-        val evidence = EvidenceSet.of(drafts, parts.hasher, state.value.knownLanguage())
+        val seen = own.mapTo(mutableSetOf(), ::triple)
+        val items = input.items.lines.filter { settings.isEnabled(it.source) && seen.add(triple(it)) }
+        val evidence = EvidenceSet.of(own + items, parts.hasher, state.value.knownLanguage())
+        val albumIds = takenIds(evidence, items.filter { it in input.items.album })
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
             val genres = labels.of(it)
             it.copy(
                 evidence = evidence,
+                albumIds = albumIds,
                 genres = genres,
                 laterLabels = labels.states(),
                 laterFound = labels.found,
@@ -456,6 +466,9 @@ internal class TrackRun(
         const val DEADLINE_REACHED: String = "GatherDeadline"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
+
+        // What tells one line from another for the run's evidence: its source, scope and words.
+        fun triple(draft: EvidenceDraft) = Triple(draft.source, draft.scope, draft.text)
 
         // Whether [before] rejected a match only for want of what MusicBrainz resolves (#1069).
         fun waitedOnMusicBrainz(before: SourceState): Boolean =

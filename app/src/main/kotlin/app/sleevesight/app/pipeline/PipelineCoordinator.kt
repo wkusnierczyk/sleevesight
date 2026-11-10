@@ -12,6 +12,7 @@ import app.sleevesight.core.pipeline.AutoWrite
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.ItemLines
 import app.sleevesight.core.pipeline.LookAgain
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
@@ -20,11 +21,20 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Instant
 
-/** A card paid for: the insight written and checked, and the evidence it cites. */
+/**
+ * A card paid for: the insight written and checked, and the evidence it cites, with [items], the lines
+ * its run took beyond the track's own (#1131), which its evidence holds: a run of its track rebuilt
+ * takes them again, and *Sources* marks the album's among them as the album's ([albumIds]), from them
+ * alone.
+ */
 data class Card(
     val insight: InsightState.Written,
     val evidence: EvidenceSet?,
-)
+    val items: ItemLines = ItemLines(),
+) {
+    /** The ids of [evidence]'s lines that are the album's, as its run took them ([ItemLines.albumIds]). */
+    val albumIds: Set<String> get() = evidence?.let(items::albumIds).orEmpty()
+}
 
 /**
  * What decides, from a run's settings, whether it writes without a tap: the causes *Reactive*
@@ -359,6 +369,16 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
+     * The song's, the artist's and the album's evidence gathered for the track under [key] holds
+     * [lines] beyond the track's own (#1131, `ItemNotes.foundLines`): what a run of it that found
+     * nothing to narrate takes into its evidence, to decide again.
+     */
+    data class ItemLinesFound(
+        val key: RunKey,
+        val lines: ItemLines,
+    ) : CoordinatorEvent
+
+    /**
      * Of run [run]'s label requests after the evidence, those of [sources] failed (#772,
      * `RunControl.labelsFailed`): sent before its labels step ends, so *Retry* may ask them again.
      */
@@ -389,13 +409,16 @@ sealed interface CoordinatorEffect {
     /**
      * Start run [run] of [nowPlaying] on the live pipeline; with [again], what the run before it
      * gathered, asking again only the sources that were unreachable (#192, `Pipeline.run`); with
-     * [lookAgain], looking every source up afresh, past the caches (#617).
+     * [lookAgain], looking every source up afresh, past the caches (#617); with [items], the lines
+     * the song's, the artist's and the album's evidence holds beyond the track's own, which its
+     * evidence takes after its own (#1131).
      */
     data class StartRun(
         val run: RunId,
         val nowPlaying: NowPlaying,
         val again: Gathered? = null,
         val lookAgain: LookAgain? = null,
+        val items: ItemLines = ItemLines(),
     ) : CoordinatorEffect
 
     /** Cancel run [run]. */
@@ -471,7 +494,9 @@ sealed interface CoordinatorEffect {
  * [withdrawals] counts the runs of such ads cancelled, so the host forgets what they showed;
  * [byClear] says the hold is a clear's, not an ad's (a clear keeps an ad's hold an ad's). [clearing]
  * counts the clears whose stores are still being wiped ([CoordinatorEvent.ClearEnded]), and
- * [lookUpAsked] says the track held is to be looked up again once none is ([released]).
+ * [lookUpAsked] says the track held is to be looked up again once none is ([released]). [found] is
+ * what the song's, the artist's and the album's evidence of a track was last found to hold beyond
+ * its own (#1131), as the host last told it.
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -503,6 +528,7 @@ data class CoordinatorState(
     val clearing: Int = 0,
     val lookUpAsked: Boolean = false,
     val withdrawals: Long = 0,
+    val found: CoordinatorEvent.ItemLinesFound? = null,
 ) {
     /**
      * The insight ledger: one entry, for the current insight track ([sameInsightTrack]), saying
@@ -544,7 +570,9 @@ data class CoordinatorState(
      * was compared with (a card written or shown in its place) and with the entry. While it is set, a
      * rewrite used new findings, whichever run makes it (one that replaced the look again's for a
      * settings change too), and updated sources besides when it writes from other evidence
-     * (`Rewriting.foundIn`, `rewriteParts`).
+     * (`Rewriting.foundIn`, `rewriteParts`). [items] are the lines beyond the track's own its card's run
+     * took (#1131, [Card.items]), kept when the card expires: a run of its written track takes them, so
+     * a rebuild finds the evidence the card was written from, and offers *Rewrite insight* beside it.
      */
     data class Ledger(
         val track: NowPlaying,
@@ -555,6 +583,7 @@ data class CoordinatorState(
         val wouldWrite: WouldWrite? = null,
         val paused: WriteSettings? = null,
         val foundNew: String? = null,
+        val items: ItemLines = ItemLines(),
     )
 
     /**
@@ -645,6 +674,8 @@ data class CoordinatorState(
      * (#724), and on every run replacing it: free, so it never writes unasked, only on a tap.
      * [evidence] the fingerprint of its evidence, once assembled (#854). [kept] is the insight its
      * question came with, kept by another AI service, model or effort (#911), until it is answered.
+     * [items] are the lines beyond the track's own it took (#1131, `CoordinatorState.found`), carried by the runs
+     * replacing it; [nothing] once it decided with no call for nothing to narrate.
      */
     data class Run(
         val id: RunId,
@@ -669,6 +700,8 @@ data class CoordinatorState(
         val retried: Boolean = false,
         val evidence: String? = null,
         val kept: Card? = null,
+        val items: ItemLines = ItemLines(),
+        val nothing: Boolean = false,
     ) {
         /**
          * What its look again (#617) found, as what a rewrite of it changed counts it (#854,
@@ -786,6 +819,29 @@ data class CoordinatorState(
                 !run.calling &&
                 run.gathered?.let { it.unreachable.isNotEmpty() || it.languageRetryable.isNotEmpty() } == true &&
                 run.lookedUp?.let { it < returns } == true
+        }
+
+    /**
+     * The lines the current run is replaced to take (#1131): those last [found] for its key, when they
+     * hold one it did not take, requests are allowed, the phone is online (as back online asks), and it
+     * decided without writing: for nothing to
+     * narrate, or, having taken lines already, by offering Write, with no model call under way and
+     * its track not written. Null otherwise: a track with its own evidence, or written, never takes them.
+     */
+    val itemsTaken: ItemLines?
+        get() {
+            val run = current ?: return null
+            val lines = found?.takeIf { it.key == run.key }?.lines ?: return null
+            val decided = run.nothing || (run.items.lines.isNotEmpty() && run.offered)
+            val taken =
+                allowed &&
+                    online &&
+                    decided &&
+                    !run.calling &&
+                    run.gathered != null &&
+                    written(run.nowPlaying) == null &&
+                    lines.lines.any { it !in run.items.lines }
+            return lines.takeIf { taken }
         }
 
     /** Whether Write is offered for the track [key]: the current run's, while it waits for a tap. */
@@ -920,6 +976,14 @@ fun sameInsightTrack(
  * ([CoordinatorState.WouldWrite], kept with it, so it holds however many replacements came
  * between); and the grant's check holds now. Else Write is offered, never written unasked:
  * Write offered before, insights off, no AI service, a setting changed since, nothing new found.
+ * Taking the item lines (#1131), after asking again: when [CoordinatorState.itemsTaken] (the song's,
+ * the artist's or the album's evidence of the current run's track holds lines beyond its own that the
+ * run did not take, `ItemLinesFound`; requests allowed; the run decided with no call for nothing to
+ * narrate, or, having taken lines, offers Write; no model call under way; the track not written), the
+ * run is replaced as back online replaces it, asking no source again, and taking those lines into its
+ * evidence. Its decision follows the same rule, the lines taken counting as lines returned: written
+ * without a tap only where the decision for nothing to narrate would have written had there been
+ * evidence; else Write is offered. A track with no such lines keeps its decision, with no call.
  * A later decision for the key never sets it: a run asking again that again finds nothing to
  * narrate keeps it under the same settings, and clears it under others; any other
  * (a Decide, a tap, a card, a rebuild's run) replaces the entry without it, and so does a report
@@ -1042,6 +1106,7 @@ fun sameInsightTrack(
  * | a preparation, current or old | StepEnded | unchanged | none |
  * | any | NetworkChanged(online) | online = it; one more return when it was offline and is online | none |
  * | the run | SourcesGathered(gathered) | what its sources ended with kept | none |
+ * | any | ItemLinesFound(key, lines) (#1131) | found = them, for their key | none |
  * | an old run | SourcesGathered | unchanged | none |
  * | the run, its sources landed | LabelsFailed(sources) (#772) | those of its label requests that failed kept with what its sources ended with (`Gathered.labelsFailed`), which *Retry* may ask again | none |
  * | otherwise | LabelsFailed | unchanged | none |
@@ -1065,6 +1130,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.ActivityStopped -> stopped(event.changingConfigurations)
             is CoordinatorEvent.BackgroundChanged -> state = state.copy(background = event.on)
             is CoordinatorEvent.PauseAutoWriteChanged -> state = state.copy(pauseAfter = event.after)
+            is CoordinatorEvent.ItemLinesFound -> state = state.copy(found = event)
             is CoordinatorEvent.WritingModeChanged,
             is CoordinatorEvent.ModeChosen,
             is CoordinatorEvent.ModeChoiceSettled,
@@ -1349,16 +1415,22 @@ class PipelineCoordinator(
         val written = state.written(report.nowPlaying)
         val key = written?.key ?: report.key
         val playing = written?.track ?: report.nowPlaying
-        state = state.copy(runs = id.value, run = CoordinatorState.Run(id, key, playing))
-        effects += CoordinatorEffect.StartRun(id, playing)
+        val items = written?.items ?: ItemLines()
+        state = state.copy(runs = id.value, run = CoordinatorState.Run(id, key, playing, items = items))
+        effects += CoordinatorEffect.StartRun(id, playing, items = items)
     }
 
     // Back online (#192): the current run is replaced by one of its key and report that asks again
-    // the sources it found unreachable, and keeps what the others found.
+    // the sources it found unreachable, and keeps what the others found. Else, with the song's, the
+    // artist's or the album's lines found for a track that found nothing to narrate (#1131), by one
+    // that asks no source again and takes them, so its insight is decided again from them likewise.
     private fun askAgain() {
-        if (!state.asksAgain) return
         val run = state.current ?: return
-        replaceAskingAgain(run, checkNotNull(run.gathered))
+        val items = state.itemsTaken
+        when {
+            state.asksAgain -> replaceAskingAgain(run, checkNotNull(run.gathered))
+            items != null -> replaceAskingAgain(run, checkNotNull(run.gathered).asking(emptySet()), items = items)
+        }
     }
 
     // A tap on *Retry* beside [sources] (#724; two on one line, #1121), for the run under [key]:
@@ -1376,31 +1448,20 @@ class PipelineCoordinator(
     }
 
     // [run] replaced by a run of its key and report that asks again what [gathered] says, keeping
-    // what the other sources found; a preparation in progress is cancelled. [retried] for a tap on
-    // *Retry*, whose run writes nothing unasked.
+    // what the other sources found, and taking [items] (#1131: the lines it took, unless new ones); a
+    // preparation in progress is cancelled. [retried] for a tap on *Retry*, whose run writes nothing
+    // unasked.
     private fun replaceAskingAgain(
         run: CoordinatorState.Run,
         gathered: Gathered,
         retried: Boolean = false,
+        items: ItemLines = run.items,
     ) {
         cancelPreparation()
         effects += CoordinatorEffect.CancelRun(run.id)
         val id = RunId(state.runs + 1)
-        // A tap shown for the run replaced, or one before it, which offered Write, may still be on
-        // its way, or be kept already: it is carried over.
-        val replacement =
-            CoordinatorState.Run(
-                id,
-                run.key,
-                run.nowPlaying,
-                again = true,
-                keepsTap = run.offered || run.keepsTap,
-                tapped = run.keepsTap && run.tapped,
-                // Once retried, a run stays so through back online's replacements (#724).
-                retried = retried || run.retried,
-            )
-        state = state.copy(runs = id.value, run = replacement)
-        effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = gathered)
+        state = state.copy(runs = id.value, run = run.askingAgain(id, retried, items))
+        effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = gathered, items = items)
     }
 
     private fun rebuild() {
@@ -1498,9 +1559,11 @@ class PipelineCoordinator(
                             run.lookAgain?.rewriting ?: state.rewrites(),
                         changed = run.lookAgain?.changed ?: (run.evidence != null && run.evidence != shown.fingerprint),
                     ),
+                // The lines its card may have been written from (#1131).
+                items = run.items,
             )
         state = state.copy(runs = id.value, run = looking)
-        effects += CoordinatorEffect.StartRun(id, run.nowPlaying, lookAgain = LookAgain(gathered))
+        effects += CoordinatorEffect.StartRun(id, run.nowPlaying, lookAgain = LookAgain(gathered), items = run.items)
         effects += CoordinatorEffect.Acted
     }
 
@@ -1643,8 +1706,8 @@ class PipelineCoordinator(
         // The run has decided: a tap kept for it has nothing left to answer.
         state =
             state.copy(
-                ledger = recorded.copy(card = kept, wouldWrite = would, paused = paused, foundNew = found),
-                run = run.copy(keepsTap = false, tapped = false),
+                ledger = recorded.recording(kept, would, paused, found),
+                run = run.copy(keepsTap = false, tapped = false, nothing = nothingToNarrate != null),
             )
     }
 
@@ -1711,7 +1774,8 @@ class PipelineCoordinator(
     }
 
     // The ledger after [run] decided, [written] or not: an entry written stays as it is, under
-    // the key its card was written under; else it is the run's.
+    // the key its card was written under; else it is the run's, with the lines it took (#1131), so a
+    // call from them that fails or is stopped leaves them for a rebuild's run of the track.
     private fun entry(
         run: CoordinatorState.Run,
         written: Boolean,
@@ -1719,7 +1783,7 @@ class PipelineCoordinator(
         val standing = state.written(run.nowPlaying)
         if (standing != null) return standing
         val shown = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }?.shown ?: run.nowPlaying
-        return CoordinatorState.Ledger(run.nowPlaying, run.key, written, shown)
+        return CoordinatorState.Ledger(run.nowPlaying, run.key, written, shown, items = run.items)
     }
 
     // What the current run may do now, decided from the whole state at once.
@@ -1830,13 +1894,14 @@ class PipelineCoordinator(
         val writes = cause != null && cause in writesOn && state.modeWrites(cause) && acted && !written
         // A key the ledger decided: a rebuild's run of it is not a track change (D5). A run that
         // asks again (#192) writes only as the decision for nothing to narrate would have, under
-        // the same settings, once a source unreachable when it was made has returned lines.
+        // the same settings, once a source unreachable when it was made has returned lines, or it
+        // took the song's, the artist's or the album's lines (#1131).
         val decided = ledger != null && ledger.key == run.key
         val would = ledger?.wouldWrite
         val asWouldHave =
             run.again &&
                 would?.settings == WriteSettings(writesOn, run.allowModel) &&
-                would.brought(run.gathered)
+                (would.brought(run.gathered) || run.items.lines.isNotEmpty())
         return writes && (!decided || asWouldHave)
     }
 }
@@ -1879,6 +1944,7 @@ internal fun CoordinatorState.clearedNow(lookUp: Boolean): CoordinatorState {
         run = null,
         ledger = null,
         prepared = null,
+        found = null,
         clears = clears + 1,
         cleared = latest?.nowPlaying,
         byClear = latest != null && !adHeld,
