@@ -45,7 +45,8 @@ import app.sleevesight.core.settings.WriteAutomatically
  * whether the track would be written by itself now ([writesItself], `PipelineView.writesItself`),
  * the [notes] it is written by, where
  * a citation goes on the track's evidence ([cite]), where a report goes ([onReport]), *Read aloud*,
- * and the note of a model found unavailable ([unavailable], [onModelSettings]).
+ * the note of a model found unavailable ([unavailable], [onModelSettings]), and *Retry* beside the
+ * sources an item's lines come from that could not be reached ([retries], #1163).
  */
 @Suppress("LongParameterList") // What an item reads and where its taps go, each on its own.
 internal class ItemContext(
@@ -59,6 +60,7 @@ internal class ItemContext(
     val unavailable: UnavailableModel? = null,
     val onModelSettings: () -> Unit = {},
     val sources: EvidenceSet? = null,
+    val retries: Retries? = null,
 ) {
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on
@@ -321,7 +323,7 @@ private fun Shown(
             WrittenFooter(item, shown, state, track, context, label)
         }
 
-        InsightState.NoEvidence -> ItemQuiet(stringResource(noEvidence(item)))
+        InsightState.NoEvidence -> NothingToWriteFrom(item, shown.evidence, context)
 
         is InsightState.Failed ->
             RetryLine(
@@ -392,6 +394,7 @@ internal fun itemContext(
     cite = cite,
     onReport = onReport,
     readAloud = actions.readAloud,
+    retries = Retries(shown.view, shown.playing, actions.askAgain),
     unavailable = state.unavailable.takeIf { settings.writeInsights },
     onModelSettings = {
         state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) } ?: actions.openSettings()

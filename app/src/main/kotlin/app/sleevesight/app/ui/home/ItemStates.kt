@@ -15,6 +15,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.ItemEvidence
 
 // The states of the song's, the artist's and the album's insights (#522) that say something of their
 // own, in the key insight's words: gathering, writing with *Stop writing*, stopped with *Write
@@ -112,6 +113,39 @@ internal fun itemWrites(
 internal fun ItemQuiet(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+// [item]'s insight with nothing to write from: while sources its lines come from could not be reached
+// (#1163: MusicBrainz, without which Last.fm's and Wikipedia's lines about the artist are not verified),
+// that, naming them, with *Retry* beside it, which asks them again, as the key insight's line does
+// (#1121); else that the sources give nothing to write it from.
+@Composable
+internal fun NothingToWriteFrom(
+    item: InsightItem,
+    evidence: ItemEvidence,
+    context: ItemContext,
+) {
+    val unanswered = evidence.unanswered
+    if (unanswered.isEmpty()) {
+        ItemQuiet(stringResource(noEvidence(item)))
+        return
+    }
+    val names = namedTogether(unanswered.map { chipName(it) })
+    RetryLine(
+        stringResource(R.string.home_source_note_unreachable, names),
+        names,
+        context.retries?.ofAll(unanswered),
+        Modifier.testTag(ITEM_UNREACHABLE_TAG),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        tag = ITEM_UNREACHABLE_RETRY_TAG,
+    )
+}
+
+/** The test tag of the line saying which sources of an item's lines could not be reached (#1163). */
+const val ITEM_UNREACHABLE_TAG: String = "item_unreachable"
+
+/** The test tag of *Retry* beside it. */
+const val ITEM_UNREACHABLE_RETRY_TAG: String = "item_unreachable_retry"
 
 /** What [item]'s insight says when the sources give nothing to write it from. */
 internal fun noEvidence(item: InsightItem): Int =
