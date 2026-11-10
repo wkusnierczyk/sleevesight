@@ -27,6 +27,65 @@ class NormalizerTest {
         }
     }
 
+    // #1161: a remaster, mono and stereo together, with years, are one suffix.
+    @Test
+    fun `a mono or stereo remaster suffix is stripped and noted`() {
+        val track = normalizer.normalize("Time of the Season - Mono Remastered", "The Zombies")
+        assertEquals("Time of the Season", track.title)
+        assertEquals("Mono Remastered", track.dropped)
+        assertEquals(listOf("drop \"Mono Remastered\""), track.notes)
+        assertEquals("the zombies|time of the season", track.lookupKey)
+        for (suffix in listOf(
+            "Stereo Remastered",
+            "Remastered Mono",
+            "Remastered Stereo",
+            "2019 Mono Remaster",
+            "2019 Stereo Remaster",
+            "Mono Remastered 2019",
+            "Remastered 2009 Mono",
+            "Stereo",
+            "stereo",
+            "MONO REMASTERED",
+            "Mono  Remastered",
+        )) {
+            val normalized = normalizer.normalize("Song - $suffix", "A")
+            assertEquals("Song", normalized.title, suffix)
+            assertEquals(suffix, normalized.dropped, suffix)
+        }
+        // Only the last " - " part goes, as with an edit.
+        assertEquals("Song - Mono Remastered", normalizer.normalize("Song - Mono Remastered - Live", "A").title)
+        assertEquals("Song - Live", normalizer.normalize("Song - Live - Mono Remastered", "A").title)
+    }
+
+    @Test
+    fun `mono or stereo as part of the title is kept`() {
+        for (title in listOf(
+            "Mono",
+            "Stereo",
+            "Stereo Love",
+            "Song - Stereo Love",
+            "Song - Mono Lake",
+            "Song - Monophonic",
+            "Song - Stereophonic",
+            "Song - 2019",
+            "Song - Remastered Love",
+            "Song-Mono Remastered",
+        )) {
+            assertEquals(title, normalizer.normalize(title, "A").title, title)
+        }
+    }
+
+    @Test
+    fun `at most six mono and remaster words are one suffix`() {
+        // The words are a bounded repeat, so matching them never recurses once per word.
+        assertEquals("Song", normalizer.normalize("Song - 2019 Mono Remastered Stereo Remaster 2020", "A").title)
+        val seven = "Song - 2019 Mono Remastered Stereo Remaster 2020 Mono"
+        assertEquals(seven, normalizer.normalize(seven, "A").title)
+        val parts = List(PARTS) { "Mono Remastered" }.joinToString(" - ")
+        val kept = "Song - $parts".removeSuffix(" - Mono Remastered")
+        assertEquals(kept, normalizer.normalize("Song - $parts", "A").title)
+    }
+
     // #1060: any trailing edit, not only a radio or single one.
     @Test
     fun `any edit suffix is stripped and noted`() {
@@ -325,4 +384,9 @@ class NormalizerTest {
         val key: String,
         val notes: List<String>,
     )
+
+    private companion object {
+        // Enough " - " parts to overflow the stack if each one took a frame.
+        const val PARTS = 20_000
+    }
 }
