@@ -68,8 +68,9 @@ class WikipediaSource(
 
     override val extractionVersion: Int = EXTRACTION_VERSION + if (check.genres) 0 else WITHOUT_GENRES_VERSION
 
-    // [ARTIST_PART], or, without genres, its counterpart at this adapter's version.
-    private val artistPart: ArtistPart = ARTIST_PART.copy(extraction = extractionVersion)
+    // [ARTIST_PART], or, without genres, its counterpart past [WITHOUT_GENRES_VERSION].
+    private val artistPart: ArtistPart =
+        ARTIST_PART.copy(extraction = ARTIST_PART_VERSION + if (check.genres) 0 else WITHOUT_GENRES_VERSION)
 
     // The identity check asks Wikidata, so a rejection depends on it too.
     override val consults: Set<SourceId> = SourceSwitch.WIKIPEDIA.sources
@@ -376,10 +377,18 @@ class WikipediaSource(
          * A resolved artist's article in the artist cache (#238), by its MusicBrainz id and the name
          * as credited, a space between ([StoredArtist]): its Wikipedia sentences and Wikidata lines,
          * or the identity check's rejection, or nothing, when no Wikidata item has the id; made with
-         * genres. Without genres, an adapter keeps its own, at its [extractionVersion].
+         * genres, at [ARTIST_PART_VERSION]. Without genres, an adapter keeps its own, that version past
+         * [WITHOUT_GENRES_VERSION].
          */
         val ARTIST_PART: ArtistPart =
-            ArtistPart("wikipedia.artist", EXTRACTION_VERSION, 1, SourceSwitch.WIKIPEDIA.sources)
+            ArtistPart("wikipedia.artist", ARTIST_PART_VERSION, 1, SourceSwitch.WIKIPEDIA.sources)
+
+        /**
+         * [ARTIST_PART]'s version: [EXTRACTION_VERSION] until 3, which it stays at since an artist's
+         * article, found through the artist's MusicBrainz id, does not depend on how a track resolves
+         * (#1129).
+         */
+        const val ARTIST_PART_VERSION: Int = 3
 
         /**
          * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
@@ -388,7 +397,8 @@ class WikipediaSource(
          * with it. 3: brackets a dropped pronunciation leaves empty are removed ([tidy], #850). 4: a
          * classical track filed under its composer, or one whose first artist MusicBrainz does not
          * credit, resolves on MusicBrainz (#1129), so a result kept against the earlier resolution's
-         * miss (a rejection for want of a MusicBrainz id) is looked up again; [ARTIST_PART] goes with it.
+         * miss (a rejection for want of a MusicBrainz id) is looked up again; [ARTIST_PART] stays
+         * ([ARTIST_PART_VERSION]).
          */
         const val EXTRACTION_VERSION: Int = 4
 
