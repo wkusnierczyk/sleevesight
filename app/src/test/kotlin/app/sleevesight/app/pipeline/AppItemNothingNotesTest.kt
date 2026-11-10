@@ -16,6 +16,7 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
@@ -60,15 +61,20 @@ class AppItemNothingNotesTest {
 
     private val teardrop = NowPlaying("Teardrop", "Massive Attack, Elizabeth Fraser", "Mezzanine", player = "p")
 
-    // *Teardrop*: a line about the song; with MusicBrainz [reached], one about the band, else none,
-    // MusicBrainz having ended unreachable.
-    private fun track(reached: Boolean): TrackState {
+    // *Teardrop*: a line about the song; with MusicBrainz [reached], one about the band (unless not
+    // [band]), else none, MusicBrainz having ended unreachable; Last.fm as [lastFm] ended, if asked.
+    private fun track(
+        reached: Boolean,
+        band: Boolean = reached,
+        lastFm: SourceState? = null,
+    ): TrackState {
         val song = HomeFixtures.draft(SourceId.WIKIPEDIA, "Teardrop is a song by Massive Attack.")
         val band =
             HomeFixtures
                 .draft(SourceId.WIKIPEDIA, "Massive Attack are an English band.", scope = Scope.ARTIST)
                 .copy(about = "Massive Attack")
-        val drafts = if (reached) listOf(song, band) else listOf(song)
+                .takeIf { band }
+        val drafts = listOfNotNull(song, band)
         val musicBrainz = HomeFixtures.done(if (reached) Outcome.SongArticle else Outcome.Unreachable)
         return HomeFixtures
             .track(
@@ -77,7 +83,7 @@ class AppItemNothingNotesTest {
                     mapOf(
                         SourceId.MUSICBRAINZ to musicBrainz,
                         SourceId.WIKIPEDIA to HomeFixtures.done(evidence = drafts),
-                    ),
+                    ) + listOfNotNull(lastFm?.let { SourceId.LASTFM to it }),
                 evidence = EvidenceSet.of(drafts, JvmHasher),
             ).copy(
                 resolution =
@@ -109,6 +115,25 @@ class AppItemNothingNotesTest {
             val ended = events.filterIsInstance<PipelineEvent.AiEnded>().single()
             assertEquals(AiOutcome.NOTHING_FOUND, ended.outcome)
             assertTrue(lines().last(), "nothing found from 0 lines, MB unreachable, 0 calls" in lines().last())
+        }
+
+    @Test
+    fun `a source not reached, then asked again and answering with nothing, gathers the artist's evidence again`() =
+        runTest {
+            val notes = notes()
+            val unreached = track(reached = true, band = false, lastFm = HomeFixtures.done(Outcome.Unreachable))
+            notes.write(unreached, InsightItem.ARTIST)
+            advanceUntilIdle()
+            val before = notes.item(unreached, InsightItem.ARTIST).first { it is ItemShown.Shown } as ItemShown.Shown
+            assertEquals(listOf(SourceId.LASTFM), before.evidence.unanswered)
+
+            // *Retry*: Last.fm answers, knowing nothing of the band. The same lines, the same artist: but
+            // no longer a source not reached, so the evidence is gathered again, naming none.
+            val answered = track(reached = true, band = false, lastFm = HomeFixtures.done(Outcome.None))
+            val after = notes.item(answered, InsightItem.ARTIST).first { it !is ItemShown.Gathering } as ItemShown.Shown
+            assertTrue(after.evidence.unanswered.isEmpty())
+            assertTrue(!after.evidence.unreachable)
+            assertEquals(0, provider.requests)
         }
 
     @Test

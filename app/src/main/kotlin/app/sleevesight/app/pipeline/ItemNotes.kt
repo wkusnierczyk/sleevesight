@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
@@ -20,6 +21,7 @@ import app.sleevesight.core.pipeline.KeptItem
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.WriteGates
 import app.sleevesight.core.pipeline.WrittenBy
@@ -322,7 +324,8 @@ class AppItemNotes(
     // so switching that on, or giving the key, gathers it again; and whether it takes the lines found in the track's
     // language, and where those are kept (`ItemInsights.takesInLanguage`, #939: *Search in the track's
     // language* off or not, and *Keep what sources said about each artist*), so switching either
-    // gathers it again.
+    // gathers it again; and the sources that did not answer on the track (#1163), which the artist's
+    // evidence names, so a retry that answers gathers it again, though it brings no line.
     private data class Gathered(
         val item: InsightItem,
         val lookupKey: String,
@@ -332,6 +335,7 @@ class AppItemNotes(
         val searchesWeb: Boolean,
         val inLanguage: Boolean,
         val keepsArtists: Boolean,
+        val unanswered: Set<SourceId>,
     )
 
     // The insights shown, by key, oldest first, at most [KEPT].
@@ -905,7 +909,15 @@ class AppItemNotes(
         insights.searchesWeb(item, now),
         insights.takesInLanguage(item, now),
         insights.takesInLanguage(item, now) && now.keepArtistResults,
+        unansweredOn(track),
     )
+
+    // The sources whose lookup on [track] ended unreachable, or failed (#1163).
+    private fun unansweredOn(track: TrackState): Set<SourceId> =
+        track.sources
+            .filterValues { state ->
+                state is SourceState.Failed || (state as? SourceState.Done)?.result?.outcome == Outcome.Unreachable
+            }.keys
 
     // [first]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
     // or written; each state shown while no *Clear history* came since it started. Before an album's
