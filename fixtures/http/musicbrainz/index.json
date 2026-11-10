@@ -405,7 +405,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/0061f7cb-a681-4701-89a4-673ea660f0b7",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,
@@ -415,7 +415,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/3d55b4e1-36f5-3cec-b702-59d1b534611e",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,
@@ -425,7 +425,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/59c21df2-f1a3-49af-98e8-30becab2a5ce",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,
@@ -435,7 +435,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/8d9cf249-1f5c-433c-a0ea-dae54cf38a7e",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,
@@ -445,7 +445,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/98cd98b6-897c-3c8c-9718-98b1206d8927",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,
@@ -455,7 +455,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/c4efc5eb-9904-309a-97a4-675a73a9494f",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,
@@ -465,7 +465,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/f17eefd3-54ad-371a-90da-488571c94f99",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,

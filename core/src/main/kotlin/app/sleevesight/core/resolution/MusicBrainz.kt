@@ -209,12 +209,18 @@ data class MbArtistSearch(
     val artists: List<MbArtist>,
 )
 
-/** A relationship between a recording or work and an artist; [type] is MusicBrainz's (`producer`, `vocal`). */
+/**
+ * A relationship between a recording or work and an artist; [type] is MusicBrainz's (`producer`, `vocal`).
+ *
+ * @property begin the relationship's begin date as MusicBrainz gives it, null when it gives none: for a
+ *   work's `composer`, when the work was composed (`1788` for Mozart's K. 545), for *Dates* (#1132).
+ */
 data class MbArtistRelation(
     val type: String,
     val artistMbid: String,
     val artistName: String,
     val attributes: List<String>,
+    val begin: String? = null,
 )
 
 /**
@@ -275,6 +281,9 @@ data class MbPerformance(
  *   gives them (#728): MusicBrainz allows them only to the sites on its lyrics whitelist, which the
  *   lyrics links check again ([app.sleevesight.core.lyrics.LyricsLinks]).
  * @property languages its languages (ISO 639-3; `zxx` for no linguistic content), empty when none.
+ * @property type MusicBrainz's work type (`Song`, `Sonata`, `Aria`), null when it gives none, as for
+ *   most movements, whose type is their [parents]' (#1178).
+ * @property parents the works it is a part of, each with its type, from the same answer.
  */
 data class MbWork(
     val mbid: String,
@@ -284,4 +293,16 @@ data class MbWork(
     val performances: List<MbPerformance>,
     val lyricsUrls: List<String> = emptyList(),
     val languages: List<String> = emptyList(),
+    val type: String? = null,
+    val parents: List<MbParentWork> = emptyList(),
+)
+
+/**
+ * A work that [MbWork] is a part of (its `parts` relationship, read backward): a movement's sonata, an
+ * aria's opera (#1178). [type] is MusicBrainz's work type (`Sonata`, `Opera`), null when it gives none.
+ */
+data class MbParentWork(
+    val mbid: String,
+    val title: String,
+    val type: String?,
 )

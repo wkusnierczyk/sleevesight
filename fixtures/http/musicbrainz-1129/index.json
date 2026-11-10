@@ -1,16 +1,6 @@
 [
  {
   "method": "GET",
-  "url": "https://musicbrainz.org/ws/2/recording/c78a085d-1421-4dac-8273-aecc911a1eb9",
-  "query": {
-   "inc": "releases+release-groups",
-   "fmt": "json"
-  },
-  "status": 200,
-  "file": "recording-c78a085d-1421-4dac-8273-aecc911a1eb9.json"
- },
- {
-  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording/e0a505da-98a7-4b76-a120-dbfb56a2ac02",
   "query": {
    "inc": "artist-credits+work-rels+artist-rels+url-rels+tags",
@@ -34,7 +24,7 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/9727cab0-f302-3b71-b937-5ccd416dd36e",
   "query": {
-   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
    "fmt": "json"
   },
   "status": 200,

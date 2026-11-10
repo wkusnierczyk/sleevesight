@@ -5631,6 +5631,67 @@
     "id": "6da229f9-b0d3-489f-b3ce-38f83cbb29ca"
    },
    "attribute-ids": {}
+  },
+  {
+   "source-credit": "",
+   "type-id": "c1dca2cd-194c-36dd-93f8-6a359167e992",
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "medley",
+   "attributes": [],
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "target-type": "work",
+   "end": null,
+   "ordering-key": 7,
+   "begin": null,
+   "work": {
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "id": "955f07b4-9278-4f10-a37c-f91a03673bc6",
+    "title": "Country Classics",
+    "type": "Song",
+    "language": "eng",
+    "iswcs": [],
+    "languages": [
+     "eng"
+    ],
+    "attributes": [],
+    "disambiguation": "K-Tel mix/medley"
+   }
+  },
+  {
+   "attributes": [
+    "translated"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "other version",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "direction": "forward",
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "begin": null,
+   "work": {
+    "languages": [
+     "nld"
+    ],
+    "iswcs": [
+     "T-031.746.702-9"
+    ],
+    "title": "Die laaielichter",
+    "type": "Song",
+    "language": "nld",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "id": "e9ee35db-f95e-401d-a569-1ebf7f23c3f3",
+    "disambiguation": "",
+    "attributes": []
+   },
+   "target-credit": "",
+   "ended": false,
+   "target-type": "work",
+   "end": null
   }
  ],
  "iswcs": [

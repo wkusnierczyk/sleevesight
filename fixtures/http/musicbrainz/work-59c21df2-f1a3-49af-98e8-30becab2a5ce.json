@@ -11064,6 +11064,118 @@
    },
    "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
    "direction": "backward"
+  },
+  {
+   "work": {
+    "type": "Song",
+    "id": "58771b2a-2be0-4fd2-9c48-46e461bce294",
+    "title": "Skybound Blues",
+    "languages": [
+     "eng"
+    ],
+    "attributes": [],
+    "disambiguation": "",
+    "language": "eng",
+    "iswcs": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6"
+   },
+   "begin": null,
+   "type": "based on",
+   "type-id": "6bb1df6b-57f3-434d-8a39-5dc363d2eb78",
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "ended": false,
+   "direction": "forward",
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-type": "work"
+  },
+  {
+   "attribute-values": {},
+   "source-credit": "",
+   "target-type": "work",
+   "work": {
+    "attributes": [],
+    "disambiguation": "",
+    "language": null,
+    "iswcs": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "type": "Song",
+    "id": "f777968d-9484-4406-bf59-bd2490399920",
+    "title": "Another Man Done Gone",
+    "languages": []
+   },
+   "begin": null,
+   "type": "other version",
+   "attribute-ids": {},
+   "end": null,
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attributes": [],
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "attribute-ids": {},
+   "end": null,
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attributes": [],
+   "direction": "forward",
+   "ended": false,
+   "target-credit": "",
+   "work": {
+    "title": "Baby Please Don't Go",
+    "languages": [
+     "eng"
+    ],
+    "type": "Song",
+    "id": "203adc98-f09f-4fe9-972b-f6d55fb1d6b7",
+    "language": "eng",
+    "iswcs": [
+     "T-070.232.857-1"
+    ],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "disambiguation": ""
+   },
+   "begin": null,
+   "type": "other version",
+   "source-credit": "",
+   "target-type": "work",
+   "attribute-values": {}
+  },
+  {
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "end": null,
+   "ended": false,
+   "target-credit": "",
+   "attributes": [
+    "translated"
+   ],
+   "direction": "forward",
+   "work": {
+    "language": "spa",
+    "iswcs": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "disambiguation": "",
+    "title": "El ovni",
+    "languages": [
+     "spa"
+    ],
+    "type": "Song",
+    "id": "67d164d9-cd9c-4402-8d8b-1ac627dc5032"
+   },
+   "begin": null,
+   "type": "other version",
+   "source-credit": "",
+   "target-type": "work",
+   "attribute-values": {}
   }
  ],
  "title": "Baby, Please Don’t Go",
