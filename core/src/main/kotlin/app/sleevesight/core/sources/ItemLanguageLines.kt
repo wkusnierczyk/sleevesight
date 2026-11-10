@@ -52,11 +52,15 @@ sealed interface LanguageSubject {
 
     /**
      * An album, as its card names it (`CardEntity.Album`): kept by its MusicBrainz release group,
-     * [group], when its name names one, else by its [title] and the track's primary [artist], folded.
+     * [group], when its name names one, else by its [title] and the track's primary [artist], folded,
+     * and its [performers] when it has them (#1130: a classical album's, `CardEntity.Album.performers`),
+     * folded, without repeats and sorted, so two recordings of one title stay apart and the order a
+     * track credits them in does not matter.
      */
     data class Album(
         val title: String,
         val artist: String,
         val group: String?,
+        val performers: List<String> = emptyList(),
     ) : LanguageSubject
 }

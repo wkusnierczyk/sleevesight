@@ -432,7 +432,8 @@ class AlbumSourceTest {
 
             val searched = checkNotNull(source.searchWeb(query))
             assertEquals(listOf("Sundown" to "Gordon Lightfoot"), web.asked)
-            assertEquals(1, webKept.keys(AlbumSource.WEB_PART).size)
+            // By the album's and the artist's names alone, as before #1130, though its group is known.
+            assertEquals(setOf("name:16:gordon lightfootsundown"), webKept.keys(AlbumSource.WEB_PART))
 
             // Found again with no search: the same lines, so the same fingerprint.
             val after = source.lookup(query)

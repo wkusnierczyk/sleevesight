@@ -253,9 +253,13 @@ class StorePipelineCache(
         }
 
     // A classical album's parts after its name (#1130): its year (empty when unknown) at a fixed
-    // place, then its performers; none for an album without performers, whose key stays as it was.
-    private fun classical(album: CardEntity.Album): List<String> =
-        if (album.performers.isEmpty()) emptyList() else listOf(album.year.orEmpty()) + album.performers
+    // place, then its performers, without repeats and sorted as folded, so the order a track credits
+    // them in never splits the key; none for an album without performers, whose key stays as it was.
+    private fun classical(album: CardEntity.Album): List<String> {
+        val fold = caches.retrieval::foldName
+        val performers = album.performers.distinctBy(fold).sortedBy(fold)
+        return if (performers.isEmpty()) emptyList() else listOf(album.year.orEmpty()) + performers
+    }
 
     private fun byName(names: List<String>): String =
         BY_NAME + names.joinToString("") { name -> caches.retrieval.foldName(name).let { "${it.length}:$it" } }

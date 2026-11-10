@@ -298,6 +298,30 @@ class StorePipelineCacheTest {
         }
 
     @Test
+    fun `a classical album's card is one whatever performers each track credits, a pop album's as before`() =
+        runBlocking {
+            // #1130: players credit a classical album's tracks each with their own performers.
+            val title = "Mozart: Piano Concertos Nos. 20 & 23"
+            val mozart = "Wolfgang Amadeus Mozart"
+            val both = listOf("Khatia Buniatishvili", "Academy of St. Martin in the Fields")
+            // By its release group: one card, whichever performers a track credits.
+            val grouped = cardKey(CardKind.ALBUM, CardEntity.Album(title, mozart, "rg-concertos", both, "2024"))
+            cache.keep(grouped, "The album [W1].")
+            val solo = CardEntity.Album(title, mozart, "rg-concertos", both.take(1), "2024")
+            assertEquals("The album [W1].", cache.card(grouped.copy(entity = solo)))
+            // By name: the performers' order and repeats do not matter.
+            val named = cardKey(CardKind.ALBUM, CardEntity.Album(title, mozart, null, both, "2024"))
+            cache.keep(named, "The album by name [W1].")
+            val reordered = CardEntity.Album(title, mozart, null, both.reversed() + both.first(), "2024")
+            assertEquals("The album by name [W1].", cache.card(named.copy(entity = reordered)))
+            // A pop album's year plays no part in its key, which is as before.
+            val sundown = cardKey(CardKind.ALBUM, CardEntity.Album("Sundown", "Gordon Lightfoot", null))
+            cache.keep(sundown, "Sundown [W1].")
+            val withYear = CardEntity.Album("Sundown", "Gordon Lightfoot", null, emptyList(), "1974")
+            assertEquals("Sundown [W1].", cache.card(sundown.copy(entity = withYear)))
+        }
+
+    @Test
     fun `a card key's entity matches its kind`() {
         val track = CardEntity.Track(sundown, 213.seconds)
         val artist = CardEntity.Artist("Gordon Lightfoot", "mb-gordon")

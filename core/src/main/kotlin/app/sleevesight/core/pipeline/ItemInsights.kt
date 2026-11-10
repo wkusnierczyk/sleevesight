@@ -486,7 +486,7 @@ class ItemInsights(
     ): ItemEvidence {
         val query = queryOf(album, settings)
         val found = albums?.let { attempt { it.lookup(query) } ?: AlbumFound(emptyList(), unreachable = true) }
-        val subject = LanguageSubject.Album(album.title, album.artist, album.group)
+        val subject = LanguageSubject.Album(album.title, album.artist, album.group, album.performers)
         val drafts =
             found?.drafts.orEmpty().filter { settings.isEnabled(it.source) && !it.aggregate } +
                 inLanguage(subject, albumInLanguage(album, track), settings)
@@ -1107,7 +1107,11 @@ class ItemInsights(
         }
         (entity(InsightItem.ALBUM, track) as? CardEntity.Album)?.let { album ->
             val found = albumInLanguage(album, own)
-            keep(lookup, LanguageSubject.Album(album.title, album.artist, album.group), found.map(::draftOf))
+            keep(
+                lookup,
+                LanguageSubject.Album(album.title, album.artist, album.group, album.performers),
+                found.map(::draftOf),
+            )
         }
     }
 
@@ -1355,7 +1359,7 @@ class ItemInsights(
         val subject =
             when (item) {
                 InsightItem.ARTIST -> query?.let { LanguageSubject.Artist(it.name, it.mbid) }
-                InsightItem.ALBUM -> album?.let { LanguageSubject.Album(it.title, it.artist, it.group) }
+                InsightItem.ALBUM -> album?.let { LanguageSubject.Album(it.title, it.artist, it.group, it.performers) }
                 InsightItem.SONG -> null
             }
         if (subject != null) renewInLanguage(subject, evidence)

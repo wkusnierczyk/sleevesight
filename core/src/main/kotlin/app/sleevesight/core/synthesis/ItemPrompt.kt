@@ -226,18 +226,19 @@ object ItemPrompt {
      * its track's title names its composer ([Subject.performers]): such a title is shared by other
      * performers' recordings of the same works ("Mozart: Piano Concertos Nos. 20 & 23" by
      * Buniatishvili in 2024, and by Shelley in 1991), and a page on one names the title and the
-     * composer too. The subject block gives the album's performers and its year where known, to check
-     * a line against. Only there: a pop album's line on a guest, or on its first release beside a
-     * reissue's year, is about the album, and its prompt stays as it was. Added without raising
+     * composer too. The subject block gives the album's performers, and its year where known as
+     * context; a reissue or remaster of the same recording is still the album. Only there: a pop
+     * album's line on a guest, or on its first release beside a reissue's year, is about the album,
+     * and its prompt stays as it was. Added without raising
      * [VERSION], as the rules on a line in the track's language and on dates were: such an album's
      * web lines, and its lines found by name, are now gathered by its performers under keys of their
      * own (`AlbumQuery.performers`), so a card written from a line on another recording is written
      * afresh.
      */
     const val ALBUM_RECORDING_RULE: String =
-        "- Other recordings of the same works share this album's title. A line about another release or " +
-            "recording of the title, by other performers or released in another year than the one in <subject>, " +
-            "is not about this album: leave it out."
+        "- Other recordings of the same works share this album's title. A line about another recording of " +
+            "these works (by other performers, or by these performers at another time) is not about this " +
+            "album: leave it out. A reissue or remaster of this same recording is this album."
 
     /**
      * The fixed rules: the key insight's as they were until its version 9 (#767), word for word, so

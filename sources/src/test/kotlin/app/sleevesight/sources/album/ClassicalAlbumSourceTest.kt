@@ -12,6 +12,7 @@ import app.sleevesight.sources.wikipedia.articleUrl
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -118,6 +119,57 @@ class ClassicalAlbumSourceTest {
                 listOf(SourceId.WIKIPEDIA),
                 composerOnly.lookup(classical.copy(performers = emptyList())).drafts.map { it.source },
             )
+        }
+
+    @Test
+    fun `a classical album's article is looked for under its first performer's name`() =
+        runTest {
+            val title = "$concertos (Khatia Buniatishvili album)"
+            val wikipedia =
+                Wikipedia(
+                    pages = mapOf(title to "Q20"),
+                    leads =
+                        mapOf(
+                            title to "$concertos is a 2024 album.",
+                        ),
+                )
+            val source =
+                AlbumSource(
+                    Groups(emptyMap()),
+                    Wikidata(concertoItems(), labels = concertoLabels),
+                    WikipediaClient(wikipedia),
+                    names,
+                )
+            assertEquals(listOf(articleUrl(title)), source.lookup(classical).drafts.map { it.url })
+        }
+
+    @Test
+    fun `a classical album is searched once whatever performers, or order, each of its tracks credits`() =
+        runTest {
+            val web = Web()
+            val webKept = MemoryArtistResults()
+            val source =
+                AlbumSource(
+                    Groups(emptyMap()),
+                    Wikidata(emptyMap()),
+                    WikipediaClient(Wikipedia()),
+                    names,
+                    web = web,
+                    webKept = webKept,
+                )
+            // By its release group: a track crediting the soloist alone finds the album's lines.
+            val grouped = classical.copy(group = "rg-concertos")
+            checkNotNull(source.searchWeb(grouped))
+            val solo = grouped.copy(performers = listOf("Khatia Buniatishvili"))
+            assertFalse(source.lookup(solo).webDue)
+            checkNotNull(source.searchWeb(solo))
+            assertEquals(1, web.asked.size)
+            // By name: the performers' order and repeats do not matter.
+            checkNotNull(source.searchWeb(classical))
+            val reordered = classical.copy(performers = classical.performers.reversed() + classical.performers)
+            assertFalse(source.lookup(reordered).webDue)
+            checkNotNull(source.searchWeb(reordered))
+            assertEquals(2, web.asked.size)
         }
 
     @Test
