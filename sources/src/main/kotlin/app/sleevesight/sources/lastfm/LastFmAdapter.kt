@@ -313,9 +313,12 @@ class LastFmAdapter(
          * Instrumental past the labels' cap (`GenreLabel.beyondCap`, #996) is an optional field,
          * not raised for: a result kept before it decodes without, so until it expires a featured
          * artist with Instrumental as a sixth tag may be taken for one without it, rather than every
-         * kept result asking Last.fm again.
+         * kept result asking Last.fm again. 5: a classical track filed under its composer, or one whose
+         * first artist MusicBrainz does not credit, resolves on MusicBrainz (#1129), and a page is
+         * verified against the artists' ids it resolves, so a result kept against the earlier miss
+         * is made again ([ANSWERS_VERSION], Last.fm's own answers, stays).
          */
-        const val EXTRACTION_VERSION: Int = 4
+        const val EXTRACTION_VERSION: Int = 5
 
         /**
          * The extraction version of what the artist cache keeps ([ARTIST_PART],
