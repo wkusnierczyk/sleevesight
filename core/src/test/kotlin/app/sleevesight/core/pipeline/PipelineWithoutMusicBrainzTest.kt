@@ -1,12 +1,17 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
@@ -19,6 +24,7 @@ import kotlinx.coroutines.test.testTimeSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlin.time.Duration
 
 /**
@@ -32,6 +38,7 @@ class PipelineWithoutMusicBrainzTest {
     private val normalizer = Normalizer(JvmAccentFolder)
     private val track = nowPlaying("Take California", "Propellerheads", album = "Decksandrumsandrockandroll")
     private val key = "propellerheads|take california"
+    private val names = NameMatcher(JvmAccentFolder)
 
     private val resolver = FakeResolver(resolution = Resolution(Outcome.Unreachable))
 
@@ -67,9 +74,9 @@ class PipelineWithoutMusicBrainzTest {
     // A control that grants every step at once and never writes.
     private fun granting() = Granted(write = false).apply { grants.values.forEach { it.complete(Unit) } }
 
-    // Runs the track with MusicBrainz unreachable, then a *Retry* of MusicBrainz that it answers.
-    private suspend fun TestScope.retried(wikipedia: FakeAdapter): TrackState {
-        val pipeline = pipeline(listOf(musicBrainz, wikipedia))
+    // Runs the track with MusicBrainz unreachable, then a *Retry* of MusicBrainz that it answers, with [other].
+    private suspend fun TestScope.retried(other: FakeAdapter): TrackState {
+        val pipeline = pipeline(listOf(musicBrainz, other))
         val first = granting()
         pipeline.run(track, first)
         val before = first.gathered.single()
@@ -101,6 +108,39 @@ class PipelineWithoutMusicBrainzTest {
             runCurrent()
             assertEquals(listOf(key, key), wikipedia.asked)
             assertEquals(Outcome.SongArticle, (state.sources[SourceId.WIKIPEDIA] as SourceState.Done).result.outcome)
+        }
+
+    // Last.fm: the artist's page verified against the resolved artist, its bio cited; with no resolution
+    // (MusicBrainz not reached), nothing to check it by, so its lines are unverified, shown, never cited.
+    private val lastFm =
+        FakeAdapter(SourceId.LASTFM) { _, resolved ->
+            val text = "The Last.fm biography of Propellerheads says: \"A duo.\""
+            val bio = listOf(line(SourceId.LASTFM, text, Scope.ARTIST))
+            if (resolved?.outcome == Outcome.SongArticle) {
+                SourceResult(Outcome.ArtistArticle, bio, Duration.ZERO)
+            } else {
+                SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO, unverified = bio)
+            }
+        }
+
+    @Test
+    fun `lines left unverified for want of MusicBrainz are judged again once it answers, and the artist has them`() =
+        runTest {
+            val state = retried(lastFm)
+            assertEquals(listOf(key, key), lastFm.asked)
+            val result = (state.sources[SourceId.LASTFM] as SourceState.Done).result
+            assertEquals(1, result.evidence.size)
+            // Wikipedia off, AI web search off: the artist's insight has the bio to write from (#1163).
+            val settings =
+                Settings(
+                    aiProvider = ProviderId.ANTHROPIC,
+                    aiWebSearch = AiWebSearch.OFF,
+                    enabledSources = Settings().enabledSources - SourceSwitch.WIKIPEDIA,
+                )
+            val items = ItemInsights(AiAccess(FakeProvider(), Secret("k")), MemoryCache(), JvmHasher, names)
+            val evidence = checkNotNull(items.evidence(InsightItem.ARTIST, state, settings))
+            assertEquals(1, evidence.evidence.lines.size)
+            assertTrue(evidence.unanswered.isEmpty())
         }
 
     @Test
