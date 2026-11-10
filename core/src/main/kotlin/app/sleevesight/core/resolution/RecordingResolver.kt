@@ -87,7 +87,19 @@ class RecordingResolver(
         duration: Duration?,
         found: List<MbRecording>,
     ): Resolution {
-        val searched = found.map { candidate(track, duration, it) }
+        val all = found.map { candidate(track, duration, it) }
+        // A title that fits only without the composer's lead counts only when none fits as the player
+        // writes it (#1129): for `Band: Song` by Band, Band's older `Song` is not their `Band: Song`.
+        val searched =
+            if (all.any { it.fitsAsWritten }) {
+                all.map {
+                    it.copy(
+                        titleSimilarity = it.writtenSimilarity,
+                    )
+                }
+            } else {
+                all
+            }
         val leaders = Leaders(musicBrainz, names)
         val confirmed =
             leaders.confirm(searched.filter { it.titleMatches && it.durationMatches && it.led.isNotEmpty() })
@@ -136,7 +148,7 @@ class RecordingResolver(
                     { it.asVariant() },
                     { c ->
                         c.jointly(
-                            track.artists
+                            track.identifying
                                 .associateWith { names.jointCredits(c.recording.credits, it) }
                                 .filterValues { it.isNotEmpty() },
                         )
@@ -155,11 +167,12 @@ class RecordingResolver(
         recording: MbRecording,
     ): Candidate {
         val length = recording.lengthMs?.milliseconds
+        val written = names.titleSimilarity(track.title, recording.title)
         val gap = if (duration == null || length == null) null else (length - duration).absoluteValue
 
         // Every matching credit's id, so two same-name artists on one recording are both seen.
         fun matching(matches: (MbCredit, String) -> Boolean): Map<String, Set<String>> =
-            track.artists
+            track.identifying
                 .associateWith { artist ->
                     recording.credits
                         .filter { matches(it, artist) }
@@ -176,8 +189,8 @@ class RecordingResolver(
             recording = recording,
             // As the player writes it or as it was searched for: `Mozart: Piano Sonata …` is MusicBrainz's
             // `Piano Sonata …` (#1129).
-            titleSimilarity =
-                listOf(track.title, track.searchTitle).distinct().maxOf { names.titleSimilarity(it, recording.title) },
+            titleSimilarity = maxOf(written, names.titleSimilarity(track.searchTitle, recording.title)),
+            writtenSimilarity = written,
             named = named,
             // A band credit counts beside a credit by name: "Alex Smith" and "Alex Smith and His
             // Orchestra" on one recording may be two artists.
@@ -196,10 +209,12 @@ class RecordingResolver(
             candidates.firstOrNull { it.titleMatches && it.durationMatches && it.creditedArtists == 0 }
                 ?: return Resolution.NONE
         val credit = creditString(conflicting.recording.credits)
+        // A performer, not a composer the title names (#1129).
+        val ours = track.identifying.firstOrNull() ?: track.primary
         return Resolution(
             outcome =
                 Outcome.Rejected(
-                    "MusicBrainz has “${conflicting.recording.title}” by $credit, not by ${track.primary}",
+                    "MusicBrainz has “${conflicting.recording.title}” by $credit, not by $ours",
                 ),
         )
     }
@@ -380,6 +395,7 @@ class RecordingResolver(
     private data class Candidate(
         val recording: MbRecording,
         val titleSimilarity: Double,
+        val writtenSimilarity: Double,
         val named: Map<String, Set<String>>,
         val led: Map<String, Set<String>>,
         val variants: Map<String, Set<String>> = emptyMap(),
@@ -458,6 +474,12 @@ class RecordingResolver(
         val parts: Set<String> get() = jointArtists.mapNotNull { it.mbid }.toSet()
 
         val titleMatches: Boolean get() = titleSimilarity >= ResolutionThresholds.TITLE_SIMILARITY
+
+        /** Whether it fits by the title as the player writes it, its length, and a track artist's credit. */
+        val fitsAsWritten: Boolean get() =
+            writtenSimilarity >= ResolutionThresholds.TITLE_SIMILARITY &&
+                durationMatches &&
+                (named.isNotEmpty() || led.isNotEmpty())
         val durationMatches: Boolean get() =
             durationGap == null ||
                 durationGap <= ResolutionThresholds.DURATION_TOLERANCE
@@ -730,6 +752,16 @@ private fun lyricsOf(
 
 // The work's relationships that credit its words (#998): a `writer` covers both words and music.
 private val WORDS_TYPES = setOf("lyricist", "librettist", "writer")
+
+// The credited artists a recording must credit to be the track's (#1129): with a composer the title
+// names and other artists besides, those others, the performers, since a recording credited to the
+// composer alone may be anyone's performance of the work; else every credited artist.
+private val NormalizedTrack.identifying: List<String>
+    get() {
+        val composer = composer?.name
+        val performers = artists.filter { it != composer }
+        return if (composer != null && performers.isNotEmpty()) performers else artists
+    }
 
 // The credited artists [RecordingResolver.resolve] searches by, in order, at most
 // [RecordingResolver.ARTIST_SEARCHES] (#1129): as the player credits them, the first first, but a

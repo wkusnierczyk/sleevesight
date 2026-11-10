@@ -126,4 +126,71 @@ class RecordingResolverArtistSearchTest {
             resolve(musicBrainz, track("Bach: Aria", "Johann Sebastian Bach, Glenn Gould"))
             assertEquals(listOf("Aria" to "Glenn Gould", "Aria" to "Johann Sebastian Bach"), musicBrainz.searched)
         }
+
+    @Test
+    fun `with performers credited, a recording credited to the composer alone is not the track's`() =
+        runTest {
+            // Gould's search finds nothing; the composer's finds an `Aria` credited to Bach alone,
+            // which may be anyone's performance.
+            val bach = "Johann Sebastian Bach"
+            val composerOnly = recording("bach-only", "Aria", bach, 200, "1990")
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(listOf(composerOnly)) }
+            val resolution = resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
+            assertNull(resolution.recordingMbid)
+            assertEquals(
+                Outcome.Rejected("MusicBrainz has “Aria” by $bach, not by Glenn Gould"),
+                resolution.outcome,
+            )
+        }
+
+    @Test
+    fun `with performers credited, a recording crediting the composer and a performer is the track's`() =
+        runTest {
+            val bach = "Johann Sebastian Bach"
+            val both =
+                recording("gould", "Aria", bach, 200, "1981")
+                    .copy(credits = listOf(credit(bach), credit("Glenn Gould")))
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(listOf(both)) }
+            val resolution = resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
+            assertEquals("gould", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `a full page credited to the composer alone gives no date to search by`() =
+        runTest {
+            val bach = "Johann Sebastian Bach"
+            val page =
+                (1..MusicBrainzLookup.SEARCH_PAGE).map { recording("bach-$it", "Aria", bach, 200, "${1950 + it}") }
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(page) }
+            resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
+            assertEquals(emptyList(), musicBrainz.beforeAsked)
+        }
+
+    @Test
+    fun `the composer alone credited, a recording credited to them is the track's`() =
+        runTest {
+            val chopin = "Frédéric Chopin"
+            val found = recording("nocturne", "Nocturne", chopin, 200, "1990")
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(listOf(found)))
+            assertEquals("nocturne", resolve(musicBrainz, track("Chopin: Nocturne", chopin)).recordingMbid)
+        }
+
+    @Test
+    fun `a title fitting as the player writes it beats an earlier one fitting only stripped`() =
+        runTest {
+            // A band named before the colon is taken for a composer; its own `Band: Song` must not lose to
+            // its older `Song`, another song.
+            val older = recording("older", "Song", "Band", 200, "1970")
+            val exact = recording("exact", "Band: Song", "Band", 200, "1990")
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(older, exact))), track("Band: Song", "Band"))
+            assertEquals("exact", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `with no recording fitting the title as written, one that fits it stripped is accepted`() =
+        runTest {
+            val stripped = recording("stripped", "Song", "Band", 200, "1970")
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(stripped))), track("Band: Song", "Band"))
+            assertEquals("stripped", resolution.recordingMbid)
+        }
 }
