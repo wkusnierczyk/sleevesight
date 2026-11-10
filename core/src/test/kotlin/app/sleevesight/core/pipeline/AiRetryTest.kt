@@ -11,6 +11,7 @@ import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.AiWebSearch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -25,9 +26,11 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.AbstractLongTimeSource
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
 
 /**
  * AI calls are asked again when they fail for a while only (#1164, *Retry when the AI fails*), as a
@@ -286,12 +289,104 @@ class AiRetryTest {
                 ).stream(request, KEY).toList()
             assertEquals(listOf<CompletionEvent>(gone), events)
             assertEquals(1, provider.starts.size)
-            assertEquals("offline", ReplyFailures.of(gone))
+            assertEquals(ReplyFailures.CONNECTION_LOST, ReplyFailures.of(gone))
             assertEquals(
                 "ai call    google model: failed, incomplete (no network, SocketException (ENETDOWN)), try 1, " +
                     "0 characters received, 0 ms, not asked again",
                 EventLine.of(heard.single()),
             )
+        }
+
+    @Test
+    fun `a gate that closes during the wait ends the tries at once, with no second request`() =
+        runTest {
+            val provider = Scripted(this, listOf(busy), answer)
+            var open = true
+            launch {
+                delay(1.seconds)
+                open = false
+            }
+            val counted = mutableListOf<Long>()
+            val events =
+                underTerms({ open }, { counted += currentTime }) {
+                    retrying(provider, 30.seconds).stream(request, KEY).toList()
+                }
+            assertEquals(listOf<CompletionEvent>(busy), events)
+            assertEquals(listOf(0L), provider.starts)
+            assertTrue(counted.isEmpty())
+            // Within a gate check of its closing, not at the end of the 2 s wait.
+            assertTrue(currentTime <= 1_250L, "ended at $currentTime ms")
+        }
+
+    @Test
+    fun `a track change during the wait sends no second request`() =
+        runTest {
+            val provider = Scripted(this, listOf(busy), listOf(busy), answer)
+            var playing = "first"
+            // The caller's gate: the track it asked for is still the one playing.
+            val asked = playing
+            launch {
+                delay(3.seconds)
+                playing = "second"
+            }
+            val events =
+                underTerms({ playing == asked }, {}) { retrying(provider, 30.seconds).stream(request, KEY).toList() }
+            assertEquals(listOf<CompletionEvent>(busy), events)
+            // The try at 2 s, the gate open; none at 6 s, the track changed at 3 s.
+            assertEquals(listOf(0L, 2_000L), provider.starts)
+        }
+
+    @Test
+    fun `each try again is counted to the caller, right before it is sent`() =
+        runTest {
+            val provider = Scripted(this, listOf(busy), listOf(busy), answer)
+            val counted = mutableListOf<Long>()
+            underTerms(
+                counted = { counted += currentTime },
+            ) { retrying(provider, 30.seconds).stream(request, KEY).toList() }
+            assertEquals(listOf(2_000L, 6_000L), counted)
+        }
+
+    @Test
+    fun `the last try, its wait shortened to the total, is made though the clock runs a little late`() =
+        runTest {
+            // A clock 1 % ahead of the waits, as a real one runs past each wait by the scheduling.
+            val late =
+                object : AbstractLongTimeSource(DurationUnit.MICROSECONDS) {
+                    override fun read(): Long = testScheduler.currentTime * 1_010
+                }
+            val provider = Scripted(this, *Array(10) { listOf(busy) })
+            AiRetry(provider, { 20.seconds }, late, NO_JITTER).stream(request, KEY).toList()
+            // After 14 s the 6 s left (less the clock's lead) are waited for one last try, near 20 s.
+            assertEquals(5, provider.starts.size, provider.starts.toString())
+            assertTrue(provider.starts.last() in 19_000L..20_000L, provider.starts.toString())
+        }
+
+    @Test
+    fun `a question's cost counts every request, a reply cut short and the answer after it`() =
+        runTest {
+            val cut =
+                CompletionEvent.Error(
+                    AiErrorKind.INCOMPLETE,
+                    breakoff = Breakoff(BreakoffCause.NO_END, Usage(9, 0)),
+                )
+            val provider = Scripted(this, listOf(cut), answer)
+            val question =
+                object : WebQuestion {
+                    override val knowledge = "KNOWLEDGE"
+                    override val query = "q"
+
+                    override fun once(pages: List<app.sleevesight.core.sources.WebPage>) = "ONCE"
+
+                    override fun agent(limit: Int) = "AGENT"
+                }
+            val counted = mutableListOf<QuestionCost>()
+            val reply =
+                WebQuestions(AiAccess(retrying(provider, 30.seconds), KEY), null)
+                    .ask(question, AiWebSearch.OFF, 3, request, counted = { counted += it })
+            assertEquals(2, provider.starts.size)
+            assertEquals(QuestionCost(calls = 2), reply.cost)
+            assertEquals(listOf(QuestionCost.CALL, QuestionCost.CALL), counted)
         }
 
     private fun TestScope.retrying(

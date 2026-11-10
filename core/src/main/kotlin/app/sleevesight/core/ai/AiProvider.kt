@@ -248,7 +248,7 @@ enum class BreakoffCause {
 
     /**
      * The network went away mid-reply: the system said it was down or out of reach
-     * (`NetError.Offline.noNetwork`, #1164). Not asked again (`AiRetry`), and said as no connection.
+     * (`NetError.Offline.noNetwork`, #1164). Not asked again (`AiRetry`); said as a connection lost.
      */
     NO_NETWORK,
 

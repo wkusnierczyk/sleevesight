@@ -50,7 +50,7 @@ internal fun AiRetryRow(
 
 /**
  * The row's description, naming the value chosen ([label], as under its stop: "for up to 30 s");
- * with *Don’t retry* ([retry] zero), "for up to this long", as there is no time to name.
+ * with *Don’t retry* ([retry] zero), that the error shows at once.
  */
 @Composable
 private fun aiRetrySummary(

@@ -312,7 +312,8 @@ class GenreReasons(
             } else {
                 { true }
             }
-        val (text, end) = stream(access, request, shows, show)
+        // Each try again of the call counted too (#1164, `AiRetry`).
+        val (text, end) = underTerms(counted = { counted(QuestionCost.CALL) }) { stream(access, request, shows, show) }
         val at = now()
         val first = outcome(end, text, key, track, evidence)
         if (first.kept) attempt { cache.keep(key, keptText(text, first.state), at) }

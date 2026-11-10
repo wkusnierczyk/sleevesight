@@ -134,7 +134,7 @@ class AiRetryThroughClientsTest {
         }
 
     @Test
-    fun `a reply cut off by the network gone, before any text, is not asked again and says no connection`() =
+    fun `a reply cut off by the network gone, before any text, is not asked again and says the connection was lost`() =
         runTest {
             var calls = 0
             val net =
@@ -156,7 +156,7 @@ class AiRetryThroughClientsTest {
             val events = retrying(AnthropicProvider(net), 30.seconds).stream(request, key).toList()
             val error = events.single() as CompletionEvent.Error
             assertEquals(BreakoffCause.NO_NETWORK, error.breakoff?.cause)
-            assertEquals("offline", ReplyFailures.of(error))
+            assertEquals(ReplyFailures.CONNECTION_LOST, ReplyFailures.of(error))
             assertEquals(1, calls)
         }
 

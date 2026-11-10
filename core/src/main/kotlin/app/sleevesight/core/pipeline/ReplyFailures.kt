@@ -17,7 +17,7 @@ object ReplyFailures {
     /** The reply ended before its end, and the client cannot tell more ([AiErrorKind.INCOMPLETE]). */
     const val INCOMPLETE: String = "incomplete"
 
-    /** The connection was lost mid-reply ([BreakoffCause.CONNECTION_LOST]). */
+    /** The connection was lost mid-reply ([BreakoffCause.CONNECTION_LOST], [BreakoffCause.NO_NETWORK]). */
     const val CONNECTION_LOST: String = "connection_lost"
 
     /** The client stopped waiting for the reply ([BreakoffCause.TIMED_OUT]). */
@@ -47,8 +47,8 @@ object ReplyFailures {
         when (error.breakoff?.cause) {
             BreakoffCause.CONNECTION_LOST -> CONNECTION_LOST
             BreakoffCause.TIMED_OUT -> TIMED_OUT
-            // No network (#1164): "no connection", as for a call that never began.
-            BreakoffCause.NO_NETWORK -> AiErrorKind.OFFLINE.name.lowercase()
+            // The network gone mid-reply (#1164): a connection lost, in the same words.
+            BreakoffCause.NO_NETWORK -> CONNECTION_LOST
             BreakoffCause.NO_END, BreakoffCause.TOO_LARGE, null -> error.kind.name.lowercase()
         }
 

@@ -7,11 +7,17 @@ import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.StopReason
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -41,9 +47,13 @@ import kotlin.time.TimeSource
  * has shown that text, and a new reply would follow it. The tries cost what they cost: a busy refusal
  * is not billed, but a reply that broke off may be, for what it had written.
  *
- * A Stop cancels the collection, and with it any wait and try. [allowance] is read once per call, as
- * it starts. [ended] hears, for the diagnostics, each try that failed (with the wait before the next,
- * if any) and each that ended other than at its reply's end ([PipelineEvent.AiTried]).
+ * A Stop cancels the collection, and with it any wait and try. The caller's [AiCallTerms], set around
+ * its call ([underTerms]), go with it: its gate, asked while waiting and right before each try again,
+ * ends the tries once it closes (the track changed, the app left); and each try again is counted to
+ * it, as the caller counted the first, so what the call cost counts every request sent. [allowance]
+ * is read once per call, as it starts. [ended] hears, for the diagnostics, each try that failed
+ * (with the wait before the next, if any) and each that ended other than at its reply's end
+ * ([PipelineEvent.AiTried]).
  */
 class AiRetry(
     private val provider: AiProvider,
@@ -58,57 +68,96 @@ class AiRetry(
     ): Flow<CompletionEvent> =
         flow {
             val total = allowance()
+            // The caller's terms for its call (`AiCallTerms`): its gate, and the count of what it pays.
+            val terms = currentCoroutineContext()[AiCallTerms] ?: AiCallTerms()
             var firstFailure: TimeMark? = null
             var attempt = 1
             while (true) {
                 val started = timeSource.markNow()
-                var received = 0
-                var passedOn = false
-                var end: CompletionEvent? = null
-                provider.stream(request, key).collect { event ->
-                    when (event) {
-                        is CompletionEvent.Delta -> {
-                            received += event.text.length
-                            passedOn = true
-                            emit(event)
-                        }
-
-                        is CompletionEvent.ToolUse -> {
-                            passedOn = true
-                            emit(event)
-                        }
-
-                        is CompletionEvent.Done -> {
-                            end = event
-                        }
-
-                        // The total runs from the first failure as it arrives, whenever the stream
-                        // closes after it.
-                        is CompletionEvent.Error -> {
-                            end = event
-                            if (firstFailure == null) firstFailure = timeSource.markNow()
-                        }
-                    }
-                }
-                val failed = end as? CompletionEvent.Error
+                // The total runs from the first failure as it arrives, whenever the stream closes after it.
+                val made = tryOnce(request, key) { if (firstFailure == null) firstFailure = timeSource.markNow() }
+                val end = made.end
                 val wait =
-                    failed?.takeIf { !passedOn && retried(it) }?.let { error ->
+                    (end as? CompletionEvent.Error)?.takeIf { !made.passedOn && retried(it) }?.let { error ->
                         nextWait(attempt, error, total - checkNotNull(firstFailure).elapsedNow())
                     }
-                tried(request, attempt, end, received, started.elapsedNow(), wait)
+                tried(request, attempt, end, made.received, started.elapsedNow(), wait)
                 if (wait == null) {
                     end?.let { emit(it) }
                     return@flow
                 }
-                delay(wait)
-                // Never a try past the total: a wait shortened to it ends on it, at the latest.
-                if (checkNotNull(firstFailure).elapsedNow() > total) {
+                // The caller's gate is asked while waiting and right before the next try: once it says
+                // no (the track changed, the app left), the wait ends and no request is sent.
+                val open = waitOpen(wait, terms)
+                // Never a try past the total, but for the scheduling's own lateness: the last wait,
+                // shortened to end on it, ends a little after it on a real clock.
+                if (!open || checkNotNull(firstFailure).elapsedNow() > total + LATE) {
                     end?.let { emit(it) }
                     return@flow
                 }
+                terms.counted()
                 attempt++
             }
         }
+
+    // How one try went: its end, how much of its text came, and whether any of it, or a tool call,
+    // was passed on.
+    private class Try {
+        var end: CompletionEvent? = null
+        var received = 0
+        var passedOn = false
+    }
+
+    // One try of [request]: its text and tool calls passed on as they come, its end held back;
+    // [failing] told as an error arrives.
+    private suspend fun FlowCollector<CompletionEvent>.tryOnce(
+        request: CompletionRequest,
+        key: Secret,
+        failing: () -> Unit,
+    ): Try {
+        val made = Try()
+        provider.stream(request, key).collect { event ->
+            when (event) {
+                is CompletionEvent.Delta -> {
+                    made.received += event.text.length
+                    made.passedOn = true
+                    emit(event)
+                }
+
+                is CompletionEvent.ToolUse -> {
+                    made.passedOn = true
+                    emit(event)
+                }
+
+                is CompletionEvent.Done -> {
+                    made.end = event
+                }
+
+                is CompletionEvent.Error -> {
+                    made.end = event
+                    failing()
+                }
+            }
+        }
+        return made
+    }
+
+    // Waits [wait], asking [terms]' gate every [GATE_CHECK] and once more at its end: false as soon as
+    // it says no.
+    @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `delay` as suspending; it is.
+    private suspend fun waitOpen(
+        wait: Duration,
+        terms: AiCallTerms,
+    ): Boolean {
+        var left = wait
+        while (left.isPositive()) {
+            val step = minOf(left, GATE_CHECK)
+            delay(step)
+            left -= step
+            if (!terms.mayPay()) return false
+        }
+        return terms.mayPay()
+    }
 
     // Whether [error] is asked again: one of [RETRIED], but not a reply cut off by the network gone.
     private fun retried(error: CompletionEvent.Error): Boolean =
@@ -166,6 +215,12 @@ class AiRetry(
         /** The first wait before asking again: 2 s, then 4, 8, 16 s, which add up to 30 s. */
         val FIRST_WAIT: Duration = 2.seconds
 
+        /** How late a try may start past the total, for the scheduling's own delay. */
+        private val LATE: Duration = 1.seconds
+
+        /** How often the caller's gate is asked while waiting. */
+        private val GATE_CHECK: Duration = 250.milliseconds
+
         /** Up to this share of each wait is added at random. */
         private const val JITTER = 0.25
 
@@ -186,3 +241,24 @@ class AiRetry(
         private val WHOLE = setOf(StopReason.END, StopReason.TOOL_USE)
     }
 }
+
+/**
+ * What an AI call's tries again ([AiRetry]) answer to, set by its caller around the call
+ * ([underTerms], #1164): [mayPay], the caller's gate for a paid step, asked while waiting and right
+ * before each try again, none made once it says no; and [counted], told of each try again as it is
+ * sent, as the caller counted the first. A call with none set is retried with no gate but its
+ * cancellation, and counts nothing.
+ */
+class AiCallTerms(
+    val mayPay: () -> Boolean = { true },
+    val counted: () -> Unit = {},
+) : AbstractCoroutineContextElement(AiCallTerms) {
+    companion object Key : CoroutineContext.Key<AiCallTerms>
+}
+
+/** [block], an AI call, under the caller's [mayPay] and with its tries again [counted] ([AiCallTerms]). */
+suspend fun <T> underTerms(
+    mayPay: () -> Boolean = { true },
+    counted: () -> Unit,
+    block: suspend () -> T,
+): T = withContext(AiCallTerms(mayPay, counted)) { block() }

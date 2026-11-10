@@ -132,6 +132,11 @@ class AiRetrySettingTest {
             description("30 s"),
         )
         assertEquals("Don’t retry", text(R.string.settings_ai_retry_none))
+        assertEquals(
+            "When your AI service is busy or the connection fails, Sleevesight shows the error at once. A longer " +
+                "wait fails less often; a shorter one tells you sooner.",
+            text(R.string.settings_ai_retry_summary_none),
+        )
         assertEquals("the connection dropped", text(R.string.home_failure_connection_failed))
         assertEquals(
             "Asking AI failed: the connection dropped.",
@@ -184,8 +189,16 @@ class AiRetrySettingTest {
             compose.waitUntil(WAIT_MS) { settings.now().aiRetry == Duration.ZERO }
             compose.waitUntil(WAIT_MS) { spoken() == "Don’t retry" }
             assertEquals("Don’t retry", shownValue())
-            // No time to name: "for up to this long".
-            compose.waitUntil(WAIT_MS) { named("this long") }
+            // Nothing asked again: the error at once.
+            compose.waitUntil(WAIT_MS) {
+                compose
+                    .onAllNodesWithText(
+                        "Sleevesight shows the error at once.",
+                        substring = true,
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
         }
     }
 
