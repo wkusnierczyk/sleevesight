@@ -266,7 +266,7 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
         <div class="screen">
           <div class="statusbar" aria-hidden="true"><span>12:30</span><svg viewBox="0 0 40 12" width="40" height="12"><path d="M1 9.5a8 8 0 0 1 12 0M3.5 7a4.5 4.5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="10" r="1.2" fill="currentColor"/><rect x="20" y="2.5" width="16" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="21.8" y="4.3" width="10" height="4.4" rx="1" fill="currentColor"/><rect x="36.6" y="5" width="1.6" height="3" rx=".6" fill="currentColor"/></svg></div>
           <span class="cam" aria-hidden="true"></span>
-          <div class="slides" aria-live="off">
+          <div class="slides">
           <div class="slide on" role="group" aria-roledescription="slide" aria-label="1 of 5: Home"><img src="assets/screenshots/home-playing.webp" width="540" height="1122" alt="Home: the playing track with its cover, and the Dates, Genres and Lyrics buttons."></div>
           <div class="slide" role="group" aria-roledescription="slide" aria-label="2 of 5: Key insight" aria-hidden="true"><img src="assets/screenshots/key-insights.webp" width="540" height="1122" alt="Key insight: a few lines on why the track is worth knowing, each fact cited."></div>
           <div class="slide" role="group" aria-roledescription="slide" aria-label="3 of 5: Genres" aria-hidden="true"><img src="assets/screenshots/genres-ai-genre.webp" width="540" height="1122" alt="Genres: the track's genres, and why it has each one."></div>
@@ -275,6 +275,7 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
           </div>
         </div>
       </div>
+      <p class="said vh" role="status"></p>
       <div class="ctl">
         <button type="button" class="pp" aria-label="Pause the slideshow"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path class="i-pause" d="M4 3h3v10H4zM9 3h3v10H9z"/><path class="i-play" d="M4 2.5v11l9-5.5z"/></svg></button>
         <div class="dots">
@@ -328,7 +329,7 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     </li>
     <li class="ex">
       <h3 class="vh">Artist</h3>
-      <div class="about"><p><b>Who the artist is</b>, and why they matter, for each artist on the track.</p><p>This example insight is based on three lines of Last.fm's biography of the band: <span class="cite L">L1</span>, <span class="cite L">L2</span> and <span class="cite L">L3</span>.</p></div>
+      <div class="about"><p><b>Who the artist is</b>, and why they matter, for the track's first artist.</p><p>This example insight is based on three lines of Last.fm's biography of the band: <span class="cite L">L1</span>, <span class="cite L">L2</span> and <span class="cite L">L3</span>.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Artist</p><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="vh">, source&nbsp;</span><span class="cite L">L1</span><span class="vh">, source&nbsp;</span><span class="cite L">L2</span><span class="vh">.&nbsp;</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the development of 1960s counterculture.<span class="vh">, source&nbsp;</span><span class="cite L">L3</span><span class="vh">.&nbsp;</span></p></div>
     </li>
     <li class="ex">
@@ -431,50 +432,49 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 {% include site-header-script.html %}
 <script>
 // The hero's slideshow: a screen every few seconds, the dots to pick one, and a button to pause.
-// It stops while the pointer or the keyboard's focus is on it, and starts paused when the system
-// asks for reduced motion.
+// It stops while the pointer is over it or the keyboard's focus is in it, and starts paused when the
+// system asks for reduced motion. A screen picked by hand (a dot, or the arrow keys) is announced;
+// the turning by itself is not.
 (function () {
   const c = document.querySelector('.carousel');
   if (!c) return;
   const slides = [...c.querySelectorAll('.slide')];
   const dots = [...c.querySelectorAll('.dot')];
   const pp = c.querySelector('.pp');
-  const live = c.querySelector('.slides');
-  let i = 0, timer = null, held = false;
+  const said = c.querySelector('.said');
+  let i = 0, timer = null, hovered = false, focused = false;
   let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   const every = 5000;
 
-  function go(n) {
-    const prev = i;
+  function go(n, byHand) {
     i = (n + slides.length) % slides.length;
     slides.forEach((s, k) => {
       s.classList.toggle('on', k === i);
-      s.classList.toggle('out', k === prev && k !== i);
-      s.toggleAttribute('aria-hidden', k !== i);
+      if (k === i) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true');
     });
     dots.forEach((d, k) => { if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+    if (byHand) said.textContent = slides[i].getAttribute('aria-label');
   }
   function arm() {
     clearInterval(timer);
-    timer = playing && !held ? setInterval(() => go(i + 1), every) : null;
+    timer = playing && !hovered && !focused ? setInterval(() => go(i + 1), every) : null;
   }
   function set(p) {
     playing = p;
     c.classList.toggle('paused', !p);
     pp.setAttribute('aria-label', p ? 'Pause the slideshow' : 'Play the slideshow');
-    live.setAttribute('aria-live', p ? 'off' : 'polite');
     arm();
   }
   pp.addEventListener('click', () => set(!playing));
-  dots.forEach((d, k) => d.addEventListener('click', () => { go(k); arm(); }));
+  dots.forEach((d, k) => d.addEventListener('click', () => { go(k, true); arm(); }));
   c.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight') { go(i + 1); arm(); }
-    if (e.key === 'ArrowLeft') { go(i - 1); arm(); }
+    if (e.key === 'ArrowRight') { go(i + 1, true); arm(); }
+    if (e.key === 'ArrowLeft') { go(i - 1, true); arm(); }
   });
-  c.addEventListener('mouseenter', () => { held = true; arm(); });
-  c.addEventListener('mouseleave', () => { held = false; arm(); });
-  c.addEventListener('focusin', () => { held = true; arm(); });
-  c.addEventListener('focusout', e => { if (!c.contains(e.relatedTarget)) { held = false; arm(); } });
+  c.addEventListener('mouseenter', () => { hovered = true; arm(); });
+  c.addEventListener('mouseleave', () => { hovered = false; arm(); });
+  c.addEventListener('focusin', () => { focused = true; arm(); });
+  c.addEventListener('focusout', e => { if (!c.contains(e.relatedTarget)) { focused = false; arm(); } });
   go(0);
   set(playing);
 })();
