@@ -566,9 +566,10 @@ class RecordingResolver(
         /**
          * At most this many searches by artist for a track (#1129): the first that finds something
          * is used. Each is one MusicBrainz request, a second apart, so a track MusicBrainz does not
-         * have costs at most two more than the one search it cost before.
+         * have costs at most three more than the one search it cost before. Four, so a classical
+         * credit of a composer, a soloist, an orchestra and a conductor searches the composer too, last.
          */
-        const val ARTIST_SEARCHES: Int = 3
+        const val ARTIST_SEARCHES: Int = 4
 
         /** MusicBrainz's relationship types that name someone performing on a recording. */
         val PERFORMER_TYPES: Set<String> =

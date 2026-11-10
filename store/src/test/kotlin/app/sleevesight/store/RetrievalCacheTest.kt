@@ -431,8 +431,9 @@ class RetrievalCacheTest {
         )
     }
 
-    // #1129: MusicBrainz is searched by the credited artists in order, at most three, so the order
-    // of the artists after the first can change what the track resolves to.
+    // #1129: MusicBrainz is searched by the credited artists in order, at most four, and the first
+    // search that finds something decides, so the order of the artists after the first can change
+    // what the track resolves to.
     @Test
     fun `the track key keeps the credited artists in the player's order, a card's entity key sorts them`() {
         val credited = normalizer.normalize("Song", "A, B, C, D")

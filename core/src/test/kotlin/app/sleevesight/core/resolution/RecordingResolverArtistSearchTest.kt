@@ -54,12 +54,12 @@ class RecordingResolverArtistSearchTest {
         }
 
     @Test
-    fun `the searches by artist stop at three, however many artists are credited`() =
+    fun `the searches by artist stop at four, however many artists are credited`() =
         runTest {
             val musicBrainz = FakeMusicBrainz(nothing)
             val resolution = resolve(musicBrainz, track("Song", "A, B, C, D, E"))
             assertEquals(Outcome.None, resolution.outcome)
-            assertEquals(listOf("A", "B", "C"), musicBrainz.searched.map { it.second })
+            assertEquals(listOf("A", "B", "C", "D"), musicBrainz.searched.map { it.second })
             assertEquals(RecordingResolver.ARTIST_SEARCHES, musicBrainz.searched.size)
         }
 
@@ -224,5 +224,13 @@ class RecordingResolverArtistSearchTest {
             val exact = recording("exact", written, "Band", 200, "1990")
             val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(older, exact))), track(written, "Band"))
             assertEquals("exact", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `a composer, a soloist, an orchestra and a conductor are all searched, the composer last`() =
+        runTest {
+            val musicBrainz = FakeMusicBrainz(nothing)
+            resolve(musicBrainz, track("Mozart: Requiem", "$mozart, Soloist, Orchestra, Conductor"))
+            assertEquals(listOf("Soloist", "Orchestra", "Conductor", mozart), musicBrainz.searched.map { it.second })
         }
 }

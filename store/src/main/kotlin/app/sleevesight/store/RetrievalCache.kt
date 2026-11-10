@@ -144,7 +144,7 @@ class RetrievalCache internal constructor(
      * is ([Normalizer.foldForKey]), so equivalent spellings (NFC and NFD, any case) give one key. The
      * adapters read the artists (each is looked up, and verified) and the work (web search filters
      * on it), so "Song (feat. X)" and "Song" get entries of their own. The order counts: MusicBrainz
-     * is searched by the artists one at a time, in that order, up to a cap (#1129), so `A, B, C, D`
+     * is searched by the artists one at a time, in that order, up to four (#1129), so `A, B, C, D`
      * and `A, D, B, C` may resolve differently. Then the length the player
      * reports, [duration], in whole seconds, or `-` when it reports none: resolution chooses the
      * recording by its length, so the same song at another length may resolve to another recording.
