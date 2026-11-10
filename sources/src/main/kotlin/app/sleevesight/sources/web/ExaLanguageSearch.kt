@@ -132,13 +132,13 @@ internal object ExaLanguageQuery {
         val native = nativeTrack(query, items)
         val work = items.comes.firstNotNullOfOrNull { it.label?.takeIf(String::isNotBlank) } ?: query.track.from
         val artists = native.artists.filter { it.isNotBlank() }
-        val names = (listOf("\"${native.title}\"") + listOfNotNull(work) + artists).joinToString(" ")
+        val names = (listOf("\"${native.searchTitle}\"") + listOfNotNull(work) + artists).joinToString(" ")
         return ExaSearchRequest(
             query = "$names, ${query.language.song}",
             contents =
                 ExaContents(
                     ExaHighlights(
-                        query = (listOfNotNull(native.title, work) + artists).joinToString(" "),
+                        query = (listOfNotNull(native.searchTitle, work) + artists).joinToString(" "),
                         maxCharacters = ExaSearchRequest.HIGHLIGHT_CHARACTERS,
                     ),
                 ),

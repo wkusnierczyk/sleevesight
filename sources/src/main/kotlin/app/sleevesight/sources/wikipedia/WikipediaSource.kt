@@ -492,9 +492,11 @@ class WikipediaSource(
          * The article titles a song would have, most specific first: `Title (Artist song)`,
          * `Title (song)`, `Title`; for the title as given, in Wikipedia's casing (small words in
          * lowercase), and without a leading `The`. Wikipedia's redirects cover most other spellings.
+         * The title as searched ([NormalizedTrack.searchTitle], #1179): without a composer's lead,
+         * which no article's title has.
          */
         fun songTitles(track: NormalizedTrack): List<String> {
-            val title = track.title.trim()
+            val title = track.searchTitle.trim()
             if (title.isEmpty()) return emptyList()
             val bases =
                 listOf(

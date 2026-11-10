@@ -1,5 +1,7 @@
 package app.sleevesight.core.model
 
+import app.sleevesight.core.text.JS_WHITESPACE_CLASS
+
 /**
  * A track as sources name it: the song's plain title and its credited artists, with what
  * normalization removed kept as [from], [variant] and [notes] (`design/design.md`, *Normalizer*).
@@ -33,8 +35,10 @@ data class NormalizedTrack(
     val titleArtists: List<String> = emptyList(),
 ) {
     /**
-     * The title MusicBrainz is searched by: without a leading [composer] (`Mozart: `), which
-     * MusicBrainz's titles do not have and a phrase search would need (#1129); else [title].
+     * The title the sources are searched by: without a leading [composer] (`Mozart: `), which
+     * MusicBrainz's titles and the pages on the music do not have and a phrase search would need
+     * (#1129, #1179); else [title]. Last.fm and LRCLIB are asked by [title] still: they keep the
+     * names the players send, the composer's lead included (`design/classical.md`).
      */
     val searchTitle: String
         get() =
@@ -42,6 +46,45 @@ data class NormalizedTrack(
                 ?.let { title.removePrefix(it.prefix) }
                 ?.takeIf { it.length < title.length && it.isNotBlank() }
                 ?: title
+
+    /**
+     * The work a [searchTitle] of the shape `<work>: <movement>` names (#1179): the part before its
+     * first colon, whatever follows it (`K. 545: II. Andante`, `K. 545:II. Andante`), but for a colon
+     * a digit follows, which is a catalogue number's (Hoboken's `Hob. I:94`), without a nickname in
+     * quotes at its end, in any of the usual pairs (`"…"`, `“…”`, `„…“`, `‚…‘`, `‘…’`, `«…»`, `»…«`):
+     * `Piano Sonata No. 16 in C Major, K. 545` of `… K. 545 "Sonata facile": II. Andante`, so that a
+     * page on the work, which names no movement, can be told to be about the track. Only for a title
+     * searched without its [composer] ([searchTitle] is not [title]), and only a work with a digit in
+     * it, a number or a catalogue number: one without (`Symphony` of `Symphony "Surprise": II.
+     * Andante`, `Star Wars` of `Star Wars: Main Title`) is too generic to stand in for the track.
+     * Null for any other title, for one with no such colon or nothing but whitespace after it, and
+     * for a work with no digit.
+     */
+    val searchWork: String?
+        get() {
+            val search = searchTitle
+            val work =
+                WORK.find(search)?.takeIf {
+                    search != title && search.substring(it.range.last + 1).isNotBlank()
+                }
+            return work
+                ?.groupValues
+                ?.get(1)
+                ?.replace(NICKNAME, "")
+                ?.trim()
+                ?.trimEnd(',')
+                ?.trim()
+                ?.takeIf { part -> part.any { it.isDigit() } }
+        }
+
+    /**
+     * The key of what a search by [searchTitle] found and is kept (#1179: a song's web lines): for a
+     * title searched without its [composer], the [lookupKey] and a mark of that after a line break,
+     * which no lookup key has, so what a search by the whole title found is not served for it; else
+     * the lookup key itself, so no other track's kept results change.
+     */
+    val searchKey: String
+        get() = if (searchTitle == title) lookupKey else "$lookupKey\n$SEARCH_TITLE_MARK"
 
     /**
      * The performers (#1129): with a [composer] the title names, the credited artists the title does
@@ -61,6 +104,31 @@ data class NormalizedTrack(
      */
     val subjectNames: List<String>
         get() = listOfNotNull(title, from) + artists
+
+    private companion object {
+        // The work part of a search title: the text before its first colon that no digit follows
+        // (`Hob. I:94` is a catalogue number). No braces: ICU reads the patterns as the JVM does.
+        val WORK = Regex("^((?:[^:]|:(?=[0-9]))+):")
+
+        // A quoted nickname, each opening mark with the closing marks its languages pair it with:
+        // straight; English “…” and ‘…’; German and Polish „…“ (or „…”) and ‚…‘; French «…»; and
+        // the reversed »…« of German and Danish.
+        val QUOTED =
+            listOf(
+                "\"[^\"]*\"",
+                "\u201C[^\u201C\u201D]*\u201D",
+                "\u201E[^\u201C\u201D\u201E]*[\u201C\u201D]",
+                "\u201A[^\u2018\u2019\u201A]*[\u2018\u2019]",
+                "\u2018[^\u2018\u2019]*\u2019",
+                "\u00AB[^\u00AB\u00BB]*\u00BB",
+                "\u00BB[^\u00AB\u00BB]*\u00AB",
+            ).joinToString("|")
+
+        // A quoted nickname at the end of a work: ` "Sonata facile"`, ` „Jupiter“`.
+        val NICKNAME = Regex("$JS_WHITESPACE_CLASS*(?:$QUOTED)$JS_WHITESPACE_CLASS*$")
+
+        const val SEARCH_TITLE_MARK = "search-title"
+    }
 }
 
 /**

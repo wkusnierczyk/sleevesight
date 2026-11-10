@@ -43,7 +43,7 @@ internal class SongQuestion(
         get() = prompt(asked.evidence)
 
     override val query: String
-        get() = songReviewQuery(track.normalized.title, track.normalized.primary)
+        get() = songReviewQuery(track.normalized.searchTitle, track.normalized.primary)
 
     // No names ([WebQuestion.subjectNames]): a page is judged as it came, a part naming only the song
     // included, before [line] cleans it.

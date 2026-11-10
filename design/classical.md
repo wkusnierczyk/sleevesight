@@ -43,6 +43,27 @@ behind #1131. Catalogue numbers differ between services too (Spotify `FWV 8`, Mu
 for Franck's sonata), which a title-similarity match should tolerate; not filed, and out of #1179's
 scope.
 
+Done so in #1179, only for a title whose composer's lead the normalizer found (`composer` set):
+the track web search, Wikipedia's song titles, the Genius search link, the song's own search (in
+English and in the track's language), the language search, the AI's song question and the AI's
+genre web searches (the genre reason's, `ReasonQuestion.query`, and the genres list's,
+`GenreLists.genresQuery`) search by `searchTitle`. The track web search also quotes only the work
+part (`NormalizedTrack.searchWork`: the searched title before its first colon, but for one a digit
+follows as in `Hob. I:94`, a quoted nickname left out, `Piano Sonata No. 16 in C Major, K. 545`;
+none when what is left has no digit, a number or a catalogue number, as `Symphony` of `Symphony
+"Surprise"` or `Star Wars` would be too generic), and its filter (`RecordingFilter.isAbout`) takes a page that names the title as searched or the work, and
+still a credited artist by full name, as before: a page on the sonata naming Buniatishvili, or
+naming Wolfgang Amadeus Mozart, counts for the Song insight; one on another sonata does not. Every
+other title is searched exactly as before (`Star Wars: Main Title`). Two sources keep the whole
+title on purpose: **Last.fm** and **LRCLIB** hold the names the players send, the lead included.
+Checked 2026-11-10: Last.fm has a track page with tags (`classical`, `instrumental`) for
+`Mozart: Piano Sonata No. 16 …` by Wolfgang Amadeus Mozart and none for the title without the lead;
+LRCLIB's `get` finds Buniatishvili's recording by the whole title, album and length, and nothing by
+the title without the lead. The song's kept web lines are keyed by `NormalizedTrack.searchKey`,
+which differs from the lookup key only for such a title, so only its lines are searched again once;
+the track web search's results live a day, and Wikipedia's were asked again after 0.6.3 anyway
+(#1176 raised its extraction version).
+
 ### Work and recording: the cover/original logic
 
 Once #1129 resolves K. 545 (`e0a505da-…`), the recording is marked a cover with a 1949 recording by

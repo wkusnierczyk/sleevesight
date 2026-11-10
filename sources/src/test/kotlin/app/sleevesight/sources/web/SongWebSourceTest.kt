@@ -64,6 +64,30 @@ class SongWebSourceTest {
         }
 
     @Test
+    fun `a title searched without its composer's lead keeps its lines apart, so earlier ones are searched again`() =
+        runTest {
+            val k545 =
+                SongWebQuery(
+                    Normalizer(JvmAccentFolder).normalize(
+                        "Mozart: Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante",
+                        "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
+                    ),
+                )
+            // Kept by 0.6.3's search, by the whole title, under the track's lookup key.
+            val kept = MemoryArtistResults()
+            val before = listOf(EvidenceDraft(SourceId.WEB, Scope.WEB, "A listing.", "https://example.com/old", AT))
+            kept.keep(SongWebSource.PART, k545.track.lookupKey, KeptDrafts.encode(before))
+            val web = Web()
+            val source = SongWebSource(web, kept)
+            assertNull(source.kept(k545))
+            assertNotNull(source.search(k545))
+            assertEquals(1, web.searches)
+            assertEquals(setOf(k545.track.lookupKey, k545.track.searchKey), kept.keys(SongWebSource.PART))
+            // Any other track's key is its lookup key, as before (the test above).
+            assertEquals(song.track.lookupKey, song.track.searchKey)
+        }
+
+    @Test
     fun `lines kept before Exa's references were decoded are kept again unless they hold one`() =
         runTest {
             val now = MemoryArtistResults()

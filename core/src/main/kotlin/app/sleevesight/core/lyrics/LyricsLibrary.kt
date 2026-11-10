@@ -49,7 +49,9 @@ data class LibraryQuery(
          * match not held to the track's length could be another recording's, and drop a real
          * Instrumental. Null too when normalizing the title removed what may tell one mix from another
          * ([removedVersion]): "Song - Off Vocal Version" would be asked for as "Song", whose vocal
-         * mix, of the same album and length, LRCLIB would give.
+         * mix, of the same album and length, LRCLIB would give. By the whole title, a composer's lead
+         * included (`NormalizedTrack.searchTitle` leaves it out, #1179): LRCLIB keeps the names the
+         * players give, and has Buniatishvili's K. 545 as `Mozart: Piano Sonata No. 16 …` only.
          */
         fun of(
             track: NormalizedTrack,

@@ -12,7 +12,8 @@ import kotlin.time.Instant
 /**
  * The web lines about a song the other sources only list (#958; `design/architecture.md`, *Source
  * adapters*), for the song's insight under *Key insights*: the pages a web search for the song found,
- * kept per track ([PART]), by its lookup key, as an artist's are per artist ([ArtistWebSource]) and in
+ * kept per track ([PART]), by its search key (`NormalizedTrack.searchKey`: its lookup key, marked for a
+ * title searched without its composer's lead, #1179), as an artist's are per artist ([ArtistWebSource]) and in
  * the same way: whatever *Keep what sources said about each artist* says, for as long as the song's
  * insight is kept, counted from the last card written from them ([renew]), "found nothing" included. A
  * search that fails keeps nothing, and is due again at the next write. Never throws but for
@@ -24,7 +25,7 @@ class SongWebSource(
 ) : SongWebLookup {
     private val lines = KeptWebLines(PART, kept, BEFORE_DECODING)
 
-    override suspend fun kept(song: SongWebQuery): List<EvidenceDraft>? = lines.kept(song.track.lookupKey)
+    override suspend fun kept(song: SongWebQuery): List<EvidenceDraft>? = lines.kept(song.track.searchKey)
 
     override suspend fun search(
         song: SongWebQuery,
@@ -33,27 +34,29 @@ class SongWebSource(
         mayPay: () -> Boolean,
     ): List<EvidenceDraft>? =
         web?.let { engine ->
-            lines.search(song.track.lookupKey, keeping, mayPay) { engine.search(song, sent, mayPay) }
+            lines.search(song.track.searchKey, keeping, mayPay) { engine.search(song, sent, mayPay) }
         }
 
     override suspend fun keep(
         song: SongWebQuery,
         lines: List<EvidenceDraft>,
-    ) = this.lines.keep(song.track.lookupKey, lines)
+    ) = this.lines.keep(song.track.searchKey, lines)
 
     override suspend fun pageLines(song: SongWebQuery): (WebPage, Instant) -> EvidenceDraft? =
         web?.pageLines(song) ?: { _, _ -> null }
 
-    override suspend fun renew(song: SongWebQuery) = lines.renew(song.track.lookupKey)
+    override suspend fun renew(song: SongWebQuery) = lines.renew(song.track.searchKey)
 
     companion object {
         /**
-         * A song's web lines (#958), by the track's lookup key: what a web search for it found, the
+         * A song's web lines (#958), by the track's search key: what a web search for it found, the
          * app's or the AI service's, none included, kept whatever *Keep what sources said about each
          * artist* says (`PipelineWiring.TRACK_ONLY_PARTS`), and as long as the song's insight written from
          * them ([ArtistPart.keptAsHistory]: *Keep history for*), so its card's key stays the same across days.
          * Extraction 2 (#1165): Exa's text with its HTML character references decoded
          * (`ExaWebSearch.EXTRACTION_VERSION` 4), so a song's lines kept before are searched again.
+         * Not raised for #1179's search by the title without a composer's lead: only such a track's
+         * key changes (`NormalizedTrack.searchKey`), so only its lines are searched again.
          */
         val PART: ArtistPart =
             ArtistPart("song.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)

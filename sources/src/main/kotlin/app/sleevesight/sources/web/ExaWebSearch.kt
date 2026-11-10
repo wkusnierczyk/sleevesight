@@ -434,22 +434,37 @@ internal data class ExaSearchRequest(
          * would list them. Exa's search is neural, so a phrase reads better than keywords; the
          * quotes keep a title made of common words together. The track credits an artist: the
          * adapter sends nothing otherwise.
+         *
+         * A title that leads with its composer is searched without the lead ([NormalizedTrack.searchTitle],
+         * #1179), and with a work part ([NormalizedTrack.searchWork]) only that is quoted, the rest
+         * following it, since a page on the music names the work and seldom the movement as the
+         * player titles it: `"Piano Sonata No. 16 in C Major, K. 545" "Sonata facile": II. Andante by
+         * Wolfgang Amadeus Mozart, Khatia Buniatishvili and Academy of St. Martin in the Fields, song`.
          */
         fun of(track: NormalizedTrack): ExaSearchRequest {
             val artists = track.artists.filter { it.isNotBlank() }
             val byline = " by ${listed(artists)}"
             val from = track.from?.let { " from $it" }.orEmpty()
+            val title = track.searchTitle
+            val named = track.searchWork?.let { work -> "\"$work\" ${afterWork(title, work)}" } ?: "\"$title\""
             return ExaSearchRequest(
-                query = "\"${track.title}\"$from$byline, song",
+                query = "$named$from$byline, song",
                 contents =
                     ExaContents(
                         ExaHighlights(
-                            query = (listOfNotNull(track.title, track.from) + artists).joinToString(" "),
+                            query = (listOfNotNull(title, track.from) + artists).joinToString(" "),
                             maxCharacters = HIGHLIGHT_CHARACTERS,
                         ),
                     ),
             )
         }
+
+        // What [title] says after its [work]: the nickname and the movement, the colon or comma
+        // between them and the work left out (`II. Romance` of `…, K.466: II. Romance`).
+        private fun afterWork(
+            title: String,
+            work: String,
+        ): String = title.removePrefix(work).trimStart { it == ':' || it == ',' || it.isWhitespace() }
 
         // [artists] as a sentence lists them: "A", "A and B", "A, B and C".
         private fun listed(artists: List<String>): String =
