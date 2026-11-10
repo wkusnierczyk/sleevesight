@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -22,6 +23,7 @@ import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.WriteGates
 import app.sleevesight.core.pipeline.WrittenBy
+import app.sleevesight.core.pipeline.linesBeyond
 import app.sleevesight.core.pipeline.rewriteParts
 import app.sleevesight.core.pipeline.writtenBy
 import app.sleevesight.core.resolution.NameMatcher
@@ -168,6 +170,14 @@ interface ItemNotes {
      * *Sources* lists beside the track's, its lines the track has already once.
      */
     fun songEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
+
+    /**
+     * The lines the song's, the artist's and the album's evidence gathered for [track] holds beyond the
+     * track's own (#1131, `linesBeyond`), as they come: what *Sources* lists after the track's lines, and
+     * what *Key insights* takes once the track's own found nothing to narrate. Null while the track's
+     * own evidence is not in.
+     */
+    fun foundLines(track: TrackState): Flow<List<EvidenceDraft>?> = flowOf(null)
 
     /**
      * Whether [item]'s insight is being written for what it is about on [track] (its entity, #948):
@@ -640,6 +650,21 @@ class AppItemNotes(
 
     // The song's lines gathered for [track], the web's for a song the sources only list among them (#958).
     override fun songEvidence(track: TrackState): Flow<EvidenceSet?> = gatheredLines(track, InsightItem.SONG)
+
+    // The lines beyond the track's own evidence under the settings now (`ItemInsights.ownEvidence`, not
+    // [TrackState.evidence], which holds those a run took from here already), in *Sources*' order: the
+    // album's, the artist's, then the song's.
+    override fun foundLines(track: TrackState): Flow<List<EvidenceDraft>?> =
+        combine(
+            albumEvidence(track),
+            artistEvidence(track),
+            songEvidence(track),
+            parts,
+            settings,
+        ) { album, artist, song, made, now ->
+            val own = if (made != null && now != null) insightsOf(made).ownEvidence(track, now) else null
+            own?.let { linesBeyond(it.lines, listOf(album, artist, song)) }
+        }.distinctUntilChanged()
 
     // [item]'s lines gathered for [track], and what it is about as it names it now (its entity).
     private fun gatheredLines(

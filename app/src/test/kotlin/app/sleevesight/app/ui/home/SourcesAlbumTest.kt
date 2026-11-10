@@ -63,6 +63,17 @@ class SourcesAlbumTest {
     }
 
     @Test
+    fun theAlbumsLinesARunTookStillSayAlbumAndAreListedOnce() {
+        // A run that found nothing to narrate took the album's lines into its evidence (#1131).
+        val before = withAlbum(track, album)
+        val took = checkNotNull(before.evidence)
+        val taken = took.ids.toSet() - track.ids.toSet()
+        val shown = withAlbum(took, album, taken = taken)
+        assertEquals(took.ids, checkNotNull(shown.evidence).ids)
+        assertEquals(before.album, shown.album)
+    }
+
+    @Test
     fun theArtistsWebLinesAreMixedInByTheirSourceAboutTheArtistNotTheAlbum() {
         // The web search's lines for an artist the sources miss (#912), about the artist.
         val artist =

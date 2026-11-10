@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -346,6 +348,27 @@ class PipelineHost(
      * AI*'s automatic searches start only then (#773, `AutoSearches`).
      */
     val onScreen: Flow<Boolean> = snapshot.map { it.visible }.distinctUntilChanged()
+
+    /**
+     * Follows the lines [found] gives (`ItemNotes.foundLines`) for the track the view shows, once its
+     * evidence is in, and tells the coordinator (#1131): a run of the track that found nothing to
+     * narrate is decided again with them. Followed afresh only when what they are found from changes
+     * (the report, the resolution, the sources), not as the insight is written. Runs until cancelled.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    suspend fun followItemLines(found: (TrackState) -> Flow<List<EvidenceDraft>?>) {
+        view
+            .map { it.track?.takeIf { track -> track.gathered && track.evidence != null } }
+            .distinctUntilChangedBy { track ->
+                track?.let { listOf(it.nowPlaying, it.normalized, it.resolution, it.sources, it.inLanguage) }
+            }.flatMapLatest { track ->
+                track?.let { shown ->
+                    val key = RunKey.of(normalizer, shown.nowPlaying)
+                    found(shown).filterNotNull().map { CoordinatorEvent.ItemLinesFound(key, it) }
+                } ?: emptyFlow()
+            }.distinctUntilChanged()
+            .collect { queue.send(it) }
+    }
 
     /**
      * Whether the song's, the artist's or the album's insight (#522) may make its call now, asked
@@ -652,7 +675,7 @@ class PipelineHost(
         handle.job =
             current.scope.launch(epoch.mark()) {
                 try {
-                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain)
+                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain, effect.items)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (

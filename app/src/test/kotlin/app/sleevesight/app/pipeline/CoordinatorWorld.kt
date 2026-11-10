@@ -156,6 +156,14 @@ internal class World {
      */
     var evidenceText = "Evidence 1."
 
+    /**
+     * The runs started taking the song's, the artist's or the album's lines (#1131), by title, and
+     * what they took: such a run finds something to narrate.
+     */
+    val tookItems = mutableListOf<String>()
+    val itemsTaken = mutableListOf<List<EvidenceDraft>>()
+    private val withItems = HashSet<RunId>()
+
     /** The runs started to look again (#617), by title, and what the run before them gathered. */
     val lookedAgain = mutableListOf<String>()
     val lookedAgainBefore = mutableListOf<Gathered>()
@@ -246,6 +254,11 @@ internal class World {
         effect.again?.let {
             askedAgain += effect.nowPlaying.title
             carried += it
+        }
+        if (effect.items.isNotEmpty()) {
+            withItems += effect.run
+            tookItems += effect.nowPlaying.title
+            itemsTaken += effect.items
         }
         effect.lookAgain?.let {
             lookedAgain += effect.nowPlaying.title
@@ -404,7 +417,7 @@ internal class World {
             sources(
                 unreachable,
             ).let { if (inLanguage) it.copy(inLanguage = language(languageUnreachable)) else it }
-        val finds = finds(unreachable, languageUnreachable)
+        val finds = finds(unreachable, languageUnreachable) || run in withItems
         schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources), run)
         schedule(delayMs, CoordinatorEvent.EvidenceAssembled(run, evidence()), run)
         val insight =
@@ -636,5 +649,19 @@ internal fun checkAll(cases: List<Case>) {
 internal fun World.network(online: Boolean) {
     offline = !online
     send(CoordinatorEvent.NetworkChanged(online))
+    advance(0)
+}
+
+/**
+ * The song's, the artist's and the album's evidence of [title] found to hold lines beyond its own, one
+ * for each of [texts], none for none (#1131), as the host tells it.
+ */
+internal fun World.itemLines(
+    title: String,
+    vararg texts: String,
+) {
+    val lines =
+        texts.map { EvidenceDraft(SourceId.WEB, Scope.SONG, it, null, Instant.parse("2026-11-10T12:00:00Z")) }
+    send(CoordinatorEvent.ItemLinesFound(key(title), lines))
     advance(0)
 }

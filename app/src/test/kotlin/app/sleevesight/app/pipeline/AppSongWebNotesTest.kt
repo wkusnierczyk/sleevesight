@@ -228,6 +228,21 @@ class AppSongWebNotesTest {
         }
 
     @Test
+    fun `the page the song's search found is a line beyond the track's own, for Key insights to take`() =
+        runTest {
+            val provider = CountingProvider().apply { reply = { "A slow groove [S1]." } }
+            val notes = notes(parts(provider))
+            val first = track()
+            assertEquals(ItemShown.Offered, notes.settled(first))
+            // Gathered, before its search: nothing the track has not already.
+            assertEquals(emptyList<String>(), notes.foundLines(first).first()?.map { it.text })
+
+            notes.write(first, InsightItem.SONG)
+            advanceUntilIdle()
+            assertEquals(listOf(WEB_LINE.text), notes.foundLines(first).first()?.map { it.text })
+        }
+
+    @Test
     fun `a failed search shows the write failed, makes no call, keeps nothing, and is made again on a tap`() =
         runTest {
             songWeb.found = null

@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.linesBeyond
 import app.sleevesight.core.platform.JvmHasher
 import kotlinx.coroutines.flow.flowOf
 
@@ -30,30 +31,22 @@ internal class SourcesLines(
  * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web
  * lines for an artist the sources say nothing about, #912), and [song]'s, the song's insight's (its web
  * lines for a song the sources only list, #958), mixed in by source and numbered on from the track's; a
- * line the track, or the album, has already (its source, scope and words) once. The artist's lines say
- * "artist" as their scope does. Not the key insight's evidence: a list to read.
+ * line the track, or the album, has already (its source, scope and words) once (`linesBeyond`). The
+ * artist's lines say "artist" as their scope does. [taken] are the ids of [evidence]'s lines its run
+ * took from these (#1131, `TrackState.itemIds`): the album's among them still say "album".
  */
 internal fun withAlbum(
     evidence: EvidenceSet?,
     album: EvidenceSet?,
     artist: EvidenceSet? = null,
     song: EvidenceSet? = null,
+    taken: Set<String> = emptySet(),
 ): SourcesLines {
-    val seen = evidence?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
-    val more =
-        listOfNotNull(album, artist, song)
-            .flatMap { it.lines }
-            .filter { seen.add(Triple(it.source, it.scope, it.text)) }
-            // A language read from the line's script by the item's set is read again with the track's (#949).
-            .map {
-                it.draft().let { draft ->
-                    if (draft.scripted) draft.copy(language = null, scripted = false) else draft
-                }
-            }
-    if (evidence == null || more.isEmpty()) return SourcesLines(evidence)
+    val more = linesBeyond(evidence?.lines.orEmpty(), listOf(album, artist, song))
+    if (evidence == null || (more.isEmpty() && taken.isEmpty())) return SourcesLines(evidence)
     val shown = evidence.with(more, JvmHasher)
     val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
-    val own = evidence.ids.toSet()
+    val own = evidence.ids.toSet() - taken
     val albumIds =
         shown.lines
             .filter { it.id !in own && Triple(it.source, it.scope, it.text) in albums }
@@ -81,7 +74,8 @@ internal fun sourcesLines(
         track?.let(notes::songEvidence) ?: flowOf(null)
     }.collectAsState(null)
     val evidence = track?.evidence
-    return remember(evidence, album, artist, song) { withAlbum(evidence, album, artist, song) }
+    val taken = track?.itemIds.orEmpty()
+    return remember(evidence, album, artist, song, taken) { withAlbum(evidence, album, artist, song, taken) }
 }
 
 /**
