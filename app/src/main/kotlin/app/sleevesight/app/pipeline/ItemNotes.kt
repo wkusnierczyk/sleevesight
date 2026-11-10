@@ -132,6 +132,14 @@ enum class ItemAsk {
 
     /** Its row unfolded at a new track's start, under an automatic mode: as the track's own writing is. */
     BY_ITSELF,
+
+    /**
+     * Its row left unfolded by a tap, or its page left open, asked again under an automatic mode as
+     * the track's evidence changes (#1163): as [OPENED], but not by the lines a *Retry* of a source
+     * brings, which write nothing unasked (`CoordinatorState.itemCallAllowed`); the tap's own opening
+     * is [OPENED], which writes whatever came before.
+     */
+    KEPT_OPEN,
 }
 
 /** The song's, the artist's and the album's insights under *Key insights* (#522), as Home and their pages show them. */
@@ -714,7 +722,8 @@ class AppItemNotes(
         val made = parts.value
         val same =
             now != null && made != null && insightsOf(made).key(asked.item, asked.track, asked.evidence, now) == key
-        val mode = asked.ask != ItemAsk.BY_ITSELF || now?.writeAutomatically != WriteAutomatically.NEVER
+        val unasked = asked.ask == ItemAsk.BY_ITSELF || asked.ask == ItemAsk.KEPT_OPEN
+        val mode = !unasked || now?.writeAutomatically != WriteAutomatically.NEVER
         // The service selected now, the one the parts carry and the card's (`ItemInsights.key` asks
         // the first two): a switch waits for the rebuild that brings the new service.
         val service = now?.aiProvider == key.provider && made?.ai?.provider?.id == key.provider
@@ -912,11 +921,12 @@ class AppItemNotes(
         unansweredOn(track),
     )
 
-    // The sources whose lookup on [track] ended unreachable, or failed (#1163).
+    // The sources whose lookup on [track] ended unreachable, failed, or was left provisional (#1163).
     private fun unansweredOn(track: TrackState): Set<SourceId> =
         track.sources
             .filterValues { state ->
-                state is SourceState.Failed || (state as? SourceState.Done)?.result?.outcome == Outcome.Unreachable
+                val result = (state as? SourceState.Done)?.result
+                state is SourceState.Failed || result?.outcome == Outcome.Unreachable || result?.provisional == true
             }.keys
 
     // [first]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
@@ -1104,6 +1114,7 @@ class AppItemNotes(
                     failure,
                     lines = nothing?.evidence?.lines?.size,
                     unanswered = nothing?.unanswered.orEmpty(),
+                    failed = nothing?.failed.orEmpty(),
                 ),
             )
         }

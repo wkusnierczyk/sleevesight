@@ -117,18 +117,19 @@ class PipelineCoordinatorRetryTest {
     }
 
     @Test
-    fun `after Retry brings lines, an item's insight is called for only on a tap on Write insight`() {
+    fun `after Retry brings lines, an open panel asks for no call by itself, while a tap opening one does`() {
         val world = unreachable()
-        // Automatic writing: an item's panel opened, or unfolded by itself, may call.
-        assertTrue(world.coordinator.state.itemCallAllowed(ItemAsk.OPENED))
-        assertTrue(world.coordinator.state.itemCallAllowed(ItemAsk.BY_ITSELF))
+        // Automatic writing: an item opened, kept open, or unfolded by itself may call.
+        for (ask in ItemAsk.entries) assertTrue(ask.name, world.coordinator.state.itemCallAllowed(ask))
         world.offline = false
         world.retry(SourceId.WEB)
         world.settle()
-        // The lines the retried source brings start no call for a panel left open (#1163)...
-        assertFalse(world.coordinator.state.itemCallAllowed(ItemAsk.OPENED))
+        // The lines the retried source brings start no call for a panel left open, nor one unfolded by
+        // itself (#1163)...
+        assertFalse(world.coordinator.state.itemCallAllowed(ItemAsk.KEPT_OPEN))
         assertFalse(world.coordinator.state.itemCallAllowed(ItemAsk.BY_ITSELF))
-        // ... but a tap on its *Write insight* does.
+        // ... but a tap that opens a panel or page (#948), in any mode, or on *Write insight*, does.
+        assertTrue(world.coordinator.state.itemCallAllowed(ItemAsk.OPENED))
         assertTrue(world.coordinator.state.itemCallAllowed(ItemAsk.TAP))
     }
 

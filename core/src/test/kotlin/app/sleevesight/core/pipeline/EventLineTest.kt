@@ -202,6 +202,24 @@ class EventLineTest {
     }
 
     @Test
+    fun `an item's insight that found nothing names a source that failed apart from one not reached`() {
+        assertEquals(
+            "ask ai     a|song: artist insight, nothing found from 0 lines, W failed, 0 calls, 0 web searches, 3 ms",
+            EventLine.of(
+                PipelineEvent.AiEnded(
+                    "a|song",
+                    AiQuestion.Item(InsightItem.ARTIST),
+                    AiOutcome.NOTHING_FOUND,
+                    QuestionCost(),
+                    3.milliseconds,
+                    lines = 0,
+                    failed = listOf(SourceId.WIKIPEDIA),
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun `an unreachable resolution names its failure, others nothing more`() {
         assertEquals(
             "resolved   a|song: unreachable (RateLimited) in 2050 ms",

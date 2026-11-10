@@ -62,10 +62,9 @@ enum class InsightItem(
  * ([ItemInsights.search], [ItemInsights.writeSearching]). [onlyListings] when it is the song's, and
  * none of its own lines describes it as they stand (`SongListings`, #958): its prompt says how to
  * write that ([ItemPrompt.ONLY_LISTINGS_RULE]), its [evidence] holds the artist's lines for it, and
- * its card has a prompt version of its own ([ItemPrompt.ONLY_LISTINGS_VERSION]). [unanswered] (#1163):
- * the artist's, with no line about the artist, the sources its lines come from (and MusicBrainz,
- * whose resolution verifies them) that could not be asked on the track, so it is [unreachable]: with
- * nothing to write from, it is those that the row names, not that the sources give nothing.
+ * its card has a prompt version of its own ([ItemPrompt.ONLY_LISTINGS_VERSION]). The artist's, with
+ * no line about the artist while a source its lines come from (or MusicBrainz, whose resolution
+ * verifies them) did not answer on the track, is [unreachable], and [held] says which (#1163).
  */
 class ItemEvidence(
     val evidence: EvidenceSet,
@@ -73,7 +72,30 @@ class ItemEvidence(
     val unreachable: Boolean = false,
     val webDue: Boolean = false,
     val onlyListings: Boolean = false,
-    val unanswered: List<SourceId> = emptyList(),
+    val held: SourcesHeld? = null,
+) {
+    /** The sources that could not be reached, which the row names ([SourcesHeld.named]); none without [held]. */
+    val unanswered: List<SourceId> get() = held?.named.orEmpty()
+
+    /** Those a *Retry* asks again ([SourcesHeld.retry]). */
+    val retry: List<SourceId> get() = held?.retry.orEmpty()
+
+    /** Those whose lookup failed ([SourcesHeld.failed]). */
+    val failed: List<SourceId> get() = held?.failed.orEmpty()
+}
+
+/**
+ * Why the artist's sources, with no line about the artist, may yet have one (#1163): the sources that
+ * could not be reached ([named]), which the artist's row names rather than that the sources give
+ * nothing (MusicBrainz too where Last.fm's own MusicBrainz search failed, leaving its page unverified
+ * and its result provisional); those a *Retry* asks again ([retry]: Last.fm, for that search); and
+ * those whose lookup failed in a way its adapter did not map ([failed], a bug, not the network),
+ * which only the diagnostics name.
+ */
+class SourcesHeld(
+    val named: List<SourceId>,
+    val retry: List<SourceId> = named,
+    val failed: List<SourceId> = emptyList(),
 )
 
 /**
@@ -381,15 +403,15 @@ class ItemInsights(
         val (english, found) = artistLines(own, track).partition { it.found == null }
         val subject = query?.let { LanguageSubject.Artist(it.name, it.mbid) }
         val lines = english.map(::draftOf) + inLanguage(subject, found, settings)
-        val unanswered = if (lines.isEmpty()) unansweredOf(track, settings) else emptyList()
+        val held = if (lines.isEmpty()) heldOf(track, settings) else null
         val lookup = artistWeb?.takeIf { lines.isEmpty() && usesWebSearch(settings) }
         return when {
-            unanswered.isNotEmpty() ->
+            held != null ->
                 ItemEvidence(
                     EvidenceSet.of(emptyList(), hasher),
                     emptyMap(),
                     unreachable = true,
-                    unanswered = unanswered,
+                    held = held,
                 )
             lookup == null || query == null -> numbered(lines, shown)
             else -> {
@@ -1494,6 +1516,27 @@ private fun unanswered(
     settings: Settings,
     sources: Set<SourceId> = ARTIST_SOURCES,
 ): Boolean = unansweredOf(track, settings, sources).isNotEmpty()
+
+// Why the artist's sources on [track], under [settings], may yet have a line about the artist
+// ([SourcesHeld], #1163); null when every one answered.
+private fun heldOf(
+    track: TrackState,
+    settings: Settings,
+): SourcesHeld? {
+    val failed = ARTIST_SOURCES.filter { settings.isEnabled(it) && track.sources[it] is SourceState.Failed }
+    val unreachable = unansweredOf(track, settings) - failed.toSet()
+    val lastFm = (track.sources[SourceId.LASTFM] as? SourceState.Done)?.result
+    // Last.fm's own MusicBrainz search failed: its page unverified, its result provisional.
+    val unverified =
+        settings.isEnabled(SourceId.LASTFM) &&
+            lastFm != null &&
+            lastFm.provisional &&
+            lastFm.evidence.isEmpty() &&
+            lastFm.unverified.isNotEmpty()
+    val named = (unreachable + listOfNotNull(SourceId.MUSICBRAINZ.takeIf { unverified })).distinct()
+    val retry = (unreachable + listOfNotNull(SourceId.LASTFM.takeIf { unverified })).distinct()
+    return SourcesHeld(named, retry, failed).takeIf { named.isNotEmpty() || failed.isNotEmpty() }
+}
 
 // Those of [sources] [settings] switch on that ended on [track] unreachable, or failed, in their order.
 private fun unansweredOf(

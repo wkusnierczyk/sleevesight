@@ -37,6 +37,7 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.RunKey
+import app.sleevesight.core.pipeline.SourcesHeld
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
@@ -75,7 +76,8 @@ class ItemUnreachableScreenTest {
         unanswered: List<SourceId>,
         block: () -> Unit = { checkLine(unanswered) },
     ) {
-        val evidence = ItemEvidence(EvidenceSet.of(emptyList(), JvmHasher), emptyMap(), unanswered = unanswered)
+        val held = unanswered.takeIf { it.isNotEmpty() }?.let(::SourcesHeld)
+        val evidence = ItemEvidence(EvidenceSet.of(emptyList(), JvmHasher), emptyMap(), held = held)
         notes.shown.value = mapOf(InsightItem.ARTIST to ItemShown.Shown(InsightState.NoEvidence, evidence))
         val view =
             PipelineView(

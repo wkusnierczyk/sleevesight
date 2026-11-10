@@ -951,14 +951,18 @@ data class CoordinatorState(
      * Whether the song's, the artist's or the album's insight (#522) may make its call now, as [ask]
      * came (`PipelineHost.itemCallAllowed`): requests allowed (D6); for one asked by itself, the app on
      * screen and the track written by itself now ([writesItself]); and, while the run is one a tap on
-     * *Retry* started, or replaced from one ([Run.retried], #1163), only on a tap on *Write insight*:
-     * a source asked again writes nothing unasked, as the key insight's run does (#724), so the lines
-     * it brings to an open panel (MusicBrainz, then the artist's) start no call by themselves.
+     * *Retry* started, or replaced from one ([Run.retried], #1163), not one asked by itself nor a panel
+     * left open asked again as the evidence changes ([ItemAsk.KEPT_OPEN]): a source asked again writes
+     * nothing unasked, as the key insight's run does (#724), so the lines it brings to an open panel
+     * (MusicBrainz, then the artist's) start no call by themselves. A tap on *Write insight*, or one
+     * that opens a panel or page ([ItemAsk.OPENED], #948), still writes.
      */
-    fun itemCallAllowed(ask: ItemAsk): Boolean =
-        allowed &&
-            (ask == ItemAsk.TAP || run?.retried != true) &&
+    fun itemCallAllowed(ask: ItemAsk): Boolean {
+        val unasked = ask == ItemAsk.BY_ITSELF || ask == ItemAsk.KEPT_OPEN
+        return allowed &&
+            (!unasked || run?.retried != true) &&
             (ask != ItemAsk.BY_ITSELF || (visible && writesItself))
+    }
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */

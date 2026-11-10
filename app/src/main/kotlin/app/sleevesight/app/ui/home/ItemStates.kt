@@ -134,7 +134,7 @@ internal fun NothingToWriteFrom(
     RetryLine(
         stringResource(R.string.home_source_note_unreachable, names),
         names,
-        context.retries?.ofAll(unanswered),
+        context.retries?.ofAll(evidence.retry),
         Modifier.testTag(ITEM_UNREACHABLE_TAG),
         afterRetry = afterRetry,
         style = MaterialTheme.typography.bodyMedium,

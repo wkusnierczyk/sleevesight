@@ -236,6 +236,66 @@ class ArtistNothingInsightsTest {
             assertEquals(0, artistWeb.searches)
         }
 
+    // MusicBrainz reached, but Last.fm's own MusicBrainz search for the name failed: its page left
+    // unverified, the result provisional; Wikipedia with no article on the band.
+    private val searchFailed =
+        reached.copy(
+            sources =
+                reached.sources +
+                    mapOf(
+                        SourceId.LASTFM to
+                            SourceState.Done(
+                                SourceResult(
+                                    Outcome.ArtistArticle,
+                                    emptyList(),
+                                    ZERO,
+                                    unverified = lastFm("Massive Attack"),
+                                    provisional = true,
+                                ),
+                                false,
+                            ),
+                        SourceId.WIKIPEDIA to
+                            SourceState.Done(SourceResult(Outcome.SongArticle, listOf(wikipediaSong), ZERO), false),
+                    ),
+        )
+
+    @Test
+    fun `Last_fm's own MusicBrainz search failing names MusicBrainz, with Retry asking Last_fm again`() =
+        runTest {
+            val items = items(FakeProvider())
+            for (settings in listOf(webOff, webOnce)) {
+                val evidence = checkNotNull(items.evidence(InsightItem.ARTIST, searchFailed, settings))
+                assertTrue(evidence.evidence.isEmpty())
+                assertTrue(evidence.unreachable)
+                assertEquals(listOf(SourceId.MUSICBRAINZ), evidence.unanswered)
+                assertEquals(listOf(SourceId.LASTFM), evidence.retry)
+                // No search while Last.fm may yet describe the artist.
+                assertFalse(evidence.webDue)
+            }
+            assertEquals(0, artistWeb.searches)
+        }
+
+    @Test
+    fun `a source that failed holds the search back, but is not named as not reached`() =
+        runTest {
+            val none = SourceState.Done(SourceResult(Outcome.None, emptyList(), ZERO), false)
+            val failed =
+                searchFailed.copy(
+                    sources =
+                        searchFailed.sources +
+                            mapOf(
+                                SourceId.LASTFM to none,
+                                SourceId.WIKIPEDIA to SourceState.Failed("IllegalStateException"),
+                            ),
+                )
+            val evidence = checkNotNull(items(FakeProvider()).evidence(InsightItem.ARTIST, failed, webOnce))
+            assertTrue(evidence.unreachable)
+            assertFalse(evidence.webDue)
+            // The row says the sources give nothing; the diagnostics name the failure.
+            assertTrue(evidence.unanswered.isEmpty())
+            assertEquals(listOf(SourceId.WIKIPEDIA), evidence.failed)
+        }
+
     @Test
     fun `a reply of no evidence is kept, and served again for the same lines with no call`() =
         runTest {

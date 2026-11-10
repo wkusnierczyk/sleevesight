@@ -150,7 +150,10 @@ private object AskAiLines {
     private fun nothingFrom(e: PipelineEvent.AiEnded): String {
         val lines = e.lines ?: return ""
         val unanswered = e.unanswered.joinToString(", ") { it.tag }
-        return " from ${count(lines, "line", "lines")}" + if (unanswered.isEmpty()) "" else ", $unanswered unreachable"
+        val failed = e.failed.joinToString(", ") { it.tag }
+        return " from ${count(lines, "line", "lines")}" +
+            (if (unanswered.isEmpty()) "" else ", $unanswered unreachable") +
+            if (failed.isEmpty()) "" else ", $failed failed"
     }
 
     fun kept(e: PipelineEvent.AiKept): String =

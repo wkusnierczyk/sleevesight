@@ -293,7 +293,7 @@ sealed interface PipelineEvent {
      * the web searches and AI calls of [cost] (none when what was kept answered it after all), in
      * [latency]. For an item's insight that found nothing (#1163), how many [lines] it was to be
      * written from (none: no call was made), and the sources of its lines that could not be asked
-     * ([unanswered]), so the line says why; null and empty elsewhere.
+     * ([unanswered]), or failed ([failed]), so the line says why; null and empty elsewhere.
      */
     data class AiEnded(
         override val key: String,
@@ -304,6 +304,7 @@ sealed interface PipelineEvent {
         val failure: String? = null,
         val lines: Int? = null,
         val unanswered: List<SourceId> = emptyList(),
+        val failed: List<SourceId> = emptyList(),
     ) : PipelineEvent
 
     /**
