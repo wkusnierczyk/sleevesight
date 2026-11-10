@@ -41,7 +41,7 @@ internal fun detailOf(response: NetResponse): String = "HTTP ${response.status}"
  * (#1164): kept only as a code (letters, digits, `_`, `.`, `-`, at most 64), so no message can pass.
  */
 internal fun codeDetail(code: String?): String =
-    "error in the stream" + (code?.takeIf(CODE::matches)?.let { ": $it" } ?: "")
+    "error in the stream" + code?.takeIf(CODE::matches)?.let { ": $it" }.orEmpty()
 
 private val CODE = Regex("[A-Za-z0-9_.-]{1,64}")
 
