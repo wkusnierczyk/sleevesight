@@ -486,11 +486,13 @@ private val EXPLANATION_ADDRESS: Regex =
         Regex("""(?i:\b[a-z][a-z0-9+.-]*://|\bwww\.)|\b$label(?:\.$label)*\.[a-z]{2,}\b""")
     }
 
-// The string at [key], trimmed, when it is one and not blank.
+// The string at [key], cleaned as text from sources is ([SourceText], #1041) and trimmed, when it is
+// one and not blank once cleaned.
 private fun JsonObject.text(key: String): String? =
     (get(key) as? JsonPrimitive)
         ?.takeIf { it.isString }
         ?.content
+        ?.let(SourceText::clean)
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
 
@@ -500,13 +502,9 @@ private fun JsonObject.name(key: String): String? =
     text(key)?.let(::oneLine)?.takeIf { it.length <= AiSearchAnswers.NAME_MAX }
 
 // [text] on one line: every control character and line or paragraph separator, and each run of
-// spaces, one space; cleaned as text from sources is ([SourceText], #1041).
+// spaces, one space.
 private fun oneLine(text: String): String =
-    SourceText
-        .clean(text)
-        .map { if (InsightPrompt.breaksLine(it)) ' ' else it }
-        .joinToString("")
-        .replace(SPACES, " ")
+    text.map { if (InsightPrompt.breaksLine(it)) ' ' else it }.joinToString("").replace(SPACES, " ")
 
 private val SPACES = Regex(" {2,}")
 

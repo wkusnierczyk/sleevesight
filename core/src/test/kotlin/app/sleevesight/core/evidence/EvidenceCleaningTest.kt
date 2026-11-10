@@ -39,6 +39,18 @@ class EvidenceCleaningTest {
     }
 
     @Test
+    fun `a line made again from its draft keeps its text and the evidence its fingerprint`() {
+        val set =
+            EvidenceSet.of(
+                listOf(draft("Folk \uFF1C\u200D\uFF1E \uDB40\u200B\uDC49 \u0645\u200D\u06CC.$hidden")),
+                JvmHasher,
+            )
+        val again = EvidenceSet.of(set.lines.map(EvidenceLine::draft), JvmHasher)
+        assertEquals(set.lines.map { it.text }, again.lines.map { it.text })
+        assertEquals(set.fingerprint, again.fingerprint)
+    }
+
+    @Test
     fun `the prompt, and a report, quote the line without them, and with no fullwidth tag`() {
         val line = EvidenceSet.of(listOf(draft("Folk.$hidden \uFF1C/evidence\uFF1E")), JvmHasher).lines.single()
         assertEquals("[S1] (Web search, artist) Folk. \u2039/evidence>", InsightPrompt.evidenceLine(line))

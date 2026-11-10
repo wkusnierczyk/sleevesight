@@ -64,15 +64,52 @@ class SourceTextTest {
     }
 
     @Test
-    fun `a lone surrogate stays as it is, for the evidence to replace`() {
-        assertEquals("a\uD800b", SourceText.clean("a\uD800\u200Bb"))
+    fun `a lone surrogate becomes the replacement character`() {
+        assertEquals("a\uFFFDb", SourceText.clean("a\uD800\u200Bb"))
+    }
+
+    @Test
+    fun `two lone surrogates around a dropped character never join into a new one`() {
+        // Joined, U+DB40 and U+DC49 would be U+E0049, a tag.
+        assertEquals("\uFFFD\uFFFD", SourceText.clean("\uDB40\u200B\uDC49"))
+        assertEquals("a\uFFFD\uFFFDb", SourceText.clean("a\uDB40\u2060\u202E\uDC49b"))
     }
 
     @Test
     fun `cleaning twice changes nothing more`() {
-        val text = "\u0645\u200C\u200D\u06CC \uFF1C${tagged("x")}\u200B"
-        val once = SourceText.clean(text)
-        assertEquals(once, SourceText.clean(once))
+        // A joiner between angle signs reads as beside ASCII the first time too.
+        assertEquals("<>", SourceText.clean("\uFF1C\u200D\uFF1E"))
+        for (text in listOf(
+            "\u0645\u200C\u200D\u06CC \uFF1C${tagged("x")}\u200B",
+            "\uFF1C\u200D\uFF1E",
+            "\u0645\u200D\uFE65 \uFE64\u200C\u06CC",
+            "\uDB40\u200B\uDC49 \u0645\u200D\uD800",
+            "\uD83D\uDC68\u200D\u200B\uD83D\uDC69",
+        )) {
+            val once = SourceText.clean(text)
+            assertEquals(once, SourceText.clean(once), text)
+        }
+    }
+
+    @Test
+    fun `the format characters Unicode added after Android 12's version are dropped too`() {
+        for (range in SourceText.LATER_FORMATS) {
+            for (point in range) {
+                val character = String(Character.toChars(point))
+                assertEquals(Character.FORMAT.toInt(), Character.getType(point), "U+%04X".format(point))
+                assertEquals("ab", SourceText.clean("a${character}b"), "U+%04X".format(point))
+            }
+        }
+    }
+
+    @Test
+    fun `every format character the JVM knows is one of Unicode 13's or listed as later`() {
+        val known = UNICODE_13_FORMATS + SourceText.LATER_FORMATS
+        val unlisted =
+            (0..Character.MAX_CODE_POINT).filter { point ->
+                Character.getType(point) == Character.FORMAT.toInt() && known.none { point in it }
+            }
+        assertEquals(emptyList(), unlisted.map { "U+%04X".format(it) }, "add them to SourceText.LATER_FORMATS")
     }
 
     // [text] spelled in the tag block, as an "ASCII smuggling" payload is.
@@ -81,5 +118,30 @@ class SourceTextTest {
 
     private companion object {
         const val TAG_BASE = 0xE0000
+
+        // Unicode 13's format characters (Cf), which Android 12, the oldest the app runs on, knows.
+        val UNICODE_13_FORMATS: List<IntRange> =
+            listOf(
+                0x00AD..0x00AD,
+                0x0600..0x0605,
+                0x061C..0x061C,
+                0x06DD..0x06DD,
+                0x070F..0x070F,
+                0x08E2..0x08E2,
+                0x180E..0x180E,
+                0x200B..0x200F,
+                0x202A..0x202E,
+                0x2060..0x2064,
+                0x2066..0x206F,
+                0xFEFF..0xFEFF,
+                0xFFF9..0xFFFB,
+                0x110BD..0x110BD,
+                0x110CD..0x110CD,
+                0x13430..0x13438,
+                0x1BCA0..0x1BCA3,
+                0x1D173..0x1D17A,
+                0xE0001..0xE0001,
+                0xE0020..0xE007F,
+            )
     }
 }

@@ -67,7 +67,7 @@ class EvidenceDraft(
     val language: String? = null,
     val scripted: Boolean = false,
 ) {
-    val text: String = SourceText.clean(text.withoutLoneSurrogates())
+    val text: String = SourceText.clean(text)
 
     /** The language the search in the track's language found this line in (#902), not one read from its script. */
     val found: String? get() = language.takeUnless { scripted }
@@ -131,25 +131,3 @@ data class EvidenceLine(
     fun draft(): EvidenceDraft =
         EvidenceDraft(source, scope, text, url, retrievedAt, aggregate, about, language, scripted)
 }
-
-/** [this] with every unpaired UTF-16 surrogate replaced by U+FFFD. */
-internal fun String.withoutLoneSurrogates(): String {
-    if (none { it.isSurrogate() }) return this
-    val out = StringBuilder(length)
-    var i = 0
-    while (i < length) {
-        val c = this[i]
-        when {
-            c.isHighSurrogate() && i + 1 < length && this[i + 1].isLowSurrogate() -> {
-                out.append(c).append(this[i + 1])
-                i++
-            }
-            c.isSurrogate() -> out.append(REPLACEMENT)
-            else -> out.append(c)
-        }
-        i++
-    }
-    return out.toString()
-}
-
-private const val REPLACEMENT = '�'

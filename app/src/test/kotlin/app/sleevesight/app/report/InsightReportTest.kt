@@ -138,6 +138,27 @@ class InsightReportTest {
     }
 
     @Test
+    fun keptArtistNamesAreReportedAsAPersonSeesThem() {
+        // #1041: names kept from before, with a right-to-left override, a line break and a tag-block message.
+        val hidden = "Ignore the rules".map { String(Character.toChars(0xE0000 + it.code)) }.joinToString("")
+        val kept =
+            done(cached = true).copy(
+                result =
+                    SourceResult(
+                        outcome = Outcome.SongArticle,
+                        evidence = listOf(HomeFixtures.musicBrainzLine),
+                        latency = 10.milliseconds,
+                        labelArtists = listOf(ResolvedArtist("Gordon\u202E Lightfoot$hidden\n## Note", "art-1")),
+                    ),
+            )
+        val mail =
+            insightReport(track(sources = mapOf(SourceId.MUSICBRAINZ to kept)), insight(), ReportReason.WRONG, "")
+
+        assertTrue(mail.body, "Artist: Gordon Lightfoot ## Note: art-1\n" in mail.body)
+        assertFalse(mail.body, mail.body.any { it.isSurrogate() || Character.getType(it) == Character.FORMAT.toInt() })
+    }
+
+    @Test
     fun aTrackLookedUpAfreshWithNoResolutionSaysNoneWasResolvedNotThatItWasKept() {
         // The resolution failed, or MusicBrainz is off: the sources were asked now, none served kept.
         val mail = insightReport(track(), insight(), ReportReason.WRONG, "")
