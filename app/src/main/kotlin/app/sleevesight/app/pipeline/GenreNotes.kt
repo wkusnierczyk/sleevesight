@@ -997,7 +997,7 @@ class AppGenreNotes private constructor(
         beforeLaunch()
         when (start) {
             is Start.Reason ->
-                scope.launch(start.work) { write(reasonsOf(made), start.key, track, label(track, genre)) }
+                scope.launch(start.work) { write(made, start.key, track, label(track, genre)) }
 
             is Start.Listing -> scope.launch(start.work) { list(made, start.key, track) }
 
@@ -1122,15 +1122,16 @@ class AppGenreNotes private constructor(
         return entry == null || entry.state is GenreListState.Failed || expired(entry.writtenAt)
     }
 
-    // [key]'s reason, kept meanwhile (another panel's, or from the evidence alone under another *AI
-    // web search*, `GenreReasons.found`), with no call, or written; each state shown while no *Clear
-    // history* came since it started.
+    // [key]'s reason on [made], kept meanwhile (another panel's, or from the evidence alone under
+    // another *AI web search*, `GenreReasons.found`), with no call, or written; each state shown while
+    // no *Clear history* came since it started.
     private suspend fun write(
-        reasons: GenreReasons,
+        made: PipelineParts,
         key: CardKey,
         track: TrackState,
         label: String,
     ) {
+        val reasons = reasonsOf(made)
         val work = currentCoroutineContext()
         val show: (
             InsightState,
@@ -1148,7 +1149,17 @@ class AppGenreNotes private constructor(
             } else {
                 asked.start()
                 val end =
-                    reasons.write(key, track, label, asking(), asked.counted, fresh = { !expired(it) }, show = show)
+                    reasons.write(
+                        key,
+                        track,
+                        label,
+                        asking(),
+                        asked.counted,
+                        fresh = { !expired(it) },
+                        // Its tries again (#1164) only on the pipeline it was asked on.
+                        mayRetry = { parts.value === made },
+                        show = show,
+                    )
                 asked.end(
                     when (end) {
                         is InsightState.Written -> AiOutcome.ANSWERED
@@ -1298,7 +1309,7 @@ class AppGenreNotes private constructor(
         } finally {
             release(key, work)
         }
-        writeFollowing(work, reasons, next, track)
+        writeFollowing(work, made, next, track)
     }
 
     // [entry], [key]'s list for [track], shown if no *Clear history* came since [work] started, in place
@@ -1337,17 +1348,17 @@ class AppGenreNotes private constructor(
         return next
     }
 
-    // Each genre handed on by [key]'s list ([showList]), its reason written; none after a *Clear
-    // history* since [work] started, which drops their claims.
+    // Each genre handed on by [key]'s list ([showList]), its reason written on [made]; none after a
+    // *Clear history* since [work] started, which drops their claims.
     private suspend fun writeFollowing(
         work: CoroutineContext,
-        reasons: GenreReasons,
+        made: PipelineParts,
         next: List<Pair<CardKey, String>>,
         track: TrackState,
     ) {
         if (current(work)) {
             coroutineScope {
-                for ((reason, genre) in next) launch { write(reasons, reason, track, label(track, genre)) }
+                for ((reason, genre) in next) launch { write(made, reason, track, label(track, genre)) }
             }
         } else {
             next.forEach { (reason, _) -> release(reason, work) }
@@ -1478,7 +1489,7 @@ class AppGenreNotes private constructor(
                 val reasons = reasonsOf(made)
                 val entry = Entry<GenreListState>(kept.state, kept.writtenAt ?: clock.now())
                 val told = kept(track, key, AiQuestion.GenreList, kept.writtenAt)
-                writeFollowing(work, reasons, showList(work, reasons, key, track, entry, told), track)
+                writeFollowing(work, made, showList(work, reasons, key, track, entry, told), track)
             }
         }
     }

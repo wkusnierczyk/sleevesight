@@ -134,6 +134,27 @@ class AiRetryThroughClientsTest {
         }
 
     @Test
+    fun `a timeout after the request was sent is not asked again, one to connect is`() =
+        runTest {
+            for ((reason, sent) in listOf("SocketTimeoutException" to 1, "ConnectTimeoutException" to 2)) {
+                var calls = 0
+                val net =
+                    ReplayNetClient {
+                        calls++
+                        if (calls ==
+                            1
+                        ) {
+                            failure(NetError.Offline(reason))
+                        } else {
+                            ok(recorded("google/stream-generate-content.sse"))
+                        }
+                    }
+                retrying(GoogleProvider(net), 30.seconds).stream(request, key).toList()
+                assertEquals(sent, net.requests.size, reason)
+            }
+        }
+
+    @Test
     fun `a reply cut off by the network gone, before any text, is not asked again and says the connection was lost`() =
         runTest {
             var calls = 0

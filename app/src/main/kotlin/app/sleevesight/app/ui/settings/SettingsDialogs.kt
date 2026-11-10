@@ -558,7 +558,7 @@ private fun modelStatus(load: ModelLoad): Int? =
                 AiErrorKind.UNAUTHORIZED -> R.string.settings_model_failed_unauthorized
                 AiErrorKind.OFFLINE -> R.string.settings_model_failed_offline
                 AiErrorKind.CONNECTION_FAILED -> R.string.settings_model_failed_connection
-                AiErrorKind.TIMED_OUT -> R.string.settings_model_failed_timed_out
+                AiErrorKind.TIMED_OUT, AiErrorKind.CONNECT_TIMED_OUT -> R.string.settings_model_failed_timed_out
                 AiErrorKind.UNAVAILABLE_HERE -> R.string.settings_model_failed_unavailable_here
                 AiErrorKind.QUOTA_EXHAUSTED -> R.string.settings_model_failed_quota_exhausted
                 else -> R.string.settings_model_failed_other

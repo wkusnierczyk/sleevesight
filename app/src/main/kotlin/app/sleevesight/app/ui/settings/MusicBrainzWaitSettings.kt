@@ -85,7 +85,7 @@ internal fun MusicBrainzWaitRow(
     val none = stringResource(R.string.settings_musicbrainz_wait_none)
     SteppedRow(
         title = title,
-        summary = { stringResource(R.string.settings_musicbrainz_wait_summary) },
+        summary = { _, _ -> stringResource(R.string.settings_musicbrainz_wait_summary) },
         stops = Settings.MUSICBRAINZ_WAITS,
         value = settings.musicBrainzWait,
         none = none,
@@ -105,8 +105,9 @@ internal data class SteppedTags(
 /**
  * A setting of a time ([value]) chosen from [stops] on a stepped slider (#1120, #1164): the row's
  * [title], with the value chosen at its right, beside it; its description ([summary], given the
- * chosen stop's label, so it can name it); then the slider, one stop for each of [stops], each with
- * its label under it ([StopLabels]): [none] for zero, else *15 s*, *1 min*. A move is stored at once
+ * stop shown, which follows a drag before the store does, and its label, so it can name it); then
+ * the slider, one stop for each of [stops], each with its label under it ([StopLabels]): [none] for
+ * zero, else *15 s*, *1 min*. A move is stored at once
  * ([choose]). A screen reader reads the slider by the row's name, with the value in words. Where the
  * setting does not apply ([applies] false), the whole row dims and cannot be moved (#999). The slider
  * has a thumb and a track of its own ([Thumb], [StopsTrack]), as the picked design draws them.
@@ -116,7 +117,7 @@ internal data class SteppedTags(
 @Composable
 internal fun SteppedRow(
     title: String,
-    summary: @Composable (String) -> String,
+    summary: @Composable (Duration, String) -> String,
     stops: List<Duration>,
     value: Duration,
     none: String,
@@ -149,7 +150,7 @@ internal fun SteppedRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
             )
         }
-        Description(title, summary(labels[index]), color = color)
+        Description(title, summary(stops[index], labels[index]), color = color)
         Slider(
             value = shown,
             onValueChange = { moved ->

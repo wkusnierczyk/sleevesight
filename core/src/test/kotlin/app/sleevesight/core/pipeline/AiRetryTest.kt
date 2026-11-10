@@ -28,6 +28,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.AbstractLongTimeSource
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
@@ -105,7 +106,7 @@ class AiRetryTest {
         }
 
     @Test
-    fun `a failed connection, a timeout and a reply cut short before its text are asked again`() =
+    fun `a failed connection, one not made in time and a reply cut short before its text are asked again`() =
         runTest {
             val cut =
                 CompletionEvent.Error(
@@ -115,7 +116,7 @@ class AiRetryTest {
             val failures =
                 listOf(
                     CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
-                    CompletionEvent.Error(AiErrorKind.TIMED_OUT),
+                    CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     cut,
                 )
             for (failed in failures) {
@@ -387,6 +388,40 @@ class AiRetryTest {
             assertEquals(2, provider.starts.size)
             assertEquals(QuestionCost(calls = 2), reply.cost)
             assertEquals(listOf(QuestionCost.CALL, QuestionCost.CALL), counted)
+        }
+
+    @Test
+    fun `a timeout after the request was sent, a reply that fell silent and one too long are not asked again`() =
+        runTest {
+            val failures =
+                listOf(
+                    CompletionEvent.Error(AiErrorKind.TIMED_OUT, detail = "SocketTimeoutException"),
+                    CompletionEvent.Error(
+                        AiErrorKind.INCOMPLETE,
+                        breakoff = Breakoff(BreakoffCause.TIMED_OUT, Usage(9, 0)),
+                    ),
+                    CompletionEvent.Error(
+                        AiErrorKind.INCOMPLETE,
+                        breakoff = Breakoff(BreakoffCause.TOO_LARGE, Usage(9, 0)),
+                    ),
+                )
+            for (failed in failures) {
+                val provider = Scripted(this, listOf(failed), answer)
+                assertEquals(
+                    listOf<CompletionEvent>(failed),
+                    retrying(provider, 30.seconds).stream(request, KEY).toList(),
+                )
+                assertEquals(1, provider.starts.size, failed.toString())
+            }
+        }
+
+    @Test
+    fun `a short wait the service asks for is a floor, not a faster pace`() =
+        runTest {
+            val soon = CompletionEvent.Error(AiErrorKind.RATE_LIMITED, retryAfter = 500.milliseconds)
+            val provider = Scripted(this, *Array(40) { listOf(soon) })
+            retrying(provider, 30.seconds).stream(request, KEY).toList()
+            assertEquals(listOf(0L, 2_000L, 6_000L, 14_000L, 30_000L), provider.starts)
         }
 
     private fun TestScope.retrying(

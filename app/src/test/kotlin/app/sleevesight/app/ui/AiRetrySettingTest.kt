@@ -34,6 +34,7 @@ import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
@@ -82,11 +83,14 @@ class AiRetrySettingTest {
             settings.update { it.copy(aiProvider = ProviderId.GOOGLE) }
         }
 
-    private fun showAiServices(block: () -> Unit) {
+    private fun showAiServices(
+        stores: CoroutineScope = saves,
+        block: () -> Unit,
+    ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                    SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, stores) { it }
                 }
             }
             compose.openSection(SettingsSection.AI_SERVICES)
@@ -199,6 +203,29 @@ class AiRetrySettingTest {
                     ).fetchSemanticsNodes()
                     .isNotEmpty()
             }
+        }
+    }
+
+    // A store that has not answered a move yet: the description follows the stop shown, as a drag does.
+    @Test
+    fun theDescriptionFollowsTheStopShownBeforeTheStoreAnswers() {
+        googleOn()
+        val unanswered = CoroutineScope(Job().apply { cancel() })
+        showAiServices(unanswered) {
+            moveTo(0)
+            compose.waitUntil(WAIT_MS) { spoken() == "Don’t retry" }
+            compose.waitUntil(WAIT_MS) {
+                compose
+                    .onAllNodesWithText(
+                        "Sleevesight shows the error at once.",
+                        substring = true,
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            assertEquals(30.seconds, settings.now().aiRetry)
+            moveTo(1)
+            compose.waitUntil(WAIT_MS) { named("15 s") }
         }
     }
 

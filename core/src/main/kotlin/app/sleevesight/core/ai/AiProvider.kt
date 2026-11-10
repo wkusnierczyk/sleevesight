@@ -299,11 +299,18 @@ enum class AiErrorKind {
     CONNECTION_FAILED,
 
     /**
-     * The service did not answer in time: the connection could not be made, or no reply began,
-     * within the client's timeouts (#1164). A reply that had begun and then fell silent is
-     * [INCOMPLETE] instead. Named as a reply that timed out mid-way is (`ReplyFailures.TIMED_OUT`).
+     * The service did not answer in time: the request was sent, and no reply began within the
+     * client's timeouts (#1164); the service may have acted on it, so it is not asked again. A reply
+     * that had begun and then fell silent is [INCOMPLETE] instead. Named as a reply that timed out
+     * mid-way is (`ReplyFailures.TIMED_OUT`).
      */
     TIMED_OUT,
+
+    /**
+     * The connection to the service could not be made in time (#1164): the request never reached
+     * it, so it is asked again (`AiRetry`). Named as [TIMED_OUT] is.
+     */
+    CONNECT_TIMED_OUT,
 
     /** The key is missing, wrong, revoked, or not allowed this. */
     UNAUTHORIZED,

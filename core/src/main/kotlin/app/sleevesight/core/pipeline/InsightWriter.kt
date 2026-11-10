@@ -203,7 +203,8 @@ internal class InsightWriter(
             rewriting = control.rewriting()
             val shown =
                 try {
-                    stream(ai, model, card, control)
+                    // Its tries again (#1164, `AiRetry`) only while the run may still make them.
+                    underTerms(control::mayRetry) { stream(ai, model, card, control) }
                 } finally {
                     control.ended(RunStep.MODEL_CALL)
                 }

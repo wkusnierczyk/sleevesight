@@ -794,6 +794,9 @@ class PipelineHost(
             if (step == RunStep.MODEL_CALL) call(++granted).granted.complete(Unit) else super.grant(step)
         }
 
+        // Not once a rebuild is pending or another run is current (#1164): the call's error stands.
+        override fun mayRetry(): Boolean = snapshot.value.let { it.building == null && it.run?.id == id }
+
         fun decided(write: Boolean) {
             if (write) call(++granted).granted.complete(Unit)
             decision.complete(write)

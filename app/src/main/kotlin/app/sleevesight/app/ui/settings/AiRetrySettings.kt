@@ -38,7 +38,7 @@ internal fun AiRetryRow(
     val none = stringResource(R.string.settings_ai_retry_none)
     SteppedRow(
         title = title,
-        summary = { label -> aiRetrySummary(settings.aiRetry, label) },
+        summary = { shown, label -> aiRetrySummary(shown, label) },
         stops = Settings.AI_RETRIES,
         value = settings.aiRetry,
         none = none,

@@ -34,6 +34,12 @@ sealed interface NetError {
         val timedOut: Boolean get() = reason in TIMEOUT_REASONS
 
         /**
+         * Whether it was the timeout to connect (#1164): the request never reached the host, unlike a
+         * timeout after it was sent, which the host may have acted on.
+         */
+        val connectTimedOut: Boolean get() = reason == CONNECT_TIMEOUT
+
+        /**
          * Whether the phone had no network to send on (#1164): the host's name could not be resolved
          * (`UnknownHostException`, which Android throws for every name while it has no network), or
          * the system said the network was down or out of reach (`ENETUNREACH`, `ENETDOWN`, `ENONET`),

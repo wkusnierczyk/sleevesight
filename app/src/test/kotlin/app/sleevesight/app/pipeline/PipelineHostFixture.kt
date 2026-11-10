@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
@@ -117,6 +118,9 @@ internal abstract class PipelineHostFixture {
             },
         )
 
+    /** What the AI services' clients are wrapped in, as the app's are (`AiRetry`, #1164): none by default. */
+    protected var aiThrough: (AiProvider) -> AiProvider = { it }
+
     /** The stages on the fakes: MusicBrainz, Last.fm with its key, the resolver, the AI services, the cache. */
     protected fun fakeParts(
         keys: PipelineKeys,
@@ -131,7 +135,7 @@ internal abstract class PipelineHostFixture {
                     resolutions.removeFirstOrNull() ?: Resolution(Outcome.SongArticle, recordingMbid = "rec")
                 },
             hasher = JvmHasher,
-            ai = keys.ai?.let { AiAccess(providers[built.aiProvider] ?: provider, it) },
+            ai = keys.ai?.let { AiAccess(aiThrough(providers[built.aiProvider] ?: provider), it) },
             cache = cache,
         )
 

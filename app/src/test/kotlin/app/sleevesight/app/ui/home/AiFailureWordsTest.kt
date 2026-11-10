@@ -46,5 +46,9 @@ class AiFailureWordsTest {
     @Test
     fun aTimeoutKeepsItsOwnWords() {
         assertEquals("the AI service’s reply took too long, so the app stopped waiting", words(AiErrorKind.TIMED_OUT))
+        assertEquals(
+            "the AI service’s reply took too long, so the app stopped waiting",
+            words(AiErrorKind.CONNECT_TIMED_OUT),
+        )
     }
 }
