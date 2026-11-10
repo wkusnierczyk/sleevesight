@@ -996,7 +996,7 @@ class AppItemNotes(
         val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { again && showKept(insights, key, asked) }
         if (settled != null) {
             showEnded(insights, next, writing)
-            question.end(settled, (next.shown as? InsightState.Failed)?.reason)
+            question.end(settled, (next.shown as? InsightState.Failed)?.reason, next.asked.evidence)
             return
         }
         question.ask(key)
@@ -1015,7 +1015,11 @@ class AppItemNotes(
                     writing.show,
                 )
             }
-        if (last == null) question.notAsked() else question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
+        if (last == null) {
+            question.notAsked()
+        } else {
+            question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason, asked.evidence)
+        }
     }
 
     // What [next], a write that ended on the way, shows: its state; for a web search that failed where a
@@ -1067,16 +1071,28 @@ class AppItemNotes(
             paid(more)
         }
 
-        // Ended as [outcome], with what it cost, if it was asked.
+        // Ended as [outcome], with what it cost, if it was asked; one that found nothing with what it
+        // was to be written from, [evidence]'s lines and the sources not reached (#1163).
         fun end(
             outcome: AiOutcome,
             failure: String? = null,
+            evidence: ItemEvidence? = null,
         ) {
             val at = started ?: return
             started = null
+            val nothing = evidence?.takeIf { outcome == AiOutcome.NOTHING_FOUND }
             note(
                 work,
-                PipelineEvent.AiEnded(track.normalized.lookupKey, question, outcome, cost, clock.now() - at, failure),
+                PipelineEvent.AiEnded(
+                    track.normalized.lookupKey,
+                    question,
+                    outcome,
+                    cost,
+                    clock.now() - at,
+                    failure,
+                    lines = nothing?.evidence?.lines?.size,
+                    unanswered = nothing?.unanswered.orEmpty(),
+                ),
             )
         }
 
@@ -1283,7 +1299,7 @@ class AppItemNotes(
                 }
         if (kept != null) {
             val evidence = asked.evidence
-            note(asked.work, kept(asked.track, key, AiQuestion.Item(asked.item), kept.writtenAt))
+            note(asked.work, kept(asked.track, key, AiQuestion.Item(asked.item), kept))
             val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), evidence)
             publish(asked.work) { shown.update { it.with(key, entry) } }
         }
@@ -1421,24 +1437,26 @@ class AppItemNotes(
                     val next = if (other != null && !stale(other, play)) kept else kept.with(key, entry)
                     next.also { added = it !== kept }
                 }
-                if (added) events(kept(track, key, AiQuestion.Item(item), kept.writtenAt))
+                if (added) events(kept(track, key, AiQuestion.Item(item), kept))
             }
         }.invokeOnCompletion { reading.update { it - key } }
     }
 
-    // [key]'s answer to [question], kept, written at [writtenAt], served for [track] (#851).
+    // [key]'s answer to [question], [kept], served for [track] (#851): when it was written, and whether
+    // it is that nothing was found (#1163).
     private fun kept(
         track: TrackState,
         key: CardKey,
         question: AiQuestion,
-        writtenAt: Instant?,
+        kept: KeptItem,
     ) = PipelineEvent.AiKept(
         track.normalized.lookupKey,
         question,
         key.provider,
         key.model,
-        writtenAt,
+        kept.writtenAt,
         automatic = false,
+        nothingFound = kept.state == InsightState.NoEvidence,
     )
 
     // Whether [key]'s insight on [track] may be asked for ([open]), and if so, marked as being written,

@@ -154,6 +154,54 @@ class EventLineTest {
     }
 
     @Test
+    fun `an item's insight that found nothing says from how many lines, and which sources were not reached`() {
+        val artist = AiQuestion.Item(InsightItem.ARTIST)
+        assertEquals(
+            "ask ai     a|song: artist insight, nothing found from 0 lines, MB unreachable, 0 calls, " +
+                "0 web searches, 3 ms",
+            EventLine.of(
+                PipelineEvent.AiEnded(
+                    "a|song",
+                    artist,
+                    AiOutcome.NOTHING_FOUND,
+                    QuestionCost(),
+                    3.milliseconds,
+                    lines = 0,
+                    unanswered = listOf(SourceId.MUSICBRAINZ),
+                ),
+            ),
+        )
+        assertEquals(
+            "ask ai     a|song: artist insight, nothing found from 2 lines, 1 call, 0 web searches, 900 ms",
+            EventLine.of(
+                PipelineEvent.AiEnded(
+                    "a|song",
+                    artist,
+                    AiOutcome.NOTHING_FOUND,
+                    QuestionCost(calls = 1),
+                    900.milliseconds,
+                    lines = 2,
+                ),
+            ),
+        )
+        assertEquals(
+            "ask ai     a|song: artist insight, kept answer served (nothing found), no call, " +
+                "written at a time not kept, asked by a tap, anthropic claude-haiku-5-5",
+            EventLine.of(
+                PipelineEvent.AiKept(
+                    "a|song",
+                    artist,
+                    ProviderId.ANTHROPIC,
+                    "claude-haiku-5-5",
+                    null,
+                    automatic = false,
+                    nothingFound = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun `an unreachable resolution names its failure, others nothing more`() {
         assertEquals(
             "resolved   a|song: unreachable (RateLimited) in 2050 ms",

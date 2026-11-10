@@ -62,7 +62,10 @@ enum class InsightItem(
  * ([ItemInsights.search], [ItemInsights.writeSearching]). [onlyListings] when it is the song's, and
  * none of its own lines describes it as they stand (`SongListings`, #958): its prompt says how to
  * write that ([ItemPrompt.ONLY_LISTINGS_RULE]), its [evidence] holds the artist's lines for it, and
- * its card has a prompt version of its own ([ItemPrompt.ONLY_LISTINGS_VERSION]).
+ * its card has a prompt version of its own ([ItemPrompt.ONLY_LISTINGS_VERSION]). [unanswered] (#1163):
+ * the artist's, with no line about the artist, the sources its lines come from (and MusicBrainz,
+ * whose resolution verifies them) that could not be asked on the track, so it is [unreachable]: with
+ * nothing to write from, it is those that the row names, not that the sources give nothing.
  */
 class ItemEvidence(
     val evidence: EvidenceSet,
@@ -70,6 +73,7 @@ class ItemEvidence(
     val unreachable: Boolean = false,
     val webDue: Boolean = false,
     val onlyListings: Boolean = false,
+    val unanswered: List<SourceId> = emptyList(),
 )
 
 /**
@@ -362,9 +366,11 @@ class ItemInsights(
     // language kept for the artist with them ([inLanguage], #939); with none, while *AI web search* is
     // used, the web's lines kept for the artist ([artistWeb], #912), a search due while none is kept.
     // A store that throws keeps nothing, so a search is due. Not while a source that gives
-    // artist-level lines (or MusicBrainz, whose resolution names the artist they look up) could not be
-    // asked ([unanswered]): it may have something on the artist, so no search is due, and the evidence
-    // is unreachable, gathered again, as an album's is when a source fails.
+    // artist-level lines (or MusicBrainz, whose resolution names the artist they look up, and verifies
+    // the others' lines by) could not be asked ([unanswered]): it may have something on the artist, so
+    // no search is due, and the evidence is unreachable, gathered again, as an album's is when a source
+    // fails; so too with no search to make (#1163: MusicBrainz not reached leaves a well-known band with
+    // no line, Last.fm's unverified, Wikipedia's article unconfirmed), naming those sources.
     private suspend fun artistEvidence(
         own: EvidenceSet,
         shown: EvidenceSet,
@@ -375,11 +381,17 @@ class ItemInsights(
         val (english, found) = artistLines(own, track).partition { it.found == null }
         val subject = query?.let { LanguageSubject.Artist(it.name, it.mbid) }
         val lines = english.map(::draftOf) + inLanguage(subject, found, settings)
+        val unanswered = if (lines.isEmpty()) unansweredOf(track, settings) else emptyList()
         val lookup = artistWeb?.takeIf { lines.isEmpty() && usesWebSearch(settings) }
         return when {
+            unanswered.isNotEmpty() ->
+                ItemEvidence(
+                    EvidenceSet.of(emptyList(), hasher),
+                    emptyMap(),
+                    unreachable = true,
+                    unanswered = unanswered,
+                )
             lookup == null || query == null -> numbered(lines, shown)
-            unanswered(track, settings) ->
-                ItemEvidence(EvidenceSet.of(emptyList(), hasher), emptyMap(), unreachable = true)
             else -> {
                 val kept = attempt { lookup.kept(query) }
                 val set = EvidenceSet.of(kept.orEmpty().filter { settings.isEnabled(it.source) }, hasher)
@@ -1475,13 +1487,20 @@ private val SONG_SOURCES = ARTIST_SOURCES + SourceId.WEB
 
 // Whether a source [settings] switch on of [sources] (by default, those the artist's lines come from,
 // and MusicBrainz) ended on [track] unreachable (the network, the source), or failed in a way its
-// adapter did not map.
+// adapter did not map ([unansweredOf]).
 private fun unanswered(
     track: TrackState,
     settings: Settings,
     sources: Set<SourceId> = ARTIST_SOURCES,
-): Boolean =
-    sources.any { source ->
+): Boolean = unansweredOf(track, settings, sources).isNotEmpty()
+
+// Those of [sources] [settings] switch on that ended on [track] unreachable, or failed, in their order.
+private fun unansweredOf(
+    track: TrackState,
+    settings: Settings,
+    sources: Set<SourceId> = ARTIST_SOURCES,
+): List<SourceId> =
+    sources.filter { source ->
         settings.isEnabled(source) &&
             when (val state = track.sources[source]) {
                 is SourceState.Failed -> true
