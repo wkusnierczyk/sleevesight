@@ -222,8 +222,11 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .carousel.paused .i-pause,.carousel:not(.paused) .i-play{display:none}
 .dots{display:flex}
 .dot{display:grid;place-items:center;width:24px;height:24px}
-.dot::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--line);transition:background .2s,transform .2s}
-.dot[aria-current=true]::before{background:var(--ink);transform:scale(1.15)}
+/* The dots in the muted text colour (at least 3:1, as a control must be); the current one a longer
+   pill in the text colour, so it differs by shape as well. */
+.dot::before{content:"";width:8px;height:8px;border-radius:4px;background:var(--muted);transition:width .2s,background .2s}
+.dot[aria-current=true]::before{width:18px;background:var(--ink)}
+.dot[aria-current=true]{width:30px}
 .ctl button:focus-visible{outline:3px solid var(--accent);outline-offset:1px;border-radius:999px}
 @media (prefers-reduced-motion:reduce){.slide{transition:none}}
 /* You choose: the players, sources and AI services named on tinted chips, each a link to its site:
