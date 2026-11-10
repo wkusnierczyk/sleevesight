@@ -260,7 +260,14 @@ class ItemInsights(
                 album(track)?.let { title ->
                     val performers = track.normalized.performers.takeIf { track.normalized.composer != null }
                     val dates = releaseDates(track)
-                    CardEntity.Album.of(title, track.normalized.primary, dates, names::albumKey, performers.orEmpty())
+                    // With performers (#1130), the year the prompt gives, part of the card's key.
+                    val year =
+                        performers?.let {
+                            ReleaseDate.albumYear(title, dates, track.nowPlaying.year?.toString(), names::albumKey)
+                        }
+                    CardEntity.Album
+                        .of(title, track.normalized.primary, dates, names::albumKey, performers.orEmpty())
+                        .copy(year = year)
                 }
             }
         }
@@ -509,17 +516,15 @@ class ItemInsights(
 
     // What [item]'s insight on [track] is written about: its name, and for the album of a track whose
     // title names its composer (#1130), its performers and the year of its release where known
-    // (`ReleaseDate.albumYear`), which tell it from other recordings of the same title.
+    // ([CardEntity.Album.year]), which tell it from other recordings of the same title, and are part
+    // of its card's key.
     private fun subjectOf(
         item: InsightItem,
         track: TrackState,
     ): ItemPrompt.Subject {
         val name = checkNotNull(name(item, track))
-        val performers = (entity(item, track) as? CardEntity.Album)?.performers.orEmpty()
-        if (performers.isEmpty()) return ItemPrompt.Subject(item.kind, name)
-        val playerYear = track.nowPlaying.year?.toString()
-        val year = ReleaseDate.albumYear(name, releaseDates(track), playerYear, names::albumKey)
-        return ItemPrompt.Subject(item.kind, name, performers, year)
+        val album = entity(item, track) as? CardEntity.Album
+        return ItemPrompt.Subject(item.kind, name, album?.performers.orEmpty(), album?.year)
     }
 
     // [album] as [albums] is asked about it, with the sources [settings] switch on.

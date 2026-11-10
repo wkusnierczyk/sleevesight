@@ -275,6 +275,29 @@ class StorePipelineCacheTest {
         }
 
     @Test
+    fun `a classical album's recordings by the same performers in different years are kept apart, one year shared`() =
+        runBlocking {
+            // #1130: the same title and performers, released in 2014 and in 2024, written from the same
+            // evidence; each prompt gives its own year, so each its own card.
+            val title = "Mozart: Piano Concertos Nos. 20 & 23"
+            val mozart = "Wolfgang Amadeus Mozart"
+            val performers = listOf("Khatia Buniatishvili", "Academy of St. Martin in the Fields")
+
+            fun album(
+                year: String?,
+                by: List<String> = performers,
+            ) = CardEntity.Album(title, mozart, null, by, year)
+            val later = cardKey(CardKind.ALBUM, album("2024"))
+            cache.keep(later, "The 2024 album [W1].")
+
+            assertEquals("The 2024 album [W1].", cache.card(later.copy(entity = album("2024"))))
+            assertNull(cache.card(later.copy(entity = album("2014"))))
+            assertNull(cache.card(later.copy(entity = album(null))))
+            // The year has its own place: a performer named as a year is not one.
+            assertNull(cache.card(later.copy(entity = album(null, listOf("2024") + performers))))
+        }
+
+    @Test
     fun `a card key's entity matches its kind`() {
         val track = CardEntity.Track(sundown, 213.seconds)
         val artist = CardEntity.Artist("Gordon Lightfoot", "mb-gordon")

@@ -234,11 +234,12 @@ class StorePipelineCache(
 
     // The entity key (architecture, *Cache and history*; #240): an artist or album by its MusicBrainz
     // id, else by its name, folded as the retrieval key folds names (an album's with the artist's
-    // before it, and, on a track whose title names its composer, its performers after it, #1130:
-    // two recordings of one title by one composer may be written from the same page, one comparing
-    // them, and must not share a card). Each part is length-prefixed, as the retrieval key's are, so
-    // no two blur, and an album without performers keeps its key. The kind is part of the key too,
-    // so an artist's or album's never meets a track's.
+    // before it, and, on a track whose title names its composer, its year and performers after it,
+    // #1130: two recordings of one title by one composer, or by the same performers in different
+    // years, may be written from the same page, one comparing them, and must not share a card).
+    // Each part is length-prefixed, as the retrieval key's are, so no two blur, and an album without
+    // performers keeps its key. The kind is part of the key too, so an artist's or album's never
+    // meets a track's.
     private fun entityKey(entity: CardEntity): String =
         when (entity) {
             // A card about more than the track (a genre's reason, #523) keeps its subject after it,
@@ -248,8 +249,13 @@ class StorePipelineCache(
             is CardEntity.Artist -> entity.mbid?.let { BY_ID + it } ?: byName(listOf(entity.name))
             is CardEntity.Album ->
                 entity.group?.let { BY_ID + it }
-                    ?: byName(listOf(entity.artist, entity.title) + entity.performers)
+                    ?: byName(listOf(entity.artist, entity.title) + classical(entity))
         }
+
+    // A classical album's parts after its name (#1130): its year (empty when unknown) at a fixed
+    // place, then its performers; none for an album without performers, whose key stays as it was.
+    private fun classical(album: CardEntity.Album): List<String> =
+        if (album.performers.isEmpty()) emptyList() else listOf(album.year.orEmpty()) + album.performers
 
     private fun byName(names: List<String>): String =
         BY_NAME + names.joinToString("") { name -> caches.retrieval.foldName(name).let { "${it.length}:$it" } }

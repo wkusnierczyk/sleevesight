@@ -49,15 +49,18 @@ sealed interface CardEntity {
      *
      * [performers]: with a composer the track's title names, its performers
      * ([NormalizedTrack.performers], #1130), whom what is found about the album must name; empty
-     * otherwise. Part of the key by name, after the title, so two recordings of one title by one
-     * composer never share a card, not even one written from the same page (a comparison of both);
-     * an album without performers keeps its key.
+     * otherwise. With them, [year]: the year of its release where known (`ReleaseDate.albumYear`),
+     * which its prompt gives (`ItemPrompt.Subject.year`); null otherwise. Both are part of the key by
+     * name, after the title, so two recordings of one title by one composer, or by the same
+     * performers in different years, never share a card, not even one written from the same page (a
+     * comparison of them); an album without performers keeps its key.
      */
     data class Album(
         val title: String,
         val artist: String,
         val group: String?,
         val performers: List<String> = emptyList(),
+        val year: String? = null,
     ) : CardEntity {
         companion object {
             /**

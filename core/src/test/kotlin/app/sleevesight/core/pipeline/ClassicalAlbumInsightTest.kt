@@ -121,7 +121,13 @@ class ClassicalAlbumInsightTest {
             val prompt = albumPrompt(concerto)
             assertEquals(performers, albums.asked.last().performers)
             assertEquals(
-                CardEntity.Album("Mozart: Piano Concertos Nos. 20 & 23", "Wolfgang Amadeus Mozart", null, performers),
+                CardEntity.Album(
+                    "Mozart: Piano Concertos Nos. 20 & 23",
+                    "Wolfgang Amadeus Mozart",
+                    null,
+                    performers,
+                    "2024",
+                ),
                 items.entity(InsightItem.ALBUM, concerto),
             )
             assertTrue("Performers: Khatia Buniatishvili, Academy of St. Martin in the Fields\n" in prompt)
