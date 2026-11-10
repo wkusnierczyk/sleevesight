@@ -13,7 +13,8 @@
   linear logo's reference, which the app's header logo follows); and its footer is the line every
   page of the site carries, the licence, the page's source (its file, or the one it renders,
   `source_path`) and the brand sheet's *Fonts*, in place of the theme's "This site is open source.
-  Improve this page." (#454). Keep it in step with the theme's layout.
+  Improve this page." (#454), then, on a page that names one (`docs_version`), the version it is up
+  to date with (#1156). Keep it in step with the theme's layout.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="{{ site.lang | default: "en-US" }}">
@@ -48,6 +49,7 @@
         <a href="{{ site.github.repository_url }}/blob/main/LICENSE">GPL-3.0</a> ·
         <a href="{{ site.github.repository_url }}/blob/main/{{ page.source_path | default: page.path }}">Source</a> ·
         <a href="{{ "/design/brand.html#fonts" | relative_url }}">Fonts</a>
+        {%- if page.docs_version %}<br>Up to date with version {{ page.docs_version }}.{% endif %}
       </div>
       {% endif %}
     </div>
