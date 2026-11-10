@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -163,11 +164,15 @@ interface ItemNotes {
     /**
      * [item]'s own lookups on [track] asked again (#1187, *Retry* beside the album's sources not
      * reached, which are not the track's): its evidence gathered afresh, free, with no call; the line
-     * goes once they answer, and the insight is written only on a tap, as after any *Retry*.
+     * goes once they answer, and the insight is written only on a tap, as after any *Retry*. With
+     * [afterRun], when the track's own sources are asked again too, not now: what was gathered for the
+     * track before is no longer taken as it is, so it is gathered afresh once the track's run lands,
+     * from what that run found.
      */
     fun gatherAgain(
         track: TrackState,
         item: InsightItem,
+        afterRun: Boolean = false,
     ) = Unit
 
     /**
@@ -361,12 +366,19 @@ class AppItemNotes(
 
     // Evidence gathered, and when; on which track, under which settings (for an album's web lines
     // found on another of its tracks, [spread]).
+    // [round], the count of *Retry* gatherings asked ([gatherAgain]) when it began.
     private class Found(
         val evidence: ItemEvidence,
         val at: Instant,
         val track: TrackState,
         val settings: Settings,
+        val round: Long = 0,
     )
+
+    // The *Retry* gatherings asked (#1187), counted, and the last asked for each item on a track (by its
+    // lookup key): what was gathered for it before is not taken again ([usable]).
+    private val rounds = AtomicLong()
+    private val asked = ConcurrentHashMap<Pair<InsightItem, String>, Long>()
 
     // The evidence gathered, by what it was gathered for, oldest first, at most [KEPT]: one a source
     // could not be asked for too, for [UNREACHABLE_FOR], so it is not asked again at every update.
@@ -426,7 +438,7 @@ class AppItemNotes(
         now: Settings,
     ): Flow<ItemShown> {
         val at = gatheredFor(insights, track, item, now)
-        if (!usable(gathered.value[at])) gather(insights, track, item, now, at)
+        if (!usable(at, gathered.value[at])) gather(insights, track, item, now, at)
         return gathered
             .map { it[at]?.evidence }
             .distinctUntilChanged()
@@ -652,10 +664,15 @@ class AppItemNotes(
     }
 
     // Gathered again whatever is kept (#1187), as a write would gather it; while one gathers, that one.
+    // What was gathered for [item] on the track before is not taken again ([usable]); with [afterRun],
+    // it is gathered once the run asking the track's sources again lands, not from [track] now.
     override fun gatherAgain(
         track: TrackState,
         item: InsightItem,
+        afterRun: Boolean,
     ) {
+        asked[item to track.normalized.lookupKey] = rounds.incrementAndGet()
+        if (afterRun) return
         val made = parts.value
         val now = settings.value?.takeIf { it.writeInsights && ItemInsights.offered(track) }
         if (made == null || now == null) return
@@ -861,7 +878,7 @@ class AppItemNotes(
     ): ItemEvidence? {
         val at = gatheredFor(insights, track, item, now)
         val known = gathered.value[at]
-        return if (usable(known)) {
+        return if (usable(at, known)) {
             known?.evidence
         } else {
             gather(insights, track, item, now, at).await()?.evidence
@@ -869,10 +886,16 @@ class AppItemNotes(
         }
     }
 
-    // Whether [found] is shown and written from as it is: one a source could not be asked for only
-    // for [UNREACHABLE_FOR], then gathered again.
-    private fun usable(found: Found?): Boolean =
-        found != null && (!found.evidence.unreachable || clock.now() - found.at < UNREACHABLE_FOR)
+    // Whether [found], [at]'s, is shown and written from as it is: one a source could not be asked for
+    // only for [UNREACHABLE_FOR], then gathered again; none begun before a *Retry* asked [at]'s item on
+    // its track again ([gatherAgain], #1187).
+    private fun usable(
+        at: Gathered,
+        found: Found?,
+    ): Boolean =
+        found != null &&
+            found.round >= (asked[at.item to at.lookupKey] ?: 0) &&
+            (!found.evidence.unreachable || clock.now() - found.at < UNREACHABLE_FOR)
 
     // The gathering of [at]'s evidence (off the main thread): the one under way, or a new one in
     // [scope], which outlives whoever asked; kept once it ends, unless a *Clear history* came since it
@@ -888,12 +911,14 @@ class AppItemNotes(
             inflight.computeIfAbsent(at) {
                 // Where the lines in the track's language are kept, when it began (#939).
                 val keeping = keepings.value
+                // The *Retry* gatherings asked when it began (#1187).
+                val round = rounds.get()
                 val job =
                     scope.async(mark(), start = CoroutineStart.LAZY) {
                         val found =
                             withContext(
                                 io,
-                            ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now) }
+                            ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now, round) }
                         found?.also { keep(at, it, coroutineContext) { at.inLanguage && keeping != keepings.value } }
                     }
                 pending += job
@@ -1230,7 +1255,11 @@ class AppItemNotes(
         asked: Asked,
     ) {
         val at = gatheredFor(insights, asked.track, asked.item, asked.settings)
-        keep(at, Found(asked.evidence, clock.now(), asked.track, asked.settings), asked.work)
+        keep(
+            at,
+            Found(asked.evidence, clock.now(), asked.track, asked.settings, gathered.value[at]?.round ?: 0),
+            asked.work,
+        )
         spread(insights, at, asked.evidence, asked.work)
     }
 
@@ -1417,7 +1446,7 @@ class AppItemNotes(
                     } else {
                         null
                     }
-                given?.let { Found(it, other.at, other.track, other.settings) } ?: other
+                given?.let { Found(it, other.at, other.track, other.settings, other.round) } ?: other
             }
         }
     }

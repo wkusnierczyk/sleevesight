@@ -101,6 +101,10 @@ class AlbumSource(
     // The web searches under way, by album ([webKeyOf]): one at a time per album.
     private val searching = OneSearchAtATime<List<EvidenceDraft>>()
 
+    // The free lookups under way, by album and the sources asked ([keyOf]): one at a time, a second
+    // lookup of the album meanwhile taking its outcome (#1187: a *Retry* and a row gathering it).
+    private val gathering = OneSearchAtATime<AlbumFound>()
+
     override suspend fun lookup(query: AlbumQuery): AlbumFound {
         val free = free(query)
         val searches = searches(query)
@@ -180,9 +184,18 @@ class AlbumSource(
         }
     }
 
-    // What the free sources [query] may ask say about the album: kept, or gathered and kept.
+    // What the free sources [query] may ask say about the album: kept, or gathered and kept; while
+    // one lookup of it is under way, that one's.
     private suspend fun free(query: AlbumQuery): AlbumFound {
         val key = keyOf(query)
+        return checkNotNull(gathering.once(key) { keptOrGathered(query, key) })
+    }
+
+    // What [free] gives for [query], under [key], made now.
+    private suspend fun keptOrGathered(
+        query: AlbumQuery,
+        key: String,
+    ): AlbumFound {
         kept.get(PART, key)?.let { stored -> KeptDrafts.decode(stored.value)?.let { return AlbumFound(it) } }
         val found = gather(query)
         if (!found.unreachable) kept.keep(PART, key, KeptDrafts.encode(found.drafts))

@@ -71,6 +71,8 @@ class MainActivity : ComponentActivity() {
             // *Retry* beside a source that could not be reached (#724): that source alone, asked again; or
             // the two named on one line (#1121), together.
             askAgain = graph.pipeline::askAgain,
+            // *Retry* beside the album's own lookups not reached (#1187): no write unasked after it.
+            itemRetried = graph.pipeline::itemRetried,
             unavailableModel = graph.unavailableModel,
             // The insight card's menu of Reactive's modes (#615), saved in the process's scope; an
             // automatic mode chosen is the first action (#625).

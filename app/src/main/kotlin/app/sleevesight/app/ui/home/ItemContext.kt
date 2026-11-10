@@ -76,7 +76,11 @@ internal class ItemContext(
     /**
      * The tap on *Retry* beside [item]'s sources not reached, [evidence]'s: the track's asked again
      * ([ItemEvidence.retry], as the pipeline offers them, [retries]), and the item's own lookups gathered
-     * again ([SourcesHeld.gatherAgain]: the album's, #1187); null when neither is offered.
+     * again ([SourcesHeld.gatherAgain]: the album's, #1187); null when neither is offered. Either way
+     * the track's run writes nothing unasked after it: the pipeline's *Retry* starts such a run, and
+     * with none asked of it, the run is told so first ([Retries.ofItem]). With both, the item is
+     * gathered once the track's run asked again has landed, from what it found (`afterRun`), not now
+     * from what it is replacing.
      */
     fun retryOf(
         item: InsightItem,
@@ -84,19 +88,19 @@ internal class ItemContext(
     ): (() -> Unit)? {
         val shown = track
         val asks = retries?.ofAll(evidence.retry)
-        val gathers =
-            if (evidence.held?.gatherAgain == true && shown != null) {
-                { notes.gatherAgain(shown, item) }
-            } else {
-                null
-            }
+        val own = evidence.held?.gatherAgain == true
         return when {
-            asks == null -> gathers
-            gathers == null -> asks
-            else -> (
+            shown == null || !own -> asks
+            asks != null -> (
                 {
                     asks()
-                    gathers()
+                    notes.gatherAgain(shown, item, afterRun = true)
+                }
+            )
+            else -> (
+                {
+                    retries?.ofItem()
+                    notes.gatherAgain(shown, item)
                 }
             )
         }
@@ -449,7 +453,7 @@ internal fun itemContext(
     cite = cite,
     onReport = onReport,
     readAloud = actions.readAloud,
-    retries = Retries(shown.view, shown.playing, actions.askAgain),
+    retries = Retries(shown.view, shown.playing, actions.askAgain, actions.itemRetried),
     unavailable = state.unavailable.takeIf { settings.writeInsights },
     onModelSettings = {
         state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) } ?: actions.openSettings()

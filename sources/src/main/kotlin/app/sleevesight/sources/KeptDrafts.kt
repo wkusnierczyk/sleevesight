@@ -80,10 +80,11 @@ internal object KeptDrafts {
 }
 
 /**
- * One paid search at a time per key (#885: an album, #912: an artist): a second asked for the same
- * key while one is under way waits for it and takes its outcome (what it kept), rather than paying
- * for its own. When the one under way is cancelled (a Stop), or fails by throwing, the next takes its
- * place and reads, or searches, itself.
+ * One paid search at a time per key (#885: an album, #912: an artist), or an album's free
+ * lookups (#1187): a second asked for the same key while one is under way waits for it and takes
+ * its outcome (what it kept), rather than paying, or asking the sources, for its own. When the one
+ * under way is cancelled (a Stop), or fails by throwing, the next takes its place and reads, or
+ * searches, itself.
  */
 internal class OneSearchAtATime<T> {
     // A search's outcome, shared with those that waited for it: its [value], null when it failed.

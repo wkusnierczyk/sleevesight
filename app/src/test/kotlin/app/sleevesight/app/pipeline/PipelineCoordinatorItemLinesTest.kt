@@ -3,6 +3,7 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -284,4 +285,50 @@ class PipelineCoordinatorItemLinesTest {
 
     @Test
     fun `item lines are taken only by a track that found nothing to narrate`() = checkAll(cases)
+
+    // #1187: the album's own lookups asked again by *Retry*, under an automatic mode, the track's own
+    // sources all answered: the lines they bring are taken, but nothing is written unasked, neither the
+    // key insight nor an item asked by itself or left open; a tap writes.
+    private val retried =
+        listOf(
+            Case(
+                "an item's own Retry: its lines taken, Write offered, no call; a tap writes",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A"),
+            ) {
+                acted()
+                englishFinds = false
+                play("A")
+                settle()
+                assertTrue(coordinator.state.itemCallAllowed(ItemAsk.KEPT_OPEN))
+                itemRetry("A")
+                itemLines("A", "The album's page.")
+                settle()
+                assertEquals(listOf("A"), tookItems)
+                assertEquals(null, calls["A"])
+                assertTrue(offersWriteFor("A"))
+                assertFalse(coordinator.state.itemCallAllowed(ItemAsk.KEPT_OPEN))
+                assertFalse(coordinator.state.itemCallAllowed(ItemAsk.BY_ITSELF))
+                assertTrue(coordinator.state.itemCallAllowed(ItemAsk.OPENED))
+                assertTrue(coordinator.state.itemCallAllowed(ItemAsk.TAP))
+                tap()
+                settle()
+            },
+            Case(
+                "an item's own Retry for another track: nothing held, the lines written as the track would be",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A"),
+            ) {
+                acted()
+                englishFinds = false
+                play("A")
+                settle()
+                itemRetry("B")
+                itemLines("A", "The album's page.")
+                settle()
+            },
+        )
+
+    @Test
+    fun `an item's own Retry writes nothing unasked from the lines it brings`() = checkAll(retried)
 }

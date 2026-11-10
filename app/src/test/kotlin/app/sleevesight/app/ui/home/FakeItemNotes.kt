@@ -71,15 +71,18 @@ internal class FakeItemNotes : ItemNotes {
         stops += key
     }
 
-    // The items whose own lookups were asked again (#1187), and what each then shows, if the test sets it.
+    // The items whose own lookups were asked again (#1187), and what each then shows, if the test sets it;
+    // those asked after the track's run asks its sources again.
     val gatheredAgain = mutableListOf<InsightItem>()
+    val gatheredAfterRun = mutableListOf<InsightItem>()
     var afterGathering: ItemShown? = null
 
     override fun gatherAgain(
         track: TrackState,
         item: InsightItem,
+        afterRun: Boolean,
     ) {
-        gatheredAgain += item
+        if (afterRun) gatheredAfterRun += item else gatheredAgain += item
         afterGathering?.let { shown.value = shown.value + (item to it) }
     }
 }

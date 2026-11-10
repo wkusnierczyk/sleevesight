@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.ui.logo.Busy
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.ItemEvidence
 
@@ -132,7 +133,8 @@ internal fun NothingToWriteFrom(
         ItemQuiet(stringResource(noEvidence(item)))
         return
     }
-    val names = namedTogether(unanswered.map { chipName(it) })
+    // Wikidata by the setting that switches it, Wikipedia (#1187); the diagnostics keep it apart.
+    val names = namedTogether(unanswered.map { chipName(if (it == SourceId.WIKIDATA) SourceId.WIKIPEDIA else it) })
     RetryLine(
         stringResource(R.string.home_source_note_unreachable, names),
         names,

@@ -27,8 +27,10 @@ import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.synthesis.GroundingCheck
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -45,9 +47,11 @@ import org.junit.Test
 class AppItemNothingNotesTest {
     private val provider = CountingProvider().apply { reply = { GroundingCheck.NO_EVIDENCE } }
 
-    // What the album's lookup answers, and how many times it was asked.
+    // What the album's lookup answers, and how many times it was asked; while [waiting] is set, it
+    // waits for it: under way.
     private var album = AlbumFound(emptyList())
     private var albumLookups = 0
+    private var waiting: CompletableDeferred<Unit>? = null
     private val parts =
         MutableStateFlow<PipelineParts?>(
             PipelineParts(
@@ -59,6 +63,7 @@ class AppItemNothingNotesTest {
                 cache = CardCache(),
                 albums = {
                     albumLookups++
+                    waiting?.await()
                     album
                 },
             ),
@@ -72,11 +77,13 @@ class AppItemNothingNotesTest {
     private val teardrop = NowPlaying("Teardrop", "Massive Attack, Elizabeth Fraser", "Mezzanine", player = "p")
 
     // *Teardrop*: a line about the song; with MusicBrainz [reached], one about the band (unless not
-    // [band]), else none, MusicBrainz having ended unreachable; Last.fm as [lastFm] ended, if asked.
+    // [band]), else none, MusicBrainz having ended unreachable, or, with [notFound], answered with no
+    // recording; Last.fm as [lastFm] ended, if asked.
     private fun track(
         reached: Boolean,
         band: Boolean = reached,
         lastFm: SourceState? = null,
+        notFound: Boolean = false,
     ): TrackState {
         val song = HomeFixtures.draft(SourceId.WIKIPEDIA, "Teardrop is a song by Massive Attack.")
         val band =
@@ -85,7 +92,14 @@ class AppItemNothingNotesTest {
                 .copy(about = "Massive Attack")
                 .takeIf { band }
         val drafts = listOfNotNull(song, band)
-        val musicBrainz = HomeFixtures.done(if (reached) Outcome.SongArticle else Outcome.Unreachable)
+        val musicBrainz =
+            HomeFixtures.done(
+                when {
+                    reached -> Outcome.SongArticle
+                    notFound -> Outcome.None
+                    else -> Outcome.Unreachable
+                },
+            )
         return HomeFixtures
             .track(
                 teardrop,
@@ -103,6 +117,8 @@ class AppItemNothingNotesTest {
                             recordingMbid = "rec-teardrop",
                             artists = listOf(ResolvedArtist("Massive Attack", "mb-massive-attack")),
                         )
+                    } else if (notFound) {
+                        Resolution.NONE
                     } else {
                         Resolution.unreachable("rate limited")
                     },
@@ -205,5 +221,64 @@ class AppItemNothingNotesTest {
             assertEquals(InsightState.NoEvidence, shown.state)
             assertTrue(shown.evidence.unanswered.isEmpty())
             assertTrue(lines("album").last(), "nothing found from 0 lines, 0 calls" in lines("album").last())
+        }
+
+    @Test
+    fun `a Retry asking MusicBrainz too gathers the album once, after the track's run, from what it found`() =
+        runTest {
+            album = AlbumFound(emptyList(), unanswered = listOf(SourceId.WIKIPEDIA))
+            val notes = notes()
+            val before = track(reached = false)
+            notes.write(before, InsightItem.ALBUM)
+            advanceUntilIdle()
+            val held = notes.item(before, InsightItem.ALBUM).first { it is ItemShown.Shown } as ItemShown.Shown
+            assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA), held.evidence.unanswered)
+            val asked = albumLookups
+
+            // *Retry*: MusicBrainz asked again by the track's run, the album not from the track it replaces.
+            notes.gatherAgain(before, InsightItem.ALBUM, afterRun = true)
+            advanceUntilIdle()
+            assertEquals(asked, albumLookups)
+
+            // The run lands, MusicBrainz finding no recording (still no release group): the album
+            // gathered once, from it, whatever follows it meanwhile.
+            waiting = CompletableDeferred()
+            album =
+                AlbumFound(
+                    listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Mezzanine is an album.", scope = Scope.RELEASE)),
+                )
+            val after = track(reached = false, notFound = true)
+            // Two rows following it, as a panel and a page would.
+            val row = launch { notes.item(after, InsightItem.ALBUM).collect {} }
+            val page = launch { notes.item(after, InsightItem.ALBUM).collect {} }
+            advanceUntilIdle()
+            assertEquals(asked + 1, albumLookups)
+            checkNotNull(waiting).complete(Unit)
+            advanceUntilIdle()
+            assertEquals(ItemShown.Offered, notes.item(after, InsightItem.ALBUM).first { it !is ItemShown.Gathering })
+            assertEquals(asked + 1, albumLookups)
+            assertEquals(0, provider.requests)
+            row.cancel()
+            page.cancel()
+        }
+
+    @Test
+    fun `a Retry whose track's run finds the same sources not reached still gathers the album afresh`() =
+        runTest {
+            album = AlbumFound(emptyList(), unanswered = listOf(SourceId.WIKIPEDIA))
+            val notes = notes()
+            val before = track(reached = false)
+            notes.write(before, InsightItem.ALBUM)
+            advanceUntilIdle()
+            val asked = albumLookups
+            notes.gatherAgain(before, InsightItem.ALBUM, afterRun = true)
+            // The same state again: what was gathered before the *Retry* is not taken as it is.
+            album =
+                AlbumFound(
+                    listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Mezzanine is an album.", scope = Scope.RELEASE)),
+                )
+            val again = track(reached = false)
+            assertEquals(ItemShown.Offered, notes.item(again, InsightItem.ALBUM).first { it is ItemShown.Offered })
+            assertEquals(asked + 1, albumLookups)
         }
 }

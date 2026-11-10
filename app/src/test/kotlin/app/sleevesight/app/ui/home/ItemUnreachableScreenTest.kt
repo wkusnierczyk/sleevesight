@@ -64,6 +64,9 @@ class ItemUnreachableScreenTest {
 
     private val retried = mutableListOf<Triple<RunKey, Set<SourceId>, NowPlaying>>()
 
+    // The taps on *Retry* beside an item's own lookups told to the pipeline (#1187).
+    private val itemRetries = mutableListOf<NowPlaying>()
+
     private val unreached =
         track(
             sources =
@@ -101,6 +104,7 @@ class ItemUnreachableScreenTest {
             NowPlayingActions(
                 normalizer::normalize,
                 itemNotes = notes,
+                itemRetried = { itemRetries += it },
                 askAgain = { key, sources, shown ->
                     retried += Triple(key, sources, shown)
                     // Asked again: the line gives way, as once the sources are gathered anew.
@@ -172,8 +176,10 @@ class ItemUnreachableScreenTest {
             compose.waitForIdle()
             compose.onNodeWithTag(ITEM_UNREACHABLE_TAG).assertDoesNotExist()
         }
-        // The album's lookups asked again, not the track's sources, which answered.
+        // The album's lookups asked again, not the track's sources, which answered; the track's run
+        // told first, so it writes nothing unasked from what they bring.
         assertEquals(listOf(InsightItem.ALBUM), notes.gatheredAgain)
+        assertEquals(listOf(unreached.nowPlaying), itemRetries)
         assertEquals(emptyList<Any>(), retried)
         // A *Retry* of sources writes nothing by itself.
         assertEquals(emptyList<InsightItem>(), notes.writes)
@@ -189,7 +195,11 @@ class ItemUnreachableScreenTest {
             )
         show(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA), InsightItem.ALBUM, held)
         assertEquals(setOf(SourceId.MUSICBRAINZ), retried.single().second)
-        assertEquals(listOf(InsightItem.ALBUM), notes.gatheredAgain)
+        // Gathered once the track's run asked again has landed, not now from what it replaces; the
+        // pipeline's *Retry* holds the writing itself.
+        assertEquals(listOf(InsightItem.ALBUM), notes.gatheredAfterRun)
+        assertEquals(emptyList<InsightItem>(), notes.gatheredAgain)
+        assertEquals(emptyList<NowPlaying>(), itemRetries)
     }
 
     @Test
@@ -204,6 +214,15 @@ class ItemUnreachableScreenTest {
         }
         assertEquals(setOf(SourceId.MUSICBRAINZ), retried.single().second)
         assertEquals(emptyList<InsightItem>(), notes.gatheredAgain)
+    }
+
+    @Test
+    fun wikidataNotReachedIsNamedAsWikipediaTheSettingThatSwitchesIt() {
+        val held = SourcesHeld(listOf(SourceId.WIKIDATA, SourceId.WIKIPEDIA), retry = emptyList(), gatherAgain = true)
+        show(listOf(SourceId.WIKIDATA), InsightItem.ALBUM, held) {
+            compose.onNodeWithText("Wikipedia could not be reached.").assertExists()
+            compose.onNodeWithText("Wikidata", substring = true).assertDoesNotExist()
+        }
     }
 
     @Test
