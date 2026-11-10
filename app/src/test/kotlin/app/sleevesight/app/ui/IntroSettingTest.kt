@@ -15,13 +15,12 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.LastIntro
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
@@ -37,7 +36,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -47,19 +45,18 @@ class IntroSettingTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // In memory, read, written and saved on the test's thread, the main one (#1140): over files,
+    // with the saves on `Dispatchers.Default`, each wait below also waited on threads the main looper
+    // does not drive. The settings file's own reads and writes are `SettingsStoreTest`'s.
+    private val settings = memorySettings()
+    private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
         saves.cancel()
-        stores.close()
     }
 
     private fun text(id: Int) = app.getString(id)
