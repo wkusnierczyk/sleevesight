@@ -299,8 +299,10 @@ class LyricsAiScreenTest {
     @Test
     fun theExplanationShowsCitedThenItsPagesThenTheModel() =
         show {
-            val songfacts = CitedPage("S1", "https://www.songfacts.example/sundown", "Sundown: song facts")
-            val interview = CitedPage("S2", "https://music-mag.example/interview", null)
+            // Saved titles with invisible characters, as kept before #1041: shown without them; one of
+            // nothing else shows its site.
+            val songfacts = CitedPage("S1", "https://www.songfacts.example/sundown", "Sundown:\u200B song facts\u202E")
+            val interview = CitedPage("S2", "https://music-mag.example/interview", "\u200B \u2060")
             val reply = "It is about jealousy. [S1] It reads as a warning. The title is a time of day. [S2]"
             val grounded =
                 (GroundingCheck.check(reply, setOf("S1", "S2"), allowModel = false) as InsightReply.Written).grounded
@@ -328,7 +330,7 @@ class LyricsAiScreenTest {
             assertTrue(shows(text(R.string.home_lyrics_pages_cited)))
             assertTrue(bounds(lyricsCitedPageTag("S1")).top >= heading.bottom)
             assertTrue(shows("Sundown: song facts"))
-            // Untitled: its site.
+            // Untitled, or titled with nothing a person sees: its site.
             assertTrue(shows("music-mag.example"))
             compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("by Claude Haiku 5.5")
             assertTrue(bounds(explainTag(AI_SEARCH_BY_TAG)).top >= bounds(lyricsCitedPageTag("S2")).bottom)

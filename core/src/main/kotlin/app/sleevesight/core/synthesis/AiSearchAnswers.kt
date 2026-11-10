@@ -6,6 +6,7 @@ import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.lyrics.LyricsLink
 import app.sleevesight.core.lyrics.pages
 import app.sleevesight.core.normalizer.AccentFolder
+import app.sleevesight.core.text.SourceText
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -485,11 +486,13 @@ private val EXPLANATION_ADDRESS: Regex =
         Regex("""(?i:\b[a-z][a-z0-9+.-]*://|\bwww\.)|\b$label(?:\.$label)*\.[a-z]{2,}\b""")
     }
 
-// The string at [key], trimmed, when it is one and not blank.
+// The string at [key], cleaned as text from sources is ([SourceText], #1041) and trimmed, when it is
+// one and not blank once cleaned.
 private fun JsonObject.text(key: String): String? =
     (get(key) as? JsonPrimitive)
         ?.takeIf { it.isString }
         ?.content
+        ?.let(SourceText::clean)
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
 

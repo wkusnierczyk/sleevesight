@@ -78,6 +78,30 @@ class ExaPageSearchTest {
         }
 
     @Test
+    fun `a page's title is cleaned, and one of nothing a person sees is none`() =
+        runTest {
+            // #1041: a right-to-left override, zero-width spaces and a tag-block letter.
+            val body =
+                ExaWebSearch.JSON.encodeToString(
+                    ExaSearchResponse(
+                        listOf(
+                            ExaResult(
+                                "https://a.example/1",
+                                "Sundown\u202E:\u200B facts\uDB40\uDC49",
+                                listOf("Sundown by Gordon Lightfoot."),
+                            ),
+                            ExaResult(
+                                "https://a.example/2",
+                                "\u200B\u2060 ",
+                                listOf("Sundown by Gordon Lightfoot, 1974."),
+                            ),
+                        ),
+                    ),
+                )
+            assertEquals(listOf("Sundown: facts", null), pagesIn(body, subject = null).map { it.title })
+        }
+
+    @Test
     fun aFailureIsFailed() =
         runTest {
             assertEquals(
