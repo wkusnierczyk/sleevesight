@@ -1,7 +1,10 @@
 package app.sleevesight.ai.google
 
+import app.sleevesight.ai.UNREADABLE_EVENT
 import app.sleevesight.ai.brokeOff
+import app.sleevesight.ai.codeDetail
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.detailOf
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
@@ -45,11 +48,12 @@ internal class ContentStream(
 
             chunk == null -> {
                 malformed = true
-                end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE))
+                end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE, detail = UNREADABLE_EVENT))
             }
 
             chunk.error != null -> {
-                end(CompletionEvent.Error(kindOf(chunk.error) ?: AiErrorKind.SERVER))
+                val code = chunk.error.status ?: chunk.error.code?.toString()
+                end(CompletionEvent.Error(kindOf(chunk.error) ?: AiErrorKind.SERVER, detail = codeDetail(code)))
             }
 
             else -> {
@@ -96,11 +100,13 @@ internal class ContentStream(
     // A connection lost or cut short after the reply began leaves an incomplete reply.
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
-            error is NetError.RateLimited -> CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter)
+            error is NetError.RateLimited -> {
+                CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter, detail = detailOf(error))
+            }
             started && (error is NetError.Offline || error is NetError.TooLarge) -> {
                 brokeOff(error, Usage(inputTokens, outputTokens))
             }
-            else -> CompletionEvent.Error(kindOf(error))
+            else -> CompletionEvent.Error(kindOf(error), detail = detailOf(error))
         }
 
     private fun end(event: CompletionEvent): CompletionEvent {

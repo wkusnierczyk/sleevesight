@@ -33,12 +33,25 @@ sealed interface NetError {
          */
         val timedOut: Boolean get() = reason in TIMEOUT_REASONS
 
+        /**
+         * Whether the phone had no network to send on (#1164): the host's name could not be resolved
+         * (`UnknownHostException`, which Android throws for every name while it has no network), or
+         * the system said the network was down or out of reach (`ENETUNREACH`, `ENETDOWN`, `ENONET`),
+         * as it does for a connection tried with none. Any other failure (a connection reset,
+         * refused or closed, a TLS failure, a stream cut short) came on a network that was there.
+         */
+        val noNetwork: Boolean get() = reason.startsWith(UNKNOWN_HOST) || NO_NETWORK_ERRNOS.any { "($it)" in reason }
+
         companion object {
             /**
              * The [reason] of a body the engine ended cleanly under the reader, as it does when the
              * call is cancelled under it: a connection lost, or the whole request's timeout.
              */
             const val CANCELLED_BODY: String = "CancelledBody"
+
+            private const val UNKNOWN_HOST = "UnknownHostException"
+
+            private val NO_NETWORK_ERRNOS = listOf("ENETUNREACH", "ENETDOWN", "ENONET")
         }
     }
 

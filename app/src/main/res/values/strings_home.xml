@@ -591,7 +591,11 @@
     <string name="home_cite_none">not cited</string>
 
     <!-- Why an insight could not be written: the fixed labels the pipeline gives. -->
+    <!-- Only when the phone had no network, or the service's host could not be resolved (#1164). -->
     <string name="home_failure_offline">no connection</string>
+    <!-- A connection to the AI service that failed or dropped on a working network, before its reply
+         began (#1164): reset, refused, closed, a TLS failure. -->
+    <string name="home_failure_connection_failed">the connection dropped</string>
     <string name="home_failure_unauthorized">the AI service did not accept the key</string>
     <string name="home_failure_billing">the AI service account needs credit, or has reached its spending limit</string>
     <string name="home_failure_quota_exhausted">the AI service’s quota is used up for now; it resets later, or a higher tier lifts it</string>

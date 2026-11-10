@@ -4,6 +4,7 @@ import app.sleevesight.ai.ReplayNetClient
 import app.sleevesight.ai.ReplayNetClient.Companion.failure
 import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
+import app.sleevesight.ai.withoutDetail
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
@@ -53,7 +54,7 @@ class AnthropicProviderTest {
         answer: (NetRequest) -> NetResult<NetResponse>,
     ): Pair<List<CompletionEvent>, ReplayNetClient> {
         val net = ReplayNetClient(answer)
-        return provider(net).stream(request, key).toList() to net
+        return provider(net).stream(request, key).toList().withoutDetail() to net
     }
 
     /** A provider whose clock stands at [NOW]. */
@@ -375,7 +376,16 @@ class AnthropicProviderTest {
                     NetError.RateLimited(30.seconds) to CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 30.seconds),
                     NetError.Server(529) to CompletionEvent.Error(AiErrorKind.OVERLOADED),
                     NetError.Server(500) to CompletionEvent.Error(AiErrorKind.SERVER),
-                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    // No network to send on is "no connection" (#1164); a connection that failed on a
+                    // network that was there, or a timeout, is not.
+                    NetError.Offline("UnknownHostException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("ConnectException (ENETUNREACH)") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SocketException (ECONNRESET)") to
+                        CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SSLException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
+                    NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),
                     NetError.Protocol("ProtocolException") to CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE),
                 )
@@ -571,11 +581,18 @@ class AnthropicProviderTest {
         }
 
     @Test
-    fun `the connection lost before the message began is offline, not a reply that broke off`() =
+    fun `the connection lost before the message began is no reply that broke off, and names what failed`() =
         runTest {
-            val net = cutNet(end = NetError.Offline("SocketTimeoutException"))
-            val events = provider(net).stream(request, key).toList()
-            assertEquals(listOf(CompletionEvent.Error(AiErrorKind.OFFLINE)), events)
+            val timedOut = provider(cutNet(end = NetError.Offline("SocketTimeoutException"))).stream(request, key)
+            assertEquals(
+                listOf(CompletionEvent.Error(AiErrorKind.TIMED_OUT, detail = "SocketTimeoutException")),
+                timedOut.toList(),
+            )
+            val reset = provider(cutNet(end = NetError.Offline("SocketException (ECONNRESET)"))).stream(request, key)
+            assertEquals(
+                listOf(CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED, detail = "SocketException (ECONNRESET)")),
+                reset.toList(),
+            )
         }
 
     // A stream of [events] that ends with [end], a failure, or as a 200 whose body simply ended when null.

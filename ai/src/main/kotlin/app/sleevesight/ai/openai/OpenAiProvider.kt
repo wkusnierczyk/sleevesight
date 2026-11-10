@@ -2,6 +2,8 @@ package app.sleevesight.ai.openai
 
 import app.sleevesight.ai.ServerSentEvents
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.detailOf
+import app.sleevesight.ai.kindOfOffline
 import app.sleevesight.ai.maxTokensSent
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
@@ -453,7 +455,7 @@ class OpenAiProvider(
 /** The kind of a request that got no usable answer from `:net`. */
 internal fun kindOf(error: NetError): AiErrorKind =
     when (error) {
-        is NetError.Offline -> AiErrorKind.OFFLINE
+        is NetError.Offline -> kindOfOffline(error)
         is NetError.RateLimited -> AiErrorKind.RATE_LIMITED
         is NetError.Unauthorized -> AiErrorKind.UNAUTHORIZED
         is NetError.Server -> if (error.status == UNAVAILABLE) AiErrorKind.OVERLOADED else AiErrorKind.SERVER
@@ -490,7 +492,11 @@ internal fun errorOf(
     now: Instant,
 ): CompletionEvent.Error {
     val kind = kindOf(response)
-    return CompletionEvent.Error(kind, response.retryAfter(now).takeIf { kind == AiErrorKind.RATE_LIMITED })
+    return CompletionEvent.Error(
+        kind,
+        response.retryAfter(now).takeIf { kind == AiErrorKind.RATE_LIMITED },
+        detail = detailOf(response),
+    )
 }
 
 /**

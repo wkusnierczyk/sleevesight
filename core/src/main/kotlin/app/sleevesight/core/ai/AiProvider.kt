@@ -206,12 +206,16 @@ sealed interface CompletionEvent {
     /**
      * The reply failed; the text so far, if any, is incomplete. [retryAfter] is the service's
      * requested wait, when it gave one. [breakoff] says how a reply that had begun broke off, for
-     * [AiErrorKind.INCOMPLETE] only, when the client can tell.
+     * [AiErrorKind.INCOMPLETE] only, when the client can tell. [detail] names what failed, for the
+     * diagnostics (#1164), never with a message or the reply's text: the transport's label for a
+     * failed connection (`SocketException (ECONNRESET)`), the HTTP status of an error answer
+     * (`HTTP 503`), or the service's own code for an error it sent in the stream.
      */
     data class Error(
         val kind: AiErrorKind,
         val retryAfter: Duration? = null,
         val breakoff: Breakoff? = null,
+        val detail: String? = null,
     ) : CompletionEvent {
         init {
             require(breakoff == null || kind == AiErrorKind.INCOMPLETE) {
@@ -275,8 +279,25 @@ enum class StopReason {
 
 /** Every way a provider call fails, for the card to explain and the log to record. */
 enum class AiErrorKind {
-    /** No connection, or none that answered. */
+    /**
+     * The phone had no network: the service's host could not be resolved, or the network was down
+     * or out of reach (`NetError.Offline.noNetwork`, #1164).
+     */
     OFFLINE,
+
+    /**
+     * The connection to the service failed or dropped before its reply began, on a network that
+     * was there (#1164): reset, refused, closed, or a TLS failure. A reply that had begun and then
+     * lost its connection is [INCOMPLETE] instead.
+     */
+    CONNECTION_FAILED,
+
+    /**
+     * The service did not answer in time: the connection could not be made, or no reply began,
+     * within the client's timeouts (#1164). A reply that had begun and then fell silent is
+     * [INCOMPLETE] instead. Named as a reply that timed out mid-way is (`ReplyFailures.TIMED_OUT`).
+     */
+    TIMED_OUT,
 
     /** The key is missing, wrong, revoked, or not allowed this. */
     UNAUTHORIZED,

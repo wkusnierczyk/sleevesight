@@ -4,6 +4,7 @@ import app.sleevesight.ai.ReplayNetClient
 import app.sleevesight.ai.ReplayNetClient.Companion.failure
 import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
+import app.sleevesight.ai.withoutDetail
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
@@ -89,7 +90,7 @@ class GoogleProviderTest {
         answer: (NetRequest) -> NetResult<NetResponse>,
     ): Pair<List<CompletionEvent>, ReplayNetClient> {
         val net = ReplayNetClient(answer)
-        return provider(net).stream(request, key).toList() to net
+        return provider(net).stream(request, key).toList().withoutDetail() to net
     }
 
     @Test
@@ -352,6 +353,28 @@ class GoogleProviderTest {
         }
 
     @Test
+    fun `a failure names what failed, for the diagnostics, and never the service's message`() =
+        runTest {
+            // Fresh for each case, as the client's stream is read once.
+            suspend fun detail(answer: () -> NetResult<NetResponse>): String? =
+                (provider(ReplayNetClient { answer() }).stream(request, key).toList().last() as CompletionEvent.Error)
+                    .detail
+            assertEquals(
+                "SocketException (ECONNRESET)",
+                detail { failure(NetError.Offline("SocketException (ECONNRESET)")) },
+            )
+            assertEquals("UnknownHostException", detail { failure(NetError.Offline("UnknownHostException")) })
+            assertEquals("HTTP 503", detail { failure(NetError.Server(503)) })
+            assertEquals("HTTP 500", detail { response(500, """{"error":{"code":500,"status":"INTERNAL"}}""") })
+            val inStream =
+                detail {
+                    ok(sse(chunk("Half"), """{"error":{"code":503,"message":"Busy at x.y","status":"UNAVAILABLE"}}"""))
+                }
+            assertEquals("error in the stream: UNAVAILABLE", inStream)
+            assertEquals("unreadable event", detail { ok(sse("not json")) })
+        }
+
+    @Test
     fun `a stream that ends before a finish reason is incomplete, as having no end`() =
         runTest {
             val (events, _) = events { ok(sse(chunk("Half"))) }
@@ -377,7 +400,16 @@ class GoogleProviderTest {
                     NetError.Server(503) to CompletionEvent.Error(AiErrorKind.OVERLOADED),
                     NetError.Server(500) to CompletionEvent.Error(AiErrorKind.SERVER),
                     NetError.Server(504) to CompletionEvent.Error(AiErrorKind.SERVER),
-                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    // No network to send on is "no connection" (#1164); a connection that failed on a
+                    // network that was there, or a timeout, is not.
+                    NetError.Offline("UnknownHostException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("ConnectException (ENETUNREACH)") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SocketException (ECONNRESET)") to
+                        CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SSLException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
+                    NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),
                     NetError.Protocol("ProtocolException") to CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE),
                 )
