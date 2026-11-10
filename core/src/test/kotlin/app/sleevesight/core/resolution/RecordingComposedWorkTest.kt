@@ -128,6 +128,16 @@ class RecordingComposedWorkTest {
         }
 
     @Test
+    fun `a song's writer credited on the track but not on the recording - a song still covered by date`() =
+        runTest {
+            // A work typed `Song` is no composed work, whoever the track credits: a songwriter the player
+            // names beside the singer does not take the cover away.
+            val resolution = resolve(musicBrainz(work(type = "Song")), track("Andante", "Pianist, Composer"))
+            assertTrue(resolution.cover)
+            assertEquals("first", resolution.original?.recordingMbid)
+        }
+
+    @Test
     fun `a song whose writer the track does not credit is still a cover by date`() =
         runTest {
             val resolution = resolve(musicBrainz(work(type = "Song")), track("Andante", "Pianist"))
