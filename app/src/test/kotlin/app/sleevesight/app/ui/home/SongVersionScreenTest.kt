@@ -47,7 +47,9 @@ import org.robolectric.annotation.GraphicsMode
  * Girl - 2024 Remaster", the *Song* row reads the title as under the cover, "Material Girl", and the
  * version the normalizer dropped is said under the song's name in its panel's heading, in every state
  * of the panel, and on its page under *Separate pages*, read with the heading: "Song, Material Girl,
- * Version: 2024 Remaster". With no version in the title, no note: the row and the panel as before.
+ * Version: 2024 Remaster". With no version in the title, no note. A title with a featured artist, a
+ * source work or a variant also reads as under the cover in the row (`ItemRowsTest`); only a dropped
+ * version gets a note.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

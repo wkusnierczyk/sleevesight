@@ -40,12 +40,11 @@ internal fun ItemPage(
         ItemQuiet(stringResource(noEvidence(item)))
         return
     }
-    Column(Modifier.testTag(ITEM_PAGE_HEAD_TAG).semantics(mergeDescendants = true) {}) {
+    Column(Modifier.semantics(mergeDescendants = true) {}) {
         Text(row.name, Modifier.testTag(ITEM_PAGE_NAME_TAG), style = MaterialTheme.typography.titleLarge)
         row.version?.let {
             Text(
                 stringResource(R.string.home_item_version, it),
-                Modifier.testTag(ITEM_PAGE_VERSION_TAG),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -66,9 +65,3 @@ internal fun itemRow(
 
 /** The test tag of an item's page's first line, its name. */
 const val ITEM_PAGE_NAME_TAG: String = "item-page:name"
-
-/** The test tag of the line under a song's page's name, its version (#1160). */
-const val ITEM_PAGE_VERSION_TAG: String = "item-page:version"
-
-/** The test tag of an item's page's name and the version under it, read as one stop. */
-const val ITEM_PAGE_HEAD_TAG: String = "item-page:head"

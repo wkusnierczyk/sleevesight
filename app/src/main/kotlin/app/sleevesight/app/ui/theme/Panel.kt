@@ -53,7 +53,7 @@ import kotlin.math.roundToInt
  * outside of one layout of its own (the row reads it from its direct child). Without a
  * subtitle, the heading is as it always was, and [actions] is not drawn. With a subtitle, [note] (the
  * version a song's title names, #1160) goes on a line of its own under it, in its style, read with
- * the heading too; tagged `<tag>:note`.
+ * the heading too.
  */
 @Suppress("LongParameterList") // What the panel shows, and where its users hook into it.
 @Composable
@@ -161,7 +161,6 @@ private fun SubtitledHeading(
                     it,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("$tag:note"),
                 )
             }
         }
