@@ -10,16 +10,17 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.AppGraph
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.LastIntro
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
@@ -35,7 +36,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -45,19 +45,19 @@ class IntroSettingTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // The switch test's settings and keys, in memory, read, written and saved on the test's thread,
+    // the main one (#1140): over files, with the saves on `Dispatchers.Default`, its waits also
+    // waited on threads the main looper does not drive. The settings file's own reads and writes are
+    // `SettingsStoreTest`'s.
+    private val settings = memorySettings()
+    private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
         saves.cancel()
-        stores.close()
     }
 
     private fun text(id: Int) = app.getString(id)
@@ -85,8 +85,16 @@ class IntroSettingTest {
         }
     }
 
+    /**
+     * The graph's settings in memory ([MemoryStore]), read and changed on the test's thread, the main
+     * one (#1140), as [FontSettingsTest] has them for *Font* (#606): over their file, the mirror waited
+     * on threads the main looper does not drive (DataStore's write, and the settings' collection on
+     * `Dispatchers.IO`) within [idleUntil]'s real-time limit, and twice in CI it was not reached.
+     * The file's own reads and writes are `SettingsStoreTest`'s.
+     */
     @Test
     fun theSettingIsKeptForTheNextColdStartsFirstFrame() {
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
         assertTrue("on by default", LastIntro(app).value)
         assertTrue(app.graph.introAtStart.value)
         runBlocking { app.graph.settings.update { it.copy(introAtStart = false) } }
