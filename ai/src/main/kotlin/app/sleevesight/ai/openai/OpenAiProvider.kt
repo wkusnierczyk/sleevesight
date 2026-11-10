@@ -1,7 +1,10 @@
 package app.sleevesight.ai.openai
 
 import app.sleevesight.ai.ServerSentEvents
+import app.sleevesight.ai.WAITED
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.detailOf
+import app.sleevesight.ai.kindOfOffline
 import app.sleevesight.ai.maxTokensSent
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
@@ -23,8 +26,6 @@ import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
 import app.sleevesight.net.NetSecrets
-import app.sleevesight.net.RetryPolicy
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.JsonArray
@@ -82,22 +83,18 @@ import kotlin.time.Instant
  * OpenAI answers 429 both for too many requests and for an account out of credit, and only the
  * body says which; so its host's policy ([HOST_POLICY]) has `:net` pass a 429 on, unretried, and
  * the client reads it. An account out of credit is [AiErrorKind.BILLING] at once, since no retry
- * mends it. A rate limit is sent once more after its `Retry-After` (or [RetryPolicy.delayAfter]'s
- * first wait without one), when that is within [RetryPolicy.maxDelay], as `:net` retries another
- * host's 429; a 429 was refused before it was acted on, so the call is not paid twice. Otherwise it
- * ends as [AiErrorKind.RATE_LIMITED] with the wait. Nothing holds back the next request after one:
+ * mends it. A rate limit ends as [AiErrorKind.RATE_LIMITED] with the wait its `Retry-After` asks
+ * for: the client sends nothing again, and the pipeline's `AiRetry` asks again within the user's
+ * *Retry when the AI fails* (#1164), the one retry of an AI call. Nothing holds back the next request after one:
  * each is one track's insight or one tap of *Write*, far apart against any rate limit an account
  * has, and the next track should not wait out a limit the last one met.
  *
  * @param net the process's one `NetClient`, configured with [HOST_POLICY] under [HOST].
- * @param retry the waits for a rate limit: [net]'s own `NetConfig.retry`, so both wait alike. It
- *   has no default, so no caller leaves it different by accident.
  * @param baseUrl the API's origin, for tests.
  * @param clock for a `Retry-After` given as a date, and the models' shutdown dates.
  */
 class OpenAiProvider(
     private val net: NetClient,
-    private val retry: RetryPolicy,
     private val baseUrl: String = BASE_URL,
     private val clock: Clock = Clock.System,
 ) : AiProvider {
@@ -131,7 +128,6 @@ class OpenAiProvider(
         channelFlow {
             // What is asked for, until the service refuses it: the effort, the encrypted reasoning.
             val asked = Asked(takesEffort(request.model), request.effort)
-            var waited = false
             do {
                 val reader = ResponseStream(clock)
                 val events = ServerSentEvents()
@@ -157,37 +153,11 @@ class OpenAiProvider(
                     }
                 // An error status comes before any of the body, so nothing was emitted for it.
                 val refused = (result as? NetResult.Success)?.value?.takeUnless { it.isSuccess }
-                val wait = refused?.takeIf { !waited }?.let(::rateLimitWait)
-                val again =
-                    when {
-                        refused == null -> {
-                            false
-                        }
-
-                        asked.without(refused, request.tools.isNotEmpty()) -> {
-                            true
-                        }
-
-                        wait != null -> {
-                            delay(wait)
-                            waited = true
-                            true
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
+                // A parameter the model refuses is dropped and the request sent once more; nothing
+                // else is sent again here (#1164: `AiRetry` asks again after a rate limit).
+                val again = refused != null && asked.without(refused, request.tools.isNotEmpty())
                 if (!again) reader.end(result).forEach { send(it) }
             } while (again)
-        }
-
-    /** The wait before sending again after [response], a rate limit; null if it is not one, or too long. */
-    private fun rateLimitWait(response: NetResponse): Duration? =
-        if (response.status == TOO_MANY_REQUESTS && kindOf(response) == AiErrorKind.RATE_LIMITED) {
-            (response.retryAfter(clock.now()) ?: retry.delayAfter(1)).takeIf { it <= retry.maxDelay }
-        } else {
-            null
         }
 
     private fun responsesRequest(
@@ -453,7 +423,7 @@ class OpenAiProvider(
 /** The kind of a request that got no usable answer from `:net`. */
 internal fun kindOf(error: NetError): AiErrorKind =
     when (error) {
-        is NetError.Offline -> AiErrorKind.OFFLINE
+        is NetError.Offline -> kindOfOffline(error)
         is NetError.RateLimited -> AiErrorKind.RATE_LIMITED
         is NetError.Unauthorized -> AiErrorKind.UNAUTHORIZED
         is NetError.Server -> if (error.status == UNAVAILABLE) AiErrorKind.OVERLOADED else AiErrorKind.SERVER
@@ -490,7 +460,11 @@ internal fun errorOf(
     now: Instant,
 ): CompletionEvent.Error {
     val kind = kindOf(response)
-    return CompletionEvent.Error(kind, response.retryAfter(now).takeIf { kind == AiErrorKind.RATE_LIMITED })
+    return CompletionEvent.Error(
+        kind,
+        response.retryAfter(now).takeIf { kind in WAITED },
+        detail = detailOf(response),
+    )
 }
 
 /**

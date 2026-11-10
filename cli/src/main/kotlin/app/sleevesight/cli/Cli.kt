@@ -9,6 +9,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.AiRetry
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.KeptCard
 import app.sleevesight.core.pipeline.ListeningSessionFacts
@@ -301,7 +302,9 @@ class Cli(
                     options.mode == Mode.RECORD -> keys.forProvider(provider)?.takeIf { providerName in options.record }
                     else -> keys.forProvider(provider)
                 }
-            return key?.let { AiAccess(wiring.aiProviders.getValue(provider), it) }
+            // Asked again as the app does with its default (#1164): the clients retry nothing themselves.
+            val retrying = AiRetry(wiring.aiProviders.getValue(provider), { Settings.DEFAULT_AI_RETRY })
+            return key?.let { AiAccess(retrying, it) }
         }
 
         // Whether the AI's replies are live, not replayed: a live run's, or a record run's that records them.

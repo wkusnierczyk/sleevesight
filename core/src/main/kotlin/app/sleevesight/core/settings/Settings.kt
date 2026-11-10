@@ -88,6 +88,10 @@ import kotlin.time.Duration.Companion.seconds
  *   may wait, all its MusicBrainz requests together (`BusyWaits`), to ask again those MusicBrainz
  *   refuses as busy, waiting longer each time, before it goes on without them; zero (*Don’t wait*)
  *   for a single try. See [DEFAULT_MUSICBRAINZ_WAIT] and [MUSICBRAINZ_WAITS].
+ * @property aiRetry *Retry when the AI fails* (#1164), the last row of *AI services*: how long an AI
+ *   call that fails as busy, with its connection failed, or with its reply cut short is asked again,
+ *   waiting longer each time, before its error is shown (`AiRetry`); zero (*Don’t retry*) for a
+ *   single try. See [DEFAULT_AI_RETRY] and [AI_RETRIES].
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -230,6 +234,7 @@ data class Settings(
     val aiWebSearch: AiWebSearch = AiWebSearch.ONCE,
     val trackLanguageSearch: TrackLanguageSearch = TrackLanguageSearch.IF_NEEDED,
     val musicBrainzWait: Duration = DEFAULT_MUSICBRAINZ_WAIT,
+    val aiRetry: Duration = DEFAULT_AI_RETRY,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -266,6 +271,7 @@ data class Settings(
         }
         require(sessionGap.isPositive()) { "The session gap must be positive, was $sessionGap" }
         require(!musicBrainzWait.isNegative()) { "The MusicBrainz wait must not be negative, was $musicBrainzWait" }
+        require(!aiRetry.isNegative()) { "The AI retry must not be negative, was $aiRetry" }
         require(pauseAutoWriteAfter == null || pauseAutoWriteAfter > 0) {
             "Automatic writing must pause after a positive number of track changes, was $pauseAutoWriteAfter"
         }
@@ -612,6 +618,22 @@ data class Settings(
         /** *Wait when busy*'s stops, in order: *Don’t wait*, 15 s, 30 s and 1 min (#1120). */
         val MUSICBRAINZ_WAITS: List<Duration> =
             listOf(Duration.ZERO, DEFAULT_MUSICBRAINZ_WAIT, MUSICBRAINZ_WAIT_LONG_SECONDS.seconds, 1.minutes)
+
+        private const val AI_RETRY_SHORT_SECONDS = 15
+        private const val AI_RETRY_SECONDS = 30
+
+        /**
+         * 30 s (#1164). The waits before asking the AI service again, 2 s and then twice as long each
+         * time (4, 8, 16 s), add up to it: four more tries, fewer when a try itself takes long. In the
+         * phone check of 0.6.3 a Retry tapped a few seconds after a failure was answered every time.
+         * Longer than MusicBrainz's 15 s: the AI's reply is what is waited for, and a busy AI service
+         * takes longer to clear than MusicBrainz's limit of a request a second.
+         */
+        val DEFAULT_AI_RETRY: Duration = AI_RETRY_SECONDS.seconds
+
+        /** *Retry when the AI fails*'s stops, in order: *Don’t retry*, 15 s, 30 s and 1 min (#1164). */
+        val AI_RETRIES: List<Duration> =
+            listOf(Duration.ZERO, AI_RETRY_SHORT_SECONDS.seconds, DEFAULT_AI_RETRY, 1.minutes)
     }
 }
 

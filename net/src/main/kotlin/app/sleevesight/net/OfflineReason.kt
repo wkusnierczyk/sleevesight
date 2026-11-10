@@ -49,7 +49,7 @@ private fun errnoIn(message: String): String? =
             it.value
         }.firstOrNull { it in ERRNOS }
 
-private const val CONNECT_TIMEOUT = "ConnectTimeoutException"
+internal const val CONNECT_TIMEOUT = "ConnectTimeoutException"
 private const val SOCKET_TIMEOUT = "SocketTimeoutException"
 private const val REQUEST_TIMEOUT = "HttpRequestTimeoutException"
 

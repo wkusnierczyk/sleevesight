@@ -203,7 +203,8 @@ internal class InsightWriter(
             rewriting = control.rewriting()
             val shown =
                 try {
-                    stream(ai, model, card, control)
+                    // Its tries again (#1164, `AiRetry`) only while the run may still make them.
+                    underTerms(control::mayRetry) { stream(ai, model, card, control) }
                 } finally {
                     control.ended(RunStep.MODEL_CALL)
                 }
@@ -283,7 +284,7 @@ internal class InsightWriter(
                 }
                 is CompletionEvent.Error -> {
                     // How far the reply got, for the diagnostics: its length, never its text (#665).
-                    emit(PipelineEvent.ModelFailed(key, last.kind, last.breakoff, text.length, started?.elapsedNow()))
+                    emit(PipelineEvent.ModelFailed.of(key, last, text.length, started?.elapsedNow()))
                     show(InsightState.Failed(ReplyFailures.of(last)))
                 }
 

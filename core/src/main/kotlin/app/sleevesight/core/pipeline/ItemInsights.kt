@@ -1259,7 +1259,8 @@ class ItemInsights(
             calls++
             show(InsightState.Writing("", model = key.model), now())
             counted(QuestionCost.CALL)
-            val (text, end) = stream(access, request, key, show)
+            // Its tries again (#1164, `AiRetry`) under the same gate, each counted.
+            val (text, end) = underTerms(mayCall, { counted(QuestionCost.CALL) }) { stream(access, request, key, show) }
             val at = now()
             when (val reply = outcome(end, text, key, lines, billed, rewritten)) {
                 is Reply.RevisedAway -> {

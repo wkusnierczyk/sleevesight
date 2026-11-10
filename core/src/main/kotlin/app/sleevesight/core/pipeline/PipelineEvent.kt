@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
+import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.lyrics.LibraryLyrics
@@ -213,8 +214,9 @@ sealed interface PipelineEvent {
 
     /**
      * The call failed, as [kind] says; for a reply that broke off, [breakoff] says how, when the
-     * client can tell (#665). [received] is how many characters of the reply had come, never which,
-     * and [latency] how long after the call began it failed; both null where not measured.
+     * client can tell (#665); else [detail] names what failed (`CompletionEvent.Error.detail`,
+     * #1164). [received] is how many characters of the reply had come, never which, and [latency]
+     * how long after the call began it failed; both null where not measured.
      */
     data class ModelFailed(
         override val key: String,
@@ -222,7 +224,18 @@ sealed interface PipelineEvent {
         val breakoff: Breakoff? = null,
         val received: Int? = null,
         val latency: Duration? = null,
-    ) : PipelineEvent
+        val detail: String? = null,
+    ) : PipelineEvent {
+        companion object {
+            /** [key]'s call, failed with [error], after [received] characters and [latency]. */
+            fun of(
+                key: String,
+                error: CompletionEvent.Error,
+                received: Int?,
+                latency: Duration?,
+            ): ModelFailed = ModelFailed(key, error.kind, error.breakoff, received, latency, error.detail)
+        }
+    }
 
     /**
      * The user stopped the call before its reply ended (what was generated may still be billed).
@@ -320,6 +333,31 @@ sealed interface PipelineEvent {
         override val key: String,
         val question: AiQuestion,
     ) : PipelineEvent
+
+    /**
+     * A try of an AI call to [provider]'s [model] ([attempt], from 1) that failed, as [kind] says, or
+     * ended other than at its reply's end, as [stopReason] says (#1164), as every call's retry saw it
+     * (`AiRetry`), whichever part of the pipeline made the call: no [key], since the call does not
+     * say which track it was for; the event of what the call was for follows. [detail] names what
+     * failed (`CompletionEvent.Error.detail`: the transport's label, an HTTP status, the service's
+     * code), and [breakoff] how a reply that had begun broke off; never a message or the reply's
+     * text. [received] is how many characters of the reply came, [latency] how long the try took,
+     * and [retryIn] the wait before the call is asked again, null when it is not.
+     */
+    data class AiTried(
+        val provider: ProviderId,
+        val model: String,
+        val attempt: Int,
+        val kind: AiErrorKind? = null,
+        val stopReason: StopReason? = null,
+        val detail: String? = null,
+        val breakoff: Breakoff? = null,
+        val received: Int = 0,
+        val latency: Duration = Duration.ZERO,
+        val retryIn: Duration? = null,
+    ) : PipelineEvent {
+        override val key: String? get() = null
+    }
 }
 
 /** What an *Ask AI* question asks, for the diagnostics (#851). */

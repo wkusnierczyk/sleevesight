@@ -46,7 +46,8 @@ import kotlin.math.roundToInt
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
-// *Sources* → *Wait when busy* (#1120), under MusicBrainz.
+// *Sources* → *Wait when busy* (#1120), under MusicBrainz; and the stepped slider it shares with
+// *AI services* → *Retry when the AI fails* (#1164, `AiRetrySettings.kt`).
 
 /** The test tag of *Wait when busy*'s slider. */
 internal const val MUSICBRAINZ_WAIT_SLIDER_TAG = "settings-musicbrainz-wait-slider"
@@ -71,13 +72,9 @@ private val LABEL_GAP = 8.dp
 /**
  * *Wait when busy* (`Settings.musicBrainzWait`, #1120), under MusicBrainz, started at its name:
  * how long a request MusicBrainz refuses as busy is asked again before the lookup goes on without
- * it. A stepped slider, one stop for each of [Settings.MUSICBRAINZ_WAITS], each with its label under
- * it ([StopLabels]), and the value chosen at the row's right, beside the name; a move is stored at
- * once. A screen reader reads the slider by the row's name, with the value in words. While
+ * it. A stepped slider ([SteppedRow]), one stop for each of [Settings.MUSICBRAINZ_WAITS]. While
  * MusicBrainz is off the setting does not apply: the whole row dims and cannot be moved (#999).
- * The slider has a thumb and a track of its own ([Thumb], [StopsTrack]), as the picked design draws them.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MusicBrainzWaitRow(
     settings: Settings,
@@ -85,16 +82,57 @@ internal fun MusicBrainzWaitRow(
 ) {
     val title = stringResource(R.string.settings_musicbrainz_wait)
     if (!shownInSearch(title)) return
-    val applies = SourceSwitch.MUSICBRAINZ in settings.enabledSources
+    val none = stringResource(R.string.settings_musicbrainz_wait_none)
+    SteppedRow(
+        title = title,
+        summary = { _, _ -> stringResource(R.string.settings_musicbrainz_wait_summary) },
+        stops = Settings.MUSICBRAINZ_WAITS,
+        value = settings.musicBrainzWait,
+        none = none,
+        applies = SourceSwitch.MUSICBRAINZ in settings.enabledSources,
+        tags = SteppedTags(MUSICBRAINZ_WAIT_SLIDER_TAG, MUSICBRAINZ_WAIT_STOPS_TAG, MUSICBRAINZ_WAIT_VALUE_TAG),
+        choose = { wait -> update { it.copy(musicBrainzWait = wait) } },
+    )
+}
+
+/** The test tags of a [SteppedRow]: its slider, the labels under its stops, and its value. */
+internal data class SteppedTags(
+    val slider: String,
+    val stops: String,
+    val value: String,
+)
+
+/**
+ * A setting of a time ([value]) chosen from [stops] on a stepped slider (#1120, #1164): the row's
+ * [title], with the value chosen at its right, beside it; its description ([summary], given the
+ * stop shown, which follows a drag before the store does, and its label, so it can name it); then
+ * the slider, one stop for each of [stops], each with its label under it ([StopLabels]): [none] for
+ * zero, else *15 s*, *1 min*. A move is stored at once
+ * ([choose]). A screen reader reads the slider by the row's name, with the value in words. Where the
+ * setting does not apply ([applies] false), the whole row dims and cannot be moved (#999). The slider
+ * has a thumb and a track of its own ([Thumb], [StopsTrack]), as the picked design draws them.
+ */
+@Suppress("LongParameterList") // What the row shows, and where a move goes.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SteppedRow(
+    title: String,
+    summary: @Composable (Duration, String) -> String,
+    stops: List<Duration>,
+    value: Duration,
+    none: String,
+    applies: Boolean,
+    tags: SteppedTags,
+    choose: (Duration) -> Unit,
+) {
     val alpha = if (applies) 1f else DIMMED_ALPHA
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
-    val waits = Settings.MUSICBRAINZ_WAITS
-    val stored = nearestStop(settings.musicBrainzWait)
+    val stored = nearestStop(stops, value)
     // Follows a drag at once; the stored value catches up as it is written.
     var shown by remember(stored) { mutableFloatStateOf(stored.toFloat()) }
-    val index = shown.roundToInt().coerceIn(waits.indices)
-    val labels = waits.map { waitLabel(it) }
-    val spoken = waitSpoken(waits[index])
+    val index = shown.roundToInt().coerceIn(stops.indices)
+    val labels = stops.map { stopLabel(it, none) }
+    val spoken = if (stops[index] == Duration.ZERO) none else durationLabel(stops[index])
     Column(Modifier.fillMaxWidth().padding(start = UNDER_BADGE, top = 8.dp, bottom = 8.dp)) {
         Row {
             Text(
@@ -107,60 +145,60 @@ internal fun MusicBrainzWaitRow(
             // Read with the slider, not on its own.
             Text(
                 labels[index],
-                modifier = Modifier.testTag(MUSICBRAINZ_WAIT_VALUE_TAG).semantics { hideFromAccessibility() },
+                modifier = Modifier.testTag(tags.value).semantics { hideFromAccessibility() },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
             )
         }
-        Description(title, stringResource(R.string.settings_musicbrainz_wait_summary), color = color)
+        Description(title, summary(stops[index], labels[index]), color = color)
         Slider(
             value = shown,
-            onValueChange = { value ->
+            onValueChange = { moved ->
                 // Against the stop shown, not the one stored: a quick drag back to where it started
                 // is written too, before the store has answered the move away.
-                val before = shown.roundToInt().coerceIn(waits.indices)
-                shown = value
-                val chosen = value.roundToInt().coerceIn(waits.indices)
-                if (chosen != before) update { it.copy(musicBrainzWait = waits[chosen]) }
+                val before = shown.roundToInt().coerceIn(stops.indices)
+                shown = moved
+                val chosen = moved.roundToInt().coerceIn(stops.indices)
+                if (chosen != before) choose(stops[chosen])
             },
             modifier =
                 Modifier
                     .fillMaxWidth()
                     // Dimmed as one layer, so the track does not show through the thumb.
                     .alpha(alpha)
-                    .testTag(MUSICBRAINZ_WAIT_SLIDER_TAG)
+                    .testTag(tags.slider)
                     .semantics {
                         contentDescription = title
                         stateDescription = spoken
                     },
             enabled = applies,
-            valueRange = 0f..waits.lastIndex.toFloat(),
-            steps = waits.size - 2,
+            valueRange = 0f..stops.lastIndex.toFloat(),
+            steps = stops.size - 2,
             thumb = { Thumb() },
-            track = { state -> StopsTrack(state, waits.size) },
+            track = { state -> StopsTrack(state, stops.size) },
         )
-        StopLabels(labels, color)
+        StopLabels(labels, color, tags.stops)
     }
 }
 
-/** The index of the stop nearest [wait]: a value stored that is not a stop shows at the nearest. */
-private fun nearestStop(wait: Duration): Int =
-    Settings.MUSICBRAINZ_WAITS.indices.minBy { abs((Settings.MUSICBRAINZ_WAITS[it] - wait).inWholeMilliseconds) }
+/** The index of the stop of [stops] nearest [value]: a value stored that is not a stop shows at the nearest. */
+private fun nearestStop(
+    stops: List<Duration>,
+    value: Duration,
+): Int = stops.indices.minBy { abs((stops[it] - value).inWholeMilliseconds) }
 
-/** A stop's label, short to fit under the slider: *Don’t wait*, *15 s*, *1 min*. */
+/** A stop's label, short to fit under the slider: [none] for zero, *15 s*, *1 min*. */
 @Composable
-private fun waitLabel(wait: Duration): String =
+internal fun stopLabel(
+    stop: Duration,
+    none: String,
+): String =
     when {
-        wait == Duration.ZERO -> stringResource(R.string.settings_musicbrainz_wait_none)
-        wait >= 1.minutes && wait == wait.inWholeMinutes.minutes ->
-            stringResource(R.string.settings_musicbrainz_wait_minutes, wait.inWholeMinutes.toInt())
-        else -> stringResource(R.string.settings_musicbrainz_wait_seconds, wait.inWholeSeconds.toInt())
+        stop == Duration.ZERO -> none
+        stop >= 1.minutes && stop == stop.inWholeMinutes.minutes ->
+            stringResource(R.string.settings_musicbrainz_wait_minutes, stop.inWholeMinutes.toInt())
+        else -> stringResource(R.string.settings_musicbrainz_wait_seconds, stop.inWholeSeconds.toInt())
     }
-
-/** A stop as a screen reader says it, in words: *Don’t wait*, *15 seconds*, *1 minute*. */
-@Composable
-private fun waitSpoken(wait: Duration): String =
-    if (wait == Duration.ZERO) stringResource(R.string.settings_musicbrainz_wait_none) else durationLabel(wait)
 
 /** The slider's thumb, a circle in the theme's primary colour. */
 @Composable
@@ -210,6 +248,7 @@ private fun StopsTrack(
 private fun StopLabels(
     labels: List<String>,
     color: Color,
+    tag: String,
 ) {
     val style = MaterialTheme.typography.bodySmall
     // Each label's longest word, measured as drawn: the intrinsic width's own line breaker may break
@@ -233,7 +272,7 @@ private fun StopLabels(
                 )
             }
         },
-        modifier = Modifier.fillMaxWidth().testTag(MUSICBRAINZ_WAIT_STOPS_TAG),
+        modifier = Modifier.fillMaxWidth().testTag(tag),
     ) { measurables, constraints ->
         val width = constraints.maxWidth
         val inset = THUMB.toPx() / 2
@@ -301,5 +340,6 @@ private fun labelPositions(
 internal fun musicBrainzWaitIndexRow(): IndexedRow {
     val title = stringResource(R.string.settings_musicbrainz_wait)
     val summary = stringResource(R.string.settings_musicbrainz_wait_summary)
-    return IndexedRow(title, listOf(title, summary) + Settings.MUSICBRAINZ_WAITS.map { waitLabel(it) })
+    val none = stringResource(R.string.settings_musicbrainz_wait_none)
+    return IndexedRow(title, listOf(title, summary) + Settings.MUSICBRAINZ_WAITS.map { stopLabel(it, none) })
 }

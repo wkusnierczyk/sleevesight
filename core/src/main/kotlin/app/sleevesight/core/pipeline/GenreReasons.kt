@@ -225,7 +225,9 @@ class GenreReasons(
      * a reason from the knowledge alone again), the first call's reason from the knowledge is shown,
      * if there was one ([settled]). While the web may follow, the first call's text is not shown as
      * it comes until it cites a source, so "Looking for an explanation…" covers every step. Each
-     * search and call is counted to [counted].
+     * search and call is counted to [counted]. The first call's tries again, when the service fails
+     * for a while (#1164, `AiRetry`), are made only while [mayRetry] says so: the app's says no once
+     * the pipeline the reason was asked on is replaced (a key, the AI service or its model changed).
      */
     @Suppress("LongParameterList") // The reason, its track and label, where its states go, and how it searches.
     suspend fun write(
@@ -235,6 +237,7 @@ class GenreReasons(
         asking: AiSearches.Asking = AiSearches.Asking(),
         counted: (QuestionCost) -> Unit = {},
         fresh: (Instant?) -> Boolean = { true },
+        mayRetry: () -> Boolean = { true },
         show: (InsightState, Instant) -> Unit,
     ): InsightState {
         val access = checkNotNull(ai) { "no AI service" }
@@ -251,7 +254,10 @@ class GenreReasons(
         if (before != null && stands(before.state)) return before.state.also { show(it, before.writtenAt ?: now()) }
         val first =
             if (narrate && before == null) {
-                firstCall(access, alone, track, label, evidence, searches, counted, show)
+                // Its tries again (#1164, `AiRetry`) each counted, and made only while [mayRetry].
+                underTerms(mayRetry, { counted(QuestionCost.CALL) }) {
+                    firstCall(access, alone, track, label, evidence, searches, counted, show)
+                }
             } else {
                 null
             }
