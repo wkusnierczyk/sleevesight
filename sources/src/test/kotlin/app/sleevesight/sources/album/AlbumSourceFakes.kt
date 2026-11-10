@@ -103,8 +103,9 @@ internal class Web(
 ) : AlbumWebSearch {
     val asked = mutableListOf<Pair<String, String>>()
 
-    // The performers each search was given (#1130).
+    // The performers each search was given, and the credited artists (#1130).
     val performers = mutableListOf<List<String>>()
+    val credited = mutableListOf<List<String>>()
 
     // While set, a search waits for it: its answer on the way.
     var answering: CompletableDeferred<Unit>? = null
@@ -113,10 +114,12 @@ internal class Web(
         album: String,
         artist: String,
         performers: List<String>,
+        credited: List<String>,
         sent: () -> Unit,
     ): Lookup<List<EvidenceDraft>> {
         asked += album to artist
         this.performers += performers
+        this.credited += credited
         if (sends) sent()
         answering?.await()
         if (failing) return Lookup.Failed("offline")

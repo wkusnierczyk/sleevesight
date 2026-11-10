@@ -234,19 +234,24 @@ class StorePipelineCache(
 
     // The entity key (architecture, *Cache and history*; #240): an artist or album by its MusicBrainz
     // id, else by its name, folded as the retrieval key folds names (an album's with the artist's
-    // before it). Each part is length-prefixed, as the retrieval key's are, so no two blur. The kind
-    // is part of the key too, so an artist's or album's never meets a track's.
+    // before it, and, on a track whose title names its composer, its performers after it, #1130:
+    // two recordings of one title by one composer may be written from the same page, one comparing
+    // them, and must not share a card). Each part is length-prefixed, as the retrieval key's are, so
+    // no two blur, and an album without performers keeps its key. The kind is part of the key too,
+    // so an artist's or album's never meets a track's.
     private fun entityKey(entity: CardEntity): String =
         when (entity) {
             // A card about more than the track (a genre's reason, #523) keeps its subject after it,
             // past a line break: the retrieval key's parts are length-prefixed, so the two never blur.
             is CardEntity.Track ->
                 caches.retrieval.keyOf(entity.track, entity.duration) + entity.subject?.let { "\n$it" }.orEmpty()
-            is CardEntity.Artist -> entity.mbid?.let { BY_ID + it } ?: byName(entity.name)
-            is CardEntity.Album -> entity.group?.let { BY_ID + it } ?: byName(entity.artist, entity.title)
+            is CardEntity.Artist -> entity.mbid?.let { BY_ID + it } ?: byName(listOf(entity.name))
+            is CardEntity.Album ->
+                entity.group?.let { BY_ID + it }
+                    ?: byName(listOf(entity.artist, entity.title) + entity.performers)
         }
 
-    private fun byName(vararg names: String): String =
+    private fun byName(names: List<String>): String =
         BY_NAME + names.joinToString("") { name -> caches.retrieval.foldName(name).let { "${it.length}:$it" } }
 
     private companion object {

@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
@@ -11,6 +12,8 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
@@ -41,14 +44,30 @@ class ClassicalAlbumInsightTest {
         )
     private val settings = Settings(aiProvider = ProviderId.ANTHROPIC)
 
-    // The album's one line, whatever is asked; each query kept.
+    // The album's one line, whatever is asked, a web search due with the web on; each query kept.
     private class Albums : AlbumLookup {
         val asked = mutableListOf<AlbumQuery>()
         val renewed = mutableListOf<AlbumQuery>()
 
         override suspend fun lookup(query: AlbumQuery): AlbumFound {
             asked += query
-            return AlbumFound(listOf(line(SourceId.MUSICBRAINZ, "“${query.title}” is an album.", Scope.RELEASE)))
+            val lines = listOf(line(SourceId.MUSICBRAINZ, "“${query.title}” is an album.", Scope.RELEASE))
+            return AlbumFound(lines, webDue = query.web)
+        }
+
+        // Every web search asked for; it finds nothing.
+        val searched = mutableListOf<AlbumQuery>()
+
+        override val searchesWeb: Boolean get() = true
+
+        override suspend fun searchWeb(
+            query: AlbumQuery,
+            mayPay: () -> Boolean,
+            keeping: (List<EvidenceDraft>) -> Unit,
+            sent: () -> Unit,
+        ): List<EvidenceDraft> {
+            searched += query
+            return emptyList()
         }
 
         override suspend fun renewWeb(query: AlbumQuery) {
@@ -110,6 +129,37 @@ class ClassicalAlbumInsightTest {
             assertTrue(ItemPrompt.ALBUM_RECORDING_RULE in prompt)
             // Its web lines are kept again under the same performers they were searched with.
             assertEquals(listOf(performers), albums.renewed.map { it.performers })
+        }
+
+    @Test
+    fun `a classical album's web search is asked with every credited artist, a pop album's with none`() =
+        runTest {
+            val webOn =
+                settings.copy(
+                    enabledSources = settings.enabledSources + SourceSwitch.WEB,
+                    webEngines = setOf(WebEngine.EXA),
+                )
+            // Bach, the arranger Busoni the title names, and Grimaud: Grimaud alone performs.
+            val chaconne =
+                track(
+                    "Bach: Partita No. 2 in D Minor, BWV 1004: V. Chaconne (Arr. Busoni)",
+                    "Johann Sebastian Bach, Ferruccio Busoni, Hélène Grimaud",
+                    "Bach",
+                )
+            val evidence = checkNotNull(items.evidence(InsightItem.ALBUM, chaconne, webOn))
+            items.searched(InsightItem.ALBUM, chaconne, webOn, evidence)
+            val asked = albums.searched.single()
+            assertEquals(listOf("Hélène Grimaud"), asked.performers)
+            assertEquals(listOf("Johann Sebastian Bach", "Ferruccio Busoni", "Hélène Grimaud"), asked.credited)
+
+            val sundown = track("Carefree Highway", "Gordon Lightfoot", "Sundown")
+            items.searched(
+                InsightItem.ALBUM,
+                sundown,
+                webOn,
+                checkNotNull(items.evidence(InsightItem.ALBUM, sundown, webOn)),
+            )
+            assertEquals(emptyList(), albums.searched.last().credited)
         }
 
     @Test

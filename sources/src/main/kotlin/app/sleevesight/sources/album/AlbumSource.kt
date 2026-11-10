@@ -151,7 +151,7 @@ class AlbumSource(
     ): List<EvidenceDraft>? {
         if (!mayPay()) throw NotPaid()
         val found =
-            when (val answer = search.search(query.title, query.artist, query.performers, sent)) {
+            when (val answer = search.search(query.title, query.artist, query.performers, query.credited, sent)) {
                 is Lookup.Found -> answer.value
                 Lookup.NotFound -> emptyList()
                 is Lookup.Failed -> null

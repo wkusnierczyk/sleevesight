@@ -16,13 +16,15 @@ interface AlbumWebSearch {
      * The web lines about the [album] by [artist], at most [ExaWebSearch.MAX_LINES], none when
      * nothing found is about it; failed when the engine could not be reached or refused the request.
      * With [performers] (a track whose title names its composer, the [artist], #1130), the lines of
-     * pages that name one of them (`RecordingFilter.isAboutAlbum`). [sent] is told right before the
-     * request goes out, the paid part, and not when none is sent.
+     * pages that name one of them (`RecordingFilter.isAboutAlbum`), the request naming [credited],
+     * every credited artist, when given. [sent] is told right before the request goes out, the paid
+     * part, and not when none is sent.
      */
     suspend fun search(
         album: String,
         artist: String,
         performers: List<String> = emptyList(),
+        credited: List<String> = emptyList(),
         sent: () -> Unit = {},
     ): Lookup<List<EvidenceDraft>>
 }
@@ -59,14 +61,15 @@ class ExaAlbumSearch(
         album: String,
         artist: String,
         performers: List<String>,
+        credited: List<String>,
         sent: () -> Unit,
     ): Lookup<List<EvidenceDraft>> {
         // Without the edition a player or store adds, which few pages about the album name (#885).
         val name = Edition.stripEditions(album)
         if (!filter.canCheckAlbum(name, artist, performers)) return Lookup.Found(emptyList())
-        val request = ExaWebSearch.request(ExaSearchRequest.ofAlbum(name, artist, performers), key)
+        val request = ExaWebSearch.request(ExaSearchRequest.ofAlbum(name, artist, performers, credited), key)
         // The names a part of a line must say more than ([WebBoilerplate]).
-        val subject = (listOf(name, artist) + performers).distinct()
+        val subject = (listOf(name, artist) + performers + credited).distinct()
         sent()
         return when (val fetched = net.fetch(request, ExaWebSearch::parse)) {
             is NetResult.Failure -> Lookup.Failed(UNREACHABLE)

@@ -77,6 +77,10 @@ fun interface AlbumLookup {
  * album's name is about this album only when it names one of them, not by [artist] (the composer)
  * alone: a classical album's title is shared by other performers' recordings of the same works
  * ("Mozart: Piano Concertos Nos. 20 & 23" by Buniatishvili, and by Shelley, 33 years earlier).
+ * [credited]: on such a track, for a web search ([AlbumLookup.searchWeb]), every credited artist
+ * in the player's order, the composer and an arranger the title names included, whom its request
+ * names; empty otherwise, when it names [artist] alone. Only the request reads it: what is kept is
+ * keyed by [performers].
  */
 data class AlbumQuery(
     val title: String,
@@ -87,6 +91,7 @@ data class AlbumQuery(
     val lastFm: Boolean = true,
     val web: Boolean = true,
     val performers: List<String> = emptyList(),
+    val credited: List<String> = emptyList(),
 )
 
 /**

@@ -49,8 +49,9 @@ sealed interface CardEntity {
      *
      * [performers]: with a composer the track's title names, its performers
      * ([NormalizedTrack.performers], #1130), whom what is found about the album must name; empty
-     * otherwise. Not part of the key: two recordings of one title by one composer share the album's
-     * names, but not its card unless their evidence is the same too, which the performers decide.
+     * otherwise. Part of the key by name, after the title, so two recordings of one title by one
+     * composer never share a card, not even one written from the same page (a comparison of both);
+     * an album without performers keeps its key.
      */
     data class Album(
         val title: String,

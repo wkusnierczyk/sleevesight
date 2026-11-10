@@ -608,7 +608,13 @@ class ItemInsights(
         val keeping = reserving(InsightItem.ALBUM, track, settings, evidence, gates)
         val found =
             if (lookup != null && album != null) {
-                attempt { lookup.searchWeb(queryOf(album, settings), mayPay, keeping, sent) }
+                // With performers (#1130), the request names every credited artist, an arranger the
+                // title names and the composer wherever credited included.
+                val credited =
+                    track.normalized.artists
+                        .takeIf { album.performers.isNotEmpty() }
+                        .orEmpty()
+                attempt { lookup.searchWeb(queryOf(album, settings).copy(credited = credited), mayPay, keeping, sent) }
             } else {
                 null
             }

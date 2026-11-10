@@ -123,6 +123,39 @@ class ExaAlbumSearchTest {
         }
 
     @Test
+    fun `a classical album's search names an arranger and a composer credited after the performers`() =
+        runTest {
+            // #1129's Bach, Busoni, Grimaud: Busoni, the arranger the title names, is no performer,
+            // yet credited. And a release that credits its performers first and the composer last.
+            val net = ReplayNetClient.ok("""{"results": []}""")
+            search(net).search(
+                "Bach: Chaconne",
+                "Johann Sebastian Bach",
+                listOf("Hélène Grimaud"),
+                listOf("Johann Sebastian Bach", "Ferruccio Busoni", "Hélène Grimaud"),
+            )
+            val franck = ReplayNetClient.ok("""{"results": []}""")
+            search(franck).search(
+                "Franck: Violin Sonata",
+                "Renaud Capuçon",
+                listOf("Renaud Capuçon", "Khatia Buniatishvili"),
+                listOf("Renaud Capuçon", "Khatia Buniatishvili", "César Franck"),
+            )
+            val queries =
+                (net.sent + franck.sent).map { sent ->
+                    val request = Json.parseToJsonElement(sent.body!!.text).jsonObject
+                    request["query"]!!.jsonPrimitive.content
+                }
+            assertEquals(
+                listOf(
+                    "\"Bach: Chaconne\" by Johann Sebastian Bach, Ferruccio Busoni and Hélène Grimaud, album",
+                    "\"Franck: Violin Sonata\" by Renaud Capuçon, Khatia Buniatishvili and César Franck, album",
+                ),
+                queries,
+            )
+        }
+
+    @Test
     fun `an album without performers keeps a page naming its artist, as before`() =
         runTest {
             // The same pages, the album by its first artist alone, as every album was searched before

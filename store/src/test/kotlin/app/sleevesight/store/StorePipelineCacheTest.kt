@@ -249,6 +249,32 @@ class StorePipelineCacheTest {
         }
 
     @Test
+    fun `two recordings of a classical album's title are kept apart by their performers, from the same evidence`() =
+        runBlocking {
+            // #1130: one comparison page naming both recordings passes both performer filters, so both
+            // albums' evidence, and its fingerprint, is the same; their cards must not be.
+            val title = "Mozart: Piano Concertos Nos. 20 & 23"
+            val mozart = "Wolfgang Amadeus Mozart"
+            val buniatishvili = listOf("Khatia Buniatishvili", "Academy of St. Martin in the Fields")
+            val sony = cardKey(CardKind.ALBUM, CardEntity.Album(title, mozart, null, buniatishvili))
+            cache.keep(sony, "Buniatishvili's album [W1].")
+
+            assertEquals("Buniatishvili's album [W1].", cache.card(sony))
+            val chandos = CardEntity.Album(title, mozart, null, listOf("Howard Shelley", "London Mozart Players"))
+            assertNull(cache.card(sony.copy(entity = chandos)))
+            // Nor is it the album by its name alone, whose key is as before.
+            assertNull(cache.card(sony.copy(entity = CardEntity.Album(title, mozart, null))))
+            // The performers' parts never blur with the title's.
+            assertNull(
+                cache.card(
+                    sony.copy(
+                        entity = CardEntity.Album("$title Khatia Buniatishvili", mozart, null, buniatishvili.drop(1)),
+                    ),
+                ),
+            )
+        }
+
+    @Test
     fun `a card key's entity matches its kind`() {
         val track = CardEntity.Track(sundown, 213.seconds)
         val artist = CardEntity.Artist("Gordon Lightfoot", "mb-gordon")

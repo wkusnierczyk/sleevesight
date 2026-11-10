@@ -456,17 +456,26 @@ internal data class ExaSearchRequest(
          * The query for an [album] by [artist] (#885, `ExaAlbumSearch`): `"<album>" by <artist>,
          * album`, as [of] words a song's, nothing of the track playing, with highlights steered by
          * the album's title and the artist. With [performers] (a track whose title names its
-         * composer, the [artist], #1130), every credited artist, as [of] lists a song's: `"Mozart:
-         * Piano Concertos Nos. 20 & 23" by Wolfgang Amadeus Mozart, Khatia Buniatishvili and Academy
-         * of St. Martin in the Fields, album`, and the highlights steered by them too, since a page
-         * is kept only when it names a performer.
+         * composer, the [artist], #1130), every credited artist, [credited] in the player's order
+         * (an arranger the title names too), as [of] lists a song's: `"Mozart: Piano Concertos Nos.
+         * 20 & 23" by Wolfgang Amadeus Mozart, Khatia Buniatishvili and Academy of St. Martin in the
+         * Fields, album`, and the highlights steered by them too, since a page is kept only when it
+         * names a performer; the [artist] and the performers, with no [credited] given.
          */
         fun ofAlbum(
             album: String,
             artist: String,
             performers: List<String> = emptyList(),
+            credited: List<String> = emptyList(),
         ): ExaSearchRequest {
-            val artists = (listOf(artist) + performers).filter { it.isNotBlank() }.distinct()
+            val given = credited.filter { it.isNotBlank() }
+            val named =
+                when {
+                    performers.isEmpty() -> listOf(artist)
+                    given.isNotEmpty() -> given
+                    else -> listOf(artist) + performers
+                }
+            val artists = named.filter { it.isNotBlank() }.distinct()
             return ExaSearchRequest(
                 query = "\"$album\" by ${listed(artists)}, album",
                 contents =
