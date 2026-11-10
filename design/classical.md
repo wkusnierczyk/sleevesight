@@ -29,7 +29,7 @@ Line numbers are those of `dev-0.6.4` at `227d7fef`, before #1129's PR (#1176), 
 | Genres | Last.fm track and album tags `TrackLabels.kt:198-213`; a web line's artist `DescribedGenres.kt:306` | Tags of "Mozart"'s track (Last.fm files scrobbles under Spotify's first artist, so these may well match); a web line on artists goes to the composer | #1180 (low) |
 | Lyrics | LRCLIB `LyricsLibrary.kt:59-61`; Genius search `LyricsUrls.kt:72`; Wikipedia song titles `WikipediaSource.kt:492` (`Title (Mozart song)`) | Little harm for instrumental works; a vocal work (opera, choral) misses | #1180 (low) |
 | Lookup key | `Normalizer.kt:84` (`lookupKey`) | Composer + title; the retrieval key adds every artist (`RetrievalCache.kt:160`), so no clash | none |
-| Tracklist | `CoverBackModel.kt:84` → `AlbumPick` | The group is chosen by title; the artist is unused. Empty only when resolution misses | #1129 |
+| Tracklist | `CoverBackModel.kt:84` → `AlbumPick` | The group is chosen by title; the artist is unused. Here empty because resolution missed; a resolved track can still have none (no album group the name matches, no tracklist, empty media: `CoverBackModel.kt:138`, `:171-179`) | #1129 |
 | Dates | resolution only; cover/original `RecordingResolver.kt:288-331`, `:627-645` | See *Work and recording* below | #1178 |
 | History | `HistoryRecorder.kt`, `SessionHistory.kt` | Keeps the player's whole artist string; no first-artist use | none |
 
@@ -64,13 +64,14 @@ relationship's `begin` (`1788` for K. 545) is the composition date #1132 needs, 
 | Signal | When available | Cost | Catches | Misses |
 |---|---|---|---|---|
 | **A. Title prefix** naming a credited artist (`ComposerPrefix`, #1176) | Before any request | 0 | `Mozart:`, `Franck:`, `Allegri:` (King's), `Puccini: Turandot …` | No prefix (*Nessun Dorma* by Puccini, Mehta, Pavarotti …; Richter's *Four Seasons Recomposed*); a prefix naming an uncredited composer (Tallis Scholars' `Allegri: Miserere …`) |
-| **B. MusicBrainz work** composer relationship vs the recording's own credit | After resolution | 0 extra: the work lookup is made already; reaching the recording costs at most 2 more searches (#1176's retry by each artist) | Every resolved case, prefix or not; also gives the composition date | Unresolved tracks |
+| **B. MusicBrainz work** composer relationship vs the recording's own credit | After resolution | 0 extra: the work lookup is made already; reaching the recording costs at most 2 more searches (#1176's retry by each artist) | Resolved tracks whose work and its composer MusicBrainz gives, prefix or not; also gives the composition date | Unresolved tracks; a resolution with no work, a work lookup that failed, or a work with no composer relationship (`RecordingResolver.kt:255-270`) |
 | **C. Wikidata occupation** (P106 = composer, Q36834) | Once each artist's item is known | 1 batched `wbgetentities`, plus finding the items (about 1 request per artist) | Composers with no prefix and no resolution | Unreliable: pianist-composers (Richter), conductor-composers (Bernstein), singer-songwriters all carry *composer* |
 
 **Recommendation: A then B, not C.** Before resolution, the prefix (A) decides and the search order
-puts a titled composer last (#1176). After resolution, B decides: a credited artist who is the work's
-composer and absent from the recording's credit is the composer; every other credited artist is a
-performer. The roles go on the resolution (composers, performers), and everything in the table above
+puts a titled composer last (#1176). After resolution, B refines A where the work data is there: a credited
+artist who is the work's composer and absent from the recording's credit is the composer, and the
+other credited artists are performers. Where it is not (no work, the work lookup failed, no composer
+relationship), A's result stands: a composer the prefix found stays the composer. The roles go on the resolution (composers, performers), and everything in the table above
 reads "the first performer" where it reads `primary` today, falling back to `primary` when nothing
 tells. C adds requests for a signal that is wrong for many performers; not worth it.
 
