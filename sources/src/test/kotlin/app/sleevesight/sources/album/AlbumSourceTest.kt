@@ -20,6 +20,7 @@ import app.sleevesight.net.NetError
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import app.sleevesight.sources.KeptDrafts
 import app.sleevesight.sources.lastfm.LastFmAlbum
 import app.sleevesight.sources.lastfm.LastFmAlbumInfo
 import app.sleevesight.sources.musicbrainz.MbAlbum
@@ -570,6 +571,32 @@ class AlbumSourceTest {
             val before = MemoryArtistResults()
             before.keep(AlbumSource.WEB_PART.copy(extraction = 2), key, value)
             assertTrue(source(web = web, webKept = before).lookup(query).webDue)
+        }
+
+    @Test
+    fun `an album's web lines kept before Exa's references were decoded are kept again unless they hold one`() =
+        runTest {
+            val web = Web()
+            val now = MemoryArtistResults()
+            val searched = checkNotNull(source(web = web, webKept = now).searchWeb(query))
+            val key = now.keys(AlbumSource.WEB_PART).single()
+            val value = checkNotNull(now.get(AlbumSource.WEB_PART, key)).value
+            // Kept before #1165 (extraction 3) with no reference: the same lines, so the same
+            // fingerprint, with no search, and kept again under the part's version.
+            val before = MemoryArtistResults()
+            before.keep(AlbumSource.WEB_BEFORE_DECODING, key, value)
+            val carried = source(web = web, webKept = before).lookup(query)
+            assertFalse(carried.webDue)
+            assertEquals(searched, carried.drafts.filter { it.source == SourceId.WEB })
+            assertEquals(value, checkNotNull(before.get(AlbumSource.WEB_PART, key)).value)
+            assertEquals(1, web.asked.size)
+            // With a reference in a line: searched again.
+            val encoded = MemoryArtistResults()
+            val referenced = searched.map { it.copy(text = it.text.replace("'s", "&#039;s")) }
+            encoded.keep(AlbumSource.WEB_BEFORE_DECODING, key, KeptDrafts.encode(referenced))
+            assertTrue(source(web = web, webKept = encoded).lookup(query).webDue)
+            assertEquals(searched, source(web = web, webKept = encoded).searchWeb(query))
+            assertEquals(2, web.asked.size)
         }
 
     @Test
