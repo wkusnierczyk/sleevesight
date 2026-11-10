@@ -85,6 +85,55 @@ class ExaAlbumSearchTest {
             assertEquals("\"Sundown (Live)\" by Gordon Lightfoot, album", sent["query"]!!.jsonPrimitive.content)
         }
 
+    // A classical album (#1130): Buniatishvili's 2024 recording, and Shelley's of the same title, 1991.
+    private val concertos = "Mozart: Piano Concertos Nos. 20 & 23"
+
+    private val performers = listOf("Khatia Buniatishvili", "Academy of St. Martin in the Fields")
+
+    private val classicalBody =
+        """{"results": [
+            {"url": "https://example.com/sony", "title": "$concertos - Sony Classical",
+             "highlights": ["$concertos, Khatia Buniatishvili's 2024 album with the Academy."]},
+            {"url": "https://example.com/chandos", "title": "$concertos - Chandos",
+             "highlights": ["$concertos: Howard Shelley and the London Mozart Players play Wolfgang Amadeus Mozart, 1991."]},
+            {"url": "https://example.com/composer", "title": "$concertos",
+             "highlights": ["Wolfgang Amadeus Mozart wrote the concertos of $concertos in 1785."]}
+        ]}"""
+
+    @Test
+    fun `a classical album's search names every credited artist, and keeps only pages naming a performer`() =
+        runTest {
+            val net = ReplayNetClient.ok(classicalBody)
+            val found = search(net).search(concertos, "Wolfgang Amadeus Mozart", performers)
+            // Not Shelley's recording of the same title, nor a page naming the composer alone.
+            assertEquals(listOf("https://example.com/sony"), (found as Lookup.Found).value.map { it.url })
+            val request =
+                Json
+                    .parseToJsonElement(
+                        net.sent
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            assertEquals(
+                "\"$concertos\" by Wolfgang Amadeus Mozart, Khatia Buniatishvili and Academy of St. Martin in the " +
+                    "Fields, album",
+                request["query"]!!.jsonPrimitive.content,
+            )
+        }
+
+    @Test
+    fun `an album without performers keeps a page naming its artist, as before`() =
+        runTest {
+            // The same pages, the album by its first artist alone, as every album was searched before
+            // #1130: those naming the album and Mozart, Shelley's recording among them.
+            val found = search(ReplayNetClient.ok(classicalBody)).search(concertos, "Wolfgang Amadeus Mozart")
+            assertEquals(
+                listOf("https://example.com/chandos", "https://example.com/composer"),
+                (found as Lookup.Found).value.map { it.url },
+            )
+        }
+
     @Test
     fun `an album that cannot be checked is not searched`() =
         runTest {

@@ -70,6 +70,13 @@ fun interface AlbumLookup {
  * which sources may be asked, as *Sources* has them switched (Wikipedia with Wikidata,
  * `SourceSwitch.WIKIPEDIA`; the web with an engine switched on, `Settings.isEnabled`); Last.fm and
  * the web also need their keys, which the implementation is built with.
+ *
+ * [performers]: on a track whose title names a credited composer (`NormalizedTrack.composer`,
+ * #1130), the credited artists who perform (`NormalizedTrack.performers`), the composer and an
+ * arranger the title names left out; empty otherwise. With them, a page or an item found by the
+ * album's name is about this album only when it names one of them, not by [artist] (the composer)
+ * alone: a classical album's title is shared by other performers' recordings of the same works
+ * ("Mozart: Piano Concertos Nos. 20 & 23" by Buniatishvili, and by Shelley, 33 years earlier).
  */
 data class AlbumQuery(
     val title: String,
@@ -79,6 +86,7 @@ data class AlbumQuery(
     val wikipedia: Boolean = true,
     val lastFm: Boolean = true,
     val web: Boolean = true,
+    val performers: List<String> = emptyList(),
 )
 
 /**

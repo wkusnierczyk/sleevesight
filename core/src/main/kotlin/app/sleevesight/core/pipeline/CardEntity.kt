@@ -46,11 +46,17 @@ sealed interface CardEntity {
      * own, as [ReleaseDate.group] has it), when the album's name names one; else by its [title] and
      * the track's primary [artist], each folded as the retrieval key folds names, so two artists'
      * albums of one name stay apart.
+     *
+     * [performers]: with a composer the track's title names, its performers
+     * ([NormalizedTrack.performers], #1130), whom what is found about the album must name; empty
+     * otherwise. Not part of the key: two recordings of one title by one composer share the album's
+     * names, but not its card unless their evidence is the same too, which the performers decide.
      */
     data class Album(
         val title: String,
         val artist: String,
         val group: String?,
+        val performers: List<String> = emptyList(),
     ) : CardEntity {
         companion object {
             /**
@@ -60,18 +66,20 @@ sealed interface CardEntity {
              * the album comes from). Of several, the one album among them ([ReleaseDate.type]
              * `Album`): a title track is on its single too, of the album's name, in a group of its
              * own, and its album card is the album's. None when it names none, or several and not
-             * one album (two compilations of one name), where nothing tells which is playing.
+             * one album (two compilations of one name), where nothing tells which is playing. With
+             * [performers], those of a track whose title names its composer ([Album.performers]).
              */
             fun of(
                 title: String,
                 artist: String,
                 dates: List<ReleaseDate>,
                 key: (String) -> String,
+                performers: List<String> = emptyList(),
             ): Album {
                 val named = ReleaseDate.named(title, dates, key)
                 val groups = named.map { it.group }.distinct()
                 val albums = named.filter { it.type == ALBUM_TYPE }.map { it.group }.distinct()
-                return Album(title, artist, groups.singleOrNull() ?: albums.singleOrNull())
+                return Album(title, artist, groups.singleOrNull() ?: albums.singleOrNull(), performers)
             }
 
             // MusicBrainz's primary type of an album's release group.

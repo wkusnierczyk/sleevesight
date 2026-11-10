@@ -430,12 +430,7 @@ internal data class ExaSearchRequest(
          */
         fun of(track: NormalizedTrack): ExaSearchRequest {
             val artists = track.artists.filter { it.isNotBlank() }
-            val byline =
-                if (artists.size == 1) {
-                    " by ${artists[0]}"
-                } else {
-                    " by ${artists.dropLast(1).joinToString(", ")} and ${artists.last()}"
-                }
+            val byline = " by ${listed(artists)}"
             val from = track.from?.let { " from $it" }.orEmpty()
             return ExaSearchRequest(
                 query = "\"${track.title}\"$from$byline, song",
@@ -449,19 +444,35 @@ internal data class ExaSearchRequest(
             )
         }
 
+        // [artists] as a sentence lists them: "A", "A and B", "A, B and C".
+        private fun listed(artists: List<String>): String =
+            if (artists.size == 1) {
+                artists[0]
+            } else {
+                "${artists.dropLast(1).joinToString(", ")} and ${artists.last()}"
+            }
+
         /**
          * The query for an [album] by [artist] (#885, `ExaAlbumSearch`): `"<album>" by <artist>,
          * album`, as [of] words a song's, nothing of the track playing, with highlights steered by
-         * the album's title and the artist.
+         * the album's title and the artist. With [performers] (a track whose title names its
+         * composer, the [artist], #1130), every credited artist, as [of] lists a song's: `"Mozart:
+         * Piano Concertos Nos. 20 & 23" by Wolfgang Amadeus Mozart, Khatia Buniatishvili and Academy
+         * of St. Martin in the Fields, album`, and the highlights steered by them too, since a page
+         * is kept only when it names a performer.
          */
         fun ofAlbum(
             album: String,
             artist: String,
-        ): ExaSearchRequest =
-            ExaSearchRequest(
-                query = "\"$album\" by $artist, album",
-                contents = ExaContents(ExaHighlights("$album $artist", HIGHLIGHT_CHARACTERS)),
+            performers: List<String> = emptyList(),
+        ): ExaSearchRequest {
+            val artists = (listOf(artist) + performers).filter { it.isNotBlank() }.distinct()
+            return ExaSearchRequest(
+                query = "\"$album\" by ${listed(artists)}, album",
+                contents =
+                    ExaContents(ExaHighlights((listOf(album) + artists).joinToString(" "), HIGHLIGHT_CHARACTERS)),
             )
+        }
 
         /**
          * The query for an [artist] the other sources say nothing about (#912, `ExaArtistSearch`):

@@ -50,14 +50,22 @@ class RecordingFilter(
      * `ExaAlbumSearch`), by the rules for a recording, the album's title in the song's place: it
      * names the album and the artist, and its own title does not name the artist without the album.
      * Its limit beside a recording's: a page on the album's title track names both too.
+     *
+     * With [performers] (a track whose title names its composer, the [artist], #1130), it must name
+     * one of them, a distinctive one when there is one, as a recording's artists are read, in the
+     * artist's place: a page naming the album's title and the composer alone may be about another
+     * recording of the same works ("Mozart: Piano Concertos Nos. 20 & 23" by Shelley, for
+     * Buniatishvili's); and its own title must not name a performer without the album.
      */
+    @Suppress("LongParameterList") // The album and its artists, and the result's three parts.
     fun isAboutAlbum(
         album: String,
         artist: String,
         title: String?,
         snippet: String,
         url: String,
-    ): Boolean = names(listOf(album), requiredArtists(listOf(artist)), title, snippet, url)
+        performers: List<String> = emptyList(),
+    ): Boolean = names(listOf(album), albumArtists(artist, performers), title, snippet, url)
 
     /**
      * Whether a result with [title], [snippet] and [url] is about the [artist] (#912,
@@ -111,11 +119,22 @@ class RecordingFilter(
             track.from?.let { fold(it).isNotEmpty() } != false &&
             requiredArtists(track).isNotEmpty()
 
-    /** Whether the [album] by [artist] can be checked at all: both fold to something. Else it is not searched. */
+    /**
+     * Whether the [album] by [artist] can be checked at all: both fold to something, or, with
+     * [performers] ([isAboutAlbum]), the album and a performer. Else it is not searched.
+     */
     fun canCheckAlbum(
         album: String,
         artist: String,
-    ): Boolean = fold(album).isNotEmpty() && requiredArtists(listOf(artist)).isNotEmpty()
+        performers: List<String> = emptyList(),
+    ): Boolean = fold(album).isNotEmpty() && albumArtists(artist, performers).isNotEmpty()
+
+    // The artists a page about an album must name one of ([isAboutAlbum]): its [performers] when
+    // given, else its [artist].
+    private fun albumArtists(
+        artist: String,
+        performers: List<String>,
+    ): List<String> = requiredArtists(performers.ifEmpty { listOf(artist) })
 
     /**
      * The credited artists a result must name one of, folded: the distinctive ones, those with a

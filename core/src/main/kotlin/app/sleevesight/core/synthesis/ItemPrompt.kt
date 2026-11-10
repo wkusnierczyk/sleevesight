@@ -42,10 +42,18 @@ object ItemPrompt {
      */
     const val ONLY_LISTINGS_VERSION: Int = 2
 
-    /** What an insight is about: the [kind] of card, and the [name] it goes by (the title, the artist, the album). */
+    /**
+     * What an insight is about: the [kind] of card, and the [name] it goes by (the title, the artist,
+     * the album). For the album of a track whose title names its composer (#1130), what tells it from
+     * other recordings of the same works under the same title: its [performers]
+     * (`NormalizedTrack.performers`) and, where known, the [year] of its release; each given in the
+     * subject block, with [ALBUM_RECORDING_RULE]. Empty and null otherwise, and the prompt is as before.
+     */
     class Subject(
         val kind: CardKind,
         val name: String,
+        val performers: List<String> = emptyList(),
+        val year: String? = null,
     ) {
         init {
             require(kind in KINDS) { "Not an item's kind: ${kind.key}" }
@@ -97,6 +105,10 @@ object ItemPrompt {
             appendLine()
             appendLine("<subject>")
             appendLine("${label(subject.kind)}: ${InsightPrompt.oneLine(subject.name)}")
+            subject.performers.takeIf { it.isNotEmpty() }?.let {
+                appendLine("Performers: ${InsightPrompt.oneLine(it.joinToString(", "))}")
+            }
+            subject.year?.let { appendLine("Released: ${InsightPrompt.oneLine(it)}") }
             appendLine("</subject>")
             appendLine()
             appendLine(
@@ -113,6 +125,7 @@ object ItemPrompt {
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
             appendLine(subjectRule(subject.kind))
+            if (subject.kind == CardKind.ALBUM && subject.performers.isNotEmpty()) appendLine(ALBUM_RECORDING_RULE)
             appendLine(contract(allowModel, onlyListings))
             appendLine()
             append(REPLY)
@@ -207,6 +220,24 @@ object ItemPrompt {
                 "- Write about the album named in <subject> only: how it was made, its release and how it " +
                     "was received. Say nothing about the track playing."
         }
+
+    /**
+     * The rule on another recording of a classical album's title (#1130), in the album's prompt when
+     * its track's title names its composer ([Subject.performers]): such a title is shared by other
+     * performers' recordings of the same works ("Mozart: Piano Concertos Nos. 20 & 23" by
+     * Buniatishvili in 2024, and by Shelley in 1991), and a page on one names the title and the
+     * composer too. The subject block gives the album's performers and its year where known, to check
+     * a line against. Only there: a pop album's line on a guest, or on its first release beside a
+     * reissue's year, is about the album, and its prompt stays as it was. Added without raising
+     * [VERSION], as the rules on a line in the track's language and on dates were: such an album's
+     * web lines, and its lines found by name, are now gathered by its performers under keys of their
+     * own (`AlbumQuery.performers`), so a card written from a line on another recording is written
+     * afresh.
+     */
+    const val ALBUM_RECORDING_RULE: String =
+        "- Other recordings of the same works share this album's title. A line about another release or " +
+            "recording of the title, by other performers or released in another year than the one in <subject>, " +
+            "is not about this album: leave it out."
 
     /**
      * The fixed rules: the key insight's as they were until its version 9 (#767), word for word, so
