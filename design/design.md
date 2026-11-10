@@ -161,7 +161,7 @@ Players report a song the way their catalogue files it, which is often not how s
 
 | Input pattern | Action | Example |
 |---|---|---|
-| A trailing `- 2006 Remaster`, `- demo`, `- Live`, `- Mono`, `- … Edit` (`- Radio Edit`, `- Promo 7" Edit`), `- … Version`; not `- … Mix`, often a recording of its own | Strip, record as a note | "Fisherman's Blues - 2006 Remaster" |
+| A trailing `- 2006 Remaster`, `- demo`, `- Live`, `- Mono`, `- Stereo`, a remaster, mono and stereo together (`- Mono Remastered`, `- 2019 Stereo Remaster`), `- … Edit` (`- Radio Edit`, `- Promo 7" Edit`), `- … Version`; not `- … Mix`, often a recording of its own | Strip, record as a note | "Fisherman's Blues - 2006 Remaster" |
 | `(feat. X)` in the title | Move X to the artists | "Baby, Please Don't Go (feat. Van Morrison)" |
 | `(From X)`, a trailing `- From "X"` | Strip, record the source work | "The Departure (From The Leftovers)" |
 | `(felt piano)`, `(acoustic)` | Strip, record as a variant | "And Dream Of Sheep (felt piano)" |
