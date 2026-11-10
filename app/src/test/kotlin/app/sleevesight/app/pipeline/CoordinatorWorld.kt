@@ -162,7 +162,7 @@ internal class World {
      */
     val tookItems = mutableListOf<String>()
     val itemsTaken = mutableListOf<List<EvidenceDraft>>()
-    private val withItems = HashSet<RunId>()
+    private val withItems = HashMap<RunId, List<EvidenceDraft>>()
 
     /** The runs started to look again (#617), by title, and what the run before them gathered. */
     val lookedAgain = mutableListOf<String>()
@@ -256,7 +256,7 @@ internal class World {
             carried += it
         }
         if (effect.items.isNotEmpty()) {
-            withItems += effect.run
+            withItems[effect.run] = effect.items
             tookItems += effect.nowPlaying.title
             itemsTaken += effect.items
         }
@@ -358,7 +358,8 @@ internal class World {
                     return
                 }
                 // The card is reported before the call's end; neither, for a call cut off.
-                schedule(streamMs, CoordinatorEvent.CardWritten(run, card("$title #${calls[title]}")), run, call)
+                val written = card("$title #${calls[title]}", withItems[run].orEmpty())
+                schedule(streamMs, CoordinatorEvent.CardWritten(run, written), run, call)
                 schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run, call)
                 // Kept once it ends normally; a call cut off is not (`deliver` drops its end).
                 if (cache) pendingCards[run] = (keys.getValue(run) to service) to "$title #${calls[title]}"
@@ -417,7 +418,7 @@ internal class World {
             sources(
                 unreachable,
             ).let { if (inLanguage) it.copy(inLanguage = language(languageUnreachable)) else it }
-        val finds = finds(unreachable, languageUnreachable) || run in withItems
+        val finds = finds(unreachable, languageUnreachable) || run in withItems.keys
         schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources), run)
         schedule(delayMs, CoordinatorEvent.EvidenceAssembled(run, evidence()), run)
         val insight =
@@ -512,8 +513,14 @@ internal class World {
 
     fun offersWriteFor(title: String) = coordinator.state.offersWrite(key(title))
 
-    fun card(text: String) =
-        Card(InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false), evidence())
+    fun card(
+        text: String,
+        items: List<EvidenceDraft> = emptyList(),
+    ) = Card(
+        InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false),
+        evidence(),
+        items,
+    )
 
     /** The evidence the sources find now ([evidenceText]). */
     fun evidence(): EvidenceSet = EvidenceSet.of(listOf(line(SourceId.WEB).copy(text = evidenceText)), JvmHasher)

@@ -422,8 +422,7 @@ internal class TrackRun(
         val seen = own.mapTo(mutableSetOf(), ::triple)
         val items = input.items.filter { settings.isEnabled(it.source) && seen.add(triple(it)) }
         val evidence = EvidenceSet.of(own + items, parts.hasher, state.value.knownLanguage())
-        val brought = items.mapTo(mutableSetOf(), ::triple)
-        val itemIds = evidence.lines.filter { triple(it.draft()) in brought }.mapTo(mutableSetOf()) { it.id }
+        val itemIds = takenIds(evidence, items)
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
             val genres = labels.of(it)

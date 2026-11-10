@@ -110,6 +110,25 @@ class PipelineCoordinatorItemLinesTest {
                 assertEquals(listOf("A"), tookItems)
             },
             Case(
+                "a rebuild of a track written from the lines takes them again: Rewrite offered, no call",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A", "A"),
+                "A",
+            ) {
+                acted()
+                englishFinds = false
+                play("A")
+                settle()
+                itemLines("A", "The song's page.")
+                settle()
+                assertEquals(1, calls["A"])
+                // Another model, say: the track's run is looked up again on the new pipeline.
+                keyChange()
+                settle()
+                assertEquals(listOf("A", "A"), tookItems)
+                assertEquals(listOf("The song's page."), itemsTaken.last().map { it.text })
+            },
+            Case(
                 "a track with evidence of its own takes none",
                 mapOf("Zero" to 1),
                 listOf("Zero", "A"),

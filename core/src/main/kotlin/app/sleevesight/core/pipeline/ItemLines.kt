@@ -27,3 +27,17 @@ fun linesBeyond(
             }
         }
 }
+
+/**
+ * The ids of the lines of [evidence] that [items], lines a run took beyond its own (#1131), brought: by
+ * source, scope and words. What *Sources* still marks as the album's, with whichever evidence is shown
+ * (`TrackState.itemIds`, and a card kept with its own).
+ */
+fun takenIds(
+    evidence: EvidenceSet,
+    items: List<EvidenceDraft>,
+): Set<String> {
+    if (items.isEmpty()) return emptySet()
+    val brought = items.mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
+    return evidence.lines.filter { Triple(it.source, it.scope, it.text) in brought }.mapTo(mutableSetOf()) { it.id }
+}

@@ -17,15 +17,24 @@ import app.sleevesight.core.pipeline.LookAgain
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.takenIds
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Instant
 
-/** A card paid for: the insight written and checked, and the evidence it cites. */
+/**
+ * A card paid for: the insight written and checked, and the evidence it cites, with [items], the lines
+ * its run took beyond the track's own (#1131), which its evidence holds: a run of its track rebuilt
+ * takes them again, and *Sources* still marks the album's among them as the album's ([itemIds]).
+ */
 data class Card(
     val insight: InsightState.Written,
     val evidence: EvidenceSet?,
-)
+    val items: List<EvidenceDraft> = emptyList(),
+) {
+    /** The ids of [evidence]'s lines that [items] brought (`takenIds`). */
+    val itemIds: Set<String> get() = evidence?.let { takenIds(it, items) }.orEmpty()
+}
 
 /**
  * What decides, from a run's settings, whether it writes without a tap: the causes *Reactive*
@@ -561,7 +570,9 @@ data class CoordinatorState(
      * was compared with (a card written or shown in its place) and with the entry. While it is set, a
      * rewrite used new findings, whichever run makes it (one that replaced the look again's for a
      * settings change too), and updated sources besides when it writes from other evidence
-     * (`Rewriting.foundIn`, `rewriteParts`).
+     * (`Rewriting.foundIn`, `rewriteParts`). [items] are the lines beyond the track's own its card's run
+     * took (#1131, [Card.items]), kept when the card expires: a run of its written track takes them, so
+     * a rebuild finds the evidence the card was written from, and offers *Rewrite insight* beside it.
      */
     data class Ledger(
         val track: NowPlaying,
@@ -572,6 +583,7 @@ data class CoordinatorState(
         val wouldWrite: WouldWrite? = null,
         val paused: WriteSettings? = null,
         val foundNew: String? = null,
+        val items: List<EvidenceDraft> = emptyList(),
     )
 
     /**
@@ -1401,8 +1413,9 @@ class PipelineCoordinator(
         val written = state.written(report.nowPlaying)
         val key = written?.key ?: report.key
         val playing = written?.track ?: report.nowPlaying
-        state = state.copy(runs = id.value, run = CoordinatorState.Run(id, key, playing))
-        effects += CoordinatorEffect.StartRun(id, playing)
+        val items = written?.items.orEmpty()
+        state = state.copy(runs = id.value, run = CoordinatorState.Run(id, key, playing, items = items))
+        effects += CoordinatorEffect.StartRun(id, playing, items = items)
     }
 
     // Back online (#192): the current run is replaced by one of its key and report that asks again
@@ -1691,7 +1704,7 @@ class PipelineCoordinator(
         // The run has decided: a tap kept for it has nothing left to answer.
         state =
             state.copy(
-                ledger = recorded.copy(card = kept, wouldWrite = would, paused = paused, foundNew = found),
+                ledger = recorded.recording(kept, would, paused, found),
                 run = run.copy(keepsTap = false, tapped = false, nothing = nothingToNarrate != null),
             )
     }
@@ -1889,28 +1902,6 @@ class PipelineCoordinator(
         return writes && (!decided || asWouldHave)
     }
 }
-
-/**
- * [this] replaced by run [id] of its key and report that asks again (#192), [retried] for a tap on
- * *Retry*, taking [items] (#1131). A tap shown for the run replaced, or one before it, which offered
- * Write, may still be on its way, or be kept already: it is carried over. Once retried, a run stays so
- * through back online's replacements (#724).
- */
-internal fun CoordinatorState.Run.askingAgain(
-    id: RunId,
-    retried: Boolean,
-    items: List<EvidenceDraft>,
-): CoordinatorState.Run =
-    CoordinatorState.Run(
-        id,
-        key,
-        nowPlaying,
-        again = true,
-        keepsTap = offered || keepsTap,
-        tapped = keepsTap && tapped,
-        retried = retried || this.retried,
-        items = items,
-    )
 
 /**
  * An ad told late ([CoordinatorEvent.Withdrawn], #880): the latest report, of [track], is held as a

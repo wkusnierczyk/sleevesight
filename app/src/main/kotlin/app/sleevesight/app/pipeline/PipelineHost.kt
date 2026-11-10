@@ -669,7 +669,7 @@ class PipelineHost(
 
     private fun startRun(effect: CoordinatorEffect.StartRun) {
         val current = live.value ?: return
-        val handle = RunHandle(effect.run)
+        val handle = RunHandle(effect.run, effect.items)
         runs[effect.run] = handle
         failed.value = null
         handle.job =
@@ -773,8 +773,10 @@ class PipelineHost(
     // (`CallId`), the loop as it carries out each grant (a tap's Grant, or Decide to write), the
     // run as it makes each, after its grant. A Stop names its call's number, so it reaches that
     // call alone.
+    // [items]: the lines beyond the track's own the run takes (#1131), which each card it reports keeps.
     private inner class RunHandle(
         id: RunId,
+        private val items: List<EvidenceDraft>,
     ) : StepHandle(id) {
         private val decision = CompletableDeferred<Boolean>()
         private val calls = ConcurrentHashMap<Int, CallGate>()
@@ -806,7 +808,7 @@ class PipelineHost(
             settings: Settings,
             kept: InsightState.Written?,
             evidence: EvidenceSet,
-        ): Boolean = ask(settings, kept?.let { Card(it, evidence) })
+        ): Boolean = ask(settings, kept?.let { Card(it, evidence, items) })
 
         // Whether the coordinator took [kept] as the card paid for of this run's track (#911): read
         // once its answer came, so the state seen holds the decision.
@@ -875,14 +877,14 @@ class PipelineHost(
             card: InsightState.Written?,
             evidence: EvidenceSet,
         ) {
-            queue.trySend(CoordinatorEvent.CardShown(id, card?.let { Card(it, evidence) }))
+            queue.trySend(CoordinatorEvent.CardShown(id, card?.let { Card(it, evidence, items) }))
         }
 
         override fun cardWritten(
             card: InsightState.Written,
             evidence: EvidenceSet,
         ) {
-            queue.trySend(CoordinatorEvent.CardWritten(id, Card(card, evidence)))
+            queue.trySend(CoordinatorEvent.CardWritten(id, Card(card, evidence, items)))
         }
     }
 
@@ -980,7 +982,7 @@ class PipelineHost(
                 InsightState.Stopped -> STOPPED
                 else -> null
             }?.takeIf { card != null }
-        return Shown(header(if (card != null) withCard(own, card) else own, owner), failure, cardShown = card != null)
+        return Shown(header(if (card != null) own.withCard(card) else own, owner), failure, cardShown = card != null)
     }
 
     // What *Rewrite insight* beside the insight [track] shows would change (#854): what its run would
@@ -1074,11 +1076,6 @@ class PipelineHost(
     private fun lacksInsight(track: TrackState): Boolean =
         track.insight !is InsightState.Written && track.insight !is InsightState.Writing
 
-    private fun withCard(
-        track: TrackState,
-        card: Card,
-    ): TrackState = track.copy(insight = card.insight, evidence = card.evidence)
-
     // The header (artists, album, length) from the latest report of the ledger's insight track;
     // the run's input and its card's key stay its own.
     private fun header(
@@ -1145,3 +1142,11 @@ class PipelineHost(
         const val STOPPED: String = "stopped"
     }
 }
+
+/**
+ * [this] shown with [card], the card paid for, in place of its own insight: its evidence, and with it
+ * the ids of the lines its run took beyond the track's own (#1131, [Card.itemIds]), numbered as that
+ * evidence numbers them, whatever this run took, so *Sources* marks the album's among them as they were.
+ */
+internal fun TrackState.withCard(card: Card): TrackState =
+    copy(insight = card.insight, evidence = card.evidence, itemIds = card.itemIds)
