@@ -59,26 +59,39 @@ class PipelineItemLinesTest {
         runTest {
             val provider = FakeProvider { FakeProvider.done("Sundown is a song [W1] by a Canadian singer [W2].") }
 
-            val state = pipeline(provider).run(sundown, RunControl.Unattended(true), items = listOf(song, artist))
+            val items = ItemLines(listOf(song, artist))
+
+            val state = pipeline(provider).run(sundown, RunControl.Unattended(true), items = items)
 
             // As *Sources* numbers them after the track's own (`withAlbum`): the same ids.
             val sources = EvidenceSet.of(listOf(release), JvmHasher).with(listOf(song, artist), JvmHasher)
             assertEquals(sources.ids, state.evidence?.ids)
-            assertEquals(setOf("W1", "W2"), state.itemIds)
             assertEquals(1, provider.requests.size)
             assertIs<InsightState.Written>(state.insight)
         }
 
     @Test
+    fun `the album's lines taken are marked as the album's, from what was taken alone`() =
+        runTest {
+            val albumLine = line(SourceId.WIKIPEDIA, "Sundown is his tenth album.", Scope.RELEASE)
+            val provider = FakeProvider { FakeProvider.done("It is his tenth album [W1].") }
+            val items = ItemLines(listOf(albumLine, song), album = listOf(albumLine))
+
+            val state = pipeline(provider).run(sundown, RunControl.Unattended(true), items = items)
+
+            assertEquals(setOf("W1"), state.albumIds)
+        }
+
+    @Test
     fun `no item line, or only one the run has already, leaves nothing to narrate, and no call`() =
         runTest {
-            for (items in listOf(emptyList(), listOf(release))) {
+            for (items in listOf(ItemLines(), ItemLines(listOf(release)))) {
                 val provider = FakeProvider()
 
                 val state = pipeline(provider).run(sundown, RunControl.Unattended(true), items = items)
 
                 assertEquals(listOf("P1"), state.evidence?.ids)
-                assertEquals(emptySet(), state.itemIds)
+                assertEquals(emptySet(), state.albumIds)
                 assertEquals(InsightState.NoEvidence, state.insight)
                 assertEquals(0, provider.requests.size)
             }
@@ -90,7 +103,7 @@ class PipelineItemLinesTest {
             settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.WIKIPEDIA)
             val provider = FakeProvider()
 
-            val state = pipeline(provider).run(sundown, RunControl.Unattended(true), items = listOf(song))
+            val state = pipeline(provider).run(sundown, RunControl.Unattended(true), items = ItemLines(listOf(song)))
 
             assertEquals(listOf("P1"), state.evidence?.ids)
             assertEquals(InsightState.NoEvidence, state.insight)

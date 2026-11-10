@@ -67,10 +67,11 @@ class SourcesAlbumTest {
         // A run that found nothing to narrate took the album's lines into its evidence (#1131).
         val before = withAlbum(track, album)
         val took = checkNotNull(before.evidence)
-        val taken = took.ids.toSet() - track.ids.toSet()
-        val shown = withAlbum(took, album, taken = taken)
+        val shown = withAlbum(took, album, taken = before.album)
         assertEquals(took.ids, checkNotNull(shown.evidence).ids)
         assertEquals(before.album, shown.album)
+        // The album's source switched off since: its evidence holds none of them, and they still say "album".
+        assertEquals(before.album, withAlbum(took, EvidenceSet.of(emptyList(), JvmHasher), taken = before.album).album)
     }
 
     @Test

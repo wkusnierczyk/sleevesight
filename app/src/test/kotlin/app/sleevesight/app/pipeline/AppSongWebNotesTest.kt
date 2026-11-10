@@ -227,6 +227,13 @@ class AppSongWebNotesTest {
             assertEquals(QuestionCost(searches = 1, calls = 1), paid)
         }
 
+    // The words of the lines [track]'s items hold beyond its own (#1131), as they are now.
+    private suspend fun ItemNotes.found(track: TrackState): List<String>? =
+        foundLines(track)
+            .first()
+            ?.lines
+            ?.map { it.text }
+
     @Test
     fun `the page the song's search found is a line beyond the track's own, for Key insights to take`() =
         runTest {
@@ -235,11 +242,11 @@ class AppSongWebNotesTest {
             val first = track()
             assertEquals(ItemShown.Offered, notes.settled(first))
             // Gathered, before its search: nothing the track has not already.
-            assertEquals(emptyList<String>(), notes.foundLines(first).first()?.map { it.text })
+            assertEquals(emptyList<String>(), notes.found(first))
 
             notes.write(first, InsightItem.SONG)
             advanceUntilIdle()
-            assertEquals(listOf(WEB_LINE.text), notes.foundLines(first).first()?.map { it.text })
+            assertEquals(listOf(WEB_LINE.text), notes.found(first))
         }
 
     @Test

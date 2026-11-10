@@ -1,6 +1,6 @@
 package app.sleevesight.app.pipeline
 
-import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.pipeline.ItemLines
 
 // Steps of the coordinator's ledger and runs, apart from its class (`PipelineCoordinator`).
 
@@ -26,7 +26,7 @@ internal fun CoordinatorState.Ledger.recording(
 internal fun CoordinatorState.Run.askingAgain(
     id: RunId,
     retried: Boolean,
-    items: List<EvidenceDraft>,
+    items: ItemLines,
 ): CoordinatorState.Run =
     CoordinatorState.Run(
         id,

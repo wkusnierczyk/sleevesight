@@ -12,6 +12,7 @@ import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InLanguageState
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.ItemLines
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
@@ -162,7 +163,7 @@ internal class World {
      */
     val tookItems = mutableListOf<String>()
     val itemsTaken = mutableListOf<List<EvidenceDraft>>()
-    private val withItems = HashMap<RunId, List<EvidenceDraft>>()
+    private val withItems = HashMap<RunId, ItemLines>()
 
     /** The runs started to look again (#617), by title, and what the run before them gathered. */
     val lookedAgain = mutableListOf<String>()
@@ -255,10 +256,10 @@ internal class World {
             askedAgain += effect.nowPlaying.title
             carried += it
         }
-        if (effect.items.isNotEmpty()) {
+        if (effect.items.lines.isNotEmpty()) {
             withItems[effect.run] = effect.items
             tookItems += effect.nowPlaying.title
-            itemsTaken += effect.items
+            itemsTaken += effect.items.lines
         }
         effect.lookAgain?.let {
             lookedAgain += effect.nowPlaying.title
@@ -358,7 +359,7 @@ internal class World {
                     return
                 }
                 // The card is reported before the call's end; neither, for a call cut off.
-                val written = card("$title #${calls[title]}", withItems[run].orEmpty())
+                val written = card("$title #${calls[title]}", withItems[run] ?: ItemLines())
                 schedule(streamMs, CoordinatorEvent.CardWritten(run, written), run, call)
                 schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run, call)
                 // Kept once it ends normally; a call cut off is not (`deliver` drops its end).
@@ -515,7 +516,7 @@ internal class World {
 
     fun card(
         text: String,
-        items: List<EvidenceDraft> = emptyList(),
+        items: ItemLines = ItemLines(),
     ) = Card(
         InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false),
         evidence(),
@@ -669,6 +670,6 @@ internal fun World.itemLines(
 ) {
     val lines =
         texts.map { EvidenceDraft(SourceId.WEB, Scope.SONG, it, null, Instant.parse("2026-11-10T12:00:00Z")) }
-    send(CoordinatorEvent.ItemLinesFound(key(title), lines))
+    send(CoordinatorEvent.ItemLinesFound(key(title), ItemLines(lines)))
     advance(0)
 }

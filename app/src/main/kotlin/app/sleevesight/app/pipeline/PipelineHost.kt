@@ -2,7 +2,6 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.ReasoningEffort
-import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
@@ -12,6 +11,7 @@ import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.InsightState.Written
+import app.sleevesight.core.pipeline.ItemLines
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
@@ -356,7 +356,7 @@ class PipelineHost(
      * (the report, the resolution, the sources), not as the insight is written. Runs until cancelled.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun followItemLines(found: (TrackState) -> Flow<List<EvidenceDraft>?>) {
+    suspend fun followItemLines(found: (TrackState) -> Flow<ItemLines?>) {
         view
             .map { it.track?.takeIf { track -> track.gathered && track.evidence != null } }
             .distinctUntilChangedBy { track ->
@@ -776,7 +776,7 @@ class PipelineHost(
     // [items]: the lines beyond the track's own the run takes (#1131), which each card it reports keeps.
     private inner class RunHandle(
         id: RunId,
-        private val items: List<EvidenceDraft>,
+        private val items: ItemLines,
     ) : StepHandle(id) {
         private val decision = CompletableDeferred<Boolean>()
         private val calls = ConcurrentHashMap<Int, CallGate>()
@@ -1145,8 +1145,8 @@ class PipelineHost(
 
 /**
  * [this] shown with [card], the card paid for, in place of its own insight: its evidence, and with it
- * the ids of the lines its run took beyond the track's own (#1131, [Card.itemIds]), numbered as that
- * evidence numbers them, whatever this run took, so *Sources* marks the album's among them as they were.
+ * the ids of the album's lines its run took (#1131, [Card.albumIds]), numbered as that evidence numbers
+ * them, whatever this run took, so *Sources* marks them as the album's as they were.
  */
 internal fun TrackState.withCard(card: Card): TrackState =
-    copy(insight = card.insight, evidence = card.evidence, itemIds = card.itemIds)
+    copy(insight = card.insight, evidence = card.evidence, albumIds = card.albumIds)

@@ -51,8 +51,9 @@ import kotlin.time.Instant
  *   ends ([gathered]).
  * @property libraryUnreachable whether LRCLIB, asked whether the track has lyrics (#997, [LibrarySign]),
  *   could not be reached: *Retry* may ask it again. Its answer is in [genres] (`Singing.library`).
- * @property itemIds the ids of the lines of [evidence] that the song's, the artist's and the album's
- *   evidence brought (#1131), not the run's own sources: set with it, empty for a run that took none.
+ * @property albumIds the ids of the lines of [evidence] that the album's evidence brought (#1131,
+ *   [ItemLines.album]), not the run's own sources: set with it, empty for a run that took none.
+ *   *Sources* says "album" of them.
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -70,7 +71,7 @@ data class TrackState(
     val inLanguage: InLanguageState? = null,
     val searchingInLanguage: Boolean = false,
     val libraryUnreachable: Boolean = false,
-    val itemIds: Set<String> = emptySet(),
+    val albumIds: Set<String> = emptySet(),
 ) {
     /**
      * Whether every source has landed, those searched in the track's language too (#902), and the

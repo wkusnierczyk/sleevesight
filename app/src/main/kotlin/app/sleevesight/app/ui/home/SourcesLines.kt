@@ -33,7 +33,8 @@ internal class SourcesLines(
  * lines for a song the sources only list, #958), mixed in by source and numbered on from the track's; a
  * line the track, or the album, has already (its source, scope and words) once (`linesBeyond`). The
  * artist's lines say "artist" as their scope does. [taken] are the ids of [evidence]'s lines its run
- * took from these (#1131, `TrackState.itemIds`): the album's among them still say "album".
+ * took from the album's (#1131, `TrackState.albumIds`): they say "album" from that alone, whatever
+ * [album] holds now.
  */
 internal fun withAlbum(
     evidence: EvidenceSet?,
@@ -46,11 +47,11 @@ internal fun withAlbum(
     if (evidence == null || (more.isEmpty() && taken.isEmpty())) return SourcesLines(evidence)
     val shown = evidence.with(more, JvmHasher)
     val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
-    val own = evidence.ids.toSet() - taken
+    val own = evidence.ids.toSet()
     val albumIds =
         shown.lines
             .filter { it.id !in own && Triple(it.source, it.scope, it.text) in albums }
-            .mapTo(mutableSetOf()) { it.id }
+            .mapTo(taken.toMutableSet()) { it.id }
     return SourcesLines(shown, albumIds)
 }
 
@@ -74,7 +75,7 @@ internal fun sourcesLines(
         track?.let(notes::songEvidence) ?: flowOf(null)
     }.collectAsState(null)
     val evidence = track?.evidence
-    val taken = track?.itemIds.orEmpty()
+    val taken = track?.albumIds.orEmpty()
     return remember(evidence, album, artist, song, taken) { withAlbum(evidence, album, artist, song, taken) }
 }
 

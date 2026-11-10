@@ -42,7 +42,7 @@ internal class RunInput(
     val again: Gathered? = null,
     val lookAgain: LookAgain? = null,
     val before: LabelsBefore = LabelsBefore(),
-    val items: List<EvidenceDraft> = emptyList(),
+    val items: ItemLines = ItemLines(),
 )
 
 /**
@@ -420,15 +420,15 @@ internal class TrackRun(
                     )
                 }
         val seen = own.mapTo(mutableSetOf(), ::triple)
-        val items = input.items.filter { settings.isEnabled(it.source) && seen.add(triple(it)) }
+        val items = input.items.lines.filter { settings.isEnabled(it.source) && seen.add(triple(it)) }
         val evidence = EvidenceSet.of(own + items, parts.hasher, state.value.knownLanguage())
-        val itemIds = takenIds(evidence, items)
+        val albumIds = takenIds(evidence, items.filter { it in input.items.album })
         // The genres and how their later requests stand, in one update with the evidence (#772).
         update {
             val genres = labels.of(it)
             it.copy(
                 evidence = evidence,
-                itemIds = itemIds,
+                albumIds = albumIds,
                 genres = genres,
                 laterLabels = labels.states(),
                 laterFound = labels.found,

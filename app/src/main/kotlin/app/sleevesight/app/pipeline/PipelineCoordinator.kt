@@ -4,7 +4,6 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.session.TrackIdentity
-import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.bringsNewSince
 import app.sleevesight.core.model.NowPlaying
@@ -13,11 +12,11 @@ import app.sleevesight.core.pipeline.AutoWrite
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.ItemLines
 import app.sleevesight.core.pipeline.LookAgain
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
-import app.sleevesight.core.pipeline.takenIds
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Instant
@@ -25,15 +24,16 @@ import kotlin.time.Instant
 /**
  * A card paid for: the insight written and checked, and the evidence it cites, with [items], the lines
  * its run took beyond the track's own (#1131), which its evidence holds: a run of its track rebuilt
- * takes them again, and *Sources* still marks the album's among them as the album's ([itemIds]).
+ * takes them again, and *Sources* marks the album's among them as the album's ([albumIds]), from them
+ * alone.
  */
 data class Card(
     val insight: InsightState.Written,
     val evidence: EvidenceSet?,
-    val items: List<EvidenceDraft> = emptyList(),
+    val items: ItemLines = ItemLines(),
 ) {
-    /** The ids of [evidence]'s lines that [items] brought (`takenIds`). */
-    val itemIds: Set<String> get() = evidence?.let { takenIds(it, items) }.orEmpty()
+    /** The ids of [evidence]'s lines that are the album's, as its run took them ([ItemLines.albumIds]). */
+    val albumIds: Set<String> get() = evidence?.let(items::albumIds).orEmpty()
 }
 
 /**
@@ -375,7 +375,7 @@ sealed interface CoordinatorEvent {
      */
     data class ItemLinesFound(
         val key: RunKey,
-        val lines: List<EvidenceDraft>,
+        val lines: ItemLines,
     ) : CoordinatorEvent
 
     /**
@@ -418,7 +418,7 @@ sealed interface CoordinatorEffect {
         val nowPlaying: NowPlaying,
         val again: Gathered? = null,
         val lookAgain: LookAgain? = null,
-        val items: List<EvidenceDraft> = emptyList(),
+        val items: ItemLines = ItemLines(),
     ) : CoordinatorEffect
 
     /** Cancel run [run]. */
@@ -583,7 +583,7 @@ data class CoordinatorState(
         val wouldWrite: WouldWrite? = null,
         val paused: WriteSettings? = null,
         val foundNew: String? = null,
-        val items: List<EvidenceDraft> = emptyList(),
+        val items: ItemLines = ItemLines(),
     )
 
     /**
@@ -700,7 +700,7 @@ data class CoordinatorState(
         val retried: Boolean = false,
         val evidence: String? = null,
         val kept: Card? = null,
-        val items: List<EvidenceDraft> = emptyList(),
+        val items: ItemLines = ItemLines(),
         val nothing: Boolean = false,
     ) {
         /**
@@ -827,18 +827,18 @@ data class CoordinatorState(
      * narrate, or, having taken lines already, by offering Write, with no model call under way and
      * its track not written. Null otherwise: a track with its own evidence, or written, never takes them.
      */
-    val itemsTaken: List<EvidenceDraft>?
+    val itemsTaken: ItemLines?
         get() {
             val run = current ?: return null
             val lines = found?.takeIf { it.key == run.key }?.lines ?: return null
-            val decided = run.nothing || (run.items.isNotEmpty() && run.offered)
+            val decided = run.nothing || (run.items.lines.isNotEmpty() && run.offered)
             val taken =
                 allowed &&
                     decided &&
                     !run.calling &&
                     run.gathered != null &&
                     written(run.nowPlaying) == null &&
-                    lines.any { it !in run.items }
+                    lines.lines.any { it !in run.items.lines }
             return lines.takeIf { taken }
         }
 
@@ -1413,7 +1413,7 @@ class PipelineCoordinator(
         val written = state.written(report.nowPlaying)
         val key = written?.key ?: report.key
         val playing = written?.track ?: report.nowPlaying
-        val items = written?.items.orEmpty()
+        val items = written?.items ?: ItemLines()
         state = state.copy(runs = id.value, run = CoordinatorState.Run(id, key, playing, items = items))
         effects += CoordinatorEffect.StartRun(id, playing, items = items)
     }
@@ -1453,7 +1453,7 @@ class PipelineCoordinator(
         run: CoordinatorState.Run,
         gathered: Gathered,
         retried: Boolean = false,
-        items: List<EvidenceDraft> = run.items,
+        items: ItemLines = run.items,
     ) {
         cancelPreparation()
         effects += CoordinatorEffect.CancelRun(run.id)
@@ -1898,7 +1898,7 @@ class PipelineCoordinator(
         val asWouldHave =
             run.again &&
                 would?.settings == WriteSettings(writesOn, run.allowModel) &&
-                (would.brought(run.gathered) || run.items.isNotEmpty())
+                (would.brought(run.gathered) || run.items.lines.isNotEmpty())
         return writes && (!decided || asWouldHave)
     }
 }

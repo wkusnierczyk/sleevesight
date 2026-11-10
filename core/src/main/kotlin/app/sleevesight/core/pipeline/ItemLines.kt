@@ -31,7 +31,7 @@ fun linesBeyond(
 /**
  * The ids of the lines of [evidence] that [items], lines a run took beyond its own (#1131), brought: by
  * source, scope and words. What *Sources* still marks as the album's, with whichever evidence is shown
- * (`TrackState.itemIds`, and a card kept with its own).
+ * ([ItemLines.albumIds]).
  */
 fun takenIds(
     evidence: EvidenceSet,
@@ -40,4 +40,31 @@ fun takenIds(
     if (items.isEmpty()) return emptySet()
     val brought = items.mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
     return evidence.lines.filter { Triple(it.source, it.scope, it.text) in brought }.mapTo(mutableSetOf()) { it.id }
+}
+
+/**
+ * The lines a run takes beyond the track's own (#1131, [lines]), and which of them are the album's own
+ * ([album]), as they were found: so *Sources* marks those as the album's from them alone, whatever the
+ * album's evidence holds by then (a source switched off since, say).
+ */
+data class ItemLines(
+    val lines: List<EvidenceDraft> = emptyList(),
+    val album: List<EvidenceDraft> = emptyList(),
+) {
+    /** The ids of [evidence]'s lines that are [album]'s ([takenIds]). */
+    fun albumIds(evidence: EvidenceSet): Set<String> = takenIds(evidence, album)
+
+    companion object {
+        /** The lines of [album], [artist] and [song] beyond [own] ([linesBeyond]), the album's marked. */
+        fun beyond(
+            own: List<EvidenceLine>,
+            album: EvidenceSet?,
+            artist: EvidenceSet?,
+            song: EvidenceSet?,
+        ): ItemLines {
+            val lines = linesBeyond(own, listOf(album, artist, song))
+            val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
+            return ItemLines(lines, lines.filter { Triple(it.source, it.scope, it.text) in albums })
+        }
+    }
 }
