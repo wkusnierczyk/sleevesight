@@ -23,6 +23,7 @@ internal suspend fun ArtistResults.getCarried(
             ?.takeIf { withoutReferences(it.value) }
             ?.also { keep(part, key, it.value) }
 
-// Whether [value], kept lines, decodes and none of its lines' texts holds a character reference.
+// Whether [value], kept lines, decodes and none of its lines' texts holds a character reference:
+// decoding gives each the same text.
 private fun withoutReferences(value: String): Boolean =
-    KeptDrafts.decode(value)?.none { HtmlReferences.decode(it.text) !== it.text } == true
+    KeptDrafts.decode(value)?.all { HtmlReferences.decode(it.text) == it.text } == true
