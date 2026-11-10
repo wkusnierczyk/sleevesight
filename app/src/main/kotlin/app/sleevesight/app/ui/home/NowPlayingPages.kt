@@ -80,7 +80,7 @@ internal fun NowPlayingPageContent(
                         )
                     }
 
-                    is HomePage.Item -> ItemPageOf(page, state, shown, playing, actions)
+                    is HomePage.Item -> ItemPageOf(page, state, shown, playing, actions) { handoff.moveTo(back) }
                 }
             }
         }
@@ -134,9 +134,10 @@ private fun itemOf(page: HomePage.Item): InsightItem =
 
 /**
  * The song's, the artist's or the album's page (#522): its name, then its insight, for the track
- * playing; a citation opens *Sources*' page at its line; *Report a problem* opens its report here.
- * Nothing until the settings are read.
+ * playing; a citation opens *Sources*' page at its line; *Report a problem* opens its report here;
+ * [afterRetry] hands the focus to the back arrow (#1163). Nothing until the settings are read.
  */
+@Suppress("LongParameterList") // The page, what it shows, and where the focus goes after *Retry*.
 @Composable
 private fun ItemPageOf(
     page: HomePage.Item,
@@ -144,6 +145,7 @@ private fun ItemPageOf(
     shown: Showing,
     playing: NowPlaying,
     actions: NowPlayingActions,
+    afterRetry: () -> Unit,
 ) {
     val settings = state.settings ?: return
     var reporting by remember { mutableStateOf<Reported?>(null) }
@@ -171,7 +173,7 @@ private fun ItemPageOf(
     // Its opening's write (#948), asked for once, on that track only: not again after a rotation.
     var due by rememberSaveable { mutableStateOf(true) }
     val opening = if (tapped && due) OpeningWrite(due = true) { due = false } else OpeningWrite.NONE
-    ItemPage(item, itemRow(item, header, actions.normalize(header)), context, tapped, opening)
+    ItemPage(item, itemRow(item, header, actions.normalize(header)), context, tapped, opening, afterRetry)
 }
 
 // The track an item page was opened on, saved as plain values ([savedTrack]).

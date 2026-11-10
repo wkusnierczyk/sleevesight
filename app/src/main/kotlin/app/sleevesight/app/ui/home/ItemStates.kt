@@ -123,6 +123,7 @@ internal fun NothingToWriteFrom(
     item: InsightItem,
     evidence: ItemEvidence,
     context: ItemContext,
+    afterRetry: () -> Unit,
 ) {
     val unanswered = evidence.unanswered
     if (unanswered.isEmpty()) {
@@ -135,6 +136,7 @@ internal fun NothingToWriteFrom(
         names,
         context.retries?.ofAll(unanswered),
         Modifier.testTag(ITEM_UNREACHABLE_TAG),
+        afterRetry = afterRetry,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         tag = ITEM_UNREACHABLE_RETRY_TAG,

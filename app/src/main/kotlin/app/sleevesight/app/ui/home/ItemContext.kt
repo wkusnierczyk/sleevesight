@@ -103,7 +103,9 @@ internal class OpeningWrite(
  *
  * [shown] is what [item] shows, when its caller follows it already ([itemShown]): Home's panel, which
  * draws *Read aloud* in its heading ([ItemReadAloud], #894) and so passes [readAloud] false, leaving
- * it out of the byline's row.
+ * it out of the byline's row. [afterRetry] runs after a tap on *Retry* beside sources not reached
+ * (#1163), whose line then goes: it hands the focus on (to the panel's *Close*, the page's back
+ * arrow), as the other panels' *Retry* does (#724).
  */
 @Suppress("LongParameterList") // The item, what it is shown with, and how it was opened.
 @Composable
@@ -114,6 +116,7 @@ internal fun ItemContent(
     shown: ItemShown? = null,
     readAloud: Boolean = true,
     opening: OpeningWrite = OpeningWrite.NONE,
+    afterRetry: () -> Unit = {},
 ) {
     val track = context.track
     if (track == null) {
@@ -122,7 +125,8 @@ internal fun ItemContent(
     }
     val now = shown ?: itemShown(item, context)
     WritesOnTap(item, track, context, now, opening)
-    ItemShownContent(item, track, context, tapped, now, readAloud, writingDue = opening.due && !context.automatic)
+    val writingDue = opening.due && !context.automatic
+    ItemShownContent(item, track, context, tapped, now, ItemShowing(readAloud, writingDue, afterRetry))
 }
 
 /**
@@ -205,8 +209,17 @@ internal fun ItemReadAloud(
     }
 }
 
-// [ItemContent] of [track], [shown] as followed; *Writing…* for one offered while its tap's write is
-// due ([writingDue], #948), asked for at once, rather than *Write insight* for a frame.
+// How [ItemContent] shows an item: with *Read aloud* in its byline's row ([readAloud]); *Writing…* for
+// one offered while its tap's write is due ([writingDue], #948); and where the focus goes after *Retry*
+// beside sources not reached ([afterRetry], #1163).
+private class ItemShowing(
+    val readAloud: Boolean,
+    val writingDue: Boolean,
+    val afterRetry: () -> Unit,
+)
+
+// [ItemContent] of [track], [shown] as followed, as [showing] says: *Writing…* for one offered while
+// its tap's write is due, asked for at once, rather than *Write insight* for a frame.
 @Suppress("LongParameterList") // What the item shows, and where.
 @Composable
 private fun ItemShownContent(
@@ -215,8 +228,7 @@ private fun ItemShownContent(
     context: ItemContext,
     tapped: Boolean,
     shown: ItemShown,
-    readAloud: Boolean,
-    writingDue: Boolean,
+    showing: ItemShowing,
 ) {
     WritesAtOnce(item, track, context, tapped)
     val unavailable = context.unavailable
@@ -232,7 +244,7 @@ private fun ItemShownContent(
         // Nothing written and nothing under way: *Write insight*, whatever the mode, so an automatic
         // write the gates refused never shows as writing; the plain line, whatever held it back.
         ItemShown.Offered ->
-            if (writingDue) {
+            if (showing.writingDue) {
                 Writing()
             } else {
                 ItemQuiet(stringResource(R.string.home_item_tap_write))
@@ -243,7 +255,7 @@ private fun ItemShownContent(
 
         // Nothing to write about on this track (no album it names): said as for no evidence.
         ItemShown.NoSubject -> ItemQuiet(stringResource(noEvidence(item)))
-        is ItemShown.Shown -> Shown(item, now, track, context, readAloud)
+        is ItemShown.Shown -> Shown(item, now, track, context, showing)
     }
 }
 
@@ -288,7 +300,7 @@ private fun Shown(
     shown: ItemShown.Shown,
     track: TrackState,
     context: ItemContext,
-    readAloud: Boolean,
+    showing: ItemShowing,
 ) {
     val own = track.copy(evidence = shown.evidence.evidence)
     // Where a citation goes, and how it shows and is read: by the id *Sources* shows its line under.
@@ -311,7 +323,7 @@ private fun Shown(
         is InsightState.Written -> {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { shown.model?.let { InsightByline(it) } }
-                if (readAloud) {
+                if (showing.readAloud) {
                     itemReading(context.readAloud, item, track, state, context.notes)?.let {
                         ReadAloudButton(it, itemReadAloudTag(item))
                     }
@@ -323,7 +335,7 @@ private fun Shown(
             WrittenFooter(item, shown, state, track, context, label)
         }
 
-        InsightState.NoEvidence -> NothingToWriteFrom(item, shown.evidence, context)
+        InsightState.NoEvidence -> NothingToWriteFrom(item, shown.evidence, context, showing.afterRetry)
 
         is InsightState.Failed ->
             RetryLine(

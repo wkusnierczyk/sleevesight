@@ -5,11 +5,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -66,7 +71,10 @@ class ItemUnreachableScreenTest {
                 ),
         )
 
-    private fun show(unanswered: List<SourceId>) {
+    private fun show(
+        unanswered: List<SourceId>,
+        block: () -> Unit = { checkLine(unanswered) },
+    ) {
         val evidence = ItemEvidence(EvidenceSet.of(emptyList(), JvmHasher), emptyMap(), unanswered = unanswered)
         notes.shown.value = mapOf(InsightItem.ARTIST to ItemShown.Shown(InsightState.NoEvidence, evidence))
         val view =
@@ -87,7 +95,11 @@ class ItemUnreachableScreenTest {
             NowPlayingActions(
                 normalizer::normalize,
                 itemNotes = notes,
-                askAgain = { key, sources, shown -> retried += Triple(key, sources, shown) },
+                askAgain = { key, sources, shown ->
+                    retried += Triple(key, sources, shown)
+                    // Asked again: the line gives way, as once the sources are gathered anew.
+                    notes.shown.value = emptyMap()
+                },
             )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
@@ -98,15 +110,19 @@ class ItemUnreachableScreenTest {
             compose.waitForIdle()
             compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).performScrollTo().performClick()
             compose.waitForIdle()
-            if (unanswered.isEmpty()) {
-                compose.onNodeWithText(app.getString(R.string.home_item_no_evidence_artist)).assertExists()
-                compose.onNodeWithTag(ITEM_UNREACHABLE_TAG).assertDoesNotExist()
-            } else {
-                compose.onNodeWithText(app.getString(R.string.home_item_no_evidence_artist)).assertDoesNotExist()
-                compose.onNodeWithText("MusicBrainz could not be reached.").assertExists()
-                compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performScrollTo().performClick()
-                compose.waitForIdle()
-            }
+            block()
+        }
+    }
+
+    private fun checkLine(unanswered: List<SourceId>) {
+        if (unanswered.isEmpty()) {
+            compose.onNodeWithText(app.getString(R.string.home_item_no_evidence_artist)).assertExists()
+            compose.onNodeWithTag(ITEM_UNREACHABLE_TAG).assertDoesNotExist()
+        } else {
+            compose.onNodeWithText(app.getString(R.string.home_item_no_evidence_artist)).assertDoesNotExist()
+            compose.onNodeWithText("MusicBrainz could not be reached.").assertExists()
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
         }
     }
 
@@ -114,6 +130,19 @@ class ItemUnreachableScreenTest {
     fun musicBrainzNotReachedIsNamedWithRetryWhichAsksItAgain() {
         show(listOf(SourceId.MUSICBRAINZ))
         assertEquals(listOf(Triple(RunKey.of(normalizer, sundown), setOf(SourceId.MUSICBRAINZ), sundown)), retried)
+    }
+
+    @Test
+    fun fromAKeyboardRetryHandsTheFocusToClose() {
+        show(listOf(SourceId.MUSICBRAINZ)) {
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performScrollTo().requestFocus()
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performKeyInput { pressKey(Key.Enter) }
+            compose.waitForIdle()
+            // The line gone with *Retry*: the focus on the panel's *Close*, not fallen to the top.
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).assertDoesNotExist()
+            compose.onNodeWithTag("${itemPanelTag(InsightItem.ARTIST)}:close").assertIsFocused()
+        }
+        assertEquals(setOf(SourceId.MUSICBRAINZ), retried.single().second)
     }
 
     @Test
