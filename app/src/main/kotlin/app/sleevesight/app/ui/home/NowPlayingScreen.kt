@@ -87,6 +87,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property askAgain a tap on *Retry* beside a source that could not be reached (#724), with the key
  *   it was offered under, the source (or the two named on one line, #1121), and the track it was
  *   shown beside: those alone are asked again (`PipelineHost.askAgain`), free.
+ * @property itemRetried a tap on *Retry* beside an item's own lookups not reached (#1187, the album's),
+ *   with the track it was shown beside, before they are gathered again (`PipelineHost.itemRetried`).
  * @property aiSearches *Search with AI* under the empty state of *Dates*, *Genres* and *Lyrics*
  *   (#773): each panel's search, a paid call, and its *Stop*.
  * @property itemNotes the song's, the artist's and the album's insights under *Key insights* (#522).
@@ -119,6 +121,7 @@ class HomeFeed(
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
     val askAgain: (RunKey, Set<SourceId>, NowPlaying) -> Unit = { _, _, _ -> },
+    val itemRetried: (NowPlaying) -> Unit = {},
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
     val ad: StateFlow<AdPlaying?> = MutableStateFlow(null),
@@ -200,6 +203,7 @@ private fun HomeFeed.actions(
     openSettingsAt = openSettingsAt,
     readAloud = readAloud,
     askAgain = askAgain,
+    itemRetried = itemRetried,
     aiSearches = aiSearches,
     itemNotes = itemNotes,
     tracklists = tracklists,
@@ -238,7 +242,8 @@ internal class NowPlayingState(
  * [installedPlayers]' icons, and the guide's buttons go to [hideGuideOnce] (*Hide once*) or
  * to [dismissals] (*Dismiss*, and its *Undo*; #759). [readAloud] reads the insight, or a genre's
  * reason, aloud (#325); null shows no *Read aloud*. [askAgain] takes a tap on *Retry* beside a
- * source that could not be reached (#724), as [write] takes one on Write. [aiSearches] gives *Search
+ * source that could not be reached (#724), as [write] takes one on Write, and [itemRetried] one
+ * beside an item's own lookups (#1187). [aiSearches] gives *Search
  * with AI* under the empty *Dates*, *Genres* and *Lyrics* (#773). [itemNotes] gives the song's, the
  * artist's and the album's insights under *Key insights* (#522). [tracklists] gives the albums'
  * tracklists on the back of the cover (#984), and [releaseGroups] the albums' release groups' first
@@ -264,6 +269,7 @@ internal class NowPlayingActions(
     val lookAgain: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val readAloud: ReadAloud? = null,
     val askAgain: (RunKey, Set<SourceId>, NowPlaying) -> Unit = { _, _, _ -> },
+    val itemRetried: (NowPlaying) -> Unit = {},
     val aiSearches: AiSearchFeed = AiSearchFeed.None,
     val itemNotes: ItemNotes = ItemNotes.None,
     val tracklists: TracklistFeed = TracklistFeed.None,

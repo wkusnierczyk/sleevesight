@@ -5,6 +5,9 @@ package app.sleevesight.sources.musicbrainz
 
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.resolution.MbParentWork
+import app.sleevesight.core.resolution.MbWork
 import app.sleevesight.core.resolution.RecordingResolver
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -17,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -194,6 +198,37 @@ class MusicBrainzResolutionTest {
                 ),
                 net.sent.filter { it.url == "${MusicBrainzClient.BASE}/recording" }.map { it.query["query"] },
             )
+            // A performance of a composed work (#1178): no cover of the 1949 recording by another pianist,
+            // and no original named, so its releases are not looked up.
+            assertFalse(resolution.cover)
+            assertFalse(resolution.earliest)
+            assertNull(resolution.original)
+            assertEquals(
+                listOf("${MusicBrainzClient.BASE}/recording/e0a505da-98a7-4b76-a120-dbfb56a2ac02"),
+                net.sent.filter { it.url.startsWith("${MusicBrainzClient.BASE}/recording/") }.map { it.url },
+            )
+        }
+
+    @Test
+    fun `a movement's work gives its sonata's type and its composer's date, in the same answer`() =
+        runTest {
+            // #1178: the movement has no type of its own; `work-rels` gives the sonata it is part of.
+            val client = MusicBrainzClient(ReplayNetClient("musicbrainz-1129"))
+            val lookup = client.work("9727cab0-f302-3b71-b937-5ccd416dd36e")
+            val work = assertIs<Lookup.Found<MbWork>>(lookup).value
+            assertNull(work.type)
+            assertEquals(
+                listOf(
+                    MbParentWork(
+                        "a2ad223d-d73b-3775-9580-fd25b4d986e1",
+                        "Sonata for Piano no. 16 in C major, K. 545 \"Sonata facile\"",
+                        "Sonata",
+                    ),
+                ),
+                work.parents,
+            )
+            // The composition date, for *Dates* (#1132).
+            assertEquals("1788", work.artistRelations.single { it.type == "composer" }.begin)
         }
 
     @Test

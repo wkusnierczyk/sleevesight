@@ -29,8 +29,12 @@ internal class Groups(
     val asked = mutableListOf<String>()
     val releasesAsked = mutableListOf<String>()
 
+    // While set, a release group's lookup waits for it: under way.
+    var waiting: CompletableDeferred<Unit>? = null
+
     override suspend fun releaseGroup(mbid: String): Lookup<MbAlbum> {
         asked += mbid
+        waiting?.await()
         return albums[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
     }
 

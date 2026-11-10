@@ -454,6 +454,18 @@ class PipelineHost(
     }
 
     /**
+     * The user tapped *Retry* beside an item's own lookups not reached (#1187: the album's), beside
+     * [shown], before they are gathered again: the run of that track then writes nothing unasked
+     * ([CoordinatorEvent.ItemRetryTapped]); dropped for a track the session layer no longer shows.
+     * Sent before the gathering starts, so the coordinator has it before the lines it brings.
+     */
+    fun itemRetried(shown: NowPlaying) {
+        val latest = latestPlaying() ?: return
+        if (!sameInsightTrack(shown, latest)) return
+        queue.trySend(CoordinatorEvent.ItemRetryTapped(RunKey.of(normalizer, shown)))
+    }
+
+    /**
      * The user chose [mode] for *Reactive* (#625), in the insight card's menu or in the settings,
      * the mode chosen already included. It applies from the next track: the track playing is
      * written only on a tap. An automatic one is the first action (D5), so automatic writing

@@ -673,3 +673,9 @@ internal fun World.itemLines(
     send(CoordinatorEvent.ItemLinesFound(key(title), ItemLines(lines)))
     advance(0)
 }
+
+/** A tap on *Retry* beside [title]'s item's own lookups not reached (#1187), as the host tells it. */
+internal fun World.itemRetry(title: String) {
+    send(CoordinatorEvent.ItemRetryTapped(key(title)))
+    advance(0)
+}

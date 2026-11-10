@@ -48,13 +48,17 @@ import app.sleevesight.core.pipeline.TrackState
  * line (#1121: "Last.fm and MusicBrainz could not be reached; …"), is the tap that asks those of them
  * it offers again, together, or null while it offers none. [askAgain] carries the tap to the
  * pipeline (`PipelineHost.askAgain`), with the key it was offered under and the track it was shown
- * beside, as Write's does.
+ * beside, as Write's does; [itemRetried] one beside an item's own lookups (#1187), with that track.
  */
 internal class Retries(
     private val view: PipelineView,
     private val playing: NowPlaying,
     private val askAgain: (RunKey, Set<SourceId>, NowPlaying) -> Unit,
+    private val itemRetried: (NowPlaying) -> Unit = {},
 ) {
+    /** A tap on *Retry* beside an item's own lookups (#1187), told to the pipeline before they are asked again. */
+    fun ofItem() = itemRetried(playing)
+
     fun of(source: SourceId): (() -> Unit)? = ofAll(listOf(source))
 
     /** The sources the insight draws on that did not answer for [track] ([insightUnanswered]), and their *Retry*. */

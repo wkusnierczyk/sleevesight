@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.ItemInsights
+import app.sleevesight.core.pipeline.SourcesHeld
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
@@ -71,6 +73,39 @@ internal class ItemContext(
      */
     val automatic: Boolean
         get() = settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER
+
+    /**
+     * The tap on *Retry* beside [item]'s sources not reached, [evidence]'s: the track's asked again
+     * ([ItemEvidence.retry], as the pipeline offers them, [retries]), and the item's own lookups gathered
+     * again ([SourcesHeld.gatherAgain]: the album's, #1187); null when neither is offered. Either way
+     * the track's run writes nothing unasked after it: the pipeline's *Retry* starts such a run, and
+     * with none asked of it, the run is told so first ([Retries.ofItem]). With both, the item is
+     * gathered once the track's run asked again has landed, from what it found (`afterRun`), not now
+     * from what it is replacing.
+     */
+    fun retryOf(
+        item: InsightItem,
+        evidence: ItemEvidence,
+    ): (() -> Unit)? {
+        val shown = track
+        val asks = retries?.ofAll(evidence.retry)
+        val own = evidence.held?.gatherAgain == true
+        return when {
+            shown == null || !own -> asks
+            asks != null -> (
+                {
+                    asks()
+                    notes.gatherAgain(shown, item, afterRun = true)
+                }
+            )
+            else -> (
+                {
+                    retries?.ofItem()
+                    notes.gatherAgain(shown, item)
+                }
+            )
+        }
+    }
 }
 
 /**
@@ -264,8 +299,10 @@ private fun ItemShownContent(
  * Under an automatic mode, [item]'s insight on [track] asked for at once ([ItemContext.automatic]):
  * as an opening when [tapped], else by itself; and asked again each time the app comes back on
  * screen, so a call the gates refused while it was away (no lookups in the background) is made once
- * they open. Asked again as the track's evidence changes while it stays open, one opened by a tap
- * asks as kept open ([ItemAsk.KEPT_OPEN], #1163), which the lines a *Retry* brings do not write.
+ * they open. One opened by a tap asks as an opening once; asked again while it stays open on that
+ * track (its evidence changed, the app back on screen, the hold-back lifted), it asks as kept open
+ * ([ItemAsk.KEPT_OPEN], #1163, #1187), which a *Retry* of a source holds: what it brings is not
+ * written unasked.
  */
 @Composable
 private fun WritesAtOnce(
@@ -281,8 +318,9 @@ private fun WritesAtOnce(
     val onScreen = resumed.isAtLeast(Lifecycle.State.RESUMED)
     // The hold-back lifting (a tap on *Write* after *Saver*, a first action) asks again too.
     val holdBackLifted = context.writesItself
-    // The evidence it first asked with on this track, while it stays open (#1163).
-    val first = remember(track.normalized.lookupKey, item) { mutableStateOf<String?>(null) }
+    // Whether its opening was asked for on this track, while it stays open (#1163, #1187): kept
+    // through a rotation, whatever the evidence or the lifecycle did since.
+    val opened = rememberSaveable(track.normalized.lookupKey, item) { mutableStateOf(false) }
     LaunchedEffect(
         track.normalized.lookupKey,
         track.evidence?.fingerprint,
@@ -293,15 +331,13 @@ private fun WritesAtOnce(
         holdBackLifted,
     ) {
         if (atOnce && offered && onScreen) {
-            val evidence = track.evidence?.fingerprint
-            val asked = first.value
-            if (asked == null) first.value = evidence
             val ask =
                 when {
                     !tapped -> ItemAsk.BY_ITSELF
-                    asked != null && asked != evidence -> ItemAsk.KEPT_OPEN
+                    opened.value -> ItemAsk.KEPT_OPEN
                     else -> ItemAsk.OPENED
                 }
+            if (tapped) opened.value = true
             context.notes.write(track, item, ask)
         }
     }
@@ -419,7 +455,7 @@ internal fun itemContext(
     cite = cite,
     onReport = onReport,
     readAloud = actions.readAloud,
-    retries = Retries(shown.view, shown.playing, actions.askAgain),
+    retries = Retries(shown.view, shown.playing, actions.askAgain, actions.itemRetried),
     unavailable = state.unavailable.takeIf { settings.writeInsights },
     onModelSettings = {
         state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) } ?: actions.openSettings()

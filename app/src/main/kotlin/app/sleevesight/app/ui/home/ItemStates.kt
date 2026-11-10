@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.ui.logo.Busy
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.ItemEvidence
 
@@ -117,7 +118,9 @@ internal fun ItemQuiet(text: String) {
 // [item]'s insight with nothing to write from: while sources its lines come from could not be reached
 // (#1163: MusicBrainz, without which Last.fm's and Wikipedia's lines about the artist are not verified),
 // that, naming them, with *Retry* beside it, which asks them again, as the key insight's line does
-// (#1121); else that the sources give nothing to write it from.
+// (#1121); the album's own lookups not reached (#1187) gathered again by that *Retry* too, and the
+// track's MusicBrainz, which names its release group, asked again; else that the sources give nothing
+// to write it from.
 @Composable
 internal fun NothingToWriteFrom(
     item: InsightItem,
@@ -130,11 +133,12 @@ internal fun NothingToWriteFrom(
         ItemQuiet(stringResource(noEvidence(item)))
         return
     }
-    val names = namedTogether(unanswered.map { chipName(it) })
+    // Wikidata by the setting that switches it, Wikipedia (#1187); the diagnostics keep it apart.
+    val names = namedTogether(unanswered.map { chipName(if (it == SourceId.WIKIDATA) SourceId.WIKIPEDIA else it) })
     RetryLine(
         stringResource(R.string.home_source_note_unreachable, names),
         names,
-        context.retries?.ofAll(evidence.retry),
+        context.retryOf(item, evidence),
         Modifier.testTag(ITEM_UNREACHABLE_TAG),
         afterRetry = afterRetry,
         style = MaterialTheme.typography.bodyMedium,

@@ -59,7 +59,9 @@ class MusicBrainzSource(
      * track kept before is asked again. 12: a title's leading composer is left out of the search, which
      * is by the first performer (#1129), so a track kept as *nothing found* is asked again: every kept
      * MusicBrainz result is, once, as are Wikipedia's track results, in English and in the track's
-     * language, and Last.fm's (their versions raised with it). Without
+     * language, and Last.fm's (their versions raised with it). A performance of a composed work is no
+     * cover of its earliest recording by someone else (#1178): released in the same version as #1129,
+     * whose upgrade asks every kept result again, so it needs none of its own. Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
