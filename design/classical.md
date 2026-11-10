@@ -61,7 +61,10 @@ work's own type, else its parent's, is of a classical form (MusicBrainz work typ
 *Sonata for Piano no. 16*, is `Sonata`). Then keep only MusicBrainz's own cover mark, and name no
 original and no `earliest`. The composer
 relationship's `begin` (`1788` for K. 545) is the composition date #1132 needs, also free. Filed as
-#1178, and done so (`composed` in `RecordingResolver.kt`, `RecordingResolver.COMPOSED_FORMS`); the composer's `begin` is read
+#1178, and done so (`composed` in `RecordingResolver.kt`, `RecordingResolver.COMPOSED_FORMS`), with
+two narrowings: a type of the work's own that is no classical form (`Song`) is never composed, and the
+composer signal counts only for an untyped work whose composer the title leads with (`Mozart: …`,
+signal A), since a songwriter credited on a pop track would pass it too. The composer's `begin` is read
 into `MbArtistRelation.begin`, not yet used.
 
 ## 2. Telling the composer from the performers

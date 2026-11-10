@@ -58,10 +58,11 @@ class RecordingComposedWorkTest {
     )
 
     @Test
-    fun `the work's composer credited on the track but not on the recording - no cover, no original`() =
+    fun `an untyped work by the composer the title leads with, not on the recording - no cover, no original`() =
         runTest {
+            // `Mozart: …` (#1129): the title names its credited composer, whom the recording does not credit.
             val musicBrainz = musicBrainz(work(composer = "Wolfgang Amadeus Mozart"))
-            val resolution = resolve(musicBrainz, track("Andante", "Wolfgang Amadeus Mozart, Pianist"))
+            val resolution = resolve(musicBrainz, track("Mozart: Andante", "Wolfgang Amadeus Mozart, Pianist"))
             assertEquals("ours", resolution.recordingMbid)
             assertFalse(resolution.cover)
             assertNull(resolution.original)
@@ -116,15 +117,27 @@ class RecordingComposedWorkTest {
         }
 
     @Test
-    fun `a composer who is also credited on the recording does not make the work composed`() =
+    fun `a composer the title leads with who is also credited on the recording does not make the work composed`() =
         runTest {
-            // A writer the player credits beside the singer, on the recording too: as before, the
-            // earlier recording by someone else makes this one a cover.
+            // The composer plays on the recording too: as before, the earlier recording by someone else
+            // makes this one a cover.
             val credits = listOf(credit("Pianist"), credit("Composer"))
             val resolution =
-                resolve(musicBrainz(work(), credits = credits), track("Andante", "Pianist, Composer"))
+                resolve(musicBrainz(work(), credits = credits), track("Composer: Andante", "Composer, Pianist"))
             assertTrue(resolution.cover)
             assertEquals("first", resolution.original?.recordingMbid)
+        }
+
+    @Test
+    fun `an untyped work's writer credited on the track but not on the recording - still covered by date`() =
+        runTest {
+            // No type is no sign of a classical work: a songwriter the player names beside the singer of
+            // a pop song or a standard, with no title lead naming them, does not take the cover away.
+            val musicBrainz = musicBrainz(work())
+            val resolution = resolve(musicBrainz, track("Andante", "Pianist, Composer"))
+            assertTrue(resolution.cover)
+            assertEquals("first", resolution.original?.recordingMbid)
+            assertEquals(listOf("first"), musicBrainz.releasesAsked)
         }
 
     @Test

@@ -739,11 +739,11 @@ class RecordingResolver(
 
 // Whether [work] is a composed work rather than a song (#1178), from what the answers hold already.
 // A type of its own decides: a classical form ([RecordingResolver.COMPOSED_FORMS]) is composed, any
-// other (`Song`) is not, whoever the track credits, so a songwriter credited beside a singer covering
-// the song keeps the cover. With no type: a parent's of a classical form (a movement's sonata), or
-// its composer one of the track's artists ([track], a classical track crediting its composer, as
-// Spotify does) but not credited on the recording ([recording]'s credit, or [ours], the ids the
-// track's artists resolved to).
+// other (`Song`) is not, whoever the track credits. With no type, which is no sign of a classical work:
+// a parent's of a classical form (a movement's sonata), or its composer the one the title leads with
+// ([NormalizedTrack.composer], `Mozart: …`, a credited artist, #1129) and not credited on the recording
+// ([recording]'s credit, or [ours], the ids the track's artists resolved to). A songwriter the player
+// merely credits beside the singer of a pop song or a standard keeps the cover.
 private fun composed(
     names: NameMatcher,
     track: NormalizedTrack,
@@ -753,12 +753,14 @@ private fun composed(
 ): Boolean {
     work.type?.let { return it.lowercase() in RecordingResolver.COMPOSED_FORMS }
     val onRecording = ours + recording.credits.map { it.artistMbid }
+    val lead = track.composer?.name
     val composer =
-        work.artistRelations.any { relation ->
-            relation.type == "composer" &&
-                relation.artistMbid !in onRecording &&
-                track.artists.any { names.sameName(relation.artistName, it) }
-        }
+        lead != null &&
+            work.artistRelations.any { relation ->
+                relation.type == "composer" &&
+                    relation.artistMbid !in onRecording &&
+                    names.sameName(relation.artistName, lead)
+            }
     return composer || work.parents.any { it.type?.lowercase() in RecordingResolver.COMPOSED_FORMS }
 }
 
