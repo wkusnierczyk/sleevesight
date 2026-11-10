@@ -47,9 +47,10 @@ class IntroSettingTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
-    // In memory, read, written and saved on the test's thread, the main one (#1140): over files,
-    // with the saves on `Dispatchers.Default`, each wait below also waited on threads the main looper
-    // does not drive. The settings file's own reads and writes are `SettingsStoreTest`'s.
+    // The switch test's settings and keys, in memory, read, written and saved on the test's thread,
+    // the main one (#1140): over files, with the saves on `Dispatchers.Default`, its waits also
+    // waited on threads the main looper does not drive. The settings file's own reads and writes are
+    // `SettingsStoreTest`'s.
     private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
