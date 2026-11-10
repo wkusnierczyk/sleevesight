@@ -74,7 +74,10 @@ import app.sleevesight.core.settings.Layout
  * button opens it, back to its button when *Close* closes it, and to its button when a new track
  * closes a panel while the focus is in it, if the new track has that row.
  */
-@Suppress("LongParameterList") // The rows, how they open, and what each shows.
+@Suppress(
+    "LongParameterList", // The rows, how they open, and what each shows.
+    "LongMethod", // Each row, open or folded, with where the focus goes from each control that goes (#1163).
+)
 @Composable
 internal fun ItemRows(
     rows: List<ItemRow>,
@@ -125,7 +128,17 @@ internal fun ItemRows(
                             handoff.moveTo(buttonOf(item))
                         },
                         actions = { centred -> ItemReadAloud(item, context, shown, centred) },
-                    ) { ItemContent(item, context, folds.tapped(item), shown, readAloud = false, folds.opening(item)) }
+                    ) {
+                        // *Retry* beside sources not reached goes once tapped: the focus to *Close* (#1163).
+                        ItemContent(
+                            item,
+                            context,
+                            folds.tapped(item),
+                            shown,
+                            readAloud = false,
+                            folds.opening(item),
+                        ) { handoff.moveTo(closeOf(item)) }
+                    }
                 } else {
                     val writing = itemWrites(item, context)
                     ItemRowLine(

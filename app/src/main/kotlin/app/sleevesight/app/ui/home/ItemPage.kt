@@ -25,8 +25,10 @@ import app.sleevesight.core.pipeline.InsightItem
  * ([tapped]) for the track it was opened on only, so that track's is written at once, in every mode
  * (#948; under *On demand* while [opening] is due), and a later track's only as one unfolded at
  * its start is, by itself under an automatic mode. With no name for it on the track playing, it says
- * there is nothing to write it from.
+ * there is nothing to write it from. [afterRetry] hands the focus on after *Retry* beside sources not
+ * reached (#1163), as [ItemContent] says.
  */
+@Suppress("LongParameterList") // The item, its row, how it was opened, and where the focus goes after *Retry*.
 @Composable
 internal fun ItemPage(
     item: InsightItem,
@@ -34,6 +36,7 @@ internal fun ItemPage(
     context: ItemContext,
     tapped: Boolean,
     opening: OpeningWrite = OpeningWrite.NONE,
+    afterRetry: () -> Unit = {},
 ) {
     if (row == null) {
         // Nothing to write about on this track (no album it names): said as for no evidence.
@@ -50,7 +53,7 @@ internal fun ItemPage(
             )
         }
     }
-    ItemContent(item, context, tapped, opening = opening)
+    ItemContent(item, context, tapped, opening = opening, afterRetry = afterRetry)
 }
 
 /**

@@ -38,8 +38,14 @@ object RecordedTracks {
     /** Entry [n] of the playlist, normalized. */
     fun track(n: Int): NormalizedTrack {
         val entry = BelowSoundtrack.track(n)
-        return normalizer.normalize(entry.title, entry.artist)
+        return normalize(entry.title, entry.artist)
     }
+
+    /** A track outside the playlist, as a player names it, normalized. */
+    fun normalize(
+        title: String,
+        artists: String,
+    ): NormalizedTrack = normalizer.normalize(title, artists)
 
     /** The length the player reports for entry [n] (`3:33`). */
     fun duration(n: Int): Duration {

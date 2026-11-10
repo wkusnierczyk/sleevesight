@@ -291,7 +291,9 @@ sealed interface PipelineEvent {
     /**
      * An [AiAsked] question ended, as [outcome] says ([failure], the reason a failure names), after
      * the web searches and AI calls of [cost] (none when what was kept answered it after all), in
-     * [latency].
+     * [latency]. For an item's insight that found nothing (#1163), how many [lines] it was to be
+     * written from (none: no call was made), and the sources of its lines that could not be asked
+     * ([unanswered]), or failed ([failed]), so the line says why; null and empty elsewhere.
      */
     data class AiEnded(
         override val key: String,
@@ -300,6 +302,9 @@ sealed interface PipelineEvent {
         val cost: QuestionCost,
         val latency: Duration,
         val failure: String? = null,
+        val lines: Int? = null,
+        val unanswered: List<SourceId> = emptyList(),
+        val failed: List<SourceId> = emptyList(),
     ) : PipelineEvent
 
     /**
@@ -307,6 +312,8 @@ sealed interface PipelineEvent {
      * cache, or shown for another track than the one it was asked from (a genre's definition). It
      * was written by [provider]'s [model] at [writtenAt] (null where the cache does not say), asked
      * by itself or by a tap as [automatic] says (null where what was kept does not say).
+     * [nothingFound] when what was kept is that nothing was found (an item's insight, #1163), which is
+     * served again until it expires.
      */
     data class AiKept(
         override val key: String,
@@ -315,6 +322,7 @@ sealed interface PipelineEvent {
         val model: String,
         val writtenAt: Instant?,
         val automatic: Boolean? = null,
+        val nothingFound: Boolean = false,
     ) : PipelineEvent
 
     /**
