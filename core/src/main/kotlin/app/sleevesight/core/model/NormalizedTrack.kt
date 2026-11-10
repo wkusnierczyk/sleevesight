@@ -74,7 +74,7 @@ data class NormalizedTrack(
                 ?.trim()
                 ?.trimEnd(',')
                 ?.trim()
-                ?.takeIf { work -> work.any { it.isDigit() } }
+                ?.takeIf { part -> part.any { it.isDigit() } }
         }
 
     /**
