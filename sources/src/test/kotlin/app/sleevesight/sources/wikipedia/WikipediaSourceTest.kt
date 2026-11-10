@@ -102,8 +102,11 @@ class WikipediaSourceTest {
         }
 
     @Test
-    fun `the kept part's version follows the adapter's extraction version`() {
-        assertEquals(adapter.extractionVersion, WikipediaSource.ARTIST_PART.extraction)
+    fun `the kept part's version stays at 3 while the track results' moved to 4`() {
+        // #1129 changed what a track resolves to, which a track's result is checked against; an
+        // artist's article, reached by the artist's id, is not, so the artist cache is kept.
+        assertEquals(3, WikipediaSource.ARTIST_PART.extraction)
+        assertEquals(4, adapter.extractionVersion)
     }
 
     @Test
