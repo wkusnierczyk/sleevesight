@@ -537,6 +537,10 @@ class AppGraph internal constructor(
                     normalizer,
                     sessionFacts,
                     modelCheck,
+                    // *Retry when the AI fails* (#1164) as last read: the default until the first read.
+                    aiRetry = { latestSettings.value?.aiRetry ?: Settings.DEFAULT_AI_RETRY },
+                    // Each try that failed, in the diagnostics' events (#1164).
+                    aiTried = { diagnostics.log.record(it) },
                 ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.

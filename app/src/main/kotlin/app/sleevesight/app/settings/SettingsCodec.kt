@@ -72,6 +72,9 @@ internal object SettingsCodec {
 
     // *Wait when busy* (#1120), in milliseconds: zero is *Don’t wait*.
     private val MUSICBRAINZ_WAIT_MS = longPreferencesKey("sources.musicbrainz_wait_ms")
+
+    // *Retry when the AI fails* (#1164), in milliseconds: zero is *Don’t retry*.
+    private val AI_RETRY_MS = longPreferencesKey("ai.retry_ms")
     private val READ_ALOUD_MUSIC = stringPreferencesKey("read_aloud.music")
     private val READ_TRACK_LINE = booleanPreferencesKey("read_aloud.track_line_first")
     private val READ_NEW_INSIGHTS = booleanPreferencesKey("read_aloud.new_insights")
@@ -144,6 +147,7 @@ internal object SettingsCodec {
             aiWebSearch = enumOf(prefs[AI_WEB_SEARCH]) ?: defaults.aiWebSearch,
             trackLanguageSearch = enumOf(prefs[TRACK_LANGUAGE_SEARCH]) ?: defaults.trackLanguageSearch,
             musicBrainzWait = prefs[MUSICBRAINZ_WAIT_MS]?.takeIf { it >= 0 }?.milliseconds ?: defaults.musicBrainzWait,
+            aiRetry = prefs[AI_RETRY_MS]?.takeIf { it >= 0 }?.milliseconds ?: defaults.aiRetry,
             readAloudMusic = enumOf(prefs[READ_ALOUD_MUSIC]) ?: defaults.readAloudMusic,
             readTrackLineFirst = prefs[READ_TRACK_LINE] ?: defaults.readTrackLineFirst,
             readNewInsightsAloud = prefs[READ_NEW_INSIGHTS] ?: defaults.readNewInsightsAloud,
@@ -267,6 +271,9 @@ internal object SettingsCodec {
                 settings.musicBrainzWait.inWholeMilliseconds,
                 defaults.musicBrainzWait.inWholeMilliseconds,
             )
+        }
+        if (moved { it.aiRetry }) {
+            prefs.put(AI_RETRY_MS, settings.aiRetry.inWholeMilliseconds, defaults.aiRetry.inWholeMilliseconds)
         }
         if (moved { it.readAloudMusic }) {
             prefs.put(READ_ALOUD_MUSIC, settings.readAloudMusic.name, defaults.readAloudMusic.name)

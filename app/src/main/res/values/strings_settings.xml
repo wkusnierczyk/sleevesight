@@ -80,6 +80,14 @@
     <string name="settings_musicbrainz_wait_none">Don’t wait</string>
     <string name="settings_musicbrainz_wait_seconds">%1$d s</string>
     <string name="settings_musicbrainz_wait_minutes">%1$d min</string>
+    <!-- *AI services* → *Retry when the AI fails* (#1164), the section's last row: a stepped slider
+         as Wait when busy's; the stops' labels are settings_ai_retry_none and the units above.
+         %1$s in the description is the value chosen, as under its stop ("30 s"). -->
+    <string name="settings_ai_retry">Retry when the AI fails</string>
+    <string name="settings_ai_retry_summary">When your AI service is busy, the connection to it fails, or its reply breaks off, Sleevesight asks again, waiting longer each time, for up to %1$s before it shows the error. A longer wait fails less often; a shorter one tells you sooner.</string>
+    <!-- The description while Don’t retry is chosen, with no time to name. -->
+    <string name="settings_ai_retry_summary_none">When your AI service is busy, the connection to it fails, or its reply breaks off, Sleevesight asks again, waiting longer each time, for up to this long before it shows the error. A longer wait fails less often; a shorter one tells you sooner.</string>
+    <string name="settings_ai_retry_none">Don’t retry</string>
     <string name="settings_source_wikipedia_summary">Articles on songs, albums and artists, and the facts behind them.</string>
     <string name="settings_source_lastfm_summary">Listeners’ tags and artist biographies.</string>
     <!-- LRCLIB (#997): asked only when one of the track's genres is Instrumental. -->

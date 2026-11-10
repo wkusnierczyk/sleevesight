@@ -39,7 +39,7 @@ internal fun aiRows(
                 )
             }
         listOfNotNull(indexRow(name), model, efforts)
-    }
+    } + aiRetryIndexRow(settings)
 
 @Composable
 internal fun secretRows(keys: KeysShown): List<IndexedRow> {

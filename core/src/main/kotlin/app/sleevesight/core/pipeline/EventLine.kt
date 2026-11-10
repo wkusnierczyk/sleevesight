@@ -54,6 +54,7 @@ object EventLine {
             is PipelineEvent.AiEnded -> AskAiLines.ended(e, ms(e.latency))
             is PipelineEvent.AiKept -> AskAiLines.kept(e)
             is PipelineEvent.AiNotAsked -> AskAiLines.notAsked(e)
+            is PipelineEvent.AiTried -> tried(e, ms(e.latency), e.retryIn?.let(::ms))
         }
 
     private fun prepared(e: PipelineEvent.Prepared): String =
@@ -85,6 +86,8 @@ object EventLine {
                 b.detail?.let { append(", $it") }
                 append("), ${b.usage.inputTokens} in, ${b.usage.outputTokens} out so far")
             }
+            // What failed (#1164), where no breakoff says it.
+            e.detail?.takeIf { e.breakoff == null }?.let { append(" ($it)") }
             e.received?.let { append(", $it characters received") }
             e.latency?.let { append(", ${ms(it)}") }
         }
@@ -165,3 +168,31 @@ private fun cut(
     return "deadline   ${e.key}: ${cut.joinToString(", ").ifEmpty { "language search" }}" +
         (e.language?.let { " in $it" } ?: "") + " cut after $after"
 }
+
+// A try of an AI call that failed or ended short (#1164), after [latency]: what failed, and whether it
+// is asked again, after [retryIn].
+private fun tried(
+    e: PipelineEvent.AiTried,
+    latency: String,
+    retryIn: String?,
+): String =
+    buildString {
+        append("ai call    ${e.provider.name.lowercase()} ${e.model}: ")
+        if (e.kind != null) {
+            append("failed, ${e.kind.name.lowercase()}")
+            val how =
+                listOfNotNull(
+                    e.breakoff
+                        ?.cause
+                        ?.name
+                        ?.lowercase()
+                        ?.replace('_', ' '),
+                    e.detail,
+                )
+            if (how.isNotEmpty()) append(" (${how.joinToString()})")
+        } else {
+            append("ended ${e.stopReason?.name?.lowercase()}")
+        }
+        append(", try ${e.attempt}, ${e.received} characters received, $latency")
+        if (e.kind != null) append(retryIn?.let { ", asked again in $it" } ?: ", not asked again")
+    }

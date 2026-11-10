@@ -283,7 +283,7 @@ internal class InsightWriter(
                 }
                 is CompletionEvent.Error -> {
                     // How far the reply got, for the diagnostics: its length, never its text (#665).
-                    emit(PipelineEvent.ModelFailed(key, last.kind, last.breakoff, text.length, started?.elapsedNow()))
+                    emit(PipelineEvent.ModelFailed.of(key, last, text.length, started?.elapsedNow()))
                     show(InsightState.Failed(ReplyFailures.of(last)))
                 }
 
