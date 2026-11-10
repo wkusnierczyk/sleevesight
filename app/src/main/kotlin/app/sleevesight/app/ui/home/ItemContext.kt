@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,7 +46,8 @@ import app.sleevesight.core.settings.WriteAutomatically
  * whether the track would be written by itself now ([writesItself], `PipelineView.writesItself`),
  * the [notes] it is written by, where
  * a citation goes on the track's evidence ([cite]), where a report goes ([onReport]), *Read aloud*,
- * and the note of a model found unavailable ([unavailable], [onModelSettings]).
+ * the note of a model found unavailable ([unavailable], [onModelSettings]), and *Retry* beside the
+ * sources an item's lines come from that could not be reached ([retries], #1163).
  */
 @Suppress("LongParameterList") // What an item reads and where its taps go, each on its own.
 internal class ItemContext(
@@ -59,6 +61,7 @@ internal class ItemContext(
     val unavailable: UnavailableModel? = null,
     val onModelSettings: () -> Unit = {},
     val sources: EvidenceSet? = null,
+    val retries: Retries? = null,
 ) {
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on
@@ -101,7 +104,9 @@ internal class OpeningWrite(
  *
  * [shown] is what [item] shows, when its caller follows it already ([itemShown]): Home's panel, which
  * draws *Read aloud* in its heading ([ItemReadAloud], #894) and so passes [readAloud] false, leaving
- * it out of the byline's row.
+ * it out of the byline's row. [afterRetry] runs after a tap on *Retry* beside sources not reached
+ * (#1163), whose line then goes: it hands the focus on (to the panel's *Close*, the page's back
+ * arrow), as the other panels' *Retry* does (#724).
  */
 @Suppress("LongParameterList") // The item, what it is shown with, and how it was opened.
 @Composable
@@ -112,6 +117,7 @@ internal fun ItemContent(
     shown: ItemShown? = null,
     readAloud: Boolean = true,
     opening: OpeningWrite = OpeningWrite.NONE,
+    afterRetry: () -> Unit = {},
 ) {
     val track = context.track
     if (track == null) {
@@ -120,7 +126,8 @@ internal fun ItemContent(
     }
     val now = shown ?: itemShown(item, context)
     WritesOnTap(item, track, context, now, opening)
-    ItemShownContent(item, track, context, tapped, now, readAloud, writingDue = opening.due && !context.automatic)
+    val writingDue = opening.due && !context.automatic
+    ItemShownContent(item, track, context, tapped, now, ItemShowing(readAloud, writingDue, afterRetry))
 }
 
 /**
@@ -203,8 +210,17 @@ internal fun ItemReadAloud(
     }
 }
 
-// [ItemContent] of [track], [shown] as followed; *Writing…* for one offered while its tap's write is
-// due ([writingDue], #948), asked for at once, rather than *Write insight* for a frame.
+// How [ItemContent] shows an item: with *Read aloud* in its byline's row ([readAloud]); *Writing…* for
+// one offered while its tap's write is due ([writingDue], #948); and where the focus goes after *Retry*
+// beside sources not reached ([afterRetry], #1163).
+private class ItemShowing(
+    val readAloud: Boolean,
+    val writingDue: Boolean,
+    val afterRetry: () -> Unit,
+)
+
+// [ItemContent] of [track], [shown] as followed, as [showing] says: *Writing…* for one offered while
+// its tap's write is due, asked for at once, rather than *Write insight* for a frame.
 @Suppress("LongParameterList") // What the item shows, and where.
 @Composable
 private fun ItemShownContent(
@@ -213,8 +229,7 @@ private fun ItemShownContent(
     context: ItemContext,
     tapped: Boolean,
     shown: ItemShown,
-    readAloud: Boolean,
-    writingDue: Boolean,
+    showing: ItemShowing,
 ) {
     WritesAtOnce(item, track, context, tapped)
     val unavailable = context.unavailable
@@ -230,7 +245,7 @@ private fun ItemShownContent(
         // Nothing written and nothing under way: *Write insight*, whatever the mode, so an automatic
         // write the gates refused never shows as writing; the plain line, whatever held it back.
         ItemShown.Offered ->
-            if (writingDue) {
+            if (showing.writingDue) {
                 Writing()
             } else {
                 ItemQuiet(stringResource(R.string.home_item_tap_write))
@@ -241,7 +256,7 @@ private fun ItemShownContent(
 
         // Nothing to write about on this track (no album it names): said as for no evidence.
         ItemShown.NoSubject -> ItemQuiet(stringResource(noEvidence(item)))
-        is ItemShown.Shown -> Shown(item, now, track, context, readAloud)
+        is ItemShown.Shown -> Shown(item, now, track, context, showing)
     }
 }
 
@@ -249,7 +264,8 @@ private fun ItemShownContent(
  * Under an automatic mode, [item]'s insight on [track] asked for at once ([ItemContext.automatic]):
  * as an opening when [tapped], else by itself; and asked again each time the app comes back on
  * screen, so a call the gates refused while it was away (no lookups in the background) is made once
- * they open.
+ * they open. Asked again as the track's evidence changes while it stays open, one opened by a tap
+ * asks as kept open ([ItemAsk.KEPT_OPEN], #1163), which the lines a *Retry* brings do not write.
  */
 @Composable
 private fun WritesAtOnce(
@@ -265,6 +281,8 @@ private fun WritesAtOnce(
     val onScreen = resumed.isAtLeast(Lifecycle.State.RESUMED)
     // The hold-back lifting (a tap on *Write* after *Saver*, a first action) asks again too.
     val holdBackLifted = context.writesItself
+    // The evidence it first asked with on this track, while it stays open (#1163).
+    val first = remember(track.normalized.lookupKey, item) { mutableStateOf<String?>(null) }
     LaunchedEffect(
         track.normalized.lookupKey,
         track.evidence?.fingerprint,
@@ -275,7 +293,16 @@ private fun WritesAtOnce(
         holdBackLifted,
     ) {
         if (atOnce && offered && onScreen) {
-            context.notes.write(track, item, if (tapped) ItemAsk.OPENED else ItemAsk.BY_ITSELF)
+            val evidence = track.evidence?.fingerprint
+            val asked = first.value
+            if (asked == null) first.value = evidence
+            val ask =
+                when {
+                    !tapped -> ItemAsk.BY_ITSELF
+                    asked != null && asked != evidence -> ItemAsk.KEPT_OPEN
+                    else -> ItemAsk.OPENED
+                }
+            context.notes.write(track, item, ask)
         }
     }
 }
@@ -286,7 +313,7 @@ private fun Shown(
     shown: ItemShown.Shown,
     track: TrackState,
     context: ItemContext,
-    readAloud: Boolean,
+    showing: ItemShowing,
 ) {
     val own = track.copy(evidence = shown.evidence.evidence)
     // Where a citation goes, and how it shows and is read: by the id *Sources* shows its line under.
@@ -309,7 +336,7 @@ private fun Shown(
         is InsightState.Written -> {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { shown.model?.let { InsightByline(it) } }
-                if (readAloud) {
+                if (showing.readAloud) {
                     itemReading(context.readAloud, item, track, state, context.notes)?.let {
                         ReadAloudButton(it, itemReadAloudTag(item))
                     }
@@ -321,7 +348,7 @@ private fun Shown(
             WrittenFooter(item, shown, state, track, context, label)
         }
 
-        InsightState.NoEvidence -> ItemQuiet(stringResource(noEvidence(item)))
+        InsightState.NoEvidence -> NothingToWriteFrom(item, shown.evidence, context, showing.afterRetry)
 
         is InsightState.Failed ->
             RetryLine(
@@ -392,6 +419,7 @@ internal fun itemContext(
     cite = cite,
     onReport = onReport,
     readAloud = actions.readAloud,
+    retries = Retries(shown.view, shown.playing, actions.askAgain),
     unavailable = state.unavailable.takeIf { settings.writeInsights },
     onModelSettings = {
         state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) } ?: actions.openSettings()
