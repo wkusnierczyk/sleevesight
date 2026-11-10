@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.session.TrackIdentity
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.settings.NewTrackFold
@@ -20,29 +21,47 @@ import app.sleevesight.core.settings.NewTrackFold
 // the key insight and before *Sources*, unfolding in place under *Expandable boxes* or opening a page
 // of its own under *Separate pages*.
 
-/** An item's row: the [item], and the [name] it goes by on the track playing. */
+/**
+ * An item's row: the [item], and the [name] it goes by on the track playing; for the song, the
+ * [version] the player's title names after it and the normalizer dropped (`2024 Remaster`, #1160),
+ * said in its panel's heading and on its page, or null for none.
+ */
 internal class ItemRow(
     val item: InsightItem,
     val name: String,
+    val version: String? = null,
 )
 
 /**
- * The rows of [header], the track shown: the song by its title, the artist by the primary artist
- * ([primary], as the normalizer reads the artists), the album by the player's album name; no row for
- * one with no name (an album the player does not name, a blank title).
+ * The rows of [header], the track shown, as [normalized] reads it: the song by its title as under the
+ * cover (the normalized title, the version suffix dropped, #1160; the player's whole title when that
+ * leaves nothing), with the [ItemRow.version] dropped; the artist by the primary artist (as the
+ * normalizer reads the artists); the album by the player's album name; no row for one with no name
+ * (an album the player does not name, a blank title).
  */
 internal fun itemRows(
     header: NowPlaying,
-    primary: String,
+    normalized: NormalizedTrack,
 ): List<ItemRow> =
     listOfNotNull(
-        header.title.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.SONG, it) },
-        primary.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.ARTIST, it) },
+        songRow(header, normalized),
+        normalized.primary.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.ARTIST, it) },
         header.album
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
             ?.let { ItemRow(InsightItem.ALBUM, it) },
     )
+
+// The song's row: its title as under the cover ([KeyData]), with the version dropped from it; the
+// player's whole title, and no version, when normalizing leaves no title.
+private fun songRow(
+    header: NowPlaying,
+    normalized: NormalizedTrack,
+): ItemRow? {
+    if (header.title.isBlank()) return null
+    val title = normalized.title.takeIf { it.isNotEmpty() }
+    return ItemRow(InsightItem.SONG, title ?: header.title, normalized.dropped.takeIf { title != null })
+}
 
 /** An item's kind, as its row and its page's title name it. */
 @Composable

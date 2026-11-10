@@ -171,7 +171,7 @@ private fun ItemPageOf(
     // Its opening's write (#948), asked for once, on that track only: not again after a rotation.
     var due by rememberSaveable { mutableStateOf(true) }
     val opening = if (tapped && due) OpeningWrite(due = true) { due = false } else OpeningWrite.NONE
-    ItemPage(item, itemName(item, header, actions.normalize(header).primary), context, tapped, opening)
+    ItemPage(item, itemRow(item, header, actions.normalize(header)), context, tapped, opening)
 }
 
 // The track an item page was opened on, saved as plain values ([savedTrack]).

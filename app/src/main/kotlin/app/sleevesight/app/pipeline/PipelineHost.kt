@@ -11,6 +11,7 @@ import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.InsightState.Written
+import app.sleevesight.core.pipeline.ItemLines
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -148,6 +150,9 @@ import kotlin.time.Instant
  *   its findings went with the history and nothing is asked for it until *Look up again*
  *   ([PipelineHost.lookUpAgain]) or another track, so Home says so in place of waiting texts; null
  *   otherwise.
+ * @property nothingToNarrate whether the current run decided with no call for nothing to narrate
+ *   (#1131, `CoordinatorState.Run.nothing`): the lines the song's, the artist's or the album's insight
+ *   finds may decide it again, which Home waits for while one is written; not a reply of `NO_EVIDENCE`.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -172,6 +177,7 @@ data class PipelineView(
     val askAgainKey: RunKey? = null,
     val askable: Set<SourceId> = emptySet(),
     val cleared: NowPlaying? = null,
+    val nothingToNarrate: Boolean = false,
 )
 
 /**
@@ -346,6 +352,26 @@ class PipelineHost(
      * AI*'s automatic searches start only then (#773, `AutoSearches`).
      */
     val onScreen: Flow<Boolean> = snapshot.map { it.visible }.distinctUntilChanged()
+
+    /**
+     * Follows the lines [found] gives (`ItemNotes.foundLines`) for the track the view shows, once its
+     * evidence is in, and tells the coordinator (#1131): a run of the track that found nothing to
+     * narrate is decided again with them. Followed afresh only when what they are found from changes
+     * (the report, the resolution, the sources), not as the insight is written. Runs until cancelled.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    suspend fun followItemLines(found: (TrackState) -> Flow<ItemLines?>) {
+        view
+            .map { it.track?.takeIf { track -> track.gathered && track.evidence != null } }
+            .distinctUntilChangedBy { track ->
+                track?.let { listOf(it.nowPlaying, it.normalized, it.resolution, it.sources, it.inLanguage) }
+            }.flatMapLatest { track ->
+                track?.let { shown ->
+                    val key = RunKey.of(normalizer, shown.nowPlaying)
+                    found(shown).filterNotNull().distinctUntilChanged().map { CoordinatorEvent.ItemLinesFound(key, it) }
+                } ?: emptyFlow()
+            }.collect { queue.send(it) }
+    }
 
     /**
      * Whether the song's, the artist's or the album's insight (#522) may make its call now, asked
@@ -646,13 +672,13 @@ class PipelineHost(
 
     private fun startRun(effect: CoordinatorEffect.StartRun) {
         val current = live.value ?: return
-        val handle = RunHandle(effect.run)
+        val handle = RunHandle(effect.run, effect.items)
         runs[effect.run] = handle
         failed.value = null
         handle.job =
             current.scope.launch(epoch.mark()) {
                 try {
-                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain)
+                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain, effect.items)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (
@@ -750,8 +776,10 @@ class PipelineHost(
     // (`CallId`), the loop as it carries out each grant (a tap's Grant, or Decide to write), the
     // run as it makes each, after its grant. A Stop names its call's number, so it reaches that
     // call alone.
+    // [items]: the lines beyond the track's own the run takes (#1131), which each card it reports keeps.
     private inner class RunHandle(
         id: RunId,
+        private val items: ItemLines,
     ) : StepHandle(id) {
         private val decision = CompletableDeferred<Boolean>()
         private val calls = ConcurrentHashMap<Int, CallGate>()
@@ -783,7 +811,7 @@ class PipelineHost(
             settings: Settings,
             kept: InsightState.Written?,
             evidence: EvidenceSet,
-        ): Boolean = ask(settings, kept?.let { Card(it, evidence) })
+        ): Boolean = ask(settings, kept?.let { Card(it, evidence, items) })
 
         // Whether the coordinator took [kept] as the card paid for of this run's track (#911): read
         // once its answer came, so the state seen holds the decision.
@@ -852,14 +880,14 @@ class PipelineHost(
             card: InsightState.Written?,
             evidence: EvidenceSet,
         ) {
-            queue.trySend(CoordinatorEvent.CardShown(id, card?.let { Card(it, evidence) }))
+            queue.trySend(CoordinatorEvent.CardShown(id, card?.let { Card(it, evidence, items) }))
         }
 
         override fun cardWritten(
             card: InsightState.Written,
             evidence: EvidenceSet,
         ) {
-            queue.trySend(CoordinatorEvent.CardWritten(id, Card(card, evidence)))
+            queue.trySend(CoordinatorEvent.CardWritten(id, Card(card, evidence, items)))
         }
     }
 
@@ -916,6 +944,7 @@ class PipelineHost(
                 askAgainKey = owner.askAgainKey,
                 askable = owner.askable,
                 cleared = owner.clearedShown,
+                nothingToNarrate = owner.current?.nothing == true,
             )
         }.collect {
             view.value = it
@@ -957,7 +986,7 @@ class PipelineHost(
                 InsightState.Stopped -> STOPPED
                 else -> null
             }?.takeIf { card != null }
-        return Shown(header(if (card != null) withCard(own, card) else own, owner), failure, cardShown = card != null)
+        return Shown(header(if (card != null) own.withCard(card) else own, owner), failure, cardShown = card != null)
     }
 
     // What *Rewrite insight* beside the insight [track] shows would change (#854): what its run would
@@ -1051,11 +1080,6 @@ class PipelineHost(
     private fun lacksInsight(track: TrackState): Boolean =
         track.insight !is InsightState.Written && track.insight !is InsightState.Writing
 
-    private fun withCard(
-        track: TrackState,
-        card: Card,
-    ): TrackState = track.copy(insight = card.insight, evidence = card.evidence)
-
     // The header (artists, album, length) from the latest report of the ledger's insight track;
     // the run's input and its card's key stay its own.
     private fun header(
@@ -1122,3 +1146,11 @@ class PipelineHost(
         const val STOPPED: String = "stopped"
     }
 }
+
+/**
+ * [this] shown with [card], the card paid for, in place of its own insight: its evidence, and with it
+ * the ids of the album's lines its run took (#1131, [Card.albumIds]), numbered as that evidence numbers
+ * them, whatever this run took, so *Sources* marks them as the album's as they were.
+ */
+internal fun TrackState.withCard(card: Card): TrackState =
+    copy(insight = card.insight, evidence = card.evidence, albumIds = card.albumIds)

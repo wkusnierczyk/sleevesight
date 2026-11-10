@@ -51,7 +51,9 @@ import kotlin.math.roundToInt
  * heading; *Close*, and before it [actions] (an item's *Read aloud*, #894), stay centred on the
  * title's line, not on the two: [actions] is handed the modifier that centres it there, for the
  * outside of one layout of its own (the row reads it from its direct child). Without a
- * subtitle, the heading is as it always was, and [actions] is not drawn.
+ * subtitle, the heading is as it always was, and [actions] is not drawn. With a subtitle, [note] (the
+ * version a song's title names, #1160) goes on a line of its own under it, in its style, read with
+ * the heading too.
  */
 @Suppress("LongParameterList") // What the panel shows, and where its users hook into it.
 @Composable
@@ -63,6 +65,7 @@ internal fun Panel(
     closeModifier: Modifier = Modifier,
     spacing: Dp = 10.dp,
     subtitle: String? = null,
+    note: String? = null,
     actions: @Composable (centred: Modifier) -> Unit = {},
     headingFrame: @Composable (@Composable () -> Unit) -> Unit = { it() },
     content: @Composable ColumnScope.() -> Unit,
@@ -96,7 +99,7 @@ internal fun Panel(
                     onClose?.let { PanelClose(tag, closeModifier, it) }
                 }
             } else {
-                SubtitledHeading(title, subtitle, tag, closeModifier, onClose, actions)
+                SubtitledHeading(title, Subtitle(subtitle, note), tag, closeModifier, onClose, actions)
             }
         }
         Column(modifier = Modifier.padding(end = CONTENT_END), verticalArrangement = Arrangement.spacedBy(spacing)) {
@@ -109,13 +112,19 @@ internal fun Panel(
     }
 }
 
+// What goes under a panel's title ([Panel]): its [name], and the [note] on a line under it, if any.
+private class Subtitle(
+    val name: String,
+    val note: String?,
+)
+
 // A heading of [title] with [subtitle] under it, read as one heading, [actions] and *Close* each
 // centred on the title's line ([Panel]).
 @Suppress("LongParameterList") // What the heading shows, and its controls.
 @Composable
 private fun SubtitledHeading(
     title: AnnotatedString,
-    subtitle: String,
+    subtitle: Subtitle,
     tag: String,
     closeModifier: Modifier,
     onClose: (() -> Unit)?,
@@ -142,11 +151,18 @@ private fun SubtitledHeading(
                 onTextLayout = { lineMiddle = ((it.getLineTop(0) + it.getLineBottom(0)) / 2).roundToInt() },
             )
             Text(
-                subtitle,
+                subtitle.name,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("$tag:subtitle"),
             )
+            subtitle.note?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         actions(centred)
         onClose?.let { PanelClose(tag, closeModifier.then(centred), it) }
