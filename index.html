@@ -8,14 +8,14 @@ docs_version: 0.6.3
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sleevesight: insights on what's playing</title>
-<meta name="description" content="Facts and stories about the song, artist and album you’re listening to, each linked to its source.">
+<meta name="description" content="Facts and stories about the song, artist and album you’re listening to, linked to their sources.">
 <link rel="canonical" href="https://sleevesight.app/">
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
 <meta name="color-scheme" content="light dark">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sleevesight">
 <meta property="og:title" content="Sleevesight: insights on what's playing">
-<meta property="og:description" content="Facts and stories about the song, artist and album you’re listening to, each linked to its source.">
+<meta property="og:description" content="Facts and stories about the song, artist and album you’re listening to, linked to their sources.">
 <meta property="og:url" content="https://sleevesight.app/">
 <!-- The link preview: the stacked logo and the tagline on the label's red, 1200 x 630, built from the
      logo's sources by `assets/logo/src/make_og_image.py` (the brand sheet, *Link preview*). Open
@@ -241,7 +241,9 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   .examples>.ex:nth-child(even){grid-template-columns:minmax(0,1fr)}
   .examples>.ex:nth-child(even) .box{order:0}
 }
-@media (max-width:360px){.carousel{transform:scale(.9);transform-origin:top center}}
+/* Narrower than the phone and the page's gutters (320 + 2 x 16 px): the slideshow at 90 %, its box
+   too. */
+@media (max-width:351px){.carousel{zoom:.9}}
 </style>
 {% include site-intro-head.html %}
 </head>
@@ -435,8 +437,9 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 {% include site-header-script.html %}
 <script>
 // The hero's slideshow: a screen every few seconds, the dots to pick one, and a button to pause.
-// It stops while the pointer is over it or the keyboard's focus is in it, and starts paused when the
-// system asks for reduced motion. A screen picked by hand (a dot, or the arrow keys) is announced;
+// It stops while a mouse pointer is over it or the keyboard's focus is in it (not a tap's or a
+// click's focus, which would hold it after Play), and starts paused when the system asks for reduced
+// motion. A screen picked by hand (a dot, or the arrow keys) is announced;
 // the turning by itself is not.
 (function () {
   const c = document.querySelector('.carousel');
@@ -471,12 +474,14 @@ a.ch:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   pp.addEventListener('click', () => set(!playing));
   dots.forEach((d, k) => d.addEventListener('click', () => { go(k, true); arm(); }));
   c.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight') { go(i + 1, true); arm(); }
-    if (e.key === 'ArrowLeft') { go(i - 1, true); arm(); }
+    if (e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+    go(i + (e.key === 'ArrowRight' ? 1 : -1), true);
+    if (dots.includes(e.target)) dots[i].focus();
+    arm();
   });
-  c.addEventListener('mouseenter', () => { hovered = true; arm(); });
-  c.addEventListener('mouseleave', () => { hovered = false; arm(); });
-  c.addEventListener('focusin', () => { focused = true; arm(); });
+  c.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { hovered = true; arm(); } });
+  c.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { hovered = false; arm(); } });
+  c.addEventListener('focusin', e => { if (e.target.matches(':focus-visible')) { focused = true; arm(); } });
   c.addEventListener('focusout', e => { if (!c.contains(e.relatedTarget)) { focused = false; arm(); } });
   go(0);
   set(playing);
