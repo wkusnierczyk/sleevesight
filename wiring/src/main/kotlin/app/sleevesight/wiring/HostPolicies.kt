@@ -40,8 +40,8 @@ object HostPolicies {
             (GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
 
     /**
-     * The retries of the process's client, which a provider that retries a response itself
-     * (`AnthropicProvider`, `OpenAiProvider` and `GoogleProvider`, for a 429 passed on) takes too, so both wait alike.
+     * The retries of the process's client. The AI services' clients retry nothing themselves: the
+     * pipeline's `AiRetry` asks an AI call again (#1164).
      */
     val RETRY: RetryPolicy = RetryPolicy()
 

@@ -241,6 +241,59 @@ class AiRetryTest {
             assertTrue(heard.isEmpty())
         }
 
+    @Test
+    fun `the total runs from the failure's arrival, not from its stream's close`() =
+        runTest {
+            var calls = 0
+            // The busy answer comes at once, and the stream closes 31 s later.
+            val lingering =
+                object : AiProvider {
+                    override val id: ProviderId = ProviderId.GOOGLE
+
+                    override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
+
+                    override fun stream(
+                        request: CompletionRequest,
+                        key: Secret,
+                    ): Flow<CompletionEvent> =
+                        flow {
+                            calls++
+                            emit(busy)
+                            delay(31.seconds)
+                        }
+                }
+            assertEquals(listOf<CompletionEvent>(busy), retrying(lingering, 30.seconds).stream(request, KEY).toList())
+            assertEquals(1, calls)
+        }
+
+    @Test
+    fun `a reply cut off by the network gone is not asked again, and its log line names the transport's label`() =
+        runTest {
+            val gone =
+                CompletionEvent.Error(
+                    AiErrorKind.INCOMPLETE,
+                    breakoff = Breakoff(BreakoffCause.NO_NETWORK, Usage(3, 0), "SocketException (ENETDOWN)"),
+                )
+            val heard = mutableListOf<PipelineEvent>()
+            val provider = Scripted(this, listOf(gone), answer)
+            val events =
+                AiRetry(
+                    provider,
+                    { 30.seconds },
+                    testScheduler.timeSource,
+                    NO_JITTER,
+                    heard::add,
+                ).stream(request, KEY).toList()
+            assertEquals(listOf<CompletionEvent>(gone), events)
+            assertEquals(1, provider.starts.size)
+            assertEquals("offline", ReplyFailures.of(gone))
+            assertEquals(
+                "ai call    google model: failed, incomplete (no network, SocketException (ENETDOWN)), try 1, " +
+                    "0 characters received, 0 ms, not asked again",
+                EventLine.of(heard.single()),
+            )
+        }
+
     private fun TestScope.retrying(
         provider: AiProvider,
         total: Duration,

@@ -47,6 +47,8 @@ object ReplyFailures {
         when (error.breakoff?.cause) {
             BreakoffCause.CONNECTION_LOST -> CONNECTION_LOST
             BreakoffCause.TIMED_OUT -> TIMED_OUT
+            // No network (#1164): "no connection", as for a call that never began.
+            BreakoffCause.NO_NETWORK -> AiErrorKind.OFFLINE.name.lowercase()
             BreakoffCause.NO_END, BreakoffCause.TOO_LARGE, null -> error.kind.name.lowercase()
         }
 

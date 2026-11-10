@@ -69,10 +69,18 @@ sealed interface NetError {
         val status: Int,
     ) : NetError
 
-    /** A 5xx, still there after the retries. */
+    /**
+     * A 5xx, still there after the retries. [retryAfter] is the wait its `Retry-After` asked for, when
+     * it gave one: a service that answers 503 when overloaded says so (#1164), and the AI calls'
+     * retry (`AiRetry`) waits it out.
+     */
     data class Server(
         val status: Int,
-    ) : NetError
+        val retryAfter: Duration? = null,
+    ) : NetError {
+        // As it read before the wait was kept: the log's lines say the wait as "retrying in" already.
+        override fun toString(): String = "Server(status=$status)"
+    }
 
     /** The response arrived but could not be read as the caller expected. [reason] is the exception's type. */
     data class Parse(

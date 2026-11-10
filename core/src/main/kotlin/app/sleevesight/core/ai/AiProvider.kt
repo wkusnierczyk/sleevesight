@@ -246,6 +246,12 @@ enum class BreakoffCause {
     /** The connection was lost or cut mid-reply. */
     CONNECTION_LOST,
 
+    /**
+     * The network went away mid-reply: the system said it was down or out of reach
+     * (`NetError.Offline.noNetwork`, #1164). Not asked again (`AiRetry`), and said as no connection.
+     */
+    NO_NETWORK,
+
     /** The client stopped waiting: the reply fell silent, or took longer in all, than it allows. */
     TIMED_OUT,
 

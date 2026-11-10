@@ -15,7 +15,6 @@ import app.sleevesight.core.ai.ToolResult
 import app.sleevesight.core.ai.ToolSpec
 import app.sleevesight.core.ai.ToolTurn
 import app.sleevesight.core.ai.Usage
-import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -74,7 +73,7 @@ class ToolUseTest {
     fun anthropicsTurnThatCallsTheToolEndsWithItsCallsAndTheTurnToSendBack() =
         runTest {
             val net = ReplayNetClient { ok(anthropicTurn) }
-            val events = AnthropicProvider(net, RetryPolicy()).stream(request, Secret("k")).toList()
+            val events = AnthropicProvider(net).stream(request, Secret("k")).toList()
             val use = assertIs<CompletionEvent.ToolUse>(events[events.size - 2])
             assertEquals(listOf(ToolCall("toolu_1", "exa_search", """{"query":"Grace"}""")), use.turn.calls)
             val replay = Json.parseToJsonElement(use.turn.replay).jsonArray
@@ -103,7 +102,7 @@ class ToolUseTest {
         runTest {
             val first = ReplayNetClient { ok(anthropicTurn) }
             val turn =
-                AnthropicProvider(first, RetryPolicy())
+                AnthropicProvider(first)
                     .stream(request, Secret("k"))
                     .toList()
                     .filterIsInstance<CompletionEvent.ToolUse>()
@@ -124,7 +123,7 @@ class ToolUseTest {
                         ),
                     toolsAllowed = false,
                 )
-            AnthropicProvider(net, RetryPolicy()).stream(next, Secret("k")).toList()
+            AnthropicProvider(net).stream(next, Secret("k")).toList()
             val sent = body(net)
             val messages = sent["messages"]!!.jsonArray
             assertEquals(
@@ -155,7 +154,7 @@ class ToolUseTest {
     fun openAisResponseThatCallsTheToolEndsWithItsCallsAndItsItems() =
         runTest {
             val net = ReplayNetClient { ok(openAiTurn) }
-            val events = OpenAiProvider(net, RetryPolicy()).stream(request, Secret("k")).toList()
+            val events = OpenAiProvider(net).stream(request, Secret("k")).toList()
             val use = assertIs<CompletionEvent.ToolUse>(events[events.size - 2])
             assertEquals(listOf(ToolCall("call_1", "exa_search", """{"query":"Grace"}""")), use.turn.calls)
             assertEquals(2, Json.parseToJsonElement(use.turn.replay).jsonArray.size)
@@ -175,7 +174,7 @@ class ToolUseTest {
     fun openAisNextRequestSendsTheItemsAndTheOutputsAndMayForbidACall() =
         runTest {
             val turn =
-                OpenAiProvider(ReplayNetClient { ok(openAiTurn) }, RetryPolicy())
+                OpenAiProvider(ReplayNetClient { ok(openAiTurn) })
                     .stream(request, Secret("k"))
                     .toList()
                     .filterIsInstance<CompletionEvent.ToolUse>()
@@ -187,7 +186,7 @@ class ToolUseTest {
                     exchanges = listOf(ToolExchange(turn, listOf(ToolResult("call_1", "PAGES")))),
                     toolsAllowed = false,
                 )
-            OpenAiProvider(net, RetryPolicy()).stream(next, Secret("k")).toList()
+            OpenAiProvider(net).stream(next, Secret("k")).toList()
             val sent = body(net)
             val input = assertIs<JsonArray>(sent["input"])
             assertEquals(4, input.size)
@@ -210,7 +209,7 @@ class ToolUseTest {
                     """{"type":"response.completed","response":{"status":"completed","usage":{"input_tokens":40,"output_tokens":12}}}""",
                 )
             val turn =
-                OpenAiProvider(ReplayNetClient { ok(withMessage) }, RetryPolicy())
+                OpenAiProvider(ReplayNetClient { ok(withMessage) })
                     .stream(request, Secret("k"))
                     .toList()
                     .filterIsInstance<CompletionEvent.ToolUse>()
@@ -225,7 +224,7 @@ class ToolUseTest {
             )
             val net = ReplayNetClient { ok(openAiTurn) }
             val next = request.copy(exchanges = listOf(ToolExchange(turn, listOf(ToolResult("call_1", "PAGES")))))
-            OpenAiProvider(net, RetryPolicy()).stream(next, Secret("k")).toList()
+            OpenAiProvider(net).stream(next, Secret("k")).toList()
             val input = assertIs<JsonArray>(body(net)["input"])
             assertEquals(
                 listOf("user", "reasoning", "message", "function_call", "function_call_output"),
@@ -238,7 +237,7 @@ class ToolUseTest {
         runTest {
             val plain = request.copy(model = "gpt-4.1")
             val net = ReplayNetClient { ok(openAiTurn) }
-            OpenAiProvider(net, RetryPolicy()).stream(plain, Secret("k")).toList()
+            OpenAiProvider(net).stream(plain, Secret("k")).toList()
             assertTrue("include" !in body(net))
             // A reasoning item with no encrypted content is not sent back; the call is.
             val turn =
@@ -248,7 +247,7 @@ class ToolUseTest {
                         """{"type":"function_call","id":"fc_1","call_id":"call_1","name":"exa_search","arguments":"{}"}]""",
                 )
             val next = plain.copy(exchanges = listOf(ToolExchange(turn, listOf(ToolResult("call_1", "PAGES")))))
-            OpenAiProvider(net, RetryPolicy()).stream(next, Secret("k")).toList()
+            OpenAiProvider(net).stream(next, Secret("k")).toList()
             val input = assertIs<JsonArray>(body(net)["input"])
             assertEquals(
                 listOf("user", "function_call", "function_call_output"),
@@ -265,7 +264,7 @@ class ToolUseTest {
                     """"param":"include"}}"""
             var calls = 0
             val net = ReplayNetClient { if (calls++ == 0) ok(refused, status = 400) else ok(openAiTurn) }
-            val events = OpenAiProvider(net, RetryPolicy()).stream(request, Secret("k")).toList()
+            val events = OpenAiProvider(net).stream(request, Secret("k")).toList()
             assertEquals(2, net.requests.size)
             assertTrue("include" in Json.parseToJsonElement(net.requests[0].body!!.text).jsonObject)
             assertTrue("include" !in body(net))
@@ -276,7 +275,7 @@ class ToolUseTest {
     fun aRequestWithNoToolsIsSentAsBefore() =
         runTest {
             val net = ReplayNetClient { ok(openAiTurn) }
-            OpenAiProvider(net, RetryPolicy()).stream(request.copy(tools = emptyList()), Secret("k")).toList()
+            OpenAiProvider(net).stream(request.copy(tools = emptyList()), Secret("k")).toList()
             val sent = body(net)
             assertTrue("tools" !in sent && "include" !in sent)
             assertEquals("Question?", sent["input"]!!.jsonPrimitive.content)

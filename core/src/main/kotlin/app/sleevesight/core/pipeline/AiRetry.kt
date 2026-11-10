@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
+import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.StopReason
@@ -29,9 +30,11 @@ import kotlin.time.TimeSource
  * (`retryAfter`), while the next try starts within [allowance] of the first failure; the last wait is
  * shortened to what is left, when at least [FIRST_WAIT] is, for one last try at its end. A wait the
  * service asked for is kept as asked, so one longer than what is left ends the tries. Past it, the
- * last failure is the call's. A try under way when the allowance runs out runs to its end. With no
- * network ([AiErrorKind.OFFLINE]), or any other failure, which no retry mends soon, the error is the
- * call's at once.
+ * last failure is the call's. The allowance runs from the first failure's arrival, not from the
+ * end of its stream. A try under way when the allowance runs out runs to its end. With no network
+ * ([AiErrorKind.OFFLINE], or a reply cut off by it, [BreakoffCause.NO_NETWORK]), or any other
+ * failure, which no retry mends soon, the error is the call's at once. The service's clients retry
+ * nothing themselves: this is the one retry of an AI call.
  *
  * Nothing new is shown while it asks again: the caller sees one call, which ends later. A reply that
  * broke off after some of its text, or a tool call, reached the caller is not asked again: the caller
@@ -75,16 +78,22 @@ class AiRetry(
                             emit(event)
                         }
 
-                        is CompletionEvent.Done, is CompletionEvent.Error -> {
+                        is CompletionEvent.Done -> {
                             end = event
+                        }
+
+                        // The total runs from the first failure as it arrives, whenever the stream
+                        // closes after it.
+                        is CompletionEvent.Error -> {
+                            end = event
+                            if (firstFailure == null) firstFailure = timeSource.markNow()
                         }
                     }
                 }
                 val failed = end as? CompletionEvent.Error
                 val wait =
-                    failed?.takeIf { !passedOn && it.kind in RETRIED }?.let { error ->
-                        val since = firstFailure ?: timeSource.markNow().also { firstFailure = it }
-                        nextWait(attempt, error, total - since.elapsedNow())
+                    failed?.takeIf { !passedOn && retried(it) }?.let { error ->
+                        nextWait(attempt, error, total - checkNotNull(firstFailure).elapsedNow())
                     }
                 tried(request, attempt, end, received, started.elapsedNow(), wait)
                 if (wait == null) {
@@ -92,9 +101,18 @@ class AiRetry(
                     return@flow
                 }
                 delay(wait)
+                // Never a try past the total: a wait shortened to it ends on it, at the latest.
+                if (checkNotNull(firstFailure).elapsedNow() > total) {
+                    end?.let { emit(it) }
+                    return@flow
+                }
                 attempt++
             }
         }
+
+    // Whether [error] is asked again: one of [RETRIED], but not a reply cut off by the network gone.
+    private fun retried(error: CompletionEvent.Error): Boolean =
+        error.kind in RETRIED && error.breakoff?.cause != BreakoffCause.NO_NETWORK
 
     /**
      * The wait before try [attempt] + 1 after [error], with [left] of the allowance; null to give up.

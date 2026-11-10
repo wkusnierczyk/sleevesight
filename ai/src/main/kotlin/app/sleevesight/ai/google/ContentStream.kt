@@ -4,7 +4,7 @@ import app.sleevesight.ai.UNREADABLE_EVENT
 import app.sleevesight.ai.brokeOff
 import app.sleevesight.ai.codeDetail
 import app.sleevesight.ai.decode
-import app.sleevesight.ai.detailOf
+import app.sleevesight.ai.failedWith
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
@@ -100,13 +100,11 @@ internal class ContentStream(
     // A connection lost or cut short after the reply began leaves an incomplete reply.
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
-            error is NetError.RateLimited -> {
-                CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter, detail = detailOf(error))
-            }
+            error is NetError.RateLimited -> failedWith(error, AiErrorKind.RATE_LIMITED)
             started && (error is NetError.Offline || error is NetError.TooLarge) -> {
                 brokeOff(error, Usage(inputTokens, outputTokens))
             }
-            else -> CompletionEvent.Error(kindOf(error), detail = detailOf(error))
+            else -> failedWith(error, kindOf(error))
         }
 
     private fun end(event: CompletionEvent): CompletionEvent {

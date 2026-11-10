@@ -187,7 +187,8 @@ private fun tried(
                         ?.name
                         ?.lowercase()
                         ?.replace('_', ' '),
-                    e.detail,
+                    // A breakoff's own label where the error names none (#1164).
+                    e.detail ?: e.breakoff?.detail,
                 )
             if (how.isNotEmpty()) append(" (${how.joinToString()})")
         } else {
