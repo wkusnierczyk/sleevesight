@@ -62,6 +62,11 @@ footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:15px;color
 footer p{margin:0 0 4px}
 /* The line on where Sleevesight is made (#839), on the product page: set apart from the licence. */
 footer .made-in{margin-bottom:12px}
+/* A link off the site, in the line on where Sleevesight is made (`made-in.html`): an arrow after it,
+   and "(external site)" for a screen reader. Not under `footer`: the documentation pages show the line
+   under their title. */
+.ext{vertical-align:-.02em;margin-left:.15em}
+.ext-vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 /* Who wrote the page, and who edited or reviewed it (#743), on its own line above the licence: small
    caps at the footer's size, each label a link in its who's colour, underlined in that colour rather
    than the footer's link colour. Human is brick and AI slate-teal; the light colours are the defaults

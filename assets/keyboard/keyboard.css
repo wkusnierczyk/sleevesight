@@ -28,6 +28,9 @@ footer { max-width: 640px; margin: 0 auto 32px; padding: 0 24px; font-size: 14px
 footer a { color: inherit; }
 footer p { margin: 0 0 4px; }
 footer .made-in { margin-bottom: 12px; }
+/* A link off the site: an arrow, and "(external site)" for a screen reader (`made-in.html`). */
+.ext { vertical-align: -.02em; margin-left: .15em; }
+.ext-vh { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 700px) { footer { margin: 0; padding: 16px; border-top: 1px solid var(--line); } }
 h1 { font-size: 28px; line-height: 1.2; margin: 0 0 12px; }
 ol { padding-left: 1.4em; }
