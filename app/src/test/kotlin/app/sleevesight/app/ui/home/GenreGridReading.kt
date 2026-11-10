@@ -7,7 +7,7 @@ import androidx.compose.ui.test.performClick
 
 /**
  * How a screen reader reads this row of a genre's tags (#786): its one reading, the merged node's
- * content description ("Track, Rock, selected, Pop"); null for none.
+ * content description ("Track, Pop, Rock, selected"); null for none.
  */
 internal fun SemanticsNodeInteraction.reading(): String? =
     fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()

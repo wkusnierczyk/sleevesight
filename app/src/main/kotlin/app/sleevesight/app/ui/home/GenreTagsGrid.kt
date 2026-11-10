@@ -63,7 +63,7 @@ import app.sleevesight.core.pipeline.TrackState
  *
  * The first column is as wide as its widest name, measured in the names' style at the current font
  * size, so it holds at large font sizes. Each row is one item to a screen reader. A row of tags has
- * one reading, its name then its tags, [genre]'s marked as selected ("Track, Rock, selected, Pop":
+ * one reading, its name then its tags, [genre]'s marked as selected ("Track, Pop, Rock, selected":
  * the chips are not buttons), and no selected state of its own, so it says which tag is marked
  * ([tagsReading]); a row of sources reads its name and sources, each source's link still a link of
  * its own, which a screen reader reaches and opens.
@@ -125,7 +125,7 @@ internal fun TagsGrid(
 
 /**
  * How a screen reader reads a row of tags (#786): its [name], then its tags in order, [genre]'s as
- * [selected] words it ("Rock, selected"), all one item: "Track, Rock, selected, Pop". A tag the AI's
+ * [selected] words it ("Rock, selected"), all one item: "Track, Pop, Rock, selected". A tag the AI's
  * genre list added (#762) reads with the model's name, as [added] words it ("Blues, from Claude
  * Haiku 5.5"). A genre an artist's description names (#1000) reads as [described] words it
  * ("Instrumental, from the artist’s description").

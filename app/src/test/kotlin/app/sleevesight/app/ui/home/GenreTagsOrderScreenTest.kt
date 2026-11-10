@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.ui.home.HomeFixtures.track
+import app.sleevesight.core.genres.DescribedIn
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
@@ -29,7 +30,9 @@ import org.robolectric.annotation.Config
 /**
  * The *Genre tags* grid's rows in the order of *Genres*' chips (#1159): a row whose tags arrive in the
  * sources' order (*Thriller*'s track row: Pop, Dance, Contemporary R&B, Disco, Dance-Pop) shows and
- * reads them as the chips are sorted, alphabetically, on every row.
+ * reads them as the chips are sorted, alphabetically, on every row; and as the chips group them, not
+ * merely by name: a genre the AI's genre list added after the sources' tags, a source's genre on a
+ * *Described* row before the genres only a description names.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -77,12 +80,39 @@ class GenreTagsOrderScreenTest {
 
     private val genres = TrackGenres(listOf(trackRow, artistRow))
 
-    private fun show(block: () -> Unit) {
+    // A genre only the artist's description names.
+    private fun described(
+        tag: String,
+        shown: String,
+    ): TrackLabel {
+        val genre = GenreLabel(tag, shown, tag, level = GenreLevel.ARTIST, artist = "Michael Jackson")
+        return TrackLabel(genre, emptyList(), describedIn = DescribedIn("line-1", "a $tag singer"))
+    }
+
+    // The track's tags out of order, the AI's Ambient after them (first by name, last as a chip), and
+    // a description naming Boogie, which no tag gives, before Disco, which the track's tags give.
+    private val mixed: TrackGenres =
+        run {
+            val track = GenreRow(GenreLevel.TRACK, null, trackRow.labels.filter { it.genre.identity in SHORT })
+            val description =
+                GenreRow(
+                    GenreLevel.ARTIST,
+                    "Michael Jackson",
+                    listOf(described("boogie", "Boogie"), described("disco", "Disco")),
+                )
+            val ambient = GenreLabel("ambient", "Ambient", "ambient", level = GenreLevel.TRACK)
+            TrackGenres(listOf(track, artistRow), descriptions = listOf(description)).withAi(listOf(ambient), "Model")
+        }
+
+    private fun show(
+        shown: TrackGenres = genres,
+        block: () -> Unit,
+    ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        TagsGrid(track().copy(genres = genres), genre = "pop")
+                        TagsGrid(track().copy(genres = shown), genre = "pop")
                     }
                 }
             }
@@ -118,11 +148,31 @@ class GenreTagsOrderScreenTest {
         }
 
     @Test
-    fun eachRowFollowsTheChipsOwnOrder() {
-        val chips = genres.chips().map { it.label.genre.identity }
-        for (row in inChipOrder(genres.table, genres.chips())) {
-            val ids = row.labels.map { it.genre.identity }
-            assertEquals(chips.filter { it in ids }, ids)
+    fun theAisGenreFollowsTheSourcesTagsAndASourcesGenreLeadsADescribedRow() =
+        show(mixed) {
+            val (track, _, described) = mixed.table
+            assertEquals(listOf("Dance", "Disco", "Pop", "Ambient"), drawn(track))
+            assertEquals(
+                "Track, Dance, Disco, Pop, selected, Ambient, from Model",
+                compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading(),
+            )
+            assertEquals(listOf("Disco", "Boogie"), drawn(described))
+            assertEquals("Described, Disco, Boogie", compose.onNodeWithTag(GENRES_ROW_PREFIX + "2").reading())
         }
+
+    @Test
+    fun eachRowFollowsTheChipsOwnOrder() {
+        for (table in listOf(genres, mixed)) {
+            val chips = table.chips().map { it.label.genre.identity }
+            for (row in inChipOrder(table.table, table.chips())) {
+                val ids = row.labels.map { it.genre.identity }
+                assertEquals(chips.filter { it in ids }, ids)
+            }
+        }
+    }
+
+    private companion object {
+        // The track's tags of [mixed]: Pop, Dance, Disco, in the sources' order.
+        val SHORT = setOf("pop", "dance", "disco")
     }
 }
