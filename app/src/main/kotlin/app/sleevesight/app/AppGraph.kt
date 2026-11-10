@@ -817,6 +817,9 @@ class AppGraph internal constructor(
         // What the song's, the artist's and the album's evidence holds beyond the track's own, which a
         // track that found nothing to narrate decides its insight again with (#1131).
         pipelineScope.launch { pipeline.followItemLines(itemNotes::foundLines) }
+        // The album's lookups a *Retry* asked again with the track's sources, gathered once the track's
+        // run lands, whether its panel is still open or not (#1187).
+        pipelineScope.launch { itemNotes.gatherAfterRuns(pipeline.state.map { it.track }) }
         // A genre whose definition Wikipedia does not have is searched by itself with the setting on
         // (#786), as a lookup ends, or an AI service comes ready.
         pipelineScope.launch {

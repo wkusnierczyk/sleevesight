@@ -1,6 +1,7 @@
 package app.sleevesight.core.sources
 
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.model.SourceId
 
 /**
  * The evidence gathered for an album, not a track (#522; `design/architecture.md`, *Cache and
@@ -12,8 +13,8 @@ import app.sleevesight.core.evidence.EvidenceDraft
  * What it answers depends on the album alone ([AlbumQuery]), never on the track playing, so the
  * album's insight is found again with no call on each of its tracks: the same lines, the same
  * fingerprint. An implementation keeps what it found per album (the artist-level table, #238), and
- * does not throw, but for cancellation: a source that fails is [AlbumFound.unreachable], and what
- * the others found is still given.
+ * does not throw, but for cancellation: a source that fails is named in [AlbumFound.unanswered], and
+ * what the others found is still given.
  *
  * The web search is paid, so [lookup] never makes it: it gives the web's lines only when an earlier
  * search kept them, and says when one is due ([AlbumFound.webDue]). [searchWeb] makes it, for a
@@ -82,15 +83,19 @@ data class AlbumQuery(
 )
 
 /**
- * The album's lines ([drafts]), whether a source could not be asked ([unreachable]), and whether a
- * web search for the album is due before its insight is written ([webDue]: it may be asked, and no
- * search was kept), which [AlbumLookup.searchWeb] makes.
+ * The album's lines ([drafts]), the sources that could not be asked ([unanswered], #1187: the album's
+ * panel names them, with *Retry*, when it has no line), and whether a web search for the album is due
+ * before its insight is written ([webDue]: it may be asked, and no search was kept), which
+ * [AlbumLookup.searchWeb] makes.
  */
 data class AlbumFound(
     val drafts: List<EvidenceDraft>,
-    val unreachable: Boolean = false,
+    val unanswered: List<SourceId> = emptyList(),
     val webDue: Boolean = false,
 ) {
+    /** Whether a source could not be asked ([unanswered]): what was found is then not kept. */
+    val unreachable: Boolean get() = unanswered.isNotEmpty()
+
     companion object {
         /** Nothing found, and nothing failed. */
         val NONE: AlbumFound = AlbumFound(emptyList())

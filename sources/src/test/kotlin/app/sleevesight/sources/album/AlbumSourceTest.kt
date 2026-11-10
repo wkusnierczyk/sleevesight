@@ -29,6 +29,7 @@ import app.sleevesight.sources.web.AlbumWebSearch
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
@@ -53,8 +54,12 @@ class AlbumSourceTest {
         val asked = mutableListOf<String>()
         val releasesAsked = mutableListOf<String>()
 
+        // While set, a release group's lookup waits for it: under way.
+        var waiting: CompletableDeferred<Unit>? = null
+
         override suspend fun releaseGroup(mbid: String): Lookup<MbAlbum> {
             asked += mbid
+            waiting?.await()
             return albums[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
         }
 
@@ -394,7 +399,7 @@ class AlbumSourceTest {
         }
 
     @Test
-    fun `a source that fails is unreachable, and nothing is kept`() =
+    fun `a source that fails is unreachable, named, and nothing is kept`() =
         runTest {
             val wikipedia = Wikipedia(failing = true)
             val kept = MemoryArtistResults()
@@ -408,6 +413,8 @@ class AlbumSourceTest {
                 )
             val found = source.lookup(AlbumQuery("Sundown", "Gordon Lightfoot", "rg-sundown"))
             assertTrue(found.unreachable)
+            // Named, for the album's panel to say so (#1187).
+            assertEquals(listOf(SourceId.WIKIPEDIA), found.unanswered)
             // MusicBrainz's line stands.
             assertEquals(SourceId.MUSICBRAINZ, found.drafts.single().source)
             assertTrue(kept.keys(AlbumSource.PART).isEmpty())
@@ -490,7 +497,7 @@ class AlbumSourceTest {
             val kept = MemoryArtistResults()
             val failed = source(LastFm(other), groups = groups(failing = true), kept = kept).lookup(query)
             assertFalse(citesLastFm(failed))
-            assertTrue(failed.unreachable)
+            assertEquals(listOf(SourceId.MUSICBRAINZ), failed.unanswered)
             assertTrue(kept.keys(AlbumSource.PART).isEmpty())
         }
 
@@ -519,11 +526,26 @@ class AlbumSourceTest {
         }
 
     @Test
+    fun `two lookups of the album at once ask its sources once, the second taking the first's outcome`() =
+        runTest {
+            // #1187: a *Retry* gathering the album while its row gathers it too.
+            val groups = Groups(mapOf("rg-sundown" to sundown)).apply { waiting = CompletableDeferred() }
+            val source = source(groups = groups)
+            val first = async { source.lookup(query) }
+            val second = async { source.lookup(query) }
+            runCurrent()
+            assertEquals(1, groups.asked.size)
+            groups.waiting?.complete(Unit)
+            assertEquals(first.await().drafts, second.await().drafts)
+            assertEquals(1, groups.asked.size)
+        }
+
+    @Test
     fun `Last fm that fails is unreachable, and nothing is kept`() =
         runTest {
             val kept = MemoryArtistResults()
             val found = source(LastFm(failing = true), kept = kept).lookup(query)
-            assertTrue(found.unreachable)
+            assertEquals(listOf(SourceId.LASTFM), found.unanswered)
             assertTrue(kept.keys(AlbumSource.PART).isEmpty())
         }
 

@@ -275,6 +275,17 @@ sealed interface CoordinatorEvent {
     }
 
     /**
+     * The user tapped *Retry* beside sources of an item's own lookups not reached (#1187: the album's,
+     * which are not the track's), for the run under [key], before they are asked again: the run then
+     * writes nothing unasked, as one *Retry* started ([CoordinatorState.Run.retried]), so the lines
+     * they bring (`ItemLinesFound`) start no call by themselves, for the key insight or an item. A tap
+     * for any other run does nothing.
+     */
+    data class ItemRetryTapped(
+        val key: RunKey,
+    ) : CoordinatorEvent
+
+    /**
      * Run [run]'s [evidence] is assembled (`RunControl.assembled`): sent after [SourcesGathered],
      * before the run decides its insight.
      */
@@ -1107,6 +1118,8 @@ fun sameInsightTrack(
  * | otherwise | LookAgainTapped(key) | unchanged | none |
  * | current run, its sources landed with some of [sources] among those unreachable, no model call under way, allowed, of the tap's key | RetryTapped(key, sources) (#724, #1121) | a new run of its key and report asking again those of [sources] alone, as back online does all of them (a tap kept likewise), but never writing unasked, nor any run replacing it (`retried`); a preparation cancelled; not the first action | CancelRun (old), CancelPreparation (if one is cancelled), StartRun (new, `again` asking those of [sources]), Acted |
  * | otherwise | RetryTapped(key, sources) | unchanged | none |
+ * | current run of the tap's key | ItemRetryTapped(key) (#1187) | `retried`: it, and any run replacing it (the item lines taken included), never writes unasked; not the first action | Acted |
+ * | otherwise | ItemRetryTapped(key) | unchanged | none |
  * | the run | EvidenceAssembled(evidence) | a look again's: whether it holds a line the card's evidence does not say; its question is then answered by offering *Rewrite insight* if so (else only if the run it replaced offered it), never by writing | none |
  * | the run, the tap's call under way | StopTapped(call) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall(call) |
  * | otherwise (no call under way, another run's call, or an earlier call of the run) | StopTapped(call) | unchanged | none |
@@ -1173,6 +1186,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.WriteTapped,
             is CoordinatorEvent.LookAgainTapped,
             is CoordinatorEvent.RetryTapped,
+            is CoordinatorEvent.ItemRetryTapped,
             is CoordinatorEvent.StopTapped,
             is CoordinatorEvent.LookUpTapped,
             -> onTap(event)
@@ -1199,6 +1213,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
             is CoordinatorEvent.LookAgainTapped -> lookAgain(event.key)
             is CoordinatorEvent.RetryTapped -> retried(event.key, event.sources)
+            is CoordinatorEvent.ItemRetryTapped -> itemRetried(event.key)
             is CoordinatorEvent.StopTapped -> stopTapped(event.call)
             is CoordinatorEvent.LookUpTapped -> lookUpAgain(state.lookUpTapped(event.playing), tapped = true)
             else -> Unit
@@ -1461,6 +1476,14 @@ class PipelineCoordinator(
         val asked = sources intersect state.askable
         val run = state.current?.takeIf { state.askAgainKey == key && asked.isNotEmpty() } ?: return
         replaceAskingAgain(run, checkNotNull(run.gathered).asking(asked), retried = true)
+        effects += CoordinatorEffect.Acted
+    }
+
+    // A tap on *Retry* beside an item's own lookups not reached (#1187), for the run under [key]: it
+    // writes nothing unasked from then on, as a run *Retry* started; a user's action, as [retried].
+    private fun itemRetried(key: RunKey) {
+        val run = state.current?.takeIf { it.key == key } ?: return
+        state = state.copy(run = run.copy(retried = true))
         effects += CoordinatorEffect.Acted
     }
 

@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -159,6 +160,20 @@ interface ItemNotes {
         item: InsightItem,
         ask: ItemAsk = ItemAsk.TAP,
     )
+
+    /**
+     * [item]'s own lookups on [track] asked again (#1187, *Retry* beside the album's sources not
+     * reached, which are not the track's): its evidence gathered afresh, free, with no call; the line
+     * goes once they answer, and the insight is written only on a tap, as after any *Retry*. With
+     * [afterRun], when the track's own sources are asked again too, not now: what was gathered for the
+     * track before is no longer taken as it is, so it is gathered afresh once the track's run lands,
+     * from what that run found.
+     */
+    fun gatherAgain(
+        track: TrackState,
+        item: InsightItem,
+        afterRun: Boolean = false,
+    ) = Unit
 
     /**
      * The album's own lines (#522) gathered for [track]'s album's insight on this track, as they come;
@@ -351,12 +366,19 @@ class AppItemNotes(
 
     // Evidence gathered, and when; on which track, under which settings (for an album's web lines
     // found on another of its tracks, [spread]).
+    // [round], the count of *Retry* gatherings asked ([gatherAgain]) when it began.
     private class Found(
         val evidence: ItemEvidence,
         val at: Instant,
         val track: TrackState,
         val settings: Settings,
+        val round: Long = 0,
     )
+
+    // The *Retry* gatherings asked (#1187), counted, and the last asked for each item on a track (by its
+    // lookup key): what was gathered for it before is not taken again ([usable]).
+    private val rounds = AtomicLong()
+    private val asked = ConcurrentHashMap<Pair<InsightItem, String>, Long>()
 
     // The evidence gathered, by what it was gathered for, oldest first, at most [KEPT]: one a source
     // could not be asked for too, for [UNREACHABLE_FOR], so it is not asked again at every update.
@@ -416,7 +438,7 @@ class AppItemNotes(
         now: Settings,
     ): Flow<ItemShown> {
         val at = gatheredFor(insights, track, item, now)
-        if (!usable(gathered.value[at])) gather(insights, track, item, now, at)
+        if (!usable(at, gathered.value[at])) gather(insights, track, item, now, at)
         return gathered
             .map { it[at]?.evidence }
             .distinctUntilChanged()
@@ -641,6 +663,114 @@ class AppItemNotes(
         }
     }
 
+    // Gathered again whatever is kept (#1187), as a write would gather it; while one gathers, that one,
+    // whose outcome is then taken (several taps during one lookup ask once). What was gathered for
+    // [item] on the track before is not taken again ([usable]). With [afterRun], it is gathered once
+    // the run asking the track's sources again lands ([gatherAfterRuns]), not from [track] now, whether
+    // or not anything follows the item then.
+    override fun gatherAgain(
+        track: TrackState,
+        item: InsightItem,
+        afterRun: Boolean,
+    ) {
+        if (afterRun) gatherAfterRun(track, item) else gatherNow(track, item)
+    }
+
+    // [item] on [track] gathered again now, unless a gathering of it is under way, whose outcome is taken.
+    private fun gatherNow(
+        track: TrackState,
+        item: InsightItem,
+    ) {
+        val made = parts.value
+        val now = settings.value?.takeIf { it.writeInsights && ItemInsights.offered(track) }
+        if (made == null || now == null) return
+        val insights = insightsOf(made)
+        val at = gatheredFor(insights, track, item, now)
+        if (inflight[at]?.isActive != true) {
+            asked[item to track.normalized.lookupKey] = rounds.incrementAndGet()
+            gather(insights, track, item, now, at)
+        }
+    }
+
+    // [item] on [track] to gather once the run asking the track's sources again lands ([landed]).
+    private fun gatherAfterRun(
+        track: TrackState,
+        item: InsightItem,
+    ) {
+        val lookupKey = track.normalized.lookupKey
+        asked[item to lookupKey] = rounds.incrementAndGet()
+        synchronized(afterRuns) {
+            val waiting = afterRuns[lookupKey]
+            afterRuns.clear()
+            afterRuns[lookupKey] = AfterRun(track, waiting?.items.orEmpty() + item)
+        }
+    }
+
+    // A *Retry* gathering waiting for the run asking [track]'s sources again (#1187): the track it was
+    // tapped beside, the [items] to gather, and whether a state of the track with a source still to
+    // land was seen since ([asking]).
+    private class AfterRun(
+        val track: TrackState,
+        val items: Set<InsightItem>,
+        val asking: Boolean = false,
+    )
+
+    // The *Retry* gatherings waiting, by the track's lookup key: one track's at most, the latest tapped.
+    private val afterRuns = HashMap<String, AfterRun>()
+
+    /**
+     * Gathers the items a *Retry* asked again with the track's own sources ([gatherAgain]'s `afterRun`,
+     * #1187) once the run asking them has landed on [tracks] (the track playing as it changes): a state
+     * of the same track, every source landed, after one still asking or with sources other than those
+     * it was tapped beside; from that state, whether a panel or page follows the item then or not; while
+     * the parts or the settings are not there (a rebuild), once they are. One for another track is
+     * dropped. Until cancelled.
+     */
+    suspend fun gatherAfterRuns(tracks: Flow<TrackState?>) {
+        // Again as the parts or the settings come back (a rebuild), for a run that landed meanwhile.
+        combine(tracks, parts, settings) { track, _, _ -> track }.collect { track -> track?.let { landed(it) } }
+    }
+
+    // [track] as [gatherAfterRuns] sees it: the items waiting for its run gathered once it landed.
+    private fun landed(track: TrackState) {
+        val lookupKey = track.normalized.lookupKey
+        val offered = ItemInsights.offered(track)
+        val made = parts.value
+        val now = settings.value?.takeIf { it.writeInsights }
+        val due =
+            synchronized(afterRuns) {
+                val waiting = afterRuns[lookupKey]
+                afterRuns.keys.retainAll(setOf(lookupKey))
+                // The taps on other tracks than the one playing are let go (#1187).
+                asked.keys.removeIf { it.second != lookupKey }
+                when {
+                    waiting == null -> {
+                        null
+                    }
+
+                    // Still asking, or landed while it cannot be gathered (the parts rebuilt, insights
+                    // off): kept, gathered once it can be.
+                    !offered || made == null || now == null -> {
+                        val asking = waiting.asking || !offered
+                        afterRuns[lookupKey] = AfterRun(waiting.track, waiting.items, asking)
+                        null
+                    }
+
+                    waiting.asking || track.sources != waiting.track.sources -> {
+                        afterRuns.remove(lookupKey)
+                        waiting
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+            }
+        if (due == null || made == null || now == null) return
+        val insights = insightsOf(made)
+        due.items.forEach { item -> gather(insights, track, item, now, gatheredFor(insights, track, item, now)) }
+    }
+
     // [block] in [scope], marked with the epoch and the count of *Clear history*, held in [pending]
     // until it ends, so a clear cancels it.
     private fun tracked(block: suspend CoroutineScope.() -> Unit): Job {
@@ -839,7 +969,7 @@ class AppItemNotes(
     ): ItemEvidence? {
         val at = gatheredFor(insights, track, item, now)
         val known = gathered.value[at]
-        return if (usable(known)) {
+        return if (usable(at, known)) {
             known?.evidence
         } else {
             gather(insights, track, item, now, at).await()?.evidence
@@ -847,10 +977,16 @@ class AppItemNotes(
         }
     }
 
-    // Whether [found] is shown and written from as it is: one a source could not be asked for only
-    // for [UNREACHABLE_FOR], then gathered again.
-    private fun usable(found: Found?): Boolean =
-        found != null && (!found.evidence.unreachable || clock.now() - found.at < UNREACHABLE_FOR)
+    // Whether [found], [at]'s, is shown and written from as it is: one a source could not be asked for
+    // only for [UNREACHABLE_FOR], then gathered again; none begun before a *Retry* asked [at]'s item on
+    // its track again ([gatherAgain], #1187).
+    private fun usable(
+        at: Gathered,
+        found: Found?,
+    ): Boolean =
+        found != null &&
+            found.round >= (asked[at.item to at.lookupKey] ?: 0) &&
+            (!found.evidence.unreachable || clock.now() - found.at < UNREACHABLE_FOR)
 
     // The gathering of [at]'s evidence (off the main thread): the one under way, or a new one in
     // [scope], which outlives whoever asked; kept once it ends, unless a *Clear history* came since it
@@ -866,12 +1002,14 @@ class AppItemNotes(
             inflight.computeIfAbsent(at) {
                 // Where the lines in the track's language are kept, when it began (#939).
                 val keeping = keepings.value
+                // The *Retry* gatherings asked when it began (#1187).
+                val round = rounds.get()
                 val job =
                     scope.async(mark(), start = CoroutineStart.LAZY) {
                         val found =
                             withContext(
                                 io,
-                            ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now) }
+                            ) { insights.evidence(item, track, now) }?.let { Found(it, clock.now(), track, now, round) }
                         found?.also { keep(at, it, coroutineContext) { at.inLanguage && keeping != keepings.value } }
                     }
                 pending += job
@@ -1208,7 +1346,11 @@ class AppItemNotes(
         asked: Asked,
     ) {
         val at = gatheredFor(insights, asked.track, asked.item, asked.settings)
-        keep(at, Found(asked.evidence, clock.now(), asked.track, asked.settings), asked.work)
+        keep(
+            at,
+            Found(asked.evidence, clock.now(), asked.track, asked.settings, gathered.value[at]?.round ?: 0),
+            asked.work,
+        )
         spread(insights, at, asked.evidence, asked.work)
     }
 
@@ -1395,7 +1537,7 @@ class AppItemNotes(
                     } else {
                         null
                     }
-                given?.let { Found(it, other.at, other.track, other.settings) } ?: other
+                given?.let { Found(it, other.at, other.track, other.settings, other.round) } ?: other
             }
         }
     }
@@ -1584,6 +1726,8 @@ class AppItemNotes(
             inflight.clear()
             looked.clear()
         }
+        synchronized(afterRuns) { afterRuns.clear() }
+        asked.clear()
         // What was gathering, reading or writing goes: nothing it found is kept or shown, and no call
         // it would have made is made.
         pending.toList().forEach { it.cancel() }

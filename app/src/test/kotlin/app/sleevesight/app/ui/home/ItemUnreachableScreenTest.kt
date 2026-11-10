@@ -50,7 +50,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The artist's insight with nothing to write from while MusicBrainz could not be reached (#1163):
  * its panel says so, with *Retry*, which asks MusicBrainz again, rather than that the sources give
- * nothing; with every source answered, it says the sources give nothing.
+ * nothing; with every source answered, it says the sources give nothing. The album's alike (#1187),
+ * its own lookups not reached gathered again by *Retry*, the track's MusicBrainz asked again.
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemUnreachableScreenTest {
@@ -63,6 +64,9 @@ class ItemUnreachableScreenTest {
 
     private val retried = mutableListOf<Triple<RunKey, Set<SourceId>, NowPlaying>>()
 
+    // The taps on *Retry* beside an item's own lookups told to the pipeline (#1187).
+    private val itemRetries = mutableListOf<NowPlaying>()
+
     private val unreached =
         track(
             sources =
@@ -74,11 +78,14 @@ class ItemUnreachableScreenTest {
 
     private fun show(
         unanswered: List<SourceId>,
-        block: () -> Unit = { checkLine(unanswered) },
+        item: InsightItem = InsightItem.ARTIST,
+        held: SourcesHeld? = unanswered.takeIf { it.isNotEmpty() }?.let(::SourcesHeld),
+        block: () -> Unit = { checkLine(unanswered, item) },
     ) {
-        val held = unanswered.takeIf { it.isNotEmpty() }?.let(::SourcesHeld)
         val evidence = ItemEvidence(EvidenceSet.of(emptyList(), JvmHasher), emptyMap(), held = held)
-        notes.shown.value = mapOf(InsightItem.ARTIST to ItemShown.Shown(InsightState.NoEvidence, evidence))
+        notes.shown.value = mapOf(item to ItemShown.Shown(InsightState.NoEvidence, evidence))
+        // Gathered again: the line gives way, as once the album's lookups answer.
+        notes.afterGathering = ItemShown.Offered
         val view =
             PipelineView(
                 unreached,
@@ -97,6 +104,7 @@ class ItemUnreachableScreenTest {
             NowPlayingActions(
                 normalizer::normalize,
                 itemNotes = notes,
+                itemRetried = { itemRetries += it },
                 askAgain = { key, sources, shown ->
                     retried += Triple(key, sources, shown)
                     // Asked again: the line gives way, as once the sources are gathered anew.
@@ -110,19 +118,24 @@ class ItemUnreachableScreenTest {
                 }
             }
             compose.waitForIdle()
-            compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).performScrollTo().performClick()
+            compose.onNodeWithTag(itemRowTag(item)).performScrollTo().performClick()
             compose.waitForIdle()
             block()
         }
     }
 
-    private fun checkLine(unanswered: List<SourceId>) {
+    private fun checkLine(
+        unanswered: List<SourceId>,
+        item: InsightItem,
+    ) {
+        val nothing = app.getString(noEvidence(item))
         if (unanswered.isEmpty()) {
-            compose.onNodeWithText(app.getString(R.string.home_item_no_evidence_artist)).assertExists()
+            compose.onNodeWithText(nothing).assertExists()
             compose.onNodeWithTag(ITEM_UNREACHABLE_TAG).assertDoesNotExist()
         } else {
-            compose.onNodeWithText(app.getString(R.string.home_item_no_evidence_artist)).assertDoesNotExist()
-            compose.onNodeWithText("MusicBrainz could not be reached.").assertExists()
+            compose.onNodeWithText(nothing).assertDoesNotExist()
+            val names = if (unanswered.size == 1) "MusicBrainz" else "MusicBrainz and Wikipedia"
+            compose.onNodeWithText("$names could not be reached.").assertExists()
             compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performScrollTo().performClick()
             compose.waitForIdle()
         }
@@ -151,5 +164,71 @@ class ItemUnreachableScreenTest {
     fun withEverySourceAnsweredItSaysTheSourcesGiveNothing() {
         show(emptyList())
         assertEquals(emptyList<Any>(), retried)
+    }
+
+    @Test
+    fun theAlbumsOwnLookupNotReachedIsNamedWithRetryWhichGathersItAgain() {
+        val held = SourcesHeld(listOf(SourceId.WIKIPEDIA), retry = emptyList(), gatherAgain = true)
+        show(listOf(SourceId.WIKIPEDIA), InsightItem.ALBUM, held) {
+            compose.onNodeWithText(app.getString(R.string.home_item_no_evidence_album)).assertDoesNotExist()
+            compose.onNodeWithText("Wikipedia could not be reached.").assertExists()
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(ITEM_UNREACHABLE_TAG).assertDoesNotExist()
+        }
+        // The album's lookups asked again, not the track's sources, which answered; the track's run
+        // told first, so it writes nothing unasked from what they bring.
+        assertEquals(listOf(InsightItem.ALBUM), notes.gatheredAgain)
+        assertEquals(listOf(unreached.nowPlaying), itemRetries)
+        assertEquals(emptyList<Any>(), retried)
+        // A *Retry* of sources writes nothing by itself.
+        assertEquals(emptyList<InsightItem>(), notes.writes)
+    }
+
+    @Test
+    fun theTracksMusicBrainzAndTheAlbumsWikipediaAreAskedAgainTogether() {
+        val held =
+            SourcesHeld(
+                listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA),
+                listOf(SourceId.MUSICBRAINZ),
+                gatherAgain = true,
+            )
+        show(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA), InsightItem.ALBUM, held)
+        assertEquals(setOf(SourceId.MUSICBRAINZ), retried.single().second)
+        // Gathered once the track's run asked again has landed, not now from what it replaces; the
+        // pipeline's *Retry* holds the writing itself.
+        assertEquals(listOf(InsightItem.ALBUM), notes.gatheredAfterRun)
+        assertEquals(emptyList<InsightItem>(), notes.gatheredAgain)
+        assertEquals(emptyList<NowPlaying>(), itemRetries)
+    }
+
+    @Test
+    fun fromAKeyboardTheAlbumsRetryHandsTheFocusToClose() {
+        val held = SourcesHeld(listOf(SourceId.MUSICBRAINZ), gatherAgain = false)
+        show(listOf(SourceId.MUSICBRAINZ), InsightItem.ALBUM, held) {
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performScrollTo().requestFocus()
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).performKeyInput { pressKey(Key.Enter) }
+            compose.waitForIdle()
+            compose.onNodeWithTag(ITEM_UNREACHABLE_RETRY_TAG).assertDoesNotExist()
+            compose.onNodeWithTag("${itemPanelTag(InsightItem.ALBUM)}:close").assertIsFocused()
+        }
+        assertEquals(setOf(SourceId.MUSICBRAINZ), retried.single().second)
+        assertEquals(emptyList<InsightItem>(), notes.gatheredAgain)
+    }
+
+    @Test
+    fun wikidataNotReachedIsNamedAsWikipediaTheSettingThatSwitchesIt() {
+        val held = SourcesHeld(listOf(SourceId.WIKIDATA, SourceId.WIKIPEDIA), retry = emptyList(), gatherAgain = true)
+        show(listOf(SourceId.WIKIDATA), InsightItem.ALBUM, held) {
+            compose.onNodeWithText("Wikipedia could not be reached.").assertExists()
+            compose.onNodeWithText("Wikidata", substring = true).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun theAlbumWithEverySourceAnsweredSaysTheSourcesGiveNothing() {
+        show(emptyList(), InsightItem.ALBUM)
+        assertEquals(emptyList<Any>(), retried)
+        assertEquals(emptyList<InsightItem>(), notes.gatheredAgain)
     }
 }
