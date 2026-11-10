@@ -1,9 +1,13 @@
 package app.sleevesight.sources.lastfm
 
+import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.SourceId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class LastFmBioTest {
     @Test
@@ -13,6 +17,14 @@ class LastFmBioTest {
                 "<a href=\"https://www.last.fm/music/X\">Read more on Last.fm</a> User-contributed text is " +
                 "available under the Creative Commons By-SA License; additional terms may apply."
         assertEquals("Ann & Bob's band — \"live\".", LastFmBio.plainText(html))
+    }
+
+    @Test
+    fun `a bio's references are decoded once, and its evidence line keeps what they gave`() {
+        // #1165: `&amp;copy;` is the text `&copy;` on the page; the line's cleaning never decodes it again.
+        val sentence = LastFmBio.sentences("They printed &amp;copy; on every sleeve of the album.").single()
+        val line = EvidenceDraft(SourceId.LASTFM, Scope.ARTIST, sentence, null, Instant.parse("2026-11-10T00:00:00Z"))
+        assertEquals("They printed &copy; on every sleeve of the album.", line.text)
     }
 
     @Test

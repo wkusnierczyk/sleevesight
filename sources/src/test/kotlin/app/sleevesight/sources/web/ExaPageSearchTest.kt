@@ -116,7 +116,9 @@ class ExaPageSearchTest {
             val body =
                 ExaWebSearch.JSON.encodeToString(
                     ExaSearchResponse(
-                        titles.mapIndexed { i, title -> ExaResult("https://a.example/$i", title, listOf("Teardrop.")) },
+                        titles.mapIndexed { i, title ->
+                            ExaResult("https://a.example/$i", title, listOf("Fraser&#039;s vocal."))
+                        },
                     ),
                 )
             assertEquals(
@@ -128,6 +130,9 @@ class ExaPageSearchTest {
                 ),
                 pagesIn(body, subject = null).map { it.title },
             )
+            // A passage's references too, once: what the page shows.
+            val passages = pagesIn(body, subject = null).map { it.text }
+            assertEquals(List(titles.size) { "Fraser's vocal." }, passages)
         }
 
     @Test

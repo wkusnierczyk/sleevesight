@@ -11,6 +11,7 @@ import app.sleevesight.core.pipeline.songReviewQuery
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.text.HtmlReferences
 import app.sleevesight.core.text.SourceText
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetBody
@@ -374,9 +375,13 @@ class ExaWebSearch(
             return WebLines(lines, emptied)
         }
 
-        /** A 2xx body read as a search response; null for any other status, which has no results. */
+        /**
+         * A 2xx body read as a search response, each result's title and highlights with their HTML
+         * character references decoded, once, here where they come in ([HtmlReferences], #1165: a
+         * page's `&#039;s` shows as `'s`); null for any other status, which has no results.
+         */
         internal fun parse(response: NetResponse): ExaSearchResponse? =
-            if (response.isSuccess) JSON.decodeFromString<ExaSearchResponse>(response.body) else null
+            if (response.isSuccess) JSON.decodeFromString<ExaSearchResponse>(response.body).decoded() else null
     }
 }
 
@@ -530,7 +535,19 @@ internal data class ExaHighlights(
 @Serializable
 internal data class ExaSearchResponse(
     val results: List<ExaResult> = emptyList(),
-)
+) {
+    /** Each result's title and highlights with their HTML character references decoded ([HtmlReferences]). */
+    fun decoded(): ExaSearchResponse =
+        copy(
+            results =
+                results.map { result ->
+                    result.copy(
+                        title = result.title?.let(HtmlReferences::decode),
+                        highlights = result.highlights.map(HtmlReferences::decode),
+                    )
+                },
+        )
+}
 
 @Serializable
 internal data class ExaResult(
