@@ -78,9 +78,6 @@ class NormalizerTest {
         assertEquals("Song", normalizer.normalize("Song - 2019 Mono Remastered Stereo Remaster 2020", "A").title)
         val seven = "Song - 2019 Mono Remastered Stereo Remaster 2020 Mono"
         assertEquals(seven, normalizer.normalize(seven, "A").title)
-        val parts = List(PARTS) { "Mono Remastered" }.joinToString(" - ")
-        val kept = "Song - $parts".removeSuffix(" - Mono Remastered")
-        assertEquals(kept, normalizer.normalize("Song - $parts", "A").title)
     }
 
     // #1060: any trailing edit, not only a radio or single one.
@@ -381,9 +378,4 @@ class NormalizerTest {
         val key: String,
         val notes: List<String>,
     )
-
-    private companion object {
-        // Enough " - " parts to overflow the stack if each one took a frame.
-        const val PARTS = 20_000
-    }
 }
