@@ -1,5 +1,6 @@
 package app.sleevesight.app.diagnostics
 
+import app.sleevesight.app.session.SessionMapping
 import app.sleevesight.core.pipeline.EventLine
 import app.sleevesight.core.text.SourceText
 import app.sleevesight.store.CacheStats
@@ -127,9 +128,9 @@ internal object DiagnosticsText {
     const val NOTHING_LEARNED = "Nothing learned yet."
 
     // A track's title as the history holds it, cleaned ([SourceText], #1041): a row written before the
-    // player's fields were cleaned may still hold invisible characters.
+    // player's fields were cleaned may still hold invisible characters; its media id as a report prints it.
     private fun track(ref: TrackRef): String =
-        "\"${SourceText.clean(ref.title)}\"" + ref.mediaId?.let { " ($it)" }.orEmpty()
+        "\"${SourceText.clean(ref.title)}\"" + ref.mediaId?.let { " (${SessionMapping.shownMediaId(it)})" }.orEmpty()
 
     private fun ms(duration: Duration?): String = duration?.let { "${it.inWholeMilliseconds} ms" } ?: "-"
 }

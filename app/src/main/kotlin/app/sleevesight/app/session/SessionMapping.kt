@@ -120,6 +120,16 @@ object SessionMapping {
      */
     const val ARTISTS_MAX: Int = 500
 
+    /** The most characters of a media id that a report or the diagnostics print ([shownMediaId]). */
+    const val MEDIA_ID_SHOWN_MAX: Int = 300
+
+    /**
+     * [mediaId] as a report or the diagnostics print it: cleaned ([SourceText]) and cut to
+     * [MEDIA_ID_SHOWN_MAX]. The id the app keeps stays as the player sent it, since the queue and ad
+     * detection match on it.
+     */
+    fun shownMediaId(mediaId: String): String = SourceText.cut(SourceText.clean(mediaId), MEDIA_ID_SHOWN_MAX)
+
     /**
      * Whether [next] falls back to the start of a track (within [AT_START]) from a position
      * [previous] reported past it (more than twice that): a new track's first state, which may name
@@ -305,15 +315,9 @@ private fun field(
         SourceText
             .clean(text)
             .trim()
-            .capped(max)
+            .let { SourceText.cut(it, max) }
             .trim()
     return SourceText.clean(cut).trim().takeIf { it.isNotEmpty() }
-}
-
-private fun String.capped(max: Int): String {
-    if (length <= max) return this
-    val end = if (this[max - 1].isHighSurrogate()) max - 1 else max
-    return substring(0, end)
 }
 
 /** One place the art can come from (see [SessionMapping.artSources]). */

@@ -1,8 +1,10 @@
 package app.sleevesight.app.diagnostics
 
+import app.sleevesight.app.session.SessionMapping
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Instant
 
@@ -31,5 +33,25 @@ class DiagnosticsTextCleaningTest {
                 "since last action -, learned crossfade -, 0 states",
             DiagnosticsText.change(change),
         )
+    }
+
+    @Test
+    fun aMediaIdIsPrintedCleanedAndCut() {
+        val long = "spotify:track:\u202E" + "x".repeat(1_000)
+        val change =
+            TrackChangeRecord(
+                player = "com.spotify.music",
+                changedAt = Instant.parse("2026-11-10T12:00:00Z"),
+                from = null,
+                to = TrackRef("Sundown", long),
+                timeLeft = null,
+                states = emptyList(),
+                sinceLastAction = null,
+                learnedCrossfade = null,
+            )
+        val id = ("spotify:track:" + "x".repeat(1_000)).take(SessionMapping.MEDIA_ID_SHOWN_MAX)
+
+        assertTrue(DiagnosticsText.change(change).startsWith("com.spotify.music: (none) -> \"Sundown\" ($id); "))
+        assertEquals(id, SessionMapping.shownMediaId(long))
     }
 }
