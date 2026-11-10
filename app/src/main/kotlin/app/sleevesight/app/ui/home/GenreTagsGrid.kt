@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,18 +51,19 @@ import app.sleevesight.core.pipeline.TrackState
  * column lines up across both parts: "Genre tags", a heading, then a row per level with tags, in
  * [GenreLevel] order, its name on the left, right-aligned (*Track*, *Artist*, *Album*; with several
  * credited artists *Artist 1*, *Artist 2*, … by their place in the credit, rather than their names),
- * its tags as chips on the right, [genre] marked wherever it shows ([Cell]); after an artist's row,
- * the genres their description names, *Described* (#1000; *Described 1*, *Described 2*, … as their
- * artist's row is numbered; `TrackGenres.table`); then "Tag sources", a
- * heading, and the same rows, each with the sources that gave any of its tags, each named and linked
- * to the row's page there ([sourceParts]), an artist's name on its own line above them with several
- * artists; a *Described* row with whose description it is and the citations of its lines, each a
- * link that opens its line in *Sources* ([onCite]); then, in the right column, once, when
- * MusicBrainz gave any tag, its credit and its licence, linked (D12).
+ * its tags as chips on the right, in the order of *Genres*' chips ([inChipOrder], #1159), [genre]
+ * marked wherever it shows ([Cell]); after an artist's row, the genres their description names,
+ * *Described* (#1000; *Described 1*, *Described 2*, … as their artist's row is numbered;
+ * `TrackGenres.table`); then "Tag sources", a heading, and the same rows, each with the sources
+ * that gave any of its tags, each named and linked to the row's page there ([sourceParts]), an
+ * artist's name on its own line above them with several artists; a *Described* row with whose
+ * description it is and the citations of its lines, each a link that opens its line in *Sources*
+ * ([onCite]); then, in the right column, once, when MusicBrainz gave any tag, its credit and its
+ * licence, linked (D12).
  *
  * The first column is as wide as its widest name, measured in the names' style at the current font
  * size, so it holds at large font sizes. Each row is one item to a screen reader. A row of tags has
- * one reading, its name then its tags, [genre]'s marked as selected ("Track, Rock, selected, Pop":
+ * one reading, its name then its tags, [genre]'s marked as selected ("Track, Pop, Rock, selected":
  * the chips are not buttons), and no selected state of its own, so it says which tag is marked
  * ([tagsReading]); a row of sources reads its name and sources, each source's link still a link of
  * its own, which a screen reader reaches and opens.
@@ -73,6 +75,9 @@ internal fun TagsGrid(
     onCite: (String) -> Unit = {},
 ) {
     val rows = track.genres.table
+    val order = rememberGenreOrder()
+    // The rows of tags in the chips' order (#1159); the sources' rows keep the rows' own.
+    val ordered = remember(track.genres, order) { inChipOrder(rows, track.genres.chips(order)) }
     val credit = track.normalized.artists
     val several = credit.size > 1
     val names = rowNames(rows, several, credit)
@@ -84,7 +89,7 @@ internal fun TagsGrid(
         val selected = stringResource(R.string.home_genre_tag_selected)
         val added = stringResource(R.string.genre_ai_added)
         val described = stringResource(R.string.genre_described)
-        rows.forEachIndexed { index, row ->
+        ordered.forEachIndexed { index, row ->
             val reading = tagsReading(names[index], row, genre, selected, added, described)
             val tagged = Modifier.testTag(GENRES_ROW_PREFIX + index).semantics { contentDescription = reading }
             GridRow(names[index], column, nameStyle, tagged, CHIP_INSET) { Cells(row, genre) }
@@ -120,7 +125,7 @@ internal fun TagsGrid(
 
 /**
  * How a screen reader reads a row of tags (#786): its [name], then its tags in order, [genre]'s as
- * [selected] words it ("Rock, selected"), all one item: "Track, Rock, selected, Pop". A tag the AI's
+ * [selected] words it ("Rock, selected"), all one item: "Track, Pop, Rock, selected". A tag the AI's
  * genre list added (#762) reads with the model's name, as [added] words it ("Blues, from Claude
  * Haiku 5.5"). A genre an artist's description names (#1000) reads as [described] words it
  * ("Instrumental, from the artist’s description").
