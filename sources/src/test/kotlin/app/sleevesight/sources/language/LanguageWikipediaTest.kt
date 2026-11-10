@@ -104,7 +104,7 @@ class LanguageWikipediaTest {
         )
 
     @Test
-    fun `results kept against the resolution before #1129 are not served`() {
+    fun `the extraction version is 2, raised for the resolution #1129 changed`() {
         // The pages are checked against the resolution, which #1129 changed: results kept under 1,
         // against an earlier miss, are asked again.
         assertEquals(2, adapter.extractionVersion)

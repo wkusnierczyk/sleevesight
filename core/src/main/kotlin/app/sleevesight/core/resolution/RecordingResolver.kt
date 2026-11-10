@@ -52,6 +52,11 @@ class RecordingResolver(
      * one more by the title as written and the composer, the search made before #1129, so a lead that
      * is no composer (`Band: Song` by Band and a guest) still finds what it found then; its answer is
      * used when it finds anything or fails.
+     *
+     * With a composer, a recording counts only as a performance by the track's own artists
+     * (`performedBy`): every name its credit gives is one of theirs, and one is a performer's. An
+     * orchestra's search finds its recordings under other conductors and with other soloists, each
+     * crediting the orchestra; a recording credited to the composer alone may be anyone's.
      */
     suspend fun resolve(
         track: NormalizedTrack,
@@ -60,22 +65,15 @@ class RecordingResolver(
         val title = track.searchTitle
         if (title.isBlank() || track.primary.isBlank()) return Resolution.NONE
         val measured = duration != null
-        val fits: (MbRecording) -> Boolean = { candidate(track, duration, it).fits }
+        val ours: (MbRecording) -> Boolean = { track.composer == null || names.performedBy(it, track) }
+        val fits: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fits }
         val first = musicBrainz.searched(title, searchArtist(track), measured, fits)
-        val composer = track.composer?.name
-        val searched =
-            if (composer != null && first.answer !is Lookup.Failed && first.found.none(fits)) {
-                musicBrainz
-                    .searched(track.title, composer, measured, fits)
-                    .takeIf { it.answer is Lookup.Failed || it.found.isNotEmpty() } ?: first
-            } else {
-                first
-            }
+        val searched = musicBrainz.asWritten(track, first, measured, fits)
         return when (val answer = searched.answer) {
             is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(answer.reason)
             is Lookup.Found ->
-                choose(track, duration, searched.found).let {
+                choose(track, duration, searched.found.filter(ours)).let {
                     it.copy(provisional = it.provisional || searched.incomplete)
                 }
         }
@@ -744,6 +742,29 @@ private fun lyricsOf(
 // The work's relationships that credit its words (#998): a `writer` covers both words and music.
 private val WORDS_TYPES = setOf("lyricist", "librettist", "writer")
 
+// Whether [recording] is a performance by [track]'s own artists (#1129): every credit stands for one
+// of them, by name, as a band one of them leads, under an honorific variant or in a joint credit, and
+// one for a performer ([performers]).
+private fun NameMatcher.performedBy(
+    recording: MbRecording,
+    track: NormalizedTrack,
+): Boolean {
+    val credits = recording.credits
+
+    fun standsFor(artists: List<String>): (MbCredit) -> Boolean {
+        val joint = artists.flatMap { jointCredits(credits, it) }.flatten().toSet()
+        return { credit ->
+            credit in joint ||
+                artists.any { artist ->
+                    listOf(credit.name, credit.artistName).any {
+                        sameName(it, artist) || leads(it, artist) || honorificVariant(it, artist)
+                    }
+                }
+        }
+    }
+    return credits.isNotEmpty() && credits.all(standsFor(track.artists)) && credits.any(standsFor(track.performers))
+}
+
 // The performers (#1129): with a composer the title names and other artists besides, those others;
 // else every credited artist.
 private val NormalizedTrack.performers: List<String>
@@ -769,6 +790,22 @@ private class Searched(
     val found: List<MbRecording>,
     val incomplete: Boolean,
 )
+
+// With a composer the title names, when the [first] search found nothing that [fits], the search by
+// the title as written and the composer, the search made before #1129, when it finds anything or
+// fails; else [first].
+private suspend fun MusicBrainzLookup.asWritten(
+    track: NormalizedTrack,
+    first: Searched,
+    measured: Boolean,
+    fits: (MbRecording) -> Boolean,
+): Searched =
+    track.composer
+        ?.name
+        ?.takeIf { first.answer !is Lookup.Failed && first.found.none(fits) }
+        ?.let { composer -> searched(track.title, composer, measured, fits) }
+        ?.takeIf { it.answer is Lookup.Failed || it.found.isNotEmpty() }
+        ?: first
 
 // The search by [title] and [artist], with the searches by date a full first page calls for.
 private suspend fun MusicBrainzLookup.searched(

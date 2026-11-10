@@ -86,27 +86,30 @@ class RecordingResolverArtistSearchTest {
         }
 
     @Test
-    fun `a lead that is no composer still finds its recording by the search as written`() =
+    fun `a lead that is no composer finds its recording as written, when it credits a performer`() =
         runTest {
             // `Band` is taken for a composer, so the search is by Guest, who has nothing; the search
-            // made before #1129, `Band: Song` by Band, finds Band's recording.
-            val exact = recording("exact", "Band: Song", "Band", 200, "1990")
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Band"] = Lookup.Found(listOf(exact)) }
-            assertEquals("exact", resolve(musicBrainz, track("Band: Song", "Band, Guest")).recordingMbid)
+            // made before #1129, `Band: Song` by Band, finds Band's recording with Guest. One credited to
+            // Band alone is not taken: with a composer, a recording must credit a performer too.
+            val withGuest =
+                recording("with-guest", "Band: Song", "Band", 200, "1990")
+                    .copy(credits = listOf(credit("Band"), credit("Guest")))
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Band"] = Lookup.Found(listOf(withGuest)) }
+            assertEquals("with-guest", resolve(musicBrainz, track("Band: Song", "Band, Guest")).recordingMbid)
             assertEquals(listOf("Song" to "Guest", "Band: Song" to "Band"), musicBrainz.searched)
+            val alone = recording("alone", "Band: Song", "Band", 200, "1990")
+            val bandOnly = FakeMusicBrainz(nothing).apply { searchesBy["Band"] = Lookup.Found(listOf(alone)) }
+            assertNull(resolve(bandOnly, track("Band: Song", "Band, Guest")).recordingMbid)
         }
 
     @Test
-    fun `when the search as written finds nothing either, the first search's answer stands`() =
+    fun `when neither search finds what fits, nothing is found`() =
         runTest {
-            // Gould's search finds a near miss, another artist's `Aria`; the composer's finds nothing.
-            val other = recording("other", "Aria", "Someone Else", 200, "1999")
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Glenn Gould"] = Lookup.Found(listOf(other)) }
-            val resolution = resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
-            assertEquals(
-                Outcome.Rejected("MusicBrainz has “Aria” by Someone Else, not by Glenn Gould"),
-                resolution.outcome,
-            )
+            // Gould's search finds his `Aria`, far too long; the composer's search as written, nothing.
+            val long = recording("long", "Aria", "Glenn Gould", 400, "1981")
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Glenn Gould"] = Lookup.Found(listOf(long)) }
+            assertEquals(Outcome.None, resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould")).outcome)
+            assertEquals(listOf("Aria" to "Glenn Gould", "Bach: Aria" to bach), musicBrainz.searched)
         }
 
     @Test
@@ -133,15 +136,17 @@ class RecordingResolverArtistSearchTest {
         }
 
     @Test
-    fun `with performers credited, a recording credited to the composer alone is not the track's`() =
+    fun `a recording credited to the composer alone is not the track's, titled either way`() =
         runTest {
-            // Gould's search finds nothing; the composer's finds an `Aria` credited to Bach alone, which
-            // may be anyone's performance.
-            val composerOnly = recording("bach-only", "Aria", bach, 200, "1990")
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(listOf(composerOnly)) }
+            // Gould's search finds nothing; the composer's search as written finds `Aria` and `Bach: Aria`,
+            // each credited to Bach alone, which may be anyone's performance.
+            val stripped = recording("bach-aria", "Aria", bach, 200, "1990")
+            val written = recording("bach-bach-aria", "Bach: Aria", bach, 200, "1991")
+            val musicBrainz =
+                FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(listOf(stripped, written)) }
             val resolution = resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
             assertNull(resolution.recordingMbid)
-            assertEquals(Outcome.Rejected("MusicBrainz has “Aria” by $bach, not by Glenn Gould"), resolution.outcome)
+            assertEquals(Outcome.None, resolution.outcome)
         }
 
     @Test
@@ -174,10 +179,15 @@ class RecordingResolverArtistSearchTest {
         runTest {
             // `Band` is taken for a composer, but the recording titled `Band: Song` is read as written,
             // so Band's credit counts; Guest's older `Song`, read without the lead, does not beat it.
-            val exact = recording("exact", "Band: Song", "Band", 200, "1990")
+            // Guest's search finds both, so Guest's `Song` does not keep the search as written from being
+            // made for want of it: the one search already holds Band's recording with Guest.
+            val exact =
+                recording("exact", "Band: Song", "Band", 200, "1990")
+                    .copy(credits = listOf(credit("Band"), credit("Guest")))
             val guests = recording("guests", "Song", "Guest", 200, "1970")
             val musicBrainz = FakeMusicBrainz(Lookup.Found(listOf(guests, exact)))
             assertEquals("exact", resolve(musicBrainz, track("Band: Song", "Band, Guest")).recordingMbid)
+            assertEquals(listOf("Song" to "Guest"), musicBrainz.searched)
         }
 
     @Test
@@ -192,8 +202,42 @@ class RecordingResolverArtistSearchTest {
                 ).titleSimilarity(written, stripped) >= ResolutionThresholds.TITLE_SIMILARITY,
             )
             val older = recording("older", stripped, "Guest", 200, "1970")
-            val exact = recording("exact", written, "Band", 200, "1990")
+            val exact =
+                recording("exact", written, "Band", 200, "1990").copy(credits = listOf(credit("Band"), credit("Guest")))
             val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(older, exact))), track(written, "Band, Guest"))
             assertEquals("exact", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `an orchestra's recording under another conductor is not the track's, its own is`() =
+        runTest {
+            val symphony = "Symphony No. 40 in G Minor, K. 550: I. Molto allegro"
+            val asmf = "Academy of St. Martin in the Fields"
+            val orchestral = track("Mozart: $symphony", "$mozart, $asmf, Neville Marriner")
+            val other =
+                recording("other", symphony, asmf, 200, "1970")
+                    .copy(credits = listOf(credit(asmf), credit("Another Conductor")))
+            val own =
+                recording("own", symphony, asmf, 200, "1985")
+                    .copy(credits = listOf(credit(asmf), credit("Neville Marriner")))
+            val both = FakeMusicBrainz(nothing).apply { searchesBy[asmf] = Lookup.Found(listOf(other, own)) }
+            assertEquals("own", resolve(both, orchestral).recordingMbid)
+            assertEquals(listOf(symphony to asmf), both.searched)
+            val otherOnly = FakeMusicBrainz(nothing).apply { searchesBy[asmf] = Lookup.Found(listOf(other)) }
+            assertNull(resolve(otherOnly, orchestral).recordingMbid)
+        }
+
+    @Test
+    fun `a recording crediting the soloist with the orchestra the player credits is the track's`() =
+        runTest {
+            val withOrchestra =
+                performed.copy(
+                    credits = listOf(credit("Khatia Buniatishvili"), credit("Academy of St Martin in the Fields")),
+                )
+            val musicBrainz =
+                FakeMusicBrainz(nothing).apply {
+                    searchesBy["Khatia Buniatishvili"] = Lookup.Found(listOf(withOrchestra))
+                }
+            assertEquals("e0a505da", resolve(musicBrainz, classical, 457).recordingMbid)
         }
 }
