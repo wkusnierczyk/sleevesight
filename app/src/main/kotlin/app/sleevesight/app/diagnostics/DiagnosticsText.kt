@@ -1,6 +1,7 @@
 package app.sleevesight.app.diagnostics
 
 import app.sleevesight.core.pipeline.EventLine
+import app.sleevesight.core.text.SourceText
 import app.sleevesight.store.CacheStats
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.TableStats
@@ -125,7 +126,10 @@ internal object DiagnosticsText {
     /** Said when skip detection has learned nothing yet. */
     const val NOTHING_LEARNED = "Nothing learned yet."
 
-    private fun track(ref: TrackRef): String = "\"${ref.title}\"" + ref.mediaId?.let { " ($it)" }.orEmpty()
+    // A track's title as the history holds it, cleaned ([SourceText], #1041): a row written before the
+    // player's fields were cleaned may still hold invisible characters.
+    private fun track(ref: TrackRef): String =
+        "\"${SourceText.clean(ref.title)}\"" + ref.mediaId?.let { " ($it)" }.orEmpty()
 
     private fun ms(duration: Duration?): String = duration?.let { "${it.inWholeMilliseconds} ms" } ?: "-"
 }

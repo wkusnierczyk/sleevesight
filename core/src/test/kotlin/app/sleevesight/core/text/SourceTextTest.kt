@@ -92,24 +92,24 @@ class SourceTextTest {
     }
 
     @Test
-    fun `the format characters Unicode added after Android 12's version are dropped too`() {
-        for (range in SourceText.LATER_FORMATS) {
+    fun `every format character in the table is dropped, whatever the platform's Unicode data says`() {
+        for (range in SourceText.FORMATS) {
             for (point in range) {
                 val character = String(Character.toChars(point))
-                assertEquals(Character.FORMAT.toInt(), Character.getType(point), name(point))
                 assertEquals("ab", SourceText.clean("a${character}b"), name(point))
             }
         }
+        // Unassigned on an older Android: a hieroglyph format control, a Kaithi number sign.
+        assertEquals("ab", SourceText.clean("a${String(Character.toChars(0x13430))}b"))
+        assertEquals("ab", SourceText.clean("a${String(Character.toChars(0x110CD))}b"))
     }
 
     @Test
-    fun `every format character the JVM knows is one of Unicode 13's or listed as later`() {
-        val known = UNICODE_13_FORMATS + SourceText.LATER_FORMATS
-        val unlisted =
-            (0..Character.MAX_CODE_POINT).filter { point ->
-                Character.getType(point) == Character.FORMAT.toInt() && known.none { point in it }
-            }
-        assertEquals(emptyList(), unlisted.map { name(it) }, "add them to SourceText.LATER_FORMATS")
+    fun `the table is every format character the JVM knows, and nothing else`() {
+        val jvm = (0..Character.MAX_CODE_POINT).filter { Character.getType(it) == Character.FORMAT.toInt() }
+        val table = SourceText.FORMATS.flatMap { it.toList() }
+        assertEquals(emptyList(), (jvm - table.toSet()).map(::name), "add them to SourceText.FORMATS")
+        assertEquals(emptyList(), (table - jvm.toSet()).map(::name), "not format characters by the JVM")
     }
 
     // [point] as Unicode names a code point: `U+0890`.
@@ -122,30 +122,5 @@ class SourceTextTest {
     private companion object {
         const val TAG_BASE = 0xE0000
         const val HEX = 16
-
-        // Unicode 13's format characters (Cf), which Android 12, the oldest the app runs on, knows.
-        val UNICODE_13_FORMATS: List<IntRange> =
-            listOf(
-                0x00AD..0x00AD,
-                0x0600..0x0605,
-                0x061C..0x061C,
-                0x06DD..0x06DD,
-                0x070F..0x070F,
-                0x08E2..0x08E2,
-                0x180E..0x180E,
-                0x200B..0x200F,
-                0x202A..0x202E,
-                0x2060..0x2064,
-                0x2066..0x206F,
-                0xFEFF..0xFEFF,
-                0xFFF9..0xFFFB,
-                0x110BD..0x110BD,
-                0x110CD..0x110CD,
-                0x13430..0x13438,
-                0x1BCA0..0x1BCA3,
-                0x1D173..0x1D17A,
-                0xE0001..0xE0001,
-                0xE0020..0xE007F,
-            )
     }
 }

@@ -319,6 +319,9 @@ class SessionMappingTest {
         // what the cleaning dropped.
         val within = "t".repeat(SessionMapping.TITLE_MAX)
         assertEquals(within, playing(metadata(title = within + hidden))?.title)
+        // A joiner the cut leaves at the end, with nothing after it to join, is dropped too.
+        val joined = "a".repeat(SessionMapping.TITLE_MAX - 2) + "\u0645\u200D\u06CC"
+        assertEquals("a".repeat(SessionMapping.TITLE_MAX - 2) + "\u0645", playing(metadata(title = joined))?.title)
         val notes = "x" + "\uD83C\uDFB6".repeat(SessionMapping.TITLE_MAX)
         assertEquals(notes.take(SessionMapping.TITLE_MAX - 1), playing(metadata(title = notes))?.title)
     }

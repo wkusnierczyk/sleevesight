@@ -18,9 +18,9 @@ package app.sleevesight.core.text
  *   person checking it cannot find. The joiners U+200C and U+200D stay where writing needs them: one
  *   alone between two characters that are neither ASCII nor space nor format characters (an emoji
  *   sequence, Persian's non-joiner, a conjunct in an Indic script). A joiner beside ASCII, or in a run,
- *   is dropped. A format character is one by the platform's Unicode data or one of [LATER_FORMATS],
- *   those Unicode added after the oldest Android the app runs on knows (Android 12, Unicode 13), so the
- *   phone drops what the JVM drops.
+ *   is dropped. Which characters are format characters is the app's own table ([FORMATS]), not the
+ *   platform's Unicode data: an older Android (the app runs from Android 8) knows fewer of them, so
+ *   the phone drops what the JVM drops.
  *
  * No regex: a scan by code point, the same on the JVM and on Android.
  */
@@ -62,21 +62,25 @@ object SourceText {
         following: Int,
     ): Boolean = !isFormat(point) || (point in JOINERS && joins(previous) && joins(following))
 
-    private fun isFormat(point: Int): Boolean =
-        Character.getType(point) == Character.FORMAT.toInt() || LATER_FORMATS.any { point in it }
+    private fun isFormat(point: Int): Boolean = point >= FIRST_FORMAT && FORMATS.any { point in it }
 
     /**
-     * The format characters Unicode added after version 13, the oldest Android the app runs on
-     * (Android 12): U+0890 and U+0891, Arabic pound and piastre marks above (14.0), and U+13439 to
-     * U+1343F, Egyptian hieroglyph format controls (15.0). None came in 15.1.
+     * Every format character (category `Cf`) of Unicode 15.1, by code point: the table the app reads
+     * instead of the platform's Unicode data, which on an older Android leaves some of them
+     * unassigned (U+110CD, U+13430 to U+1343F). A test checks it against the JVM's data, so a newer
+     * Unicode's additions are listed here as the build's JDK learns them.
      */
-    internal val LATER_FORMATS: List<IntRange> =
-        listOf(ARABIC_POUND_MARK..ARABIC_PIASTRE_MARK, HIEROGLYPH_FORMATS_15_FIRST..HIEROGLYPH_FORMATS_15_LAST)
+    internal val FORMATS: List<IntRange> =
+        (
+            "00AD 0600-0605 061C 06DD 070F 0890-0891 08E2 180E 200B-200F 202A-202E 2060-2064 2066-206F " +
+                "FEFF FFF9-FFFB 110BD 110CD 13430-1343F 1BCA0-1BCA3 1D173-1D17A E0001 E0020-E007F"
+        ).split(' ').map { range ->
+            val (first, last) = range.split('-').let { it.first() to it.last() }
+            first.toInt(HEX)..last.toInt(HEX)
+        }
 
-    private const val ARABIC_POUND_MARK = 0x0890
-    private const val ARABIC_PIASTRE_MARK = 0x0891
-    private const val HIEROGLYPH_FORMATS_15_FIRST = 0x13439
-    private const val HIEROGLYPH_FORMATS_15_LAST = 0x1343F
+    private val FIRST_FORMAT = FORMATS.first().first
+    private const val HEX = 16
 
     // Whether a joiner beside [point] may join: a character there, not ASCII, not space, not a format character.
     private fun joins(point: Int): Boolean =

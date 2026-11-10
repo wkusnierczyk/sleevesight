@@ -294,18 +294,20 @@ private fun MediaMetadata.field(
 ): String? = field(getString(key), max)
 
 // [text] cleaned ([SourceText]) and cut to at most [max] characters, never inside a surrogate pair,
-// then trimmed; null when nothing is left.
+// then trimmed and cleaned again, since the cut can leave a joiner at the end with nothing to join;
+// null when nothing is left.
 private fun field(
     text: String?,
     max: Int,
 ): String? {
     text ?: return null
-    return SourceText
-        .clean(text)
-        .trim()
-        .capped(max)
-        .trim()
-        .takeIf { it.isNotEmpty() }
+    val cut =
+        SourceText
+            .clean(text)
+            .trim()
+            .capped(max)
+            .trim()
+    return SourceText.clean(cut).trim().takeIf { it.isNotEmpty() }
 }
 
 private fun String.capped(max: Int): String {
