@@ -141,11 +141,40 @@ class RecordingComposedWorkTest {
         }
 
     @Test
-    fun `a song's writer credited on the track but not on the recording - a song still covered by date`() =
+    fun `a song with no lead and no song cycle, its writer credited on the track only - still covered by date`() =
         runTest {
-            // A work typed `Song` is no composed work, whoever the track credits: a songwriter the player
-            // names beside the singer does not take the cover away.
+            // A `Song` is composed only with the title's lead or as part of a song cycle: a songwriter the
+            // player names beside the singer, with neither, does not take the cover away.
             val resolution = resolve(musicBrainz(work(type = "Song")), track("Andante", "Pianist, Composer"))
+            assertTrue(resolution.cover)
+            assertEquals("first", resolution.original?.recordingMbid)
+        }
+
+    @Test
+    fun `a song of a song cycle - no cover, no original`() =
+        runTest {
+            // A Lied of *Winterreise*: MusicBrainz types the part `Song`, its cycle `Song-cycle`.
+            val cycle = MbParentWork("winterreise", "Winterreise", "Song-cycle")
+            val resolution =
+                resolve(musicBrainz(work(type = "Song", parents = listOf(cycle))), track("Andante", "Pianist"))
+            assertFalse(resolution.cover)
+            assertNull(resolution.original)
+        }
+
+    @Test
+    fun `a song whose title leads with its composer, not on the recording - no cover, no original`() =
+        runTest {
+            // `Schubert: Gute Nacht` by Schubert and the singer: the title names the work's composer.
+            val resolution = resolve(musicBrainz(work(type = "Song")), track("Composer: Andante", "Composer, Pianist"))
+            assertFalse(resolution.cover)
+            assertNull(resolution.original)
+        }
+
+    @Test
+    fun `a title lead naming someone other than the work's composer does not make the work composed`() =
+        runTest {
+            val musicBrainz = musicBrainz(work())
+            val resolution = resolve(musicBrainz, track("Other: Andante", "Other, Pianist"))
             assertTrue(resolution.cover)
             assertEquals("first", resolution.original?.recordingMbid)
         }

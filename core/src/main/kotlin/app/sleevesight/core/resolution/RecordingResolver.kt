@@ -738,12 +738,16 @@ class RecordingResolver(
 }
 
 // Whether [work] is a composed work rather than a song (#1178), from what the answers hold already.
-// A type of its own decides: a classical form ([RecordingResolver.COMPOSED_FORMS]) is composed, any
-// other (`Song`) is not, whoever the track credits. With no type, which is no sign of a classical work:
-// a parent's of a classical form (a movement's sonata), or its composer the one the title leads with
-// ([NormalizedTrack.composer], `Mozart: …`, a credited artist, #1129) and not credited on the recording
-// ([recording]'s credit, or [ours], the ids the track's artists resolved to). A songwriter the player
-// merely credits beside the singer of a pop song or a standard keeps the cover.
+// The lead: its composer is the one the title leads with ([NormalizedTrack.composer], `Mozart: …`, a
+// credited artist, #1129) and is not credited on the recording ([recording]'s credit, or [ours], the
+// ids the track's artists resolved to).
+// - A type of its own of a classical form ([RecordingResolver.COMPOSED_FORMS]): composed.
+// - `Song`: composed with the lead, or as part of a song cycle (a Lied of *Winterreise*); a song of a
+//   rock opera, or with no lead, stays a song.
+// - Any other type of its own: not composed.
+// - No type, which is no sign of a classical work: composed with the lead, or as part of a work of a
+//   classical form (a movement's sonata).
+// A songwriter the player merely credits beside the singer of a pop song or a standard keeps the cover.
 private fun composed(
     names: NameMatcher,
     track: NormalizedTrack,
@@ -751,17 +755,36 @@ private fun composed(
     work: MbWork,
     ours: Set<String>,
 ): Boolean {
-    work.type?.let { return it.lowercase() in RecordingResolver.COMPOSED_FORMS }
+    val type = work.type?.lowercase()
+    val parents = work.parents.mapNotNull { it.type?.lowercase() }
+    val byLead = composedByLead(names, track, recording, work, ours)
+    return when (type) {
+        in RecordingResolver.COMPOSED_FORMS -> true
+        SONG -> byLead || SONG_CYCLE in parents
+        null -> byLead || parents.any { it in RecordingResolver.COMPOSED_FORMS }
+        else -> false
+    }
+}
+
+private const val SONG = "song"
+
+private const val SONG_CYCLE = "song-cycle"
+
+// Whether [work]'s composer is the one [track]'s title leads with, and not credited on [recording] (#1178).
+private fun composedByLead(
+    names: NameMatcher,
+    track: NormalizedTrack,
+    recording: MbRecording,
+    work: MbWork,
+    ours: Set<String>,
+): Boolean {
     val onRecording = ours + recording.credits.map { it.artistMbid }
-    val lead = track.composer?.name
-    val composer =
-        lead != null &&
-            work.artistRelations.any { relation ->
-                relation.type == "composer" &&
-                    relation.artistMbid !in onRecording &&
-                    names.sameName(relation.artistName, lead)
-            }
-    return composer || work.parents.any { it.type?.lowercase() in RecordingResolver.COMPOSED_FORMS }
+    val lead = track.composer?.name ?: return false
+    return work.artistRelations.any { relation ->
+        relation.type == "composer" &&
+            relation.artistMbid !in onRecording &&
+            names.sameName(relation.artistName, lead)
+    }
 }
 
 // What MusicBrainz says of the lyrics (#728): the lyrics pages of the work [lookup] found (only the
