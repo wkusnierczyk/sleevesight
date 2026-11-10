@@ -12,6 +12,7 @@ import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InLanguageState
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.ItemLines
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.SourceState
@@ -156,6 +157,14 @@ internal class World {
      */
     var evidenceText = "Evidence 1."
 
+    /**
+     * The runs started taking the song's, the artist's or the album's lines (#1131), by title, and
+     * what they took: such a run finds something to narrate.
+     */
+    val tookItems = mutableListOf<String>()
+    val itemsTaken = mutableListOf<List<EvidenceDraft>>()
+    private val withItems = HashMap<RunId, ItemLines>()
+
     /** The runs started to look again (#617), by title, and what the run before them gathered. */
     val lookedAgain = mutableListOf<String>()
     val lookedAgainBefore = mutableListOf<Gathered>()
@@ -246,6 +255,11 @@ internal class World {
         effect.again?.let {
             askedAgain += effect.nowPlaying.title
             carried += it
+        }
+        if (effect.items.lines.isNotEmpty()) {
+            withItems[effect.run] = effect.items
+            tookItems += effect.nowPlaying.title
+            itemsTaken += effect.items.lines
         }
         effect.lookAgain?.let {
             lookedAgain += effect.nowPlaying.title
@@ -345,7 +359,8 @@ internal class World {
                     return
                 }
                 // The card is reported before the call's end; neither, for a call cut off.
-                schedule(streamMs, CoordinatorEvent.CardWritten(run, card("$title #${calls[title]}")), run, call)
+                val written = card("$title #${calls[title]}", withItems[run] ?: ItemLines())
+                schedule(streamMs, CoordinatorEvent.CardWritten(run, written), run, call)
                 schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run, call)
                 // Kept once it ends normally; a call cut off is not (`deliver` drops its end).
                 if (cache) pendingCards[run] = (keys.getValue(run) to service) to "$title #${calls[title]}"
@@ -404,7 +419,7 @@ internal class World {
             sources(
                 unreachable,
             ).let { if (inLanguage) it.copy(inLanguage = language(languageUnreachable)) else it }
-        val finds = finds(unreachable, languageUnreachable)
+        val finds = finds(unreachable, languageUnreachable) || run in withItems.keys
         schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources), run)
         schedule(delayMs, CoordinatorEvent.EvidenceAssembled(run, evidence()), run)
         val insight =
@@ -499,8 +514,14 @@ internal class World {
 
     fun offersWriteFor(title: String) = coordinator.state.offersWrite(key(title))
 
-    fun card(text: String) =
-        Card(InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false), evidence())
+    fun card(
+        text: String,
+        items: ItemLines = ItemLines(),
+    ) = Card(
+        InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false),
+        evidence(),
+        items,
+    )
 
     /** The evidence the sources find now ([evidenceText]). */
     fun evidence(): EvidenceSet = EvidenceSet.of(listOf(line(SourceId.WEB).copy(text = evidenceText)), JvmHasher)
@@ -636,5 +657,19 @@ internal fun checkAll(cases: List<Case>) {
 internal fun World.network(online: Boolean) {
     offline = !online
     send(CoordinatorEvent.NetworkChanged(online))
+    advance(0)
+}
+
+/**
+ * The song's, the artist's and the album's evidence of [title] found to hold lines beyond its own, one
+ * for each of [texts], none for none (#1131), as the host tells it.
+ */
+internal fun World.itemLines(
+    title: String,
+    vararg texts: String,
+) {
+    val lines =
+        texts.map { EvidenceDraft(SourceId.WEB, Scope.SONG, it, null, Instant.parse("2026-11-10T12:00:00Z")) }
+    send(CoordinatorEvent.ItemLinesFound(key(title), ItemLines(lines)))
     advance(0)
 }
