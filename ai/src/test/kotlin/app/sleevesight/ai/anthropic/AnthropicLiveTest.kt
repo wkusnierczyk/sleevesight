@@ -33,7 +33,7 @@ class AnthropicLiveTest {
         // Real time and a real network: not `runTest`, whose virtual clock would skip the timeouts.
         runBlocking {
             NetClient(config).use { net ->
-                val provider = AnthropicProvider(net, config.retry)
+                val provider = AnthropicProvider(net)
                 val models = assertIs<ModelList.Listed>(provider.models(secret)).models
                 val listed = models.firstOrNull { it.id == model }
                 assertTrue(listed != null, "the default model $model is not listed")

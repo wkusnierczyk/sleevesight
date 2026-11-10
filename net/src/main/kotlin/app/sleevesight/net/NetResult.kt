@@ -33,12 +33,31 @@ sealed interface NetError {
          */
         val timedOut: Boolean get() = reason in TIMEOUT_REASONS
 
+        /**
+         * Whether it was the timeout to connect (#1164): the request never reached the host, unlike a
+         * timeout after it was sent, which the host may have acted on.
+         */
+        val connectTimedOut: Boolean get() = reason == CONNECT_TIMEOUT
+
+        /**
+         * Whether the phone had no network to send on (#1164): the host's name could not be resolved
+         * (`UnknownHostException`, which Android throws for every name while it has no network), or
+         * the system said the network was down or out of reach (`ENETUNREACH`, `ENETDOWN`, `ENONET`),
+         * as it does for a connection tried with none. Any other failure (a connection reset,
+         * refused or closed, a TLS failure, a stream cut short) came on a network that was there.
+         */
+        val noNetwork: Boolean get() = reason.startsWith(UNKNOWN_HOST) || NO_NETWORK_ERRNOS.any { "($it)" in reason }
+
         companion object {
             /**
              * The [reason] of a body the engine ended cleanly under the reader, as it does when the
              * call is cancelled under it: a connection lost, or the whole request's timeout.
              */
             const val CANCELLED_BODY: String = "CancelledBody"
+
+            private const val UNKNOWN_HOST = "UnknownHostException"
+
+            private val NO_NETWORK_ERRNOS = listOf("ENETUNREACH", "ENETDOWN", "ENONET")
         }
     }
 
@@ -56,10 +75,18 @@ sealed interface NetError {
         val status: Int,
     ) : NetError
 
-    /** A 5xx, still there after the retries. */
+    /**
+     * A 5xx, still there after the retries. [retryAfter] is the wait its `Retry-After` asked for, when
+     * it gave one: a service that answers 503 when overloaded says so (#1164), and the AI calls'
+     * retry (`AiRetry`) waits it out.
+     */
     data class Server(
         val status: Int,
-    ) : NetError
+        val retryAfter: Duration? = null,
+    ) : NetError {
+        // As it read before the wait was kept: the log's lines say the wait as "retrying in" already.
+        override fun toString(): String = "Server(status=$status)"
+    }
 
     /** The response arrived but could not be read as the caller expected. [reason] is the exception's type. */
     data class Parse(

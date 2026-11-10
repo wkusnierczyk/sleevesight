@@ -1,7 +1,10 @@
 package app.sleevesight.ai.openai
 
+import app.sleevesight.ai.UNREADABLE_EVENT
 import app.sleevesight.ai.brokeOff
+import app.sleevesight.ai.codeDetail
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.failedWith
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
@@ -58,7 +61,7 @@ internal class ResponseStream(
 
             event == null -> {
                 malformed = true
-                listOf(end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE)))
+                listOf(end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE, detail = UNREADABLE_EVENT)))
             }
 
             event.type == "response.output_item.done" -> {
@@ -124,7 +127,7 @@ internal class ResponseStream(
                 if (code in POLICY_CODES) {
                     end(REFUSED)
                 } else {
-                    end(CompletionEvent.Error(code?.let(::kindOfCode) ?: AiErrorKind.SERVER))
+                    end(CompletionEvent.Error(code?.let(::kindOfCode) ?: AiErrorKind.SERVER, detail = codeDetail(code)))
                 }
             }
 
@@ -154,9 +157,9 @@ internal class ResponseStream(
     // A connection lost or cut short after the response began leaves an incomplete reply.
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
-            error is NetError.RateLimited -> CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter)
+            error is NetError.RateLimited -> failedWith(error, AiErrorKind.RATE_LIMITED)
             started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, NO_USAGE)
-            else -> CompletionEvent.Error(kindOf(error))
+            else -> failedWith(error, kindOf(error))
         }
 
     private fun end(event: CompletionEvent): CompletionEvent {
@@ -181,6 +184,7 @@ internal class ResponseStream(
         } else {
             CompletionEvent.Error(
                 error?.code?.let(::kindOfCode) ?: error?.type?.let(::kindOfType) ?: AiErrorKind.SERVER,
+                detail = codeDetail(error?.code ?: error?.type),
             )
         }
     }

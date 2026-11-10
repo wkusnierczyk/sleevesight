@@ -4,6 +4,7 @@ import app.sleevesight.ai.ReplayNetClient
 import app.sleevesight.ai.ReplayNetClient.Companion.failure
 import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
+import app.sleevesight.ai.withoutDetail
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
@@ -21,13 +22,9 @@ import app.sleevesight.net.NetMethod
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
-import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -56,7 +53,7 @@ class GoogleProviderTest {
         }
 
     /** A provider whose clock stands at [NOW]. */
-    private fun provider(net: NetClient) = GoogleProvider(net, RetryPolicy(), clock = clock)
+    private fun provider(net: NetClient) = GoogleProvider(net, clock = clock)
 
     /** A response with [status], [body] and [headers]. */
     private fun response(
@@ -89,7 +86,7 @@ class GoogleProviderTest {
         answer: (NetRequest) -> NetResult<NetResponse>,
     ): Pair<List<CompletionEvent>, ReplayNetClient> {
         val net = ReplayNetClient(answer)
-        return provider(net).stream(request, key).toList() to net
+        return provider(net).stream(request, key).toList().withoutDetail() to net
     }
 
     @Test
@@ -352,6 +349,28 @@ class GoogleProviderTest {
         }
 
     @Test
+    fun `a failure names what failed, for the diagnostics, and never the service's message`() =
+        runTest {
+            // Fresh for each case, as the client's stream is read once.
+            suspend fun detail(answer: () -> NetResult<NetResponse>): String? =
+                (provider(ReplayNetClient { answer() }).stream(request, key).toList().last() as CompletionEvent.Error)
+                    .detail
+            assertEquals(
+                "SocketException (ECONNRESET)",
+                detail { failure(NetError.Offline("SocketException (ECONNRESET)")) },
+            )
+            assertEquals("UnknownHostException", detail { failure(NetError.Offline("UnknownHostException")) })
+            assertEquals("HTTP 503", detail { failure(NetError.Server(503)) })
+            assertEquals("HTTP 500", detail { response(500, """{"error":{"code":500,"status":"INTERNAL"}}""") })
+            val inStream =
+                detail {
+                    ok(sse(chunk("Half"), """{"error":{"code":503,"message":"Busy at x.y","status":"UNAVAILABLE"}}"""))
+                }
+            assertEquals("error in the stream: UNAVAILABLE", inStream)
+            assertEquals("unreadable event", detail { ok(sse("not json")) })
+        }
+
+    @Test
     fun `a stream that ends before a finish reason is incomplete, as having no end`() =
         runTest {
             val (events, _) = events { ok(sse(chunk("Half"))) }
@@ -377,7 +396,16 @@ class GoogleProviderTest {
                     NetError.Server(503) to CompletionEvent.Error(AiErrorKind.OVERLOADED),
                     NetError.Server(500) to CompletionEvent.Error(AiErrorKind.SERVER),
                     NetError.Server(504) to CompletionEvent.Error(AiErrorKind.SERVER),
-                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    // No network to send on is "no connection" (#1164); a connection that failed on a
+                    // network that was there, or a timeout, is not.
+                    NetError.Offline("UnknownHostException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("ConnectException (ENETUNREACH)") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SocketException (ECONNRESET)") to
+                        CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SSLException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
+                    NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),
                     NetError.Protocol("ProtocolException") to CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE),
                 )
@@ -593,56 +621,22 @@ class GoogleProviderTest {
                 "You exceeded your current quota.",
                 "Spend-based rate limit exceeded per 10 minutes.",
             )) {
-                val (limited, twice) = events { exhausted(message) }
+                val (limited, sent) = events { exhausted(message) }
                 assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), limited, message)
-                assertEquals(2, twice.requests.size, message)
+                // Not sent again by the client: the pipeline's `AiRetry` asks again (#1164).
+                assertEquals(1, sent.requests.size, message)
             }
         }
 
     @Test
-    fun `a rate limit within the cap is sent once more after its RetryInfo or Retry-After`() =
+    fun `a rate limit is not sent again by the client, and ends at once with the wait it asks for`() =
         runTest {
-            val cases =
-                listOf(
-                    response(429, exhausted("GenerateRequestsPerMinutePerProjectPerModel", "1.5s")) to 1_500L,
-                    response(429, exhausted(null), mapOf("Retry-After" to listOf("3"))) to 3_000L,
-                    response(429, exhausted(null)) to RetryPolicy().delayAfter(1).inWholeMilliseconds,
-                )
-            for ((limited, wait) in cases) {
-                var calls = 0
-                val started = currentTime
-                val (events, net) =
-                    events {
-                        calls++
-                        if (calls == 1) limited else ok(recorded(stream))
-                    }
-                assertEquals(RECORDED_TEXT, text(events))
-                assertIs<CompletionEvent.Done>(events.last())
-                assertEquals(2, net.requests.size)
-                assertEquals(net.requests[0].body!!.text, net.requests[1].body!!.text)
-                assertEquals(wait, currentTime - started)
-            }
-        }
-
-    @Test
-    fun `a rate limit is sent again once only, and a cancel during its wait sends nothing more`() =
-        runTest {
-            val limited = response(429, exhausted("GenerateRequestsPerMinutePerProjectPerModel", "2s"))
-            val (again, twice) = events { limited }
-            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 2.seconds)), again)
-            assertEquals(2, twice.requests.size)
-
-            val net = ReplayNetClient { response(429, exhausted(null, "5s")) }
-            val collecting = launch { provider(net).stream(request, key).toList() }
-            advanceTimeBy(1_000)
-            runCurrent()
+            // The pipeline's `AiRetry` asks again (#1164): the client sends one request only.
+            val started = currentTime
+            val (events, net) = events { response(429, exhausted("GenerateRequestsPerMinutePerProjectPerModel", "3s")) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 3.seconds)), events)
             assertEquals(1, net.requests.size)
-            assertTrue(collecting.isActive)
-            collecting.cancel()
-            advanceTimeBy(10_000)
-            runCurrent()
-            assertTrue(collecting.isCompleted)
-            assertEquals(1, net.requests.size)
+            assertEquals(started, currentTime)
         }
 
     @Test

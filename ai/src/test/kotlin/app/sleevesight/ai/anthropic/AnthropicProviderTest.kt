@@ -4,6 +4,7 @@ import app.sleevesight.ai.ReplayNetClient
 import app.sleevesight.ai.ReplayNetClient.Companion.failure
 import app.sleevesight.ai.ReplayNetClient.Companion.ok
 import app.sleevesight.ai.ReplayNetClient.Companion.recorded
+import app.sleevesight.ai.withoutDetail
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.Breakoff
@@ -21,13 +22,9 @@ import app.sleevesight.net.NetMethod
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
-import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -53,11 +50,11 @@ class AnthropicProviderTest {
         answer: (NetRequest) -> NetResult<NetResponse>,
     ): Pair<List<CompletionEvent>, ReplayNetClient> {
         val net = ReplayNetClient(answer)
-        return provider(net).stream(request, key).toList() to net
+        return provider(net).stream(request, key).toList().withoutDetail() to net
     }
 
     /** A provider whose clock stands at [NOW]. */
-    private fun provider(net: NetClient) = AnthropicProvider(net, RetryPolicy(), clock = clock)
+    private fun provider(net: NetClient) = AnthropicProvider(net, clock = clock)
 
     private val clock =
         object : Clock {
@@ -375,7 +372,16 @@ class AnthropicProviderTest {
                     NetError.RateLimited(30.seconds) to CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 30.seconds),
                     NetError.Server(529) to CompletionEvent.Error(AiErrorKind.OVERLOADED),
                     NetError.Server(500) to CompletionEvent.Error(AiErrorKind.SERVER),
-                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    // No network to send on is "no connection" (#1164); a connection that failed on a
+                    // network that was there, or a timeout, is not.
+                    NetError.Offline("UnknownHostException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("ConnectException (ENETUNREACH)") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SocketException (ECONNRESET)") to
+                        CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("SSLException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
+                    NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),
                     NetError.Protocol("ProtocolException") to CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE),
                 )
@@ -484,56 +490,14 @@ class AnthropicProviderTest {
         }
 
     @Test
-    fun `a rate limit within the cap is sent once more after its retry-after, a date included`() =
+    fun `a rate limit is not sent again by the client, and ends at once with the wait it asks for`() =
         runTest {
-            for ((retryAfter, wait) in listOf("3" to 3.seconds, "Wed, 21 Oct 2026 12:00:07 GMT" to 7.seconds)) {
-                val limited = response(429, rateLimit, mapOf("retry-after" to listOf(retryAfter)))
-                var calls = 0
-                val started = currentTime
-                val (events, net) =
-                    events {
-                        calls++
-                        if (calls == 1) limited else ok(recorded("anthropic/messages-stream.sse"))
-                    }
-                assertIs<CompletionEvent.Done>(events.last(), retryAfter)
-                assertEquals(2, net.requests.size)
-                assertEquals(net.requests[0].body!!.text, net.requests[1].body!!.text)
-                assertEquals(wait.inWholeMilliseconds, currentTime - started, retryAfter)
-            }
-        }
-
-    @Test
-    fun `a rate limit is sent again once only, and not at all past the cap or on another status`() =
-        runTest {
-            val (again, twice) = events { response(429, rateLimit) }
-            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), again)
-            assertEquals(2, twice.requests.size)
-
-            val (late, once) = events { response(429, rateLimit, mapOf("retry-after" to listOf("60"))) }
-            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 60.seconds)), late)
-            assertEquals(1, once.requests.size)
-
-            // A rate limit's type on another status: not a refusal before it was acted on.
-            val (other, alone) = events { response(400, rateLimit) }
-            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), other)
-            assertEquals(1, alone.requests.size)
-        }
-
-    @Test
-    fun `a cancel while a rate limit is waited out sends nothing more`() =
-        runTest {
-            val net = ReplayNetClient { response(429, rateLimit, mapOf("retry-after" to listOf("5"))) }
-            val collecting = launch { provider(net).stream(request, key).toList() }
-            advanceTimeBy(1_000)
-            runCurrent()
+            // The pipeline's `AiRetry` asks again (#1164): the client sends one request only.
+            val started = currentTime
+            val (events, net) = events { response(429, rateLimit, mapOf("retry-after" to listOf("3"))) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 3.seconds)), events)
             assertEquals(1, net.requests.size)
-            // Still waiting out the `retry-after`, not ended.
-            assertTrue(collecting.isActive)
-            collecting.cancel()
-            advanceTimeBy(10_000)
-            runCurrent()
-            assertTrue(collecting.isCompleted)
-            assertEquals(1, net.requests.size)
+            assertEquals(started, currentTime)
         }
 
     @Test
@@ -571,11 +535,18 @@ class AnthropicProviderTest {
         }
 
     @Test
-    fun `the connection lost before the message began is offline, not a reply that broke off`() =
+    fun `the connection lost before the message began is no reply that broke off, and names what failed`() =
         runTest {
-            val net = cutNet(end = NetError.Offline("SocketTimeoutException"))
-            val events = provider(net).stream(request, key).toList()
-            assertEquals(listOf(CompletionEvent.Error(AiErrorKind.OFFLINE)), events)
+            val timedOut = provider(cutNet(end = NetError.Offline("SocketTimeoutException"))).stream(request, key)
+            assertEquals(
+                listOf(CompletionEvent.Error(AiErrorKind.TIMED_OUT, detail = "SocketTimeoutException")),
+                timedOut.toList(),
+            )
+            val reset = provider(cutNet(end = NetError.Offline("SocketException (ECONNRESET)"))).stream(request, key)
+            assertEquals(
+                listOf(CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED, detail = "SocketException (ECONNRESET)")),
+                reset.toList(),
+            )
         }
 
     // A stream of [events] that ends with [end], a failure, or as a 200 whose body simply ended when null.

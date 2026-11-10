@@ -6,7 +6,9 @@ import app.sleevesight.app.ui.phoneDateForm
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.AiRetry
 import app.sleevesight.core.pipeline.PipelineCache
+import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.SessionFacts
 import app.sleevesight.core.platform.JvmHasher
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import java.util.Locale
+import kotlin.time.Duration
 
 /**
  * The pipeline's stages in the app, for [PipelineHost]: the adapters, the resolver, MusicBrainz's
@@ -41,14 +44,19 @@ import java.util.Locale
  * about the artist and the album is kept by [PipelineWiring.languageLines], one for the process (#939).
  * The prompts ask for dates in the phone's form ([phoneDateForm], #957), as *Dates* writes them:
  * [phone]'s language and region, read as each prompt is built, so a change of either reaches the
- * next one.
+ * next one. Each call through the client is asked again when it fails for a while only, for up to
+ * [aiRetry] (*Retry when the AI fails*, #1164, [AiRetry]; none unless given: the app gives the
+ * setting, as last read), and each try that failed is told to [aiTried], for the diagnostics.
  */
+@Suppress("LongParameterList") // The wiring, the shared parts, and what the app sets apart from the tests.
 class AppPipelineParts(
     private val wiring: PipelineWiring,
     private val normalizer: Normalizer,
     private val sessionFacts: SessionFacts = SessionFacts.None,
     private val models: ModelCheck? = null,
     private val phone: () -> Locale = Locale::getDefault,
+    private val aiRetry: () -> Duration = { Duration.ZERO },
+    private val aiTried: (PipelineEvent) -> Unit = {},
     private val cache: () -> PipelineCache,
 ) : (PipelineKeys, Settings) -> PipelineParts {
     override fun invoke(
@@ -66,7 +74,9 @@ class AppPipelineParts(
                 settings.aiProvider
                     ?.takeUnless { blocked }
                     ?.let { wiring.aiProviders[it] }
-                    ?.let { p -> keys.ai?.let { AiAccess(models?.watching(p) ?: p, it) } },
+                    ?.let { p ->
+                        keys.ai?.let { AiAccess(AiRetry(models?.watching(p) ?: p, aiRetry, ended = aiTried), it) }
+                    },
             cache = cache(),
             musicBrainzLabels = wiring.musicBrainzLabels,
             lastFmLabels = keys.sources.lastFm?.let(wiring::lastFmLabels),

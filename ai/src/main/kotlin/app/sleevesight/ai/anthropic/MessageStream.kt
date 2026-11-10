@@ -1,7 +1,10 @@
 package app.sleevesight.ai.anthropic
 
+import app.sleevesight.ai.UNREADABLE_EVENT
 import app.sleevesight.ai.brokeOff
+import app.sleevesight.ai.codeDetail
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.failedWith
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason
@@ -59,7 +62,7 @@ internal class MessageStream(
 
             event == null -> {
                 malformed = true
-                listOf(end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE)))
+                listOf(end(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE, detail = UNREADABLE_EVENT)))
             }
 
             event.type == "message_stop" -> {
@@ -115,7 +118,8 @@ internal class MessageStream(
             }
 
             "error" -> {
-                end(CompletionEvent.Error(event.error?.let(::kindOf) ?: AiErrorKind.SERVER))
+                val kind = event.error?.let(::kindOf) ?: AiErrorKind.SERVER
+                end(CompletionEvent.Error(kind, detail = codeDetail(event.error?.type)))
             }
 
             else -> {
@@ -141,9 +145,9 @@ internal class MessageStream(
     // A connection lost or cut short after the message began leaves an incomplete reply.
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
-            error is NetError.RateLimited -> CompletionEvent.Error(AiErrorKind.RATE_LIMITED, error.retryAfter)
+            error is NetError.RateLimited -> failedWith(error, AiErrorKind.RATE_LIMITED)
             started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, usage())
-            else -> CompletionEvent.Error(kindOf(error))
+            else -> failedWith(error, kindOf(error))
         }
 
     private fun usage() = Usage(inputTokens, outputTokens)
