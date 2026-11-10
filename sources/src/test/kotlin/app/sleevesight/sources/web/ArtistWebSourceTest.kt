@@ -12,6 +12,7 @@ import app.sleevesight.core.sources.ArtistWebQuery
 import app.sleevesight.core.sources.KeptPart
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.testing.MemoryArtistResults
+import app.sleevesight.sources.KeptDrafts
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
@@ -71,6 +72,32 @@ class ArtistWebSourceTest {
             // With no id, by the name folded.
             source.search(ArtistWebQuery("Shashwat  SACHDEV", null))
             assertTrue("name:shashwat sachdev" in kept.keys(ArtistWebSource.PART))
+        }
+
+    @Test
+    fun `lines kept before Exa's references were decoded are kept again unless they hold one`() =
+        runTest {
+            val now = MemoryArtistResults()
+            val found = checkNotNull(ArtistWebSource(Web(), names, now).search(artist))
+            val key = now.keys(ArtistWebSource.PART).single()
+            val value = checkNotNull(now.get(ArtistWebSource.PART, key)).value
+            // Kept before #1165 (extraction 1) with no reference: the same lines, with no search, and
+            // kept again under the part's version.
+            val before = MemoryArtistResults()
+            before.keep(ArtistWebSource.BEFORE_DECODING, key, value)
+            val web = Web()
+            val source = ArtistWebSource(web, names, before)
+            assertEquals(found, source.search(artist))
+            assertEquals(0, web.asked.size)
+            assertEquals(value, checkNotNull(before.get(ArtistWebSource.PART, key)).value)
+            // With a reference in a line: searched again.
+            val encoded = MemoryArtistResults()
+            val referenced = found.map { it.copy(text = it.text + " &amp; more") }
+            encoded.keep(ArtistWebSource.BEFORE_DECODING, key, KeptDrafts.encode(referenced))
+            val again = ArtistWebSource(web, names, encoded)
+            assertNull(again.kept(artist))
+            assertEquals(found, again.search(artist))
+            assertEquals(1, web.asked.size)
         }
 
     @Test

@@ -24,6 +24,7 @@ import app.sleevesight.sources.lastfm.Lru
 import app.sleevesight.sources.musicbrainz.MbAlbum
 import app.sleevesight.sources.musicbrainz.ReleaseGroups
 import app.sleevesight.sources.web.AlbumWebSearch
+import app.sleevesight.sources.web.getCarried
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import app.sleevesight.sources.wikipedia.WikipediaSource
 import app.sleevesight.sources.wikipedia.articleUrl
@@ -135,7 +136,7 @@ class AlbumSource(
     override suspend fun renewWeb(query: AlbumQuery) {
         val key = webKeyOf(query)
         if (webKept.persists) {
-            webKept.get(WEB_PART, key)?.let { webKept.keep(WEB_PART, key, it.value) }
+            webKept.getCarried(WEB_PART, WEB_BEFORE_DECODING, key)?.let { webKept.keep(WEB_PART, key, it.value) }
         } else {
             remembered.get(key)?.let { remembered.put(key, it) }
         }
@@ -178,7 +179,7 @@ class AlbumSource(
     private suspend fun keptWeb(query: AlbumQuery): List<EvidenceDraft>? {
         val key = webKeyOf(query)
         return if (webKept.persists) {
-            webKept.get(WEB_PART, key)?.let { KeptDrafts.decode(it.value) }
+            webKept.getCarried(WEB_PART, WEB_BEFORE_DECODING, key)?.let { KeptDrafts.decode(it.value) }
         } else {
             remembered.get(key)
         }
@@ -487,10 +488,14 @@ class AlbumSource(
          * would key the album anew and pay for another search and call. Extraction 2: kept so; an
          * entry of 1 was kept for the web's lifetime. 3 (#905): the lines without the parts that are
          * only page boilerplate (`ExaWebSearch.EXTRACTION_VERSION` 3), so an album's lines kept
-         * before are searched again.
+         * before are searched again. 4 (#1165): Exa's text with its HTML character references
+         * decoded (`ExaWebSearch.EXTRACTION_VERSION` 4), likewise.
          */
         val WEB_PART: ArtistPart =
-            ArtistPart("album.web", extraction = 3, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+            ArtistPart("album.web", extraction = 4, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+
+        /** [WEB_PART] before Exa's references were decoded (#1165), whose lines are carried over without one. */
+        internal val WEB_BEFORE_DECODING: ArtistPart = WEB_PART.copy(extraction = 3)
 
         /** The albums whose web lines are kept in memory, without a [webKept] that keeps them. */
         const val REMEMBERED: Int = 256
