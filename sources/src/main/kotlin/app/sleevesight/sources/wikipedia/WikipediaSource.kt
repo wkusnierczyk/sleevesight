@@ -385,9 +385,12 @@ class WikipediaSource(
          * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
          * resolution it checks them against. 2: a joint credit resolves on MusicBrainz (#661), so a
          * result kept against the earlier resolution's miss is looked up again; [ARTIST_PART] goes
-         * with it. 3: brackets a dropped pronunciation leaves empty are removed ([tidy], #850).
+         * with it. 3: brackets a dropped pronunciation leaves empty are removed ([tidy], #850). 4: a
+         * classical track filed under its composer, or one whose first artist MusicBrainz does not
+         * credit, resolves on MusicBrainz (#1129), so a result kept against the earlier resolution's
+         * miss (a rejection for want of a MusicBrainz id) is looked up again; [ARTIST_PART] goes with it.
          */
-        const val EXTRACTION_VERSION: Int = 3
+        const val EXTRACTION_VERSION: Int = 4
 
         private val json = Json { encodeDefaults = false }
 

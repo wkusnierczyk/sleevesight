@@ -431,6 +431,19 @@ class RetrievalCacheTest {
         )
     }
 
+    // #1129: MusicBrainz is searched by the credited artists in order, at most three, so the order
+    // of the artists after the first can change what the track resolves to.
+    @Test
+    fun `the track key keeps the credited artists in the player's order, a card's entity key sorts them`() {
+        val credited = normalizer.normalize("Song", "A, B, C, D")
+        val reordered = normalizer.normalize("Song", "A, D, B, C")
+        assertNotEquals(retrieval.keyOf(credited, null), retrieval.keyOf(reordered, null))
+        // A card is keyed by its evidence too, so the order alone writes no card again.
+        assertEquals(retrieval.entityKeyOf(credited, null), retrieval.entityKeyOf(reordered, null))
+        val single = normalizer.normalize("Song", "A")
+        assertEquals(retrieval.keyOf(single, null), retrieval.entityKeyOf(single, null))
+    }
+
     @Test
     fun `equivalent spellings of the artists and the work give one key`() {
         val nfc = normalizer.normalize("Song (From Déjà Vu)", "A, Beyoncé")
