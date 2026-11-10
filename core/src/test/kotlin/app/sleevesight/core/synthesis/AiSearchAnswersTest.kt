@@ -84,6 +84,17 @@ class AiSearchAnswersTest {
     }
 
     @Test
+    fun aReplysNamesLoseTheirInvisibleCharacters() {
+        // #1041: a zero-width space, a right-to-left override and a tag-block letter, as JSON escapes.
+        val reply = """{"original": {"artist": "Leonard\u200B Cohen\u202E\uDB40\uDC49", "year": "1984"}}"""
+        assertEquals("Leonard Cohen", dates(reply)?.original?.artist)
+        // A name, or a definition, of invisible characters alone is none.
+        val invisible = """{"album_date": "1994", "original": {"artist": "\u200B \u202E", "year": "1984"}}"""
+        assertEquals(SearchAnswer.Dates(album = "1994"), dates(invisible))
+        assertEquals(SearchReading.NothingUsable, definition("""{"definition": "\u200B\u2060 \uFEFF"}"""))
+    }
+
+    @Test
     fun aCodeFenceAndWordsAroundTheObjectAreStripped() {
         val expected = SearchAnswer.Dates(album = "2014")
         assertEquals(expected, dates("```json\n{\"album_date\": \"2014\"}\n```"))

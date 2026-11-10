@@ -36,6 +36,7 @@ import app.sleevesight.core.synthesis.CheckedSentence
 import app.sleevesight.core.synthesis.CitedPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SentenceStatus
+import app.sleevesight.core.text.SourceText
 
 // *Explain the song*'s answer in the *Lyrics* panel (#908): its sentences, cited as an insight's are,
 // then the pages they cite.
@@ -144,7 +145,8 @@ private fun spokenSentence(
     return if (doubtful(sentence)) "$words ($uncited)" else words
 }
 
-// A page the explanation cites: its id, then its title, or else its site, as a link with the mark of
+// A page the explanation cites: its id, then its title as a person sees it ([SourceText.titleOf]), or
+// else its site, as a link with the mark of
 // a page that opens outside the app.
 @Composable
 private fun CitedPageLink(page: CitedPage) {
@@ -165,7 +167,7 @@ private fun CitedPageLink(page: CitedPage) {
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             LinkLabel(
-                TextPart.Link(page.title?.takeIf(String::isNotBlank) ?: siteOf(page.url), page.url),
+                TextPart.Link(SourceText.titleOf(page.title) ?: siteOf(page.url), page.url),
                 onClickLabel = stringResource(R.string.link_open),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f, fill = false),

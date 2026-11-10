@@ -112,7 +112,8 @@ class WebBoilerplateTest {
     @Test
     fun `a part of chords alone goes, and lyrics with chords between them stay whole`() {
         assertEquals(
-            "\u200B Am G \u200BThe evening light along the shore \u200B Fmaj7 C \u200BA quiet road back home",
+            // Its zero-width spaces dropped after the boilerplate is taken out (#1041).
+            "Am G The evening light along the shore Fmaj7 C A quiet road back home",
             lineFor("https://www.cifraclub.com.br/fixture/sundown/"),
         )
     }
