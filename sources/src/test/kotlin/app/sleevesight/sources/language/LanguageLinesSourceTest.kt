@@ -83,6 +83,21 @@ class LanguageLinesSourceTest {
         }
 
     @Test
+    fun `a classical album's lines are kept by its performers too, whatever order a track credits them in`() =
+        runTest {
+            // #1130: two recordings of one title by one composer, by name.
+            val table = MemoryArtistResults()
+            val source = LanguageLinesSource(names, table)
+            val title = "Mozart: Piano Concertos Nos. 20 & 23"
+            val lines = listOf(line("Mozart: Piano Concertos est un album.", "fr", Scope.RELEASE))
+            val sony = LanguageSubject.Album(title, "Mozart", null, listOf("Khatia Buniatishvili", "ASMF"))
+            source.keep(sony, "fr", lines)
+            assertEquals(lines, source.kept(sony.copy(performers = listOf("ASMF", "Khatia Buniatishvili", "ASMF"))))
+            assertTrue(source.kept(sony.copy(performers = listOf("Howard Shelley"))).isEmpty())
+            assertTrue(source.kept(sony.copy(performers = emptyList())).isEmpty())
+        }
+
+    @Test
     fun `with the switch off they are kept in memory, never in the table, and dropped when it is on`() =
         runTest {
             val table = MemoryArtistResults()

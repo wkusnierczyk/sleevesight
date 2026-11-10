@@ -832,7 +832,7 @@ private val WORDS_TYPES = setOf("lyricist", "librettist", "writer")
 
 // Whether [recording] is a performance by [track]'s own artists (#1129): every credit stands for one
 // of them, by name, as a band one of them leads, under an honorific variant or in a joint credit, and
-// one for a performer ([performers]).
+// one for a performer ([NormalizedTrack.performers]).
 private fun NameMatcher.performedBy(
     recording: MbRecording,
     track: NormalizedTrack,
@@ -852,16 +852,6 @@ private fun NameMatcher.performedBy(
     }
     return credits.isNotEmpty() && credits.all(standsFor(track.artists)) && credits.any(standsFor(track.performers))
 }
-
-// The performers (#1129): with a composer the title names, the credited artists the title does not
-// name ([NormalizedTrack.titleArtists]: the composer, an arranger in `(Arr. Busoni)`), when there
-// are any; else every credited artist.
-private val NormalizedTrack.performers: List<String>
-    get() {
-        val named = titleArtists.toSet() + listOfNotNull(composer?.name)
-        val performers = artists.filter { it !in named }
-        return if (composer != null && performers.isNotEmpty()) performers else artists
-    }
 
 // The credited artist [RecordingResolver.resolve] searches by (#1129): the first credited, but the
 // artists a title with a composer names (the composer, an arranger) moved last, since MusicBrainz

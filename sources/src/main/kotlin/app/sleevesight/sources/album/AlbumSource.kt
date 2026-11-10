@@ -44,7 +44,8 @@ import kotlin.time.Instant
  *   MusicBrainz does not name (or could not be asked about), the article the album's name finds
  *   (`Title (Artist album)`, `Title (album)`, `Title`; as given, then without its editions, bracketed
  *   or not, [titlesOf]) whose item is an album ([ALBUM_CLASSES]) by
- *   the artist (a performer, P175, of the artist's name); then the item's record label and producers,
+ *   the artist (a performer, P175, of the artist's name; with [AlbumQuery.performers], of one of
+ *   theirs, #1130); then the item's record label and producers,
  *   templated (CC0), and its English article's lead, at most three sentences naming the album,
  *   verbatim and linked (D1, CC BY-SA 4.0), as Wikipedia's lines on a track are
  *   ([WikipediaSource.sentences]).
@@ -69,7 +70,8 @@ import kotlin.time.Instant
  *   caller is given what was found before it is kept, to claim the key it gives (#935).
  *
  * What the free sources found is kept per album in [kept], the artist-level table (#238, [PART]),
- * by the release group, else the album's and the artist's names folded, with the sources asked,
+ * by the release group, else the album's and the artist's names folded (and the performers', with
+ * [AlbumQuery.performers]), with the sources asked,
  * for the shortest of their lifetimes (D9); not when a source could not be asked. What the web
  * search found, none included, is kept apart ([WEB_PART]), by the names folded, in [webKept],
  * which the app keeps whatever *Keep what sources said about each artist* says, as it keeps a
@@ -154,7 +156,7 @@ class AlbumSource(
     ): List<EvidenceDraft>? {
         if (!mayPay()) throw NotPaid()
         val found =
-            when (val answer = search.search(query.title, query.artist, sent)) {
+            when (val answer = search.search(query.title, query.artist, query.performers, query.credited, sent)) {
                 is Lookup.Found -> answer.value
                 Lookup.NotFound -> emptyList()
                 is Lookup.Failed -> null
@@ -361,7 +363,10 @@ class AlbumSource(
         }
     }
 
-    // The article the album's name finds whose item is an album by the artist.
+    // The article the album's name finds whose item is an album by the artist, or with
+    // [AlbumQuery.performers] (#1130), by one of them: a classical album's item names its performers
+    // (P175), seldom the composer the track credits first, and one naming the composer alone may be
+    // another recording of the same works.
     private suspend fun byName(
         query: AlbumQuery,
         asking: Asking,
@@ -383,8 +388,11 @@ class AlbumSource(
             } else {
                 asking.read(SourceId.WIKIDATA, wikidata.labels(performers), emptyMap())
             }
+        val by = query.performers.ifEmpty { listOf(query.artist) }
         return albums.firstOrNull { entity ->
-            entity.values(Wd.PERFORMER).any { id -> labels[id]?.let { names.sameName(it, query.artist) } == true }
+            entity.values(Wd.PERFORMER).any { id ->
+                labels[id]?.let { label -> by.any { names.sameName(label, it) } } == true
+            }
         }
     }
 
@@ -423,8 +431,11 @@ class AlbumSource(
     ): String? = ids.mapNotNull { named[it] }.takeIf { it.isNotEmpty() }?.let { said(EvidenceText.list(it)) }
 
     // The article titles an album would have, most specific first: by its name as given, then by
-    // its names without its editions (#1070, `Edition.strippedNames`), least stripped first.
-    private fun titlesOf(query: AlbumQuery): List<String> = titlesOf(query.title, query.artist)
+    // its names without its editions (#1070, `Edition.strippedNames`), least stripped first; with
+    // [AlbumQuery.performers] (#1130), `Title (<first performer> album)`, as the album's article
+    // would be disambiguated by its performer, not its composer.
+    private fun titlesOf(query: AlbumQuery): List<String> =
+        titlesOf(query.title, query.performers.firstOrNull() ?: query.artist)
 
     // The album's key in the table: its release group, else its folded names; with the sources asked
     // (Last.fm only with its key).
@@ -434,13 +445,27 @@ class AlbumSource(
         return "$album ${asked.joinToString("") { if (it) "1" else "0" }}"
     }
 
-    // The album's key for its web lines: its folded names, which the search sends, never the group.
-    private fun webKeyOf(query: AlbumQuery): String = namesKeyOf(query)
+    // The album's key for its web lines: its folded names, which the search sends, never the group;
+    // but with [AlbumQuery.performers] and the group known (#1130), the group, marked apart from the
+    // free sources' key: players credit a classical album's tracks each with their own performers (an
+    // opera's singers, a recital's ensembles), and the album is searched once, whichever track asks.
+    private fun webKeyOf(query: AlbumQuery): String =
+        query.group?.takeIf { query.performers.isNotEmpty() }?.let { "$CLASSICAL_GROUP$it" } ?: namesKeyOf(query)
 
-    // The album's and the artist's names folded, the artist's length first, so no two pairs meet.
+    // The album's and the artist's names folded, the artist's length first, so no two pairs meet;
+    // with [AlbumQuery.performers] (#1130), each performer's too, before them, folded, without repeats
+    // and sorted, so two recordings of one title by one composer are kept apart whatever order a track
+    // credits them in, and an album's key without performers is as before.
     private fun namesKeyOf(query: AlbumQuery): String {
         val artist = names.albumKey(query.artist)
-        return "name:${artist.length}:$artist${names.albumKey(query.title)}"
+        val performers =
+            query.performers
+                .map(names::albumKey)
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .sorted()
+                .joinToString("") { "performer:${it.length}:$it " }
+        return "${performers}name:${artist.length}:$artist${names.albumKey(query.title)}"
     }
 
     companion object {
@@ -514,6 +539,9 @@ class AlbumSource(
             setOf("Q482994", "Q208569", "Q209939", "Q222910", "Q169930", "Q4176708", "Q1366112")
 
         private const val MUSICBRAINZ_GROUP = "https://musicbrainz.org/release-group/"
+
+        // A classical album's web lines' key by its release group (#1130), apart from [keyOf]'s `mb:`.
+        private const val CLASSICAL_GROUP = "classical:mb:"
 
         // "Album" is an album; "Live" with "Album", a live album; none, a release.
         internal fun typeOf(album: MbAlbum): String {

@@ -262,7 +262,16 @@ class ItemInsights(
 
             InsightItem.ALBUM -> {
                 album(track)?.let { title ->
-                    CardEntity.Album.of(title, track.normalized.primary, releaseDates(track), names::albumKey)
+                    val performers = track.normalized.performers.takeIf { track.normalized.composer != null }
+                    val dates = releaseDates(track)
+                    // With performers (#1130), the year the prompt gives, part of the card's key.
+                    val year =
+                        performers?.let {
+                            ReleaseDate.albumYear(title, dates, track.nowPlaying.year?.toString(), names::albumKey)
+                        }
+                    CardEntity.Album
+                        .of(title, track.normalized.primary, dates, names::albumKey, performers.orEmpty())
+                        .copy(year = year)
                 }
             }
         }
@@ -486,7 +495,7 @@ class ItemInsights(
         val found = albums?.let { attempt { it.lookup(query) } }
         // A lookup that threw (a bug, not the network): every source it would ask, failed.
         val threw = albums != null && found == null
-        val subject = LanguageSubject.Album(album.title, album.artist, album.group)
+        val subject = LanguageSubject.Album(album.title, album.artist, album.group, album.performers)
         val drafts =
             found?.drafts.orEmpty().filter { settings.isEnabled(it.source) && !it.aggregate } +
                 inLanguage(subject, albumInLanguage(album, track), settings)
@@ -516,6 +525,19 @@ class ItemInsights(
         }
     }
 
+    // What [item]'s insight on [track] is written about: its name, and for the album of a track whose
+    // title names its composer (#1130), its performers and the year of its release where known
+    // ([CardEntity.Album.year]), which tell it from other recordings of the same title, and are part
+    // of its card's key.
+    private fun subjectOf(
+        item: InsightItem,
+        track: TrackState,
+    ): ItemPrompt.Subject {
+        val name = checkNotNull(name(item, track))
+        val album = entity(item, track) as? CardEntity.Album
+        return ItemPrompt.Subject(item.kind, name, album?.performers.orEmpty(), album?.year)
+    }
+
     // [album] as [albums] is asked about it, with the sources [settings] switch on.
     private fun queryOf(
         album: CardEntity.Album,
@@ -528,6 +550,7 @@ class ItemInsights(
         wikipedia = settings.isEnabled(SourceId.WIKIPEDIA),
         lastFm = settings.isEnabled(SourceId.LASTFM),
         web = settings.isEnabled(SourceId.WEB),
+        performers = album.performers,
     )
 
     /**
@@ -601,7 +624,13 @@ class ItemInsights(
         val keeping = reserving(InsightItem.ALBUM, track, settings, evidence, gates)
         val found =
             if (lookup != null && album != null) {
-                attempt { lookup.searchWeb(queryOf(album, settings), mayPay, keeping, sent) }
+                // With performers (#1130), the request names every credited artist, an arranger the
+                // title names and the composer wherever credited included.
+                val credited =
+                    track.normalized.artists
+                        .takeIf { album.performers.isNotEmpty() }
+                        .orEmpty()
+                attempt { lookup.searchWeb(queryOf(album, settings).copy(credited = credited), mayPay, keeping, sent) }
             } else {
                 null
             }
@@ -1091,7 +1120,11 @@ class ItemInsights(
         }
         (entity(InsightItem.ALBUM, track) as? CardEntity.Album)?.let { album ->
             val found = albumInLanguage(album, own)
-            keep(lookup, LanguageSubject.Album(album.title, album.artist, album.group), found.map(::draftOf))
+            keep(
+                lookup,
+                LanguageSubject.Album(album.title, album.artist, album.group, album.performers),
+                found.map(::draftOf),
+            )
         }
     }
 
@@ -1268,7 +1301,7 @@ class ItemInsights(
         if (lines.nothingToNarrate(key.modelKnowledge, artistsKnown = track.normalized.artists.isNotEmpty())) {
             return InsightState.NoEvidence.also { show(it, now()) }
         }
-        val subject = ItemPrompt.Subject(item.kind, checkNotNull(name(item, track)))
+        val subject = subjectOf(item, track)
         val prompt =
             ItemPrompt.build(
                 subject,
@@ -1329,7 +1362,8 @@ class ItemInsights(
         val album = entity(item, track) as? CardEntity.Album
         val lookup = albums
         if (album != null && lookup != null) {
-            attempt { lookup.renewWeb(AlbumQuery(album.title, album.artist, album.group)) }
+            val albumQuery = AlbumQuery(album.title, album.artist, album.group, performers = album.performers)
+            attempt { lookup.renewWeb(albumQuery) }
         }
         val artist = artistWeb
         val query = artistQuery(track)
@@ -1338,7 +1372,7 @@ class ItemInsights(
         val subject =
             when (item) {
                 InsightItem.ARTIST -> query?.let { LanguageSubject.Artist(it.name, it.mbid) }
-                InsightItem.ALBUM -> album?.let { LanguageSubject.Album(it.title, it.artist, it.group) }
+                InsightItem.ALBUM -> album?.let { LanguageSubject.Album(it.title, it.artist, it.group, it.performers) }
                 InsightItem.SONG -> null
             }
         if (subject != null) renewInLanguage(subject, evidence)

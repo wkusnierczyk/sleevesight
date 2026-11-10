@@ -136,15 +136,23 @@ class LanguageLinesSource(
 
     // [subject]'s key, as its card's entity is keyed (`StorePipelineCache`): an artist by its
     // MusicBrainz id, else its name folded; an album by its release group, else its artist's and its
-    // own names folded, each length-prefixed, so no two pairs meet.
+    // own names folded, then its performers' when it has them (#1130), without repeats and sorted,
+    // each length-prefixed, so no two meet.
     private fun keyOf(subject: LanguageSubject): String {
         val (id, names) =
             when (subject) {
-                is LanguageSubject.Artist -> subject.mbid to listOf(subject.name)
-                is LanguageSubject.Album -> subject.group to listOf(subject.artist, subject.title)
+                is LanguageSubject.Artist -> {
+                    subject.mbid to listOf(subject.name).map(normalizer::foldForKey)
+                }
+
+                is LanguageSubject.Album -> {
+                    val performers = subject.performers.map(normalizer::foldForKey).filter { it.isNotEmpty() }
+                    subject.group to
+                        listOf(subject.artist, subject.title).map(normalizer::foldForKey) +
+                        performers.distinct().sorted()
+                }
             }
-        return id?.let { "mb:$it" }
-            ?: ("name:" + names.joinToString("") { name -> normalizer.foldForKey(name).let { "${it.length}:$it" } })
+        return id?.let { "mb:$it" } ?: ("name:" + names.joinToString("") { "${it.length}:$it" })
     }
 
     companion object {
