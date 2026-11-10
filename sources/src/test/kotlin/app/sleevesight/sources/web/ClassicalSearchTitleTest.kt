@@ -67,6 +67,36 @@ class ClassicalSearchTitleTest {
     }
 
     @Test
+    fun `the movement follows the quoted work without the colon or comma between them`() {
+        val k466 =
+            normalizer.normalize(
+                "Mozart: Piano Concerto No. 20 in D Minor, K.466: II. Romance",
+                "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
+            )
+        assertEquals(
+            "\"Piano Concerto No. 20 in D Minor, K.466\" II. Romance by Wolfgang Amadeus Mozart and " +
+                "Khatia Buniatishvili, song",
+            ExaSearchRequest.of(k466).query,
+        )
+        val jupiter =
+            normalizer.normalize(
+                "Mozart: Symphony No. 41 in C Major, K. 551, \u201CJupiter\u201D: I. Allegro vivace",
+                "Wolfgang Amadeus Mozart, Wiener Philharmoniker",
+            )
+        assertEquals(
+            "\"Symphony No. 41 in C Major, K. 551\" \u201CJupiter\u201D: I. Allegro vivace by " +
+                "Wolfgang Amadeus Mozart and Wiener Philharmoniker, song",
+            ExaSearchRequest.of(jupiter).query,
+        )
+        // A work too generic to stand in for the track: the title as searched, quoted whole.
+        val surprise = normalizer.normalize("Haydn: Symphony \"Surprise\": II. Andante", "Joseph Haydn, Antal Doráti")
+        assertEquals(
+            "\"Symphony \"Surprise\": II. Andante\" by Joseph Haydn and Antal Doráti, song",
+            ExaSearchRequest.of(surprise).query,
+        )
+    }
+
+    @Test
     fun `a page on the sonata that names the work and a performer is kept, one on another sonata is not`() =
         runTest {
             val net = ReplayNetClient.recorded("web/exa-$RECORDING.response.json")
@@ -147,7 +177,7 @@ class ClassicalSearchTitleTest {
     }
 
     @Test
-    fun `the song's own search and its search in a language leave out the composer's lead`() =
+    fun `the song's own search leaves out the composer's lead`() =
         runTest {
             val net = ReplayNetClient.ok("""{"results":[]}""")
             ExaSongSearch(net, Secret("k"), JvmAccentFolder, { LanguageItems.NONE }, clock).search(SongWebQuery(k545))

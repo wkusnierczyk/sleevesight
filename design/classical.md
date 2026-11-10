@@ -45,10 +45,13 @@ scope.
 
 Done so in #1179, only for a title whose composer's lead the normalizer found (`composer` set):
 the track web search, Wikipedia's song titles, the Genius search link, the song's own search (in
-English and in the track's language) and the AI's song question search by `searchTitle`. The track
-web search also quotes only the work part (`NormalizedTrack.searchWork`: the searched title before
-its first colon, a quoted nickname left out, `Piano Sonata No. 16 in C Major, K. 545`), and its
-filter (`RecordingFilter.isAbout`) takes a page that names the title as searched or the work, and
+English and in the track's language), the language search, the AI's song question and the AI's
+genre web searches (the genre reason's, `ReasonQuestion.query`, and the genres list's,
+`GenreLists.genresQuery`) search by `searchTitle`. The track web search also quotes only the work
+part (`NormalizedTrack.searchWork`: the searched title before its first colon, but for one a digit
+follows as in `Hob. I:94`, a quoted nickname left out, `Piano Sonata No. 16 in C Major, K. 545`;
+none when what is left has no digit, a number or a catalogue number, as `Symphony` of `Symphony
+"Surprise"` or `Star Wars` would be too generic), and its filter (`RecordingFilter.isAbout`) takes a page that names the title as searched or the work, and
 still a credited artist by full name, as before: a page on the sonata naming Buniatishvili, or
 naming Wolfgang Amadeus Mozart, counts for the Song insight; one on another sonata does not. Every
 other title is searched exactly as before (`Star Wars: Main Title`). Two sources keep the whole

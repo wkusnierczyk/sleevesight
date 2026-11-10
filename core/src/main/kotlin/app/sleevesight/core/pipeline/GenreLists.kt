@@ -7,6 +7,7 @@ import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
@@ -181,11 +182,7 @@ class GenreLists(
             override val knowledge: String
                 get() = GenreListPrompt.build(track.nowPlaying, track.normalized, GenreListMode.KNOWLEDGE)
             override val query: String
-                get() =
-                    WebPrompt.query(
-                        SearchKind.GENRES,
-                        SearchFacts(track.normalized.title, track.normalized.artists),
-                    )
+                get() = genresQuery(track.normalized)
             override val subjectNames: List<String> get() = track.normalized.subjectNames
 
             override fun once(pages: List<WebPage>): String =
@@ -248,6 +245,13 @@ class GenreLists(
          * "Enable AI service knowledge."): what can be switched on to let it run.
          */
         val MODES: List<GenreListMode> = GenreListMode.entries
+
+        /**
+         * The web query of [track]'s genres question (D12): its title as searched, without a
+         * composer's lead (`NormalizedTrack.searchTitle`, #1179), and its artists, with "song genre".
+         */
+        internal fun genresQuery(track: NormalizedTrack): String =
+            WebPrompt.query(SearchKind.GENRES, SearchFacts(track.searchTitle, track.artists))
 
         /**
          * The mode [settings] let a list be asked in: from the web, with *AI web search* on and a web

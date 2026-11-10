@@ -71,6 +71,31 @@ class SearchTitleTest {
     }
 
     @Test
+    fun `a work with no digit is too generic, and a catalogue number's colon is not cut at`() {
+        val haydn = "Joseph Haydn, Philharmonia Hungarica, Antal Doráti"
+        assertNull(normalizer.normalize("Haydn: Symphony \"Surprise\": II. Andante", haydn).searchWork)
+        assertEquals(
+            "Symphony No. 94 in G Major, Hob. I:94",
+            normalizer
+                .normalize(
+                    "Haydn: Symphony No. 94 in G Major, Hob. I:94 \"Surprise\": II. Andante",
+                    haydn,
+                ).searchWork,
+        )
+        assertNull(mozart("Mozart: Serenade \"Eine kleine Nachtmusik\": I. Allegro").searchWork)
+        val williams = "John Williams, London Symphony Orchestra"
+        assertNull(normalizer.normalize("Williams: Star Wars: Main Title", williams).searchWork)
+        assertEquals(
+            "Turandot, Act 3",
+            normalizer
+                .normalize(
+                    "Puccini: Turandot, Act 3: \"Nessun dorma\"",
+                    "Giacomo Puccini, Luciano Pavarotti",
+                ).searchWork,
+        )
+    }
+
+    @Test
     fun `no work without a movement, without the composer's lead, or in a title the lead is not left out of`() {
         assertNull(normalizer.normalize("Allegri: Miserere mei, Deus", "Gregorio Allegri, Stephen Cleobury").searchWork)
         assertNull(normalizer.normalize("Star Wars: Main Title", "John Williams, London Symphony Orchestra").searchWork)

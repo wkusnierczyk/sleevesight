@@ -50,7 +50,7 @@ internal class ReasonQuestion(
     override val query: String
         get() {
             val artists = track.normalized.artists.joinToString(", ")
-            return "\"${InsightPrompt.oneLine(track.normalized.title)}\" by ${InsightPrompt.oneLine(artists)}, " +
+            return "\"${InsightPrompt.oneLine(track.normalized.searchTitle)}\" by ${InsightPrompt.oneLine(artists)}, " +
                 "${InsightPrompt.oneLine(label)} genre"
         }
 

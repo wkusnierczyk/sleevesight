@@ -49,13 +49,16 @@ data class NormalizedTrack(
 
     /**
      * The work a [searchTitle] of the shape `<work>: <movement>` names (#1179): the part before its
-     * first colon, whatever follows it (`K. 545: II. Andante`, `K. 545:II. Andante`), without a
-     * nickname in quotes at its end, in any of the usual pairs (`"…"`, `“…”`, `„…“`, `‚…‘`, `‘…’`,
-     * `«…»`, `»…«`): `Piano Sonata No. 16 in C Major, K. 545` of `… K. 545 "Sonata facile": II.
-     * Andante`, so that a page on the work, which names no movement, can be told to be about the
-     * track. Only for a title searched without its [composer] ([searchTitle] is not [title]); null
-     * for any other, for one with no colon or nothing but whitespace after it, and for a work part
-     * that is blank.
+     * first colon, whatever follows it (`K. 545: II. Andante`, `K. 545:II. Andante`), but for a colon
+     * a digit follows, which is a catalogue number's (Hoboken's `Hob. I:94`), without a nickname in
+     * quotes at its end, in any of the usual pairs (`"…"`, `“…”`, `„…“`, `‚…‘`, `‘…’`, `«…»`, `»…«`):
+     * `Piano Sonata No. 16 in C Major, K. 545` of `… K. 545 "Sonata facile": II. Andante`, so that a
+     * page on the work, which names no movement, can be told to be about the track. Only for a title
+     * searched without its [composer] ([searchTitle] is not [title]), and only a work with a digit in
+     * it, a number or a catalogue number: one without (`Symphony` of `Symphony "Surprise": II.
+     * Andante`, `Star Wars` of `Star Wars: Main Title`) is too generic to stand in for the track.
+     * Null for any other title, for one with no such colon or nothing but whitespace after it, and
+     * for a work with no digit.
      */
     val searchWork: String?
         get() {
@@ -71,7 +74,7 @@ data class NormalizedTrack(
                 ?.trim()
                 ?.trimEnd(',')
                 ?.trim()
-                ?.takeIf { it.isNotBlank() }
+                ?.takeIf { work -> work.any { it.isDigit() } }
         }
 
     /**
@@ -103,9 +106,9 @@ data class NormalizedTrack(
         get() = listOfNotNull(title, from) + artists
 
     private companion object {
-        // The work part of a search title: the text before its first colon. No braces: ICU reads
-        // the patterns as the JVM does.
-        val WORK = Regex("^([^:]+):")
+        // The work part of a search title: the text before its first colon that no digit follows
+        // (`Hob. I:94` is a catalogue number). No braces: ICU reads the patterns as the JVM does.
+        val WORK = Regex("^((?:[^:]|:(?=[0-9]))+):")
 
         // A quoted nickname, each opening mark with the closing marks its languages pair it with:
         // straight; English “…” and ‘…’; German and Polish „…“ (or „…”) and ‚…‘; French «…»; and

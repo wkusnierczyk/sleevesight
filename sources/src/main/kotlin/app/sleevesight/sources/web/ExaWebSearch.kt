@@ -446,7 +446,7 @@ internal data class ExaSearchRequest(
             val byline = " by ${listed(artists)}"
             val from = track.from?.let { " from $it" }.orEmpty()
             val title = track.searchTitle
-            val named = track.searchWork?.let { work -> "\"$work\" ${title.removePrefix(work).trim()}" } ?: "\"$title\""
+            val named = track.searchWork?.let { work -> "\"$work\" ${afterWork(title, work)}" } ?: "\"$title\""
             return ExaSearchRequest(
                 query = "$named$from$byline, song",
                 contents =
@@ -458,6 +458,13 @@ internal data class ExaSearchRequest(
                     ),
             )
         }
+
+        // What [title] says after its [work]: the nickname and the movement, the colon or comma
+        // between them and the work left out (`II. Romance` of `…, K.466: II. Romance`).
+        private fun afterWork(
+            title: String,
+            work: String,
+        ): String = title.removePrefix(work).trimStart { it == ':' || it == ',' || it.isWhitespace() }
 
         // [artists] as a sentence lists them: "A", "A and B", "A, B and C".
         private fun listed(artists: List<String>): String =
