@@ -150,6 +150,9 @@ import kotlin.time.Instant
  *   its findings went with the history and nothing is asked for it until *Look up again*
  *   ([PipelineHost.lookUpAgain]) or another track, so Home says so in place of waiting texts; null
  *   otherwise.
+ * @property nothingToNarrate whether the current run decided with no call for nothing to narrate
+ *   (#1131, `CoordinatorState.Run.nothing`): the lines the song's, the artist's or the album's insight
+ *   finds may decide it again, which Home waits for while one is written; not a reply of `NO_EVIDENCE`.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -174,6 +177,7 @@ data class PipelineView(
     val askAgainKey: RunKey? = null,
     val askable: Set<SourceId> = emptySet(),
     val cleared: NowPlaying? = null,
+    val nothingToNarrate: Boolean = false,
 )
 
 /**
@@ -364,10 +368,9 @@ class PipelineHost(
             }.flatMapLatest { track ->
                 track?.let { shown ->
                     val key = RunKey.of(normalizer, shown.nowPlaying)
-                    found(shown).filterNotNull().map { CoordinatorEvent.ItemLinesFound(key, it) }
+                    found(shown).filterNotNull().distinctUntilChanged().map { CoordinatorEvent.ItemLinesFound(key, it) }
                 } ?: emptyFlow()
-            }.distinctUntilChanged()
-            .collect { queue.send(it) }
+            }.collect { queue.send(it) }
     }
 
     /**
@@ -941,6 +944,7 @@ class PipelineHost(
                 askAgainKey = owner.askAgainKey,
                 askable = owner.askable,
                 cleared = owner.clearedShown,
+                nothingToNarrate = owner.current?.nothing == true,
             )
         }.collect {
             view.value = it

@@ -823,7 +823,8 @@ data class CoordinatorState(
 
     /**
      * The lines the current run is replaced to take (#1131): those last [found] for its key, when they
-     * hold one it did not take, requests are allowed, and it decided without writing: for nothing to
+     * hold one it did not take, requests are allowed, the phone is online (as back online asks), and it
+     * decided without writing: for nothing to
      * narrate, or, having taken lines already, by offering Write, with no model call under way and
      * its track not written. Null otherwise: a track with its own evidence, or written, never takes them.
      */
@@ -834,6 +835,7 @@ data class CoordinatorState(
             val decided = run.nothing || (run.items.lines.isNotEmpty() && run.offered)
             val taken =
                 allowed &&
+                    online &&
                     decided &&
                     !run.calling &&
                     run.gathered != null &&
@@ -1772,7 +1774,8 @@ class PipelineCoordinator(
     }
 
     // The ledger after [run] decided, [written] or not: an entry written stays as it is, under
-    // the key its card was written under; else it is the run's.
+    // the key its card was written under; else it is the run's, with the lines it took (#1131), so a
+    // call from them that fails or is stopped leaves them for a rebuild's run of the track.
     private fun entry(
         run: CoordinatorState.Run,
         written: Boolean,
@@ -1780,7 +1783,7 @@ class PipelineCoordinator(
         val standing = state.written(run.nowPlaying)
         if (standing != null) return standing
         val shown = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }?.shown ?: run.nowPlaying
-        return CoordinatorState.Ledger(run.nowPlaying, run.key, written, shown)
+        return CoordinatorState.Ledger(run.nowPlaying, run.key, written, shown, items = run.items)
     }
 
     // What the current run may do now, decided from the whole state at once.

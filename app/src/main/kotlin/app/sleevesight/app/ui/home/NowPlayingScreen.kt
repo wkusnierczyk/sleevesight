@@ -345,7 +345,7 @@ internal fun NowPlayingContent(
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
                 TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
                 InsightCard(
-                    keyInsight(actions.itemNotes, track) ?: NOT_YET,
+                    keyInsight(actions.itemNotes, track, view.nothingToNarrate) ?: NOT_YET,
                     insightContext(view, track, settings, shown.modelAllowed, state.unavailable, retries),
                     insightActions(state, playing, actions, cite) { reportedTrack, written ->
                         reporting = Reported(reportedTrack, written)

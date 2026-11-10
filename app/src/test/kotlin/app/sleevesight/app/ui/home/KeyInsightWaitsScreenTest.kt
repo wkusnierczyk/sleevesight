@@ -30,7 +30,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * *Key insights* for a track whose own sources gave nothing to narrate (#1131): while the song's, the
  * artist's or the album's insight is being written, whose searches may find lines it is then decided
- * again with, it waits rather than say the sources give nothing; once none is, it says so.
+ * again with, it waits rather than say the sources give nothing; once none is, it says so. A reply of
+ * `NO_EVIDENCE`, paid for, says so at once.
  */
 @RunWith(RobolectricTestRunner::class)
 class KeyInsightWaitsScreenTest {
@@ -44,11 +45,32 @@ class KeyInsightWaitsScreenTest {
     private val notes = FakeItemNotes()
 
     @Test
-    fun keyInsightsWaitsWhileAnItemIsWrittenAndThenSaysTheSourcesGiveNothing() {
+    fun keyInsightsWaitsWhileAnItemIsWrittenAndThenSaysTheSourcesGiveNothing() =
+        show(nothing = true) {
+            compose.onNodeWithText(text(R.string.home_insight_no_evidence)).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.home_insight_preparing)).assertExists()
+
+            // The artist's write ended with nothing found: nothing more is coming.
+            notes.shown.value = emptyMap()
+            compose.waitForIdle()
+            compose.onNodeWithText(text(R.string.home_insight_no_evidence)).assertExists()
+        }
+
+    @Test
+    fun aReplyOfNoEvidenceSaysSoAtOnceWhileAnItemIsWritten() =
+        show(nothing = false) {
+            // Paid for, and never decided again: no wait.
+            compose.onNodeWithText(text(R.string.home_insight_no_evidence)).assertExists()
+        }
+
+    private fun show(
+        nothing: Boolean,
+        block: () -> Unit,
+    ) {
         val track = track(insight = InsightState.NoEvidence)
         val state =
             NowPlayingState(
-                PipelineView(track, aiReady = true),
+                PipelineView(track, aiReady = true, nothingToNarrate = nothing),
                 track.nowPlaying,
                 PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
                 settings = Settings(writeAutomatically = WriteAutomatically.NEVER),
@@ -63,13 +85,7 @@ class KeyInsightWaitsScreenTest {
                 }
             }
             compose.waitForIdle()
-            compose.onNodeWithText(text(R.string.home_insight_no_evidence)).assertDoesNotExist()
-            compose.onNodeWithText(text(R.string.home_insight_preparing)).assertExists()
-
-            // The artist's write ended with nothing found: nothing more is coming.
-            notes.shown.value = emptyMap()
-            compose.waitForIdle()
-            compose.onNodeWithText(text(R.string.home_insight_no_evidence)).assertExists()
+            block()
         }
     }
 }
