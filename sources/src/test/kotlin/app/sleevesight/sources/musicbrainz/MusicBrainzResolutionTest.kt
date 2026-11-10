@@ -20,6 +20,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /** Resolution against recorded MusicBrainz responses for the fixture's regression cases. */
@@ -159,6 +160,39 @@ class MusicBrainzResolutionTest {
             assertEquals(
                 listOf(ResolvedArtist("a balladeer", "7048c955-cee3-44fe-86f2-28ac974fb73d")),
                 resolution.artists,
+            )
+        }
+
+    @Test
+    fun `a classical track - the composer's lead is left out of the search, and a performer finds it`() =
+        runTest {
+            // #1129: Spotify files the movement under its composer, credited first; MusicBrainz's title
+            // has no `Mozart: `, and its recording credits the performers (`fixtures/http/musicbrainz-1129/`).
+            val net = ReplayNetClient("musicbrainz-1129")
+            val track =
+                RecordedTracks.normalize(
+                    "Mozart: Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante",
+                    "Wolfgang Amadeus Mozart, Khatia Buniatishvili, Academy of St. Martin in the Fields",
+                )
+            val resolution = RecordingResolver(MusicBrainzClient(net), RecordedTracks.names).resolve(track, 457.seconds)
+            assertEquals(Outcome.SongArticle, resolution.outcome)
+            assertEquals("e0a505da-98a7-4b76-a120-dbfb56a2ac02", resolution.recordingMbid)
+            assertEquals("2024-10-25", resolution.firstReleaseDate)
+            assertEquals(
+                listOf(
+                    ResolvedArtist("Wolfgang Amadeus Mozart", null),
+                    ResolvedArtist("Khatia Buniatishvili", "fce26bb5-6332-4cbe-88c1-0b324301ae10"),
+                    ResolvedArtist("Academy of St. Martin in the Fields", "f0ac992d-edd9-4672-ac23-ba0ca93f6539"),
+                ),
+                resolution.artists,
+            )
+            // One search: the performer first, the composer last, never reached.
+            assertEquals(
+                listOf(
+                    "recording:\"Piano Sonata No. 16 in C Major, K. 545 \\\"Sonata facile\\\": II. Andante\" " +
+                        "AND artist:\"Khatia Buniatishvili\"",
+                ),
+                net.sent.filter { it.url == "${MusicBrainzClient.BASE}/recording" }.map { it.query["query"] },
             )
         }
 

@@ -166,6 +166,7 @@ Players report a song the way their catalogue files it, which is often not how s
 | `(From X)`, a trailing `- From "X"` | Strip, record the source work | "The Departure (From The Leftovers)" |
 | `(felt piano)`, `(acoustic)` | Strip, record as a variant | "And Dream Of Sheep (felt piano)" |
 | `A, B, C` in the artist field | Split into credited artists | "Peleboy, Tony K" |
+| A leading `Name: ` that names a credited artist, whole or by the last words of the name (initials allowed before the last: `J.S. Bach`), as players file classical music under its composer | Keep in the title and the key; record the artist as the composer; MusicBrainz is searched without the lead, the composer's search last (#1129) | "Mozart: Piano Sonata No. 16 in C Major, K. 545 …: II. Andante", Wolfgang Amadeus Mozart credited |
 
 The key is the lowercased, accent-folded primary artist plus the normalized title, keeping letters and digits in any script, and `+` ("C++" is not "C"); other punctuation, symbols and emoji become a space, unless they are all there is (a title `★` keys as `★`). Accents are folded on Latin and Greek letters only: Cyrillic `й` is not `и`. Duplicates in a playlist hit the cache.
 

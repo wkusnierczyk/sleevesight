@@ -1,0 +1,5768 @@
+{
+ "disambiguation": "",
+ "relations": [
+  {
+   "attribute-values": {},
+   "type": "composer",
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "end": "1788",
+   "ended": true,
+   "target-type": "artist",
+   "artist": {
+    "sort-name": "Mozart, Wolfgang Amadeus",
+    "name": "Wolfgang Amadeus Mozart",
+    "disambiguation": "classical composer",
+    "country": "AT",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "id": "b972f589-fb0e-474e-b64a-803b0364fa75"
+   },
+   "attribute-ids": {},
+   "begin": "1788",
+   "attributes": []
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "attributes": [],
+   "begin": "1949-05-28",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "end": "1949-05-28",
+   "recording": {
+    "id": "c78a085d-1421-4dac-8273-aecc911a1eb9",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Gieseking, Walter",
+       "country": "DE",
+       "disambiguation": "classical pianist 1895–1956",
+       "name": "Walter Gieseking",
+       "id": "62e0e456-bd4b-4edc-a47c-3537cdd53621",
+       "type-id": null,
+       "type": null
+      },
+      "name": "Walter Gieseking"
+     }
+    ],
+    "disambiguation": "",
+    "length": 255453,
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante"
+   },
+   "source-credit": ""
+  },
+  {
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": "",
+   "end": "1952-12-04",
+   "source-credit": "",
+   "recording": {
+    "length": 244000,
+    "title": "Piano Sonata K. 545 in C major: Andante",
+    "id": "081a1642-71f2-4eb7-9cbe-f587cc7270d3",
+    "artist-credit": [
+     {
+      "name": "Carl Seemann",
+      "artist": {
+       "country": "DE",
+       "disambiguation": "German pianist",
+       "name": "Carl Seemann",
+       "sort-name": "Seemann, Carl",
+       "id": "2c637537-0f98-45fa-9f9d-4e408abdd0ed",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "attributes": [],
+   "begin": "1952-12-04",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true
+  },
+  {
+   "recording": {
+    "title": "Piano Sonata No. 16 in C major, K. 545: II. Andante",
+    "length": 294000,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Walter Gieseking",
+       "country": "DE",
+       "disambiguation": "classical pianist 1895–1956",
+       "sort-name": "Gieseking, Walter",
+       "type": null,
+       "type-id": null,
+       "id": "62e0e456-bd4b-4edc-a47c-3537cdd53621"
+      },
+      "name": "Walter Gieseking",
+      "joinphrase": ""
+     }
+    ],
+    "id": "4200d180-712f-4e07-a998-f068acd124ba"
+   },
+   "source-credit": "",
+   "end": "1954-08-10",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": "1953-08-01",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "id": "be5e11cb-c1c6-4be4-8ea0-143e706e4476",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Lili Kraus",
+      "artist": {
+       "type-id": null,
+       "id": "5e6b2053-edb3-4566-b10c-de82bb59db0c",
+       "type": null,
+       "country": "HU",
+       "disambiguation": "pianist",
+       "name": "Lili Kraus",
+       "sort-name": "Kraus, Lili"
+      }
+     }
+    ],
+    "video": false,
+    "length": 303000,
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Semplice\": II. Andante"
+   },
+   "source-credit": "",
+   "end": "1954",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "attributes": [],
+   "begin": "1954"
+  },
+  {
+   "recording": {
+    "id": "7b2b3672-a032-4666-b2a9-90cf8c269fe6",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "2014bfbb-c65d-45dc-9973-35bead3833fa",
+       "type-id": null,
+       "type": null,
+       "sort-name": "Richter, Sviatoslav",
+       "disambiguation": "pianist",
+       "country": "RU",
+       "name": "Святослав Рихтер"
+      },
+      "name": "Sviatoslav Richter",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 350000,
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante"
+   },
+   "source-credit": "",
+   "end": "1956-06-01",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1956-06-01",
+   "attributes": [],
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "attributes": [],
+   "begin": "1961-07-14",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "end": "1961-07-14",
+   "recording": {
+    "title": "Sónata í C dúr, KV 545: Andante",
+    "length": 531946,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "13de9dfc-a9b7-43b8-a93e-5bd450b66d1a",
+       "type-id": null,
+       "name": "Árni Kristjánsson",
+       "country": "IS",
+       "disambiguation": "",
+       "sort-name": "Árni Kristjánsson"
+      },
+      "name": "Árni Kristjánsson"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "f1b5da44-5a78-4396-9463-37bfe4f37479"
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {}
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": "1965-01",
+   "recording": {
+    "title": "Sonate C-dur KV. 545 (Sonata facile) – Andante",
+    "length": 377000,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Gulda, Friedrich",
+       "name": "Friedrich Gulda",
+       "disambiguation": "Austrian pianist and composer",
+       "country": "AT",
+       "type": null,
+       "id": "e77e163b-e86d-4a06-a16e-8a06575c227f",
+       "type-id": null
+      },
+      "name": "Friedrich Gulda",
+      "joinphrase": ""
+     }
+    ],
+    "id": "6cc13c3e-da84-496a-af2e-4ab8536387a3"
+   },
+   "source-credit": "",
+   "end": "1965-01"
+  },
+  {
+   "end": "1965-11",
+   "recording": {
+    "id": "b14c7ca6-84fb-4562-8d7a-6001526dc693",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Ingrid Haebler",
+      "artist": {
+       "sort-name": "Haebler, Ingrid",
+       "name": "Ingrid Haebler",
+       "disambiguation": "pianist",
+       "country": "AT",
+       "type": null,
+       "id": "582c676f-48ad-4d6a-aed4-d2b87230b3b4",
+       "type-id": null
+      }
+     }
+    ],
+    "length": 286986,
+    "title": "Sonata for Beginners, K. 545: II. Andante"
+   },
+   "source-credit": "",
+   "attributes": [],
+   "begin": "1965-11",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "attributes": [],
+   "begin": "1967-07-25",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "end": "1967-07-25",
+   "recording": {
+    "id": "1c849a7f-5f8b-47af-9c24-063c830d71e8",
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Glenn Gould",
+       "country": "CA",
+       "disambiguation": "pianist",
+       "sort-name": "Gould, Glenn",
+       "type": null,
+       "type-id": null,
+       "id": "7002bf88-1269-4965-a772-4ba1e7a91eaa"
+      },
+      "name": "Glenn Gould",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 140000,
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante"
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "id": "19e58d5a-252b-4fc9-82fb-b696c9f09511",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "5e6b2053-edb3-4566-b10c-de82bb59db0c",
+       "type-id": null,
+       "sort-name": "Kraus, Lili",
+       "name": "Lili Kraus",
+       "country": "HU",
+       "disambiguation": "pianist"
+      },
+      "name": "Lili Kraus"
+     }
+    ],
+    "video": false,
+    "length": 256000,
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante"
+   },
+   "end": "1968-03-25",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1968-03-25",
+   "attributes": []
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "pianist and conductor",
+       "country": "DE",
+       "name": "Christoph Eschenbach",
+       "sort-name": "Eschenbach, Christoph",
+       "type-id": null,
+       "id": "67307b9a-5f5c-4611-8d41-d439d343fa84",
+       "type": null
+      },
+      "name": "Christoph Eschenbach"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "62c9d4d9-ba0a-4ce7-84dd-938dd1f7713a",
+    "title": "Piano Sonata in C, K.545: II. Andante",
+    "length": 358266
+   },
+   "source-credit": "",
+   "end": "1968-10",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1968-10",
+   "attributes": [],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "attributes": [],
+   "begin": "1972-04-24",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "end": "1972-04-24",
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata in C, K. 545: II. Andante",
+    "length": 347000,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "id": "37cd67d1-a786-4f5c-b91b-14f93b90ca04",
+       "type-id": null,
+       "name": "Mieczysław Horszowski",
+       "country": "PL",
+       "disambiguation": "pianist",
+       "sort-name": "Horszowski, Mieczysław"
+      },
+      "name": "Mieczysław Horszowski",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "541c5755-2888-452c-9b3c-0cfe0d438b94"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "id": "11a322c6-7c84-4e41-94c8-8f123316cc3b",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "id": "64cf3646-fde3-4f5e-8741-8b4d21917785",
+       "type": null,
+       "sort-name": "Pires, Maria João",
+       "disambiguation": "pianist",
+       "country": "PT",
+       "name": "Maria João Pires"
+      },
+      "name": "Maria João Pires",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 262373,
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante"
+   },
+   "end": "1974-02",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "attributes": [],
+   "begin": "1974-01"
+  },
+  {
+   "recording": {
+    "length": 231000,
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "4a061bcc-30a2-40b0-83a2-f50eea477062",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Paul Badura‐Skoda",
+      "artist": {
+       "type-id": null,
+       "id": "ba7e4f58-e926-4b18-ab32-d36f8f08c2ff",
+       "type": null,
+       "country": "AT",
+       "disambiguation": "Austrian classical pianist and pedagogue",
+       "name": "Paul Badura‐Skoda",
+       "sort-name": "Badura‐Skoda, Paul"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": "",
+   "end": "1978-06-25",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "attributes": [],
+   "begin": "1978-06-22",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "end": "1980-02-03",
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "id": "cb535c4c-711b-4be1-98f3-b6b5f8955d41",
+       "type": null,
+       "sort-name": "Schiff, András, Sir",
+       "disambiguation": "Hungarian-born British classical pianist",
+       "country": "HU",
+       "name": "Sir András Schiff"
+      },
+      "name": "András Schiff"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "ee3458ef-d5b1-4788-948e-90580dc9fdec",
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 324266
+   },
+   "begin": "1980-02-01",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "end": "1981",
+   "recording": {
+    "id": "8d6bb49f-54b3-4781-9d16-888ffcf5bedc",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Friedrich Gulda",
+      "artist": {
+       "sort-name": "Gulda, Friedrich",
+       "disambiguation": "Austrian pianist and composer",
+       "country": "AT",
+       "name": "Friedrich Gulda",
+       "type-id": null,
+       "id": "e77e163b-e86d-4a06-a16e-8a06575c227f",
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "length": 420000,
+    "title": "Piano Sonata no. 15 in C, K. 545 \"Facile\": II. Andante"
+   },
+   "source-credit": "",
+   "begin": "1981",
+   "attributes": [
+    "live"
+   ],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "begin": "1982-08",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": "1982-08",
+   "recording": {
+    "length": 344893,
+    "title": "Piano Sonata in C, K. 545: II. Andante",
+    "id": "d18bc4d3-b31b-4926-a3bc-a47bc8af7d67",
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Jean‐Bernard Pommier",
+       "disambiguation": "pianist and conductor",
+       "country": "FR",
+       "sort-name": "Pommier, Jean‐Bernard",
+       "type": null,
+       "id": "25bc5d7e-3c43-4810-8012-8899315a3328",
+       "type-id": null
+      },
+      "name": "Jean‐Bernard Pommier",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": "1983-10",
+   "source-credit": "",
+   "recording": {
+    "length": 420000,
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "3ad05d1f-1c7b-4120-ba0e-99a616f9944b",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "id": "e46cec1d-2758-4009-b7b0-930ed0465bdf",
+       "type": null,
+       "sort-name": "Uchida, Mitsuko",
+       "country": "JP",
+       "disambiguation": "pianist",
+       "name": "内田光子"
+      },
+      "name": "Mitsuko Uchida",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "end": "1983-10"
+  },
+  {
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "end": "1984-04",
+   "recording": {
+    "id": "56d0974a-7f26-425d-8d8e-18dae57de1a5",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "ba7e4f58-e926-4b18-ab32-d36f8f08c2ff",
+       "sort-name": "Badura‐Skoda, Paul",
+       "name": "Paul Badura‐Skoda",
+       "country": "AT",
+       "disambiguation": "Austrian classical pianist and pedagogue"
+      },
+      "name": "Paul Badura‐Skoda"
+     }
+    ],
+    "length": 382000,
+    "title": "Sonate en ut majeur, K 545 - II. Andante"
+   },
+   "source-credit": "",
+   "begin": "1984-04",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {}
+  },
+  {
+   "attributes": [],
+   "begin": "1984-06",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "end": "1985-10",
+   "recording": {
+    "length": 323840,
+    "title": "Sonata no. 16 in C major, K. 545 \"Sonate facile\": II. Andante",
+    "id": "f0cdfc60-c846-4a7c-bd2b-aed1bee58599",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Christian Zacharias",
+      "artist": {
+       "type-id": null,
+       "id": "0c0920e8-c64c-4329-b3be-f58bd0cf7c6b",
+       "type": null,
+       "country": "DE",
+       "disambiguation": "pianist and conductor",
+       "name": "Christian Zacharias",
+       "sort-name": "Zacharias, Christian"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance"
+  },
+  {
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "end": "1985-08",
+   "source-credit": "",
+   "recording": {
+    "id": "f61edf26-608f-442e-a3e8-42d25503dece",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "id": "fac566b2-7a0e-4977-ad92-533f43420975",
+       "type": null,
+       "disambiguation": "pianist and conductor",
+       "country": "AR",
+       "name": "Daniel Barenboim",
+       "sort-name": "Barenboim, Daniel"
+      },
+      "name": "Daniel Barenboim"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 359266,
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante"
+   },
+   "begin": "1985-08",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {}
+  },
+  {
+   "end": "1985-09",
+   "source-credit": "",
+   "recording": {
+    "length": 498000,
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "2a23135e-1f19-4b5a-bf70-1566660490a3",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Claudio Arrau",
+       "country": "CL",
+       "disambiguation": "Chilean and American pianist",
+       "sort-name": "Arrau, Claudio",
+       "type": null,
+       "type-id": null,
+       "id": "3905011f-ac59-4d50-9095-1545a9944de8"
+      },
+      "name": "Claudio Arrau"
+     }
+    ]
+   },
+   "attributes": [],
+   "begin": "1985-09",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1987-04-21",
+   "attributes": [],
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "582c676f-48ad-4d6a-aed4-d2b87230b3b4",
+       "type-id": null,
+       "name": "Ingrid Haebler",
+       "country": "AT",
+       "disambiguation": "pianist",
+       "sort-name": "Haebler, Ingrid"
+      },
+      "name": "Ingrid Haebler"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "926b35e6-7049-43dc-8a8b-e63cdc6d4877",
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 349733
+   },
+   "end": "1987-04-27",
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward"
+  },
+  {
+   "end": "1989-01-11",
+   "source-credit": "",
+   "recording": {
+    "id": "ff48f1b9-65ce-497d-8b9e-5624871716f6",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "2f25dbea-bf8a-4d89-8d91-769ab02c3adf",
+       "name": "Peter Katin",
+       "country": "GB",
+       "disambiguation": "",
+       "sort-name": "Katin, Peter"
+      },
+      "name": "Peter Katin"
+     }
+    ],
+    "length": 245026,
+    "title": "Sonata in C major, K545: II. Andante"
+   },
+   "attributes": [],
+   "begin": "1989-01-09",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "attributes": [],
+   "begin": "1989-02",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "end": "1989-02",
+   "recording": {
+    "length": 363160,
+    "title": "Sonata in C major, K. 545: II. Andante",
+    "id": "5eb0579d-bfde-4e0d-8f40-d0a12c29c74e",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Maria João Pires",
+      "artist": {
+       "id": "64cf3646-fde3-4f5e-8741-8b4d21917785",
+       "type-id": null,
+       "type": null,
+       "country": "PT",
+       "disambiguation": "pianist",
+       "name": "Maria João Pires",
+       "sort-name": "Pires, Maria João"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance"
+  },
+  {
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-type": "recording",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "begin": "1989-03-29",
+   "recording": {
+    "length": 380000,
+    "title": "Piano Sonata no. 16 in C major, K. 545 “Sonata facile”: II. Andante",
+    "id": "61f13c64-bac6-45e7-80d3-d0d4acb3f363",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Sviatoslav Richter",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "2014bfbb-c65d-45dc-9973-35bead3833fa",
+       "name": "Святослав Рихтер",
+       "disambiguation": "pianist",
+       "country": "RU",
+       "sort-name": "Richter, Sviatoslav"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": "",
+   "end": "1989-03-29",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward"
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": "1989-07-08",
+   "recording": {
+    "length": 312000,
+    "title": "Sonate Nr. 16 C-Dur, KV 545: II. Andante",
+    "id": "b35828c9-2060-4220-9a13-ec6f34c28005",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Carmen Piazzini",
+      "artist": {
+       "type-id": null,
+       "id": "e38e0db0-4a76-4da8-a082-ac029abb4d71",
+       "type": null,
+       "sort-name": "Piazzini, Carmen",
+       "disambiguation": "pianist",
+       "country": "DE",
+       "name": "Carmen Piazzini"
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "source-credit": "",
+   "end": "1989-08-07"
+  },
+  {
+   "begin": "1989-12",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": "1989-12",
+   "source-credit": "",
+   "recording": {
+    "length": 183626,
+    "title": "Sonata no. 16 in C major, K. 545: II. Andante",
+    "id": "732b8a44-e132-4052-ab94-d8ffb0ffdc5d",
+    "artist-credit": [
+     {
+      "name": "Anthony Newman",
+      "artist": {
+       "sort-name": "Newman, Anthony",
+       "name": "Anthony Newman",
+       "disambiguation": "organist, conductor, composer",
+       "country": "US",
+       "type": null,
+       "id": "2ea4c412-b5db-499a-ad58-8251d91526ca",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "attributes": [],
+   "begin": "1990-01",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "end": "1990-01",
+   "source-credit": "",
+   "recording": {
+    "id": "a436839c-1af9-4472-956e-b6078c116857",
+    "artist-credit": [
+     {
+      "name": "Ruth Laredo",
+      "artist": {
+       "sort-name": "Laredo, Ruth",
+       "name": "Ruth Laredo",
+       "disambiguation": "pianist",
+       "country": "US",
+       "type": null,
+       "type-id": null,
+       "id": "c4f2f1a6-bb67-43c6-8008-3ad82557250f"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 243506,
+    "title": "Sonata in C major, K. 545: II. Andante"
+   }
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": "1990-06-26",
+   "recording": {
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 362066,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Alicia de Larrocha",
+      "artist": {
+       "name": "Alicia de Larrocha",
+       "disambiguation": "pianist",
+       "country": "ES",
+       "sort-name": "Larrocha, Alicia de",
+       "type": null,
+       "type-id": null,
+       "id": "4253b0bc-beff-4579-9101-7df5ecd317ae"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "5d4177a9-aec7-4566-a84b-60b39ec7fc9b"
+   },
+   "source-credit": "",
+   "end": "1990-06-29"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": "1990-07",
+   "attributes": [],
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "end": "1990-07",
+   "source-credit": "",
+   "recording": {
+    "id": "0e58a3d8-59a2-4a76-bf45-6982531acaed",
+    "artist-credit": [
+     {
+      "joinphrase": ", ",
+      "artist": {
+       "country": "NL",
+       "disambiguation": "Dutch violinist",
+       "name": "Isabelle van Keulen",
+       "sort-name": "Keulen, Isabelle van",
+       "type-id": null,
+       "id": "115cf22f-059c-46ad-ab58-609e0415ab51",
+       "type": null
+      },
+      "name": "Isabelle van Keulen"
+     },
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Brautigam, Ronald",
+       "name": "Ronald Brautigam",
+       "country": "NL",
+       "disambiguation": "pianist",
+       "type": null,
+       "id": "c9ecbd32-774e-47f7-92e0-d660418f3c21",
+       "type-id": null
+      },
+      "name": "Ronald Brautigam"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 195000,
+    "title": "Sonata in C, KV 403/385c: 2. Andante"
+   }
+  },
+  {
+   "end": "1990-11-19",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Huguette Dreyfus",
+      "artist": {
+       "name": "Huguette Dreyfus",
+       "disambiguation": "harpsichordist",
+       "country": "FR",
+       "sort-name": "Dreyfus, Huguette",
+       "type": null,
+       "type-id": null,
+       "id": "a69af194-3fc4-44eb-92a0-402422470e42"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "cd10f21f-bb1d-4ccc-9f18-0e7eb53eb0c6",
+    "title": "Sonata no. 16 in C major, KV 545: II. Andante",
+    "length": 339706
+   },
+   "source-credit": "",
+   "begin": "1990-11-14",
+   "attributes": [],
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "end": "1990-11-25",
+   "source-credit": "",
+   "recording": {
+    "id": "f2a02e13-7fca-4e13-9f5c-6dd156493f94",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Jandó, Jenő",
+       "country": "HU",
+       "disambiguation": "pianist",
+       "name": "Jenő Jandó",
+       "type-id": null,
+       "id": "42959d4b-b222-49e3-880d-b21a87689279",
+       "type": null
+      },
+      "name": "Jenő Jandó",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 287000,
+    "title": "Piano Sonata no. 16 in C major, K. 545, \"Sonata facile\": II. Andante"
+   },
+   "begin": "1990-11-19",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata no. 16 in C major for Piano, K. 545 \"Sonata facile\": II. Andante",
+    "length": 307573,
+    "artist-credit": [
+     {
+      "name": "András Schiff",
+      "artist": {
+       "type-id": null,
+       "id": "cb535c4c-711b-4be1-98f3-b6b5f8955d41",
+       "type": null,
+       "disambiguation": "Hungarian-born British classical pianist",
+       "country": "HU",
+       "name": "Sir András Schiff",
+       "sort-name": "Schiff, András, Sir"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "52777c9f-94c3-49e3-ab94-4be73d2f4843"
+   },
+   "end": "1991-01",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1991-01",
+   "attributes": [],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "end": "1991-05",
+   "source-credit": "",
+   "recording": {
+    "id": "1b42ab37-bb02-4ed0-ae5a-02b3a1a164f7",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Mitsuko Uchida",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "e46cec1d-2758-4009-b7b0-930ed0465bdf",
+       "name": "内田光子",
+       "country": "JP",
+       "disambiguation": "pianist",
+       "sort-name": "Uchida, Mitsuko"
+      }
+     }
+    ],
+    "length": 379000,
+    "title": "Sonata in C, KV 545: II. Andante"
+   },
+   "attributes": [
+    "live"
+   ],
+   "begin": "1991-05",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-type": "recording",
+   "ended": true,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Hans Pålsson",
+      "artist": {
+       "id": "9ccd01fe-c0e2-4da8-b29a-1ebc0e0d1079",
+       "type-id": null,
+       "type": null,
+       "country": "SE",
+       "disambiguation": "Swedish pianist",
+       "name": "Hans Pålsson",
+       "sort-name": "Pålsson, Hans"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "3f6786a5-6a5b-4290-8a05-100439cf8de6",
+    "title": "Sonat C Dur KV 545: Andante",
+    "length": 237000
+   },
+   "source-credit": "",
+   "end": "1996-01-17",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1996-01-16",
+   "attributes": []
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": "1996-08-15",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": "1996-08-16",
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "c9ecbd32-774e-47f7-92e0-d660418f3c21",
+       "type-id": null,
+       "type": null,
+       "disambiguation": "pianist",
+       "country": "NL",
+       "name": "Ronald Brautigam",
+       "sort-name": "Brautigam, Ronald"
+      },
+      "name": "Ronald Brautigam"
+     }
+    ],
+    "video": false,
+    "id": "a8773051-7048-4205-9b5a-15c0f495f39d",
+    "title": "Sonata no. 16 in C major, KV 545: II. Andante",
+    "length": 366000
+   }
+  },
+  {
+   "recording": {
+    "length": 204000,
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "f75a9fdc-baed-4d16-97fb-640817c9c624",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Immerseel, Jos van",
+       "name": "Jos van Immerseel",
+       "country": "BE",
+       "disambiguation": "Belgian pianist and conductor",
+       "type": null,
+       "id": "095b3b6e-573b-4207-b149-3842e176d5f7",
+       "type-id": null
+      },
+      "name": "Jos van Immerseel",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "end": "1996-11-04",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1996-10-31",
+   "attributes": [],
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "attributes": [],
+   "begin": "1996-??-03",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "end": "1996-03",
+   "source-credit": "",
+   "recording": {
+    "length": 279000,
+    "title": "Sonata Iin C major, K. 545: Andante",
+    "id": "0a643d73-da05-4183-9310-f323e8c90ac6",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Ronan O’Hora",
+       "country": "GB",
+       "disambiguation": "British pianist",
+       "sort-name": "O’Hora, Ronan",
+       "type": null,
+       "id": "1701ea59-bf83-4156-baef-3667863952fc",
+       "type-id": null
+      },
+      "name": "Ronan O’Hora",
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance"
+  },
+  {
+   "target-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "1998",
+   "attributes": [],
+   "recording": {
+    "id": "5a742023-28d7-4df2-9da9-a6a5b755b534",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "eabfdf13-2234-41f2-973c-8bb132774c07",
+       "type-id": null,
+       "type": null,
+       "country": "HU",
+       "disambiguation": "pianist",
+       "name": "Klára Würtz",
+       "sort-name": "Würtz, Klára"
+      },
+      "name": "Klára Würtz"
+     }
+    ],
+    "disambiguation": "",
+    "length": 250866,
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante"
+   },
+   "source-credit": "",
+   "end": "1998"
+  },
+  {
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "attributes": [],
+   "begin": "1999",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "id": "989be237-c054-44b7-83c3-59ae9e959954",
+       "type-id": null,
+       "name": "Liv Glaser",
+       "country": "NO",
+       "disambiguation": "Norwegian classical pianist",
+       "sort-name": "Glaser, Liv"
+      },
+      "name": "Liv Glaser",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "9e3fd1d9-6a50-4dca-940c-b950a072eefc",
+    "title": "Sonata No. 16, C Major, K 545. Andante",
+    "length": 321776
+   },
+   "source-credit": "",
+   "end": "1999",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "length": 238720,
+    "title": "Sonata in C major, KV 545 \"Sonata facile\": II. Andante",
+    "id": "f5bac652-7857-40a1-94c3-861f1a3b9b59",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Arthur Schoonderwoerd",
+      "artist": {
+       "sort-name": "Schoonderwoerd, Arthur",
+       "name": "Arthur Schoonderwoerd",
+       "country": "NL",
+       "disambiguation": "pianist",
+       "type": null,
+       "id": "9b81aec8-2509-4053-8040-71205a5f736e",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "end": "2005-06-02",
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": "2005-05-31",
+   "attributes": [],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "end": "2005-11-24",
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata in C major, KV 545: Andante",
+    "length": 382586,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Bart van Oort",
+      "artist": {
+       "country": "NL",
+       "disambiguation": "pianist",
+       "name": "Bart van Oort",
+       "sort-name": "Oort, Bart van",
+       "type-id": null,
+       "id": "cd8ccf3a-59e8-44b4-90fd-fbae8f1cc847",
+       "type": null
+      }
+     }
+    ],
+    "video": false,
+    "id": "3c147205-b30d-4873-a2e9-1fd613723ef6"
+   },
+   "begin": "2005-11-22",
+   "attributes": [],
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {}
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": "2005-12-05",
+   "attributes": [],
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "end": "2006-05-25",
+   "source-credit": "",
+   "recording": {
+    "length": 331173,
+    "title": "Sonata K545 in C major: 2. Andante",
+    "id": "e5485dae-5d74-4074-ad2d-af0e4adb6d8c",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "pianist",
+       "country": "GB",
+       "name": "Leon McCawley",
+       "sort-name": "McCawley, Leon",
+       "type-id": null,
+       "id": "a527c580-1d98-47e4-868a-5ad99de8b611",
+       "type": null
+      },
+      "name": "Leon McCawley",
+      "joinphrase": ""
+     }
+    ]
+   }
+  },
+  {
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "attributes": [],
+   "begin": "2007-08",
+   "source-credit": "",
+   "recording": {
+    "id": "4e08f0f2-590f-401a-88eb-f5bf22535e98",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "2b2b1f09-c36b-4b4a-97d4-feca4220457e",
+       "type-id": null,
+       "type": null,
+       "sort-name": "Silverman, Robert",
+       "disambiguation": "",
+       "country": "CA",
+       "name": "Robert Silverman"
+      },
+      "name": "Robert Silverman",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "length": 321000,
+    "title": "Sonata No. 16 in C, K. 545 - Andante (4.0 mix)"
+   },
+   "end": "2007-08",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward"
+  },
+  {
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata No. 16 in C, K. 545: Andante",
+    "length": 321080,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Robert Silverman",
+      "artist": {
+       "sort-name": "Silverman, Robert",
+       "name": "Robert Silverman",
+       "country": "CA",
+       "disambiguation": "",
+       "type": null,
+       "type-id": null,
+       "id": "2b2b1f09-c36b-4b4a-97d4-feca4220457e"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "id": "2a1841f3-25e8-4009-9c8c-de5d003b2c16"
+   },
+   "end": "2007-08",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "2007-08",
+   "attributes": []
+  },
+  {
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "end": "2009-09",
+   "recording": {
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Daniel-Ben Pienaar",
+      "artist": {
+       "sort-name": "Pienaar, Daniel-Ben",
+       "country": "ZA",
+       "disambiguation": "pianist",
+       "name": "Daniel-Ben Pienaar",
+       "type-id": null,
+       "id": "05b9af97-63f4-43a6-a0cf-cbc85912948d",
+       "type": null
+      }
+     }
+    ],
+    "id": "05f16fe0-6d95-43e2-8166-1b8ff0032f3a",
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Für Anfänger\": II. Andante",
+    "length": 333080
+   },
+   "source-credit": "",
+   "begin": "2008-08",
+   "attributes": [],
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {}
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata in C major, K. 545: II. Andante",
+    "length": 397000,
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "id": "49fba3f8-644c-4bb4-9ff3-a1a61bd11844",
+       "type": null,
+       "disambiguation": "fortepianist, harpsichordist and pianist",
+       "country": "AU",
+       "name": "Kristian Bezuidenhout",
+       "sort-name": "Bezuidenhout, Kristian"
+      },
+      "name": "Kristian Bezuidenhout",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "a1f12565-b597-4ceb-9ce5-769a08c968a8"
+   },
+   "end": "2013-01",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": "2013-01",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": "",
+   "end": "2013-07-09",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Hamelin, Marc‐André",
+       "disambiguation": "Canadian pianist",
+       "country": "CA",
+       "name": "Marc‐André Hamelin",
+       "type-id": null,
+       "id": "28bdba1f-35c9-4c13-a728-7a72ea37b3ea",
+       "type": null
+      },
+      "name": "Marc‐André Hamelin",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "e437760d-5b88-4c43-9c4e-1031716635dc",
+    "title": "Piano Sonata in C major, K 545: Andante",
+    "length": 225000
+   },
+   "source-credit": "",
+   "attributes": [],
+   "begin": "2013-07-05",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "DE",
+       "disambiguation": "pianist",
+       "name": "William Youn",
+       "sort-name": "Youn, William",
+       "type-id": null,
+       "id": "70907d2a-1e52-429f-af70-8ad3b71c806d",
+       "type": null
+      },
+      "name": "William Youn"
+     }
+    ],
+    "id": "8d919651-aabd-4218-91a7-9d4276c1c4bf",
+    "title": "Klaviersonate C-Dur, KV 545 (Sonata facile): Andante",
+    "length": 317000
+   },
+   "end": "2014-10-30",
+   "ended": true,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": "2014-10-28",
+   "attributes": [],
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "end": "2014",
+   "recording": {
+    "length": 413338,
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Facile\": II. Andante",
+    "id": "54d98633-f98d-49c4-8c57-463c8ec4ff35",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Jennifer Lim",
+      "artist": {
+       "type-id": null,
+       "id": "17996691-6a27-4c3c-87f3-b42277a82943",
+       "type": null,
+       "disambiguation": "Korean-Canadian pianist",
+       "country": "KR",
+       "name": "Jennifer Lim",
+       "sort-name": "Lim, Jennifer"
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "source-credit": "",
+   "begin": "2014",
+   "attributes": [],
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {}
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "id": "17b00aea-fc0e-4e27-8598-f4dc746d370e",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "id": "71987909-1c14-4761-ae93-502df99eec41",
+       "type": null,
+       "disambiguation": "pianist",
+       "country": "US",
+       "name": "Jeremy Denk",
+       "sort-name": "Denk, Jeremy"
+      },
+      "name": "Jeremy Denk"
+     }
+    ],
+    "video": false,
+    "length": 274680,
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante"
+   },
+   "end": "2017-01",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "2017-01",
+   "attributes": [],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "2017-03-08",
+   "attributes": [],
+   "recording": {
+    "length": 298000,
+    "title": "Sonata no. 16 in C major, K.545: II. Andante",
+    "id": "216fa12b-9bdf-42ea-90ff-dc001035c6e6",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Maxim Emelyanychev",
+      "artist": {
+       "type-id": null,
+       "id": "2f30c8e7-a7c4-47c8-b6e5-c211504261b8",
+       "type": null,
+       "country": "RU",
+       "disambiguation": "Russian conductor, pianist, harpsichordist & cornetist",
+       "name": "Maxim Emelyanychev",
+       "sort-name": "Emelyanychev, Maxim"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "source-credit": "",
+   "end": "2017-03-10",
+   "target-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward"
+  },
+  {
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": true,
+   "attributes": [],
+   "begin": "2017-05-31",
+   "source-credit": "",
+   "recording": {
+    "length": 314000,
+    "title": "Sonata in C major, K 545: Andante",
+    "id": "e2561942-a24e-43db-894c-d4f833540898",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Grigory Sokolov",
+      "artist": {
+       "sort-name": "Sokolov, Grigory",
+       "name": "Григорий Соколов",
+       "disambiguation": "pianist",
+       "country": "RU",
+       "type": null,
+       "type-id": null,
+       "id": "1928a9f4-7ce0-4c68-855c-85410c5d06a7"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": true
+   },
+   "end": "2017-05-31",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward"
+  },
+  {
+   "attributes": [],
+   "begin": "2018-07-11",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "end": "2018-07-12",
+   "source-credit": "",
+   "recording": {
+    "id": "dc11556a-16a6-4cf2-914d-1457e5477ffe",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Peter Donohoe",
+      "artist": {
+       "sort-name": "Donohoe, Peter",
+       "country": "GB",
+       "disambiguation": "British classical pianist",
+       "name": "Peter Donohoe",
+       "id": "0eda8662-c9f0-4b57-b7f3-f61b5c9fde9e",
+       "type-id": null,
+       "type": null
+      }
+     }
+    ],
+    "length": 307600,
+    "title": "Sonata no. 16 in C major, K. 545: II. Andante"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "title": "Piano Sonata No. 16 in C Major, K. 545 “Sonata facile”: II. Andante",
+    "length": 239616,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Víkingur Ólafsson",
+      "artist": {
+       "id": "cea4a3b8-c26c-4b61-a243-cf72555e2c71",
+       "type-id": null,
+       "type": null,
+       "country": "IS",
+       "disambiguation": "pianist",
+       "name": "Víkingur Ólafsson",
+       "sort-name": "Víkingur Ólafsson"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "dc9d78b1-6ebd-47fd-8696-e80f4de9202b"
+   },
+   "source-credit": "",
+   "end": "2021-04",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": "2021-04"
+  },
+  {
+   "recording": {
+    "id": "abf0801b-9e71-4bc6-a2a0-2e2b33c7fc04",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Olga Scheps",
+       "country": "DE",
+       "disambiguation": "pianist",
+       "sort-name": "Scheps, Olga",
+       "type": null,
+       "id": "563783f7-f29c-42a1-8bc2-69a0e724b1d2",
+       "type-id": null
+      },
+      "name": "Olga Scheps",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 321870,
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante"
+   },
+   "source-credit": "",
+   "end": "2021",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "2021",
+   "attributes": [],
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "attributes": [],
+   "begin": "2021",
+   "attribute-ids": {},
+   "ended": true,
+   "target-type": "recording",
+   "end": "2021",
+   "recording": {
+    "title": "Sonata for Piano no. 16 in C major, K. 545: II. Andante",
+    "length": 412000,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "id": "db511542-7e53-4dfb-b513-504d52a0446f",
+       "type": null,
+       "sort-name": "Leonskaja, Elisabeth",
+       "disambiguation": "pianist",
+       "country": "AT",
+       "name": "Elisabeth Leonskaja"
+      },
+      "name": "Elisabeth Leonskaja",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "f317b51c-f246-41a6-bd12-17b42f378585"
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {}
+  },
+  {
+   "target-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {},
+   "begin": "2024-08-27",
+   "attributes": [],
+   "source-credit": "",
+   "recording": {
+    "length": 327120,
+    "title": "Piano Sonata no. 15 in C major, K. 545 \"Sonata facile\": II. Andante",
+    "id": "cdb3709a-c8c6-4f68-b66a-64953f494541",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Michel Dalberto",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "c4ee8d52-510b-429d-a33d-6e9adcbb978b",
+       "sort-name": "Dalberto, Michel",
+       "name": "Michel Dalberto",
+       "country": "FR",
+       "disambiguation": "pianist"
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "end": "2024-08-30"
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "id": "ded640b3-6c60-42c9-9588-7e59bbbf51a5",
+       "type": null,
+       "sort-name": "McCarthy, Dennis",
+       "country": "US",
+       "disambiguation": "US composer film scores",
+       "name": "Dennis McCarthy"
+      },
+      "name": "Dennis McCarthy",
+      "joinphrase": ""
+     }
+    ],
+    "id": "8c724f62-f195-4d80-ba96-b599900c84bf",
+    "title": "“Past Tense, Part I”: Piano Sonata in C Major K. 545 (Andante) (Mozart)",
+    "length": 197933
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "source-credit": "",
+   "recording": {
+    "title": "2. Andante From Sonata In C Major K. 545 \"Facile\"",
+    "length": 384000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "e77e163b-e86d-4a06-a16e-8a06575c227f",
+       "type-id": null,
+       "type": null,
+       "sort-name": "Gulda, Friedrich",
+       "disambiguation": "Austrian pianist and composer",
+       "country": "AT",
+       "name": "Friedrich Gulda"
+      },
+      "name": "Friedrich Gulda"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "569fca34-febd-4a03-863b-9691be5aff63"
+   },
+   "end": null
+  },
+  {
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "3d230d83-5135-4394-8aad-ac2fe847760b",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "type": null,
+       "country": "XW",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "name": "[unknown]",
+       "sort-name": "[unknown]"
+      },
+      "name": "[unknown]"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 193000,
+    "title": "Andante (aus Sonate in C-Dur KV 545)"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {}
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "attributes": [
+    "partial"
+   ],
+   "begin": null,
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "target-type": "recording",
+   "ended": false,
+   "end": null,
+   "recording": {
+    "id": "b6f59d46-7d39-420f-a25b-af149ecf1cf8",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Don Voegeli",
+      "artist": {
+       "id": "abb5bfa4-a6ca-452b-ba18-111e9447c9a7",
+       "type-id": null,
+       "type": null,
+       "sort-name": "Voegeli, Don",
+       "country": "US",
+       "disambiguation": "",
+       "name": "Don Voegeli"
+      }
+     }
+    ],
+    "length": 60000,
+    "title": "Andante from Piano Sonata No. III, K. 545"
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Don Voegeli",
+      "artist": {
+       "type": null,
+       "id": "abb5bfa4-a6ca-452b-ba18-111e9447c9a7",
+       "type-id": null,
+       "name": "Don Voegeli",
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "Voegeli, Don"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "db4638e0-690c-4c50-8d0b-b5554d247b7d",
+    "title": "Andante from Piano Sonata No. III, K. 545",
+    "length": 30000
+   },
+   "source-credit": "",
+   "end": null,
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "begin": null,
+   "attributes": [
+    "partial"
+   ]
+  },
+  {
+   "target-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "recording": {
+    "length": null,
+    "title": "Andante from Sonata in C K545",
+    "id": "50835d87-d9c2-45fe-a499-ae5ddb8da1cb",
+    "artist-credit": [
+     {
+      "name": "Amy Hayashi-Jones",
+      "artist": {
+       "sort-name": "Hayashi-Jones, Amy",
+       "name": "Amy Hayashi-Jones",
+       "disambiguation": "",
+       "country": null,
+       "type": null,
+       "id": "0720beac-88eb-4fd4-b9e4-caf239f1f3fd",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "end": null,
+   "recording": {
+    "title": "Leichte Sonate C-Dur: 1. Satz. Andante",
+    "length": 155000,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Wilhelm Ohmen",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "9d2c2c62-97f7-42d9-85f3-e8781a108563",
+       "sort-name": "Ohmen, Wilhelm",
+       "name": "Wilhelm Ohmen",
+       "country": "DE",
+       "disambiguation": "German classical pianist"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "113f9704-a0d9-47a0-b51c-d9d2081d8c4c"
+   },
+   "source-credit": ""
+  },
+  {
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "title": "Piano Sonata in C Major K 545: Second Movement",
+    "length": 477986,
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Uri Caine Ensemble",
+       "disambiguation": "",
+       "country": null,
+       "sort-name": "Uri Caine Ensemble",
+       "type": null,
+       "type-id": null,
+       "id": "25595b01-1869-4d97-bd65-cfe95581e4dc"
+      },
+      "name": "Uri Caine Ensemble",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "0272006f-e279-455a-807b-77cdc6d8dfa6"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "end": null,
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Gyula Kiss",
+      "artist": {
+       "sort-name": "Kiss, Gyula",
+       "country": "HU",
+       "disambiguation": "Hungarian classical pianist",
+       "name": "Gyula Kiss",
+       "id": "f25ae8fb-0528-402d-bfec-989897245f41",
+       "type-id": null,
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "090bb102-3ae2-4271-9bd3-e6648d6341bd",
+    "title": "Piano Sonata in C major K.545 “Sonata facile”: II. Andante",
+    "length": 372666
+   },
+   "source-credit": "",
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "recording": {
+    "length": 350720,
+    "title": "Piano Sonata in C major no. 16, K. 545: II. Andante",
+    "id": "e0cf6a84-9dac-4acd-91d5-495632be40be",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Orli Shaham",
+      "artist": {
+       "name": "Orli Shaham",
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "Shaham, Orli",
+       "type": null,
+       "type-id": null,
+       "id": "fe0823b2-9b43-47aa-8f6a-abd1d35f6aa3"
+      }
+     }
+    ],
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "begin": null,
+   "attributes": [
+    "partial"
+   ],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "end": null,
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "c9ecbd32-774e-47f7-92e0-d660418f3c21",
+       "type-id": null,
+       "name": "Ronald Brautigam",
+       "country": "NL",
+       "disambiguation": "pianist",
+       "sort-name": "Brautigam, Ronald"
+      },
+      "name": "Ronald Brautigam"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "d162bd5a-6301-4614-978b-8ab22ff4c18a",
+    "title": "Piano Sonata in C major, K545: II. (extract)",
+    "length": 17466
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "title": "Piano Sonata in C major, KV 545: II. Andante",
+    "length": 406000,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Joyce, Eileen",
+       "disambiguation": "Australian pianist",
+       "country": "AU",
+       "name": "Eileen Joyce",
+       "id": "46ecf198-6266-4cf2-87a9-309c99c2422a",
+       "type-id": null,
+       "type": null
+      },
+      "name": "Eileen Joyce",
+      "joinphrase": ""
+     }
+    ],
+    "id": "e8a9667e-cfde-4972-9670-e9835a0948f4"
+   },
+   "source-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Piano sonata in C major: Andante",
+    "length": 59000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "[unknown]",
+      "artist": {
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "name": "[unknown]",
+       "sort-name": "[unknown]",
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "01c7c67a-9351-42df-8cbd-a47e71515eac"
+   },
+   "begin": null,
+   "attributes": [
+    "partial"
+   ],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "recording": {
+    "id": "96d69d0e-2387-41c2-86fb-f467c23adb00",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type": null,
+       "country": "XW",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "name": "[unknown]",
+       "sort-name": "[unknown]"
+      },
+      "name": "[unknown]"
+     }
+    ],
+    "video": false,
+    "length": 30000,
+    "title": "Piano sonata in C major: Andante"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "begin": null,
+   "attributes": [
+    "partial"
+   ],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "begin": null,
+   "attributes": [
+    "partial"
+   ],
+   "recording": {
+    "id": "6fb616a8-1538-4cd2-8d11-d265748b04bf",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "[unknown]",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "name": "[unknown]",
+       "type-id": null,
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type": null
+      },
+      "name": "[unknown]"
+     }
+    ],
+    "video": false,
+    "length": 37000,
+    "title": "Piano sonata in C major: Andante"
+   },
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "end": null,
+   "recording": {
+    "title": "Piano sonata in C major: Andante",
+    "length": 55000,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "[unknown]",
+      "artist": {
+       "sort-name": "[unknown]",
+       "name": "[unknown]",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "type": null,
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null
+      }
+     }
+    ],
+    "id": "fe4f8454-06ba-4ea1-aa6c-62495d62c1a0"
+   },
+   "source-credit": "",
+   "attributes": [
+    "partial"
+   ],
+   "begin": null,
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "ended": false,
+   "target-type": "recording",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "id": "4015c0b6-4246-4797-b674-fa85139e6dd2",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "[unknown]",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "name": "[unknown]",
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "type": null
+      },
+      "name": "[unknown]",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "length": 84000,
+    "title": "Piano sonata in C major: Andante"
+   },
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "begin": null,
+   "attributes": [
+    "partial"
+   ]
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [
+    "partial"
+   ],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "4bd0c77d-f8d9-4f73-8765-80d4f98e1b47",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "[unknown]",
+      "artist": {
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "type": null,
+       "sort-name": "[unknown]",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "name": "[unknown]"
+      }
+     }
+    ],
+    "video": false,
+    "length": 13000,
+    "title": "Piano sonata in C major: Andante"
+   }
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "id": "760076f6-7b22-4634-af85-940e04f3f32c",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Jenő Jandó",
+      "artist": {
+       "sort-name": "Jandó, Jenő",
+       "country": "HU",
+       "disambiguation": "pianist",
+       "name": "Jenő Jandó",
+       "type-id": null,
+       "id": "42959d4b-b222-49e3-880d-b21a87689279",
+       "type": null
+      }
+     }
+    ],
+    "length": 184000,
+    "title": "Piano Sonata in C, K. 545 \"Sonata facile\": I. Allegro"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Piano Sonata in C, K.545: II. Andante",
+    "length": 362093,
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Alicia de Larrocha",
+       "disambiguation": "pianist",
+       "country": "ES",
+       "sort-name": "Larrocha, Alicia de",
+       "type": null,
+       "type-id": null,
+       "id": "4253b0bc-beff-4579-9101-7df5ecd317ae"
+      },
+      "name": "Alicia de Larrocha",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "fdc3d947-5d0c-4b82-b9af-8269ec1e0eac"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance"
+  },
+  {
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Piano Sonata in C, K545: II.",
+    "length": 392733,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Roderick Kettlewell",
+      "artist": {
+       "type-id": null,
+       "id": "be85aee7-8469-482d-b1af-1e3f51a8cd71",
+       "type": null,
+       "sort-name": "Kettlewell, Roderick",
+       "disambiguation": "",
+       "country": "US",
+       "name": "Roderick Kettlewell"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "484278e9-ac0b-485f-a0c6-e8b8f71eb976"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "target-credit": "",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "length": null,
+    "title": "Piano Sonata KV 545: Andante",
+    "id": "07898c7e-8179-490d-bf32-141e01947e4e",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Simone Renzi",
+      "artist": {
+       "id": "37210c0b-f569-4023-addd-3ec0d2e3aeb2",
+       "type-id": null,
+       "type": null,
+       "sort-name": "Renzi, Simone",
+       "disambiguation": "",
+       "country": null,
+       "name": "Simone Renzi"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "title": "Piano Sonata no. 15 in C major (\"Sonata semplice\"): Andante",
+    "length": 407960,
+    "artist-credit": [
+     {
+      "name": "Ric Louchard",
+      "artist": {
+       "name": "Ric Louchard",
+       "disambiguation": "classical pianist",
+       "country": null,
+       "sort-name": "Ric Louchard",
+       "type": null,
+       "type-id": null,
+       "id": "189d4fb5-6f34-4fe1-96a3-bfe6934ceca9"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "bd31b0c5-e97e-4ab1-9566-3476a94cb12d"
+   },
+   "source-credit": ""
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "end": null,
+   "recording": {
+    "title": "Piano Sonata no. 15 in C major, K. 545: II. Andante",
+    "length": 330000,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "85cdd339-a724-42b3-a31b-58e2ca42939f",
+       "name": "Guiomar Novaes",
+       "country": "BR",
+       "disambiguation": "pianist",
+       "sort-name": "Novaes, Guiomar"
+      },
+      "name": "Guiomar Novaes"
+     }
+    ],
+    "id": "54c9af0c-d2f2-460e-84dd-84e4c173fc8b"
+   },
+   "source-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Goldmann, Dieter",
+       "name": "Dieter Goldmann",
+       "disambiguation": "pianist, Alfred Scholz related",
+       "country": null,
+       "type": null,
+       "type-id": null,
+       "id": "e71ec8e5-7799-4484-8acf-fe59dfbdcc36"
+      },
+      "name": "Dieter Goldmann"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "1e59336f-2811-44a1-ab65-e17884c0e207",
+    "title": "Piano Sonata no. 16 in C major, K 545: 2. Adagio",
+    "length": 359000
+   },
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "recording": {
+    "id": "115d68fd-5d60-4b4c-8ff6-6320fc7ac042",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Christian Blackshaw",
+      "artist": {
+       "name": "Christian Blackshaw",
+       "country": "GB",
+       "disambiguation": "classical pianist",
+       "sort-name": "Blackshaw, Christian",
+       "type": null,
+       "type-id": null,
+       "id": "e9f4068e-a88f-47a5-bf95-8bb9ca56a608"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 410000,
+    "title": "Piano Sonata no. 16 in C major, K 545: Andante"
+   },
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "recording": {
+    "title": "Piano Sonata no. 16 in C Major, K. 545 \"Facile\": II. Andante",
+    "length": 334000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "85cdd339-a724-42b3-a31b-58e2ca42939f",
+       "type-id": null,
+       "name": "Guiomar Novaes",
+       "country": "BR",
+       "disambiguation": "pianist",
+       "sort-name": "Novaes, Guiomar"
+      },
+      "name": "Guiomar Novaes"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "3c1eb9a5-2f04-4e11-ae8e-dab27b7f326e"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Semplice\": II. Andante",
+    "length": 388000,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "385cb39b-f06c-4635-84fd-ecc8fff56c97",
+       "sort-name": "Lubimov, Alexei",
+       "name": "Алексей Любимов",
+       "country": "RU",
+       "disambiguation": "Russian pianist, fortepianist and harpsichordist"
+      },
+      "name": "Alexei Lubimov"
+     }
+    ],
+    "disambiguation": "",
+    "id": "ae5409d1-d07c-4b35-a6b0-bf5ac3217fc5"
+   },
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {}
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Semplice\": II. Andante",
+    "length": 228867,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Jean Muller",
+      "artist": {
+       "name": "Jean Muller",
+       "country": "XE",
+       "disambiguation": "pianist",
+       "sort-name": "Muller, Jean",
+       "type": null,
+       "type-id": null,
+       "id": "45ab1c99-c2fe-4a74-be00-50e981572e7f"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "619d4d5d-2016-4ae6-ae1c-5a7d256078dc"
+   },
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "recording": {
+    "length": 263360,
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata facile\": 2. Andante",
+    "id": "3edda304-8fec-4789-ae5c-c2af14eac51a",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Lang Lang",
+      "artist": {
+       "sort-name": "Lang, Lang",
+       "country": "CN",
+       "disambiguation": "Chinese pianist",
+       "name": "Lang Lang",
+       "id": "43e1570a-1a0d-479f-9c95-fba971aec91a",
+       "type-id": null,
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": "",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata facile\": II. Andante",
+    "length": 295000,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Walter Gieseking",
+      "artist": {
+       "sort-name": "Gieseking, Walter",
+       "disambiguation": "classical pianist 1895–1956",
+       "country": "DE",
+       "name": "Walter Gieseking",
+       "id": "62e0e456-bd4b-4edc-a47c-3537cdd53621",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "87d53c52-68a2-466f-8df4-3f40c09ca587"
+   },
+   "end": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null
+  },
+  {
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "target-credit": "",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "id": "fce26bb5-6332-4cbe-88c1-0b324301ae10",
+       "type-id": null,
+       "name": "Khatia Buniatishvili",
+       "country": "GE",
+       "disambiguation": "pianist",
+       "sort-name": "Buniatishvili, Khatia"
+      },
+      "name": "Khatia Buniatishvili",
+      "joinphrase": ", "
+     },
+     {
+      "joinphrase": "",
+      "name": "Academy of St Martin in the Fields",
+      "artist": {
+       "name": "Academy of St Martin in the Fields",
+       "country": "GB",
+       "disambiguation": "",
+       "sort-name": "Academy of St Martin in the Fields",
+       "type": null,
+       "type-id": null,
+       "id": "f0ac992d-edd9-4672-ac23-ba0ca93f6539"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "e0a505da-98a7-4b76-a120-dbfb56a2ac02",
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata facile\": II. Andante",
+    "length": 457000
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "length": 272173,
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata facile\": II. Andante",
+    "id": "2c2d969c-2f8d-445a-b684-7ccc02890900",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Kun Woo Paik",
+      "artist": {
+       "id": "432bfbee-70ff-4558-b8e0-96a29d90755f",
+       "type-id": null,
+       "type": null,
+       "disambiguation": "pianist",
+       "country": "KR",
+       "name": "Kun Woo Paik",
+       "sort-name": "Paik, Kun Woo"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   }
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata facile\": II. Andante",
+    "length": 304000,
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "CA",
+       "disambiguation": "Canadian classical pianist",
+       "name": "Angela Hewitt",
+       "sort-name": "Hewitt, Angela",
+       "type-id": null,
+       "id": "d79b2e2c-2e60-4b60-a077-be40e9b65981",
+       "type": null
+      },
+      "name": "Angela Hewitt",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "12e5fa37-267e-4a8f-87e7-d995d93a1e41"
+   }
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "length": 285840,
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata facile\": II. Andante",
+    "id": "bef27304-ad1c-4fef-8f1b-298ee873a30e",
+    "artist-credit": [
+     {
+      "name": "Ingrid Haebler",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "582c676f-48ad-4d6a-aed4-d2b87230b3b4",
+       "name": "Ingrid Haebler",
+       "disambiguation": "pianist",
+       "country": "AT",
+       "sort-name": "Haebler, Ingrid"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": "",
+   "end": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "title": "Piano Sonata no. 16 in C major, K. 545 \"Sonata facile\": II. Andante",
+    "length": 376680,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "ee4c8860-3ae9-4ec6-8e35-04284e82b056",
+       "sort-name": "Sunwoo, Yekwon",
+       "name": "Yekwon Sunwoo",
+       "disambiguation": "pianist",
+       "country": "KR"
+      },
+      "name": "Yekwon Sunwoo"
+     }
+    ],
+    "disambiguation": "",
+    "id": "4624f582-3b34-432b-8caf-705d4a7bf040"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "id": "5c20ec75-d369-4bf3-8f49-071094877be4",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "内田光子",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "e46cec1d-2758-4009-b7b0-930ed0465bdf",
+       "sort-name": "Uchida, Mitsuko",
+       "name": "内田光子",
+       "country": "JP",
+       "disambiguation": "pianist"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 422000,
+    "title": "Piano Sonata No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante"
+   },
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "id": "b52e9af9-dc7f-4e29-b562-d2492260e6a1",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Michael Endres",
+      "artist": {
+       "sort-name": "Endres, Michael",
+       "country": "DE",
+       "disambiguation": "pianist",
+       "name": "Michael Endres",
+       "id": "01c41df7-804d-47a6-b2a2-24be593b570d",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "length": 284000,
+    "title": "Piano Sonata no. 16 in C major, K. 545, \"Sonata facile\": II. Andante"
+   },
+   "end": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "recording": {
+    "id": "1b60f2cb-3d52-4c4f-8cbd-37ad854f6819",
+    "artist-credit": [
+     {
+      "name": "Robert Levin",
+      "artist": {
+       "type": null,
+       "id": "7ae4f30e-4182-4d4b-b64d-4e0db9dab186",
+       "type-id": null,
+       "name": "Robert Levin",
+       "disambiguation": "American classical pianist",
+       "country": "US",
+       "sort-name": "Levin, Robert"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 265000,
+    "title": "Piano Sonata no. 16 in C major, K. 545: Andante"
+   },
+   "source-credit": "",
+   "end": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "end": null,
+   "recording": {
+    "length": 311000,
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante",
+    "id": "4bb6e053-9050-42d7-a94e-add1904d2f25",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Evgeni Koroliov",
+      "artist": {
+       "name": "Евгений Королёв",
+       "disambiguation": "pianist",
+       "country": "RU",
+       "sort-name": "Koroliov, Evgeni",
+       "type": null,
+       "id": "592440cc-cceb-4e50-a085-2c7afdf272ae",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "source-credit": ""
+  },
+  {
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "recording": {
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante",
+    "length": 246000,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Klára Würtz",
+      "artist": {
+       "type-id": null,
+       "id": "eabfdf13-2234-41f2-973c-8bb132774c07",
+       "type": null,
+       "sort-name": "Würtz, Klára",
+       "country": "HU",
+       "disambiguation": "pianist",
+       "name": "Klára Würtz"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "1f7e605e-717b-4fe2-88d8-e68dc5885d75"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "e66468e9-ab10-44ba-80c7-e1945df16a97",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Irina Mejoueva",
+      "artist": {
+       "type-id": null,
+       "id": "20d7e82a-c880-4aa9-9366-179fc514c6bf",
+       "type": null,
+       "country": "RU",
+       "disambiguation": "Russian pianist",
+       "name": "Irina Mejoueva",
+       "sort-name": "Mejoueva, Irina"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 364600,
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante"
+   }
+  },
+  {
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null,
+   "recording": {
+    "id": "2b9f8914-76dd-40f8-a363-3204cdc5f226",
+    "artist-credit": [
+     {
+      "name": "Yeol Eum Son",
+      "artist": {
+       "disambiguation": "pianist",
+       "country": "DE",
+       "name": "손열음",
+       "sort-name": "Son, Yeol Eum",
+       "id": "101be554-eae4-49c5-b482-3580e7652bff",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 360880,
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward"
+  },
+  {
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "id": "1ee51216-9d21-4f06-b2ca-ee1408c695de",
+       "type-id": null,
+       "name": "Marnie Laird",
+       "disambiguation": "pianist",
+       "country": "US",
+       "sort-name": "Laird, Marnie"
+      },
+      "name": "Marnie Laird",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "2435593d-ce86-4250-9594-4a80f108dc08",
+    "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante",
+    "length": 249000
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "length": 329000,
+    "title": "Piano Sonata No. 16 in C major, K. 545: II. Andante",
+    "id": "e1e59121-75fe-40a5-8230-911c5a311b74",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Richard Fuller",
+      "artist": {
+       "name": "Richard Fuller",
+       "country": "US",
+       "disambiguation": "pianist",
+       "sort-name": "Fuller, Richard",
+       "type": null,
+       "id": "78bd6df5-10b2-46bc-81ac-b3592220c69a",
+       "type-id": null
+      }
+     }
+    ],
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null,
+   "recording": {
+    "id": "26d7e19a-fdb9-44c0-8454-271a6fccc94a",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Salome Scheidegger",
+      "artist": {
+       "sort-name": "Scheidegger, Salome",
+       "name": "Salome Scheidegger",
+       "country": "US",
+       "disambiguation": "pianist",
+       "type": null,
+       "id": "959efb83-f3ed-4b16-9843-0462fd614074",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 379533,
+    "title": "Piano Sonata No. 16 in C Major, K. 545: Ii. Andante"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "a78f240f-7483-4435-9c2e-b425a9670224",
+       "type-id": null,
+       "sort-name": "Chambers, Rebecca",
+       "name": "Rebecca Chambers",
+       "disambiguation": "Australian concert pianist",
+       "country": "AU"
+      },
+      "name": "Rebecca Chambers"
+     }
+    ],
+    "id": "c9491dfb-3d25-42ed-b50f-8bc787889d56",
+    "title": "Piano Sonata No. 16 in C Major, K. 545: II. Andante",
+    "length": 244000
+   }
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "source-credit": "",
+   "recording": {
+    "id": "71f06166-fd78-47b3-991d-2092cb8038f2",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "19b574ef-8a58-4ab2-99ce-897aa2260719",
+       "type-id": null,
+       "sort-name": "Ader, Alice",
+       "name": "Alice Ader",
+       "country": "FR",
+       "disambiguation": "pianist"
+      },
+      "name": "Alice Ader"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 408000,
+    "title": "Piano Sonata No. 16 in C Major, K. 545: II. Andante"
+   },
+   "end": null
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Josep Colom",
+      "artist": {
+       "sort-name": "Colom, Josep",
+       "disambiguation": "Spanish pianist",
+       "country": "ES",
+       "name": "Josep Colom",
+       "id": "ca807cf5-2f76-45b0-a30c-614ebb2488e2",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "id": "01a4a515-2cb5-4d03-a389-28abb7c18ad9",
+    "title": "Piano Sonata No. 16 in C Major, K. 545: II. Andante",
+    "length": 277360
+   },
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "5ebae0d8-add4-41e6-9fc0-50eb91c3dbb7",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Ronan O’Hora",
+      "artist": {
+       "name": "Ronan O’Hora",
+       "country": "GB",
+       "disambiguation": "British pianist",
+       "sort-name": "O’Hora, Ronan",
+       "type": null,
+       "id": "1701ea59-bf83-4156-baef-3667863952fc",
+       "type-id": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 279906,
+    "title": "Piano Sonata No. 16 In C Major, Kv 545 \"Sonata Facile\": II. Andante"
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "a04bc14b-7921-43ed-896f-4d073aacc3a9",
+       "sort-name": "Engel, Karl",
+       "name": "Karl Engel",
+       "country": "CH",
+       "disambiguation": "pianist"
+      },
+      "name": "Karl Engel",
+      "joinphrase": ""
+     }
+    ],
+    "id": "f70f1eeb-a1b8-4204-9eb6-057ae13866ae",
+    "title": "Piano Sonata no. 16 in C major, KV 545: Andante",
+    "length": 469773
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "72c9263f-00e7-4eab-b30a-05f7c22f669f",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "type": null,
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "name": "[unknown]",
+       "sort-name": "[unknown]"
+      },
+      "name": "[unknown]"
+     }
+    ],
+    "length": 241226,
+    "title": "Piano Sonata No. 16 in C, K. 545 - \"2nd Movement Menuet\""
+   }
+  },
+  {
+   "end": null,
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Willems, Gerard",
+       "country": "AU",
+       "disambiguation": "Australian pianist",
+       "name": "Gerard Willems",
+       "type-id": null,
+       "id": "884add7c-83bb-4792-b327-c6c0084b02b2",
+       "type": null
+      },
+      "name": "Gerard Willems"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "b04fc313-b2f4-4aed-a428-b9484071f034",
+    "title": "Piano Sonata no. 16 in C, K. 545 \"Sonata facile\": 2. Andante",
+    "length": 338000
+   },
+   "source-credit": "",
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null,
+   "source-credit": "",
+   "recording": {
+    "id": "2c292a03-8ad6-4951-9a9a-1477e3199e8e",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Jerry Martin",
+      "artist": {
+       "sort-name": "Martin, Jerry",
+       "name": "Jerry Martin",
+       "disambiguation": "video game & TV commercial composer",
+       "country": "US",
+       "type": null,
+       "type-id": null,
+       "id": "a5f1a171-993c-4f51-b860-062f920806fd"
+      }
+     }
+    ],
+    "video": false,
+    "length": 287000,
+    "title": "SIMnata #15"
+   },
+   "end": null
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null,
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Martin, Jerry",
+       "country": "US",
+       "disambiguation": "video game & TV commercial composer",
+       "name": "Jerry Martin",
+       "type-id": null,
+       "id": "a5f1a171-993c-4f51-b860-062f920806fd",
+       "type": null
+      },
+      "name": "Jerry Martin",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "e1cc61af-9798-4354-9305-5894acb96af9",
+    "title": "SIMnata #15",
+    "length": 287000
+   },
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "title": "Son No.15 in C, K.545: Andante",
+    "length": null,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Mieczysław Horszowski",
+      "artist": {
+       "type": null,
+       "id": "37cd67d1-a786-4f5c-b91b-14f93b90ca04",
+       "type-id": null,
+       "sort-name": "Horszowski, Mieczysław",
+       "name": "Mieczysław Horszowski",
+       "country": "PL",
+       "disambiguation": "pianist"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "fbd7191b-9c40-40d7-83ec-940ddc6f4c6a"
+   },
+   "source-credit": ""
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "id": "8dd73a77-a14d-416a-9464-ea462e65252b",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Andrée Sebastian Wickel",
+      "artist": {
+       "sort-name": "Wickel, Andrée Sebastian",
+       "disambiguation": "piano",
+       "country": null,
+       "name": "Andrée Sebastian Wickel",
+       "type-id": null,
+       "id": "8bd4a0f4-2ca6-4667-858e-a3e4771c594e",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 454626,
+    "title": "Sonata facile in C-Dur, KV 545: Andante"
+   },
+   "source-credit": ""
+  },
+  {
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "length": 324000,
+    "title": "Sonata Facile, K. 545: II. Andante",
+    "id": "dcb21b49-93e5-4b00-ae81-fe3d949b3c07",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "HU",
+       "disambiguation": "pianist",
+       "name": "Jenő Jandó",
+       "sort-name": "Jandó, Jenő",
+       "id": "42959d4b-b222-49e3-880d-b21a87689279",
+       "type-id": null,
+       "type": null
+      },
+      "name": "Jenő Jandó"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "a36abb3b-8d3f-417c-91d7-bd27241bd0e8",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": null,
+       "disambiguation": "",
+       "name": "Tmsoft’s White Noise Sleep Sounds",
+       "sort-name": "Tmsoft’s White Noise Sleep Sounds",
+       "id": "38ce0ce9-bcef-4d5d-95ae-c568e349e26e",
+       "type-id": null,
+       "type": null
+      },
+      "name": "Tmsoft’s White Noise Sleep Sounds"
+     }
+    ],
+    "video": false,
+    "length": 267000,
+    "title": "Sonata facile: Movement 2"
+   }
+  },
+  {
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Marina Arsenijevic",
+      "artist": {
+       "country": "US",
+       "disambiguation": "Serbian‐American pianist/composer, aka Marina",
+       "name": "Marina Arsenijević",
+       "sort-name": "Arsenijević, Marina",
+       "id": "67396c3d-4972-46dd-832f-6edbdd42c61e",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "868983d6-f09d-4254-89f7-77353de4b3c8",
+    "title": "Sonata for Piano in C major KV 545: Second Movement: Andante",
+    "length": 220493
+   },
+   "source-credit": "",
+   "end": null,
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward"
+  },
+  {
+   "recording": {
+    "id": "00ad6af6-c918-4f7f-b0e9-2c5f713187f1",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Similia",
+      "artist": {
+       "sort-name": "Similia",
+       "name": "Similia",
+       "disambiguation": "",
+       "country": "CA",
+       "type": null,
+       "type-id": null,
+       "id": "e73cdaf9-1c89-4439-a8e2-663d3886a598"
+      }
+     }
+    ],
+    "length": 314000,
+    "title": "Sonata for piano in C major, K.545: Andante"
+   },
+   "source-credit": "",
+   "end": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": "",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata for Piano No. 16 in C major K 545, \"Sonata facile\" - Andante",
+    "length": 255773,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "name": "[unknown]",
+       "country": "XW",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "sort-name": "[unknown]"
+      },
+      "name": "[unknown]",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "1f0786e7-def4-4baa-8568-b74223fa5c39"
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 255000,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Peter Schmalfuss",
+      "artist": {
+       "sort-name": "Schmalfuss, Peter",
+       "name": "Peter Schmalfuss",
+       "country": "DE",
+       "disambiguation": "pianist",
+       "type": null,
+       "type-id": null,
+       "id": "7601a96f-a7df-4967-bdf6-fa1779c25e0a"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "0cff3fab-e167-45a4-8c29-e3680a98d8f4"
+   },
+   "end": null,
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "recording": {
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 226666,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Stanislav Bunin",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "6a20a19f-4b89-4958-ae3b-3448ed9a0a67",
+       "name": "Станислав Бунин",
+       "country": "JP",
+       "disambiguation": "pianist",
+       "sort-name": "Bunin, Stanislav"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "9e11c4cc-5653-4444-b11c-93247eff0c53"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "8fc1a274-b2e3-4f7a-a690-9918286f5f7d",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Marta Deyanova",
+      "artist": {
+       "sort-name": "Deyanova, Marta",
+       "country": "BG",
+       "disambiguation": "Marta Deyanova, pianist",
+       "name": "Марта Деянова",
+       "id": "1a98cae0-32c6-4d9a-be1f-d7fe25678144",
+       "type-id": null,
+       "type": null
+      }
+     }
+    ],
+    "video": false,
+    "length": 343000,
+    "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata semplice\": II. Andante"
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "length": 323666,
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "f7744d31-d8b4-46a7-946f-538310e58208",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Schmidt, Annerose",
+       "country": "DE",
+       "disambiguation": "German classical pianist",
+       "name": "Annerose Schmidt",
+       "type-id": null,
+       "id": "1650b2d6-8264-4df1-993f-9b26ec5e401d",
+       "type": null
+      },
+      "name": "Annerose Schmidt",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 382000,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Andreas Haefliger",
+      "artist": {
+       "sort-name": "Haefliger, Andreas",
+       "name": "Andreas Haefliger",
+       "disambiguation": "pianist",
+       "country": "CH",
+       "type": null,
+       "id": "04f619dd-39f8-4591-b161-e73ce509a9bf",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "id": "29f34358-2096-42ef-b7ae-7c3b8f6b4125"
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "source-credit": "",
+   "recording": {
+    "length": 293560,
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "395192a7-28ad-4b02-a677-99dac6fbe188",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "[unknown]",
+      "artist": {
+       "sort-name": "[unknown]",
+       "country": "XW",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "name": "[unknown]",
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "end": null,
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward"
+  },
+  {
+   "recording": {
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 312000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Carmen Piazzini",
+      "artist": {
+       "sort-name": "Piazzini, Carmen",
+       "disambiguation": "pianist",
+       "country": "DE",
+       "name": "Carmen Piazzini",
+       "id": "e38e0db0-4a76-4da8-a082-ac029abb4d71",
+       "type-id": null,
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "026a02c8-3fcf-4fc3-b209-7177deb787b6"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Hakkila, Tuija",
+       "country": "FI",
+       "disambiguation": "pianist",
+       "name": "Tuija Hakkila",
+       "id": "8a2556cf-d732-4f4a-8c77-054fd4a3a5bb",
+       "type-id": null,
+       "type": null
+      },
+      "name": "Tuija Hakkila",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "c77fc5e5-4c39-4d22-a67d-da31c42659b4",
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "length": 382000
+   }
+  },
+  {
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "length": 261106,
+    "title": "Sonata for Piano No. 16 in C major, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "436eae4b-1b4d-4849-8955-c3869fab0fb9",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Blumenthal, Daniel",
+       "disambiguation": "German-born, Belgium based pianist",
+       "country": "BE",
+       "name": "Daniel Blumenthal",
+       "type-id": null,
+       "id": "e55949e0-f619-4297-aa7e-087977921744",
+       "type": null
+      },
+      "name": "Daniel Blumenthal"
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata for Piano no. 16 in C major, K. 545 “Sonata semplice”: II. Andante",
+    "length": 156400,
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "id": "0d1d8c87-7654-4574-bbdd-62567255c5f0",
+       "type-id": null,
+       "sort-name": "Baby Einstein Music Box Orchestra, The",
+       "name": "The Baby Einstein Music Box Orchestra",
+       "country": null,
+       "disambiguation": ""
+      },
+      "name": "The Baby Einstein Music Box Orchestra",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "6cc8a84d-79f0-47ac-b1a1-40c9d35f2918"
+   },
+   "end": null,
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d"
+   },
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [
+    "partial"
+   ],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "length": 464066,
+    "title": "Sonata in C K 545 Andante",
+    "id": "58103a47-0377-45e1-a559-70d40ed3ac23",
+    "artist-credit": [
+     {
+      "name": "Lisa Spector",
+      "artist": {
+       "type": null,
+       "id": "c3a96d9e-5118-4b01-8689-4cfe641560b2",
+       "type-id": null,
+       "sort-name": "Spector, Lisa",
+       "name": "Lisa Spector",
+       "disambiguation": "",
+       "country": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null,
+       "sort-name": "[unknown]",
+       "name": "[unknown]",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW"
+      },
+      "name": "[unknown]"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "17670a3e-845d-4437-b6a5-9272d7aa3f1a",
+    "title": "Sonata in C Major (Andante) K.545",
+    "length": 257000
+   },
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": ""
+  },
+  {
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Jean‐Bernard Pommier",
+      "artist": {
+       "sort-name": "Pommier, Jean‐Bernard",
+       "name": "Jean‐Bernard Pommier",
+       "country": "FR",
+       "disambiguation": "pianist and conductor",
+       "type": null,
+       "id": "25bc5d7e-3c43-4810-8012-8899315a3328",
+       "type-id": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "id": "bbab8b00-28d8-4229-b149-b8124fbe3d77",
+    "title": "Sonata in C major no. 16, KV 545: II. Andante",
+    "length": 346106
+   },
+   "end": null,
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "id": "2d5ef0d5-dea6-41fc-b9ea-88abfa8038dd",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Walter Klien",
+      "artist": {
+       "country": "AT",
+       "disambiguation": "pianist",
+       "name": "Walter Klien",
+       "sort-name": "Klien, Walter",
+       "type-id": null,
+       "id": "862bd6e8-3253-4efe-8644-7ef04b3c7aac",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 218000,
+    "title": "Sonata in C major, K. 545: II. Andante"
+   },
+   "source-credit": "",
+   "end": null,
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "end": null,
+   "recording": {
+    "length": null,
+    "title": "Sonata in C major, K.545: Andante",
+    "id": "0aaa056a-8fd9-4a1f-a8b3-e5003bcf9f6a",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Ronan O’Hora",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "1701ea59-bf83-4156-baef-3667863952fc",
+       "name": "Ronan O’Hora",
+       "disambiguation": "British pianist",
+       "country": "GB",
+       "sort-name": "O’Hora, Ronan"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "length": 208826,
+    "title": "Sonata in C, K 545: Andante",
+    "id": "838ab2a9-2810-4e55-975a-7c4a5d8f22d2",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Didier Réty",
+      "artist": {
+       "country": "FR",
+       "disambiguation": "pianist",
+       "name": "Didier Réty",
+       "sort-name": "Réty, Didier",
+       "id": "314d218f-6760-4324-b483-c074045717b7",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "recording": {
+    "length": 374000,
+    "title": "Sonata in C, K. 545 \"Sonata semplice\": II. Andante",
+    "id": "c7c67a4c-3b17-45ed-b35a-c16253339847",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "id": "f25ae8fb-0528-402d-bfec-989897245f41",
+       "type-id": null,
+       "sort-name": "Kiss, Gyula",
+       "name": "Gyula Kiss",
+       "disambiguation": "Hungarian classical pianist",
+       "country": "HU"
+      },
+      "name": "Gyula Kiss, piano",
+      "joinphrase": ""
+     }
+    ]
+   },
+   "source-credit": "",
+   "end": null,
+   "target-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "recording": {
+    "length": 284493,
+    "title": "Sonata in C, K. 545: Andante",
+    "id": "1df7142b-455c-4436-adfa-1cd53b005ff0",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Rosenberger, Carol",
+       "name": "Carol Rosenberger",
+       "country": "US",
+       "disambiguation": "pianist, producer",
+       "type": null,
+       "type-id": null,
+       "id": "19d76d66-d1d8-426c-be53-c101e680a452"
+      },
+      "name": "Carol Rosenberger",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "title": "Sonata in C, K. 545: Andante",
+    "length": 263173,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "id": "1da81b44-d3d3-4ba0-9203-2b52936446d7",
+       "type-id": null,
+       "sort-name": "Daub, Eric",
+       "name": "Eric Daub",
+       "disambiguation": "pianist",
+       "country": null
+      },
+      "name": "Eric Daub"
+     }
+    ],
+    "video": false,
+    "id": "1f8e79b0-2624-47fa-bc88-295b08643470"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "id": "7a0c57d5-ee03-48f1-a395-3f9f4ad39773",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "2c637537-0f98-45fa-9f9d-4e408abdd0ed",
+       "type-id": null,
+       "type": null,
+       "sort-name": "Seemann, Carl",
+       "disambiguation": "German pianist",
+       "country": "DE",
+       "name": "Carl Seemann"
+      },
+      "name": "Carl Seemann",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "length": 243000,
+    "title": "Sonata N°15 in C Major K 545: Andante"
+   },
+   "end": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "recording": {
+    "id": "b5ba3fe1-f947-4f85-9ff7-1bcacd088389",
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Philippe Entremont",
+       "disambiguation": "French pianist/conductor",
+       "country": "FR",
+       "sort-name": "Entremont, Philippe",
+       "type": null,
+       "type-id": null,
+       "id": "1fc11988-003a-430f-8a6d-8453869fdd04"
+      },
+      "name": "Philippe Entremont"
+     }
+    ],
+    "length": 201800,
+    "title": "Sonata no. 15 in C major, KV 545: II. Andante"
+   },
+   "source-credit": "",
+   "end": null,
+   "target-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "length": 263200,
+    "title": "Sonata no. 15 in C, K 545 (Andante)",
+    "id": "01810e1a-df0e-4b27-a3ec-00edf83a8e87",
+    "artist-credit": [
+     {
+      "name": "Daniel Blumenthal",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "e55949e0-f619-4297-aa7e-087977921744",
+       "sort-name": "Blumenthal, Daniel",
+       "name": "Daniel Blumenthal",
+       "country": "BE",
+       "disambiguation": "German-born, Belgium based pianist"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "end": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null
+  },
+  {
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata no. 16 in C major for Piano, K. 545 \"Sonata facile\": II. Andante",
+    "length": 312000,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Carmen Piazzini",
+      "artist": {
+       "type-id": null,
+       "id": "e38e0db0-4a76-4da8-a082-ac029abb4d71",
+       "type": null,
+       "sort-name": "Piazzini, Carmen",
+       "disambiguation": "pianist",
+       "country": "DE",
+       "name": "Carmen Piazzini"
+      }
+     }
+    ],
+    "id": "66cc5f7b-b4a2-4e28-8f1a-fef2b92b0559"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {}
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "length": 347000,
+    "title": "Sonata no. 16 in C major, K 545: 2. Andante",
+    "id": "a8b5a985-358b-4991-8b8e-efb57b29a46d",
+    "artist-credit": [
+     {
+      "name": "Roberto Prosseda",
+      "artist": {
+       "disambiguation": "pianist",
+       "country": "IT",
+       "name": "Roberto Prosseda",
+       "sort-name": "Prosseda, Roberto",
+       "id": "0b2462f4-f8a5-4db6-bd5f-fa9865485466",
+       "type-id": null,
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "pianist",
+       "name": "Malcolm Bilson",
+       "sort-name": "Bilson, Malcolm",
+       "type-id": null,
+       "id": "bfcc7b03-8bf9-46e2-8955-66cc80468002",
+       "type": null
+      },
+      "name": "Malcolm Bilson"
+     }
+    ],
+    "id": "f2896d44-65b7-470d-8b86-c5e3f09d9039",
+    "title": "Sonata no. 16 in C major, K. 545: II. Andante",
+    "length": 251000
+   },
+   "end": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "source-credit": "",
+   "recording": {
+    "length": 298480,
+    "title": "Sonata no. 16 in C major, K. 545: II. Andante",
+    "id": "37dbb76e-c918-443a-a9f3-171e45ae46a4",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Alessandro Deljavan",
+      "artist": {
+       "name": "Alessandro Deljavan",
+       "country": "IT",
+       "disambiguation": "Italian classical pianist",
+       "sort-name": "Deljavan, Alessandro",
+       "type": null,
+       "type-id": null,
+       "id": "b3d06bb3-f34b-47b1-a225-bab5d2386a26"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "end": null
+  },
+  {
+   "end": null,
+   "recording": {
+    "length": 255000,
+    "title": "Sonata No. 16 in C major, KV 545, 2. Andante",
+    "id": "501fcb12-fff0-46a8-b91c-4eec9d421aff",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hugo Steurer",
+      "artist": {
+       "name": "Hugo Steurer",
+       "country": "DE",
+       "disambiguation": "classical pianist",
+       "sort-name": "Steurer, Hugo",
+       "type": null,
+       "type-id": null,
+       "id": "a50d56a2-4793-4f74-ac89-10acff9f7de8"
+      }
+     }
+    ],
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "recording": {
+    "title": "Sonata no. 16 in C, K545 \"Sonata facile\": II. Andante",
+    "length": 358800,
+    "video": false,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Eschenbach, Christoph",
+       "disambiguation": "pianist and conductor",
+       "country": "DE",
+       "name": "Christoph Eschenbach",
+       "id": "67307b9a-5f5c-4611-8d41-d439d343fa84",
+       "type-id": null,
+       "type": null
+      },
+      "name": "Christoph Eschenbach"
+     }
+    ],
+    "id": "7483bbca-ab5b-4548-b954-68704c7f027a"
+   },
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "title": "Sonata no. 16 in C, K545: II. Andante",
+    "length": 370000,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "id": "131b73d6-049f-43d7-b072-8eb71bffc78d",
+       "name": "Fazıl Say",
+       "country": "TR",
+       "disambiguation": "Turkish pianist and composer",
+       "sort-name": "Say, Fazıl"
+      },
+      "name": "Fazıl Say"
+     }
+    ],
+    "video": false,
+    "id": "76c274ae-3c07-4629-bda7-210d145ddc70"
+   },
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Nick Freeth",
+      "artist": {
+       "type-id": null,
+       "id": "00e310b1-4670-4a10-b901-700c68b696da",
+       "type": null,
+       "sort-name": "Freeth, Nick",
+       "country": null,
+       "disambiguation": "",
+       "name": "Nick Freeth"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "4ff51113-c407-4836-be59-dc594fdceaed",
+    "title": "Sonata no. 16, K. 545: II. Andante",
+    "length": 347093
+   },
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "title": "Sonate \"pour débutants\", KV 545 : Andante",
+    "length": 294000,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "[unknown]",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "sort-name": "[unknown]",
+       "type": null,
+       "id": "125ec42a-7229-4250-afc5-e057484327fe",
+       "type-id": null
+      },
+      "name": "[unknown]"
+     }
+    ],
+    "video": false,
+    "id": "5af0b73e-6b61-44df-9bbd-39dd0e729199"
+   },
+   "end": null,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null
+  },
+  {
+   "attribute-values": {},
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Kaneko, Yoko",
+       "name": "Yoko Kaneko",
+       "disambiguation": "pianist",
+       "country": "JP",
+       "type": null,
+       "id": "cdb50039-57b7-4399-8b1e-a8913a4b992f",
+       "type-id": null
+      },
+      "name": "Yoko Kaneko",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "id": "ee9878ee-4d1f-44f1-bbd1-38d7e4af3749",
+    "title": "Sonate C majeur ‐ Allegro, Andante",
+    "length": 533000
+   },
+   "end": null,
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "recording": {
+    "length": 255000,
+    "title": "Sonate für Klavier Nr. 16 C-Dur 'Sonata facile', KV 545 - 2 - Andante",
+    "id": "f496bbac-b00b-434e-848d-a0e3e9908cc1",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Peter Schmalfuss",
+      "artist": {
+       "sort-name": "Schmalfuss, Peter",
+       "country": "DE",
+       "disambiguation": "pianist",
+       "name": "Peter Schmalfuss",
+       "type-id": null,
+       "id": "7601a96f-a7df-4967-bdf6-fa1779c25e0a",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "end": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null
+  },
+  {
+   "attribute-ids": {},
+   "target-type": "recording",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "source-credit": "",
+   "recording": {
+    "id": "7573a51e-5b06-47a7-8ad3-422e7086f551",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "pianist",
+       "country": "PT",
+       "name": "Maria João Pires",
+       "sort-name": "Pires, Maria João",
+       "type-id": null,
+       "id": "64cf3646-fde3-4f5e-8741-8b4d21917785",
+       "type": null
+      },
+      "name": "Maria João Pires"
+     }
+    ],
+    "video": false,
+    "length": 208000,
+    "title": "Sonate no 16 en ut majeur, KV 545: II. Andante"
+   },
+   "end": null,
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "id": "a32ad10d-beb7-4f9b-83e5-0fe2d1f30c96",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Michael Wessel",
+      "artist": {
+       "type": null,
+       "id": "354ba5d7-b724-4f53-864c-21c902f26e4d",
+       "type-id": null,
+       "sort-name": "Wessel, Michael",
+       "name": "Michael Wessel",
+       "disambiguation": "pianist",
+       "country": "DE"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 347000,
+    "title": "Sonate Nr. 16 in C-Dur, KV 545: Andante"
+   }
+  },
+  {
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "attribute-values": {},
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attributes": [],
+   "begin": null,
+   "recording": {
+    "length": 537113,
+    "title": "Wolfgang Amadeus Mozart: Klaviersonate Nr. 16 in C-Dur, KV545 ,Sonata facile’, Andante",
+    "id": "73ae2236-ea04-44e0-a92d-9b0193780030",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "[unknown]",
+       "disambiguation": "Special Purpose Artist – Do not add releases here, if possible.",
+       "country": "XW",
+       "sort-name": "[unknown]",
+       "type": null,
+       "type-id": null,
+       "id": "125ec42a-7229-4250-afc5-e057484327fe"
+      },
+      "name": "[unknown]"
+     }
+    ],
+    "disambiguation": "",
+    "video": false
+   },
+   "source-credit": "",
+   "end": null
+  }
+ ],
+ "attributes": [],
+ "language": "zxx",
+ "type": null,
+ "iswcs": [],
+ "type-id": null,
+ "id": "9727cab0-f302-3b71-b937-5ccd416dd36e",
+ "title": "Sonata for Piano no. 16 in C major, K. 545 \"Sonata facile\": II. Andante",
+ "languages": [
+  "zxx"
+ ]
+}
