@@ -645,6 +645,37 @@
    "source-credit": "",
    "direction": "backward",
    "type": "wikidata"
+  },
+  {
+   "target-type": "work",
+   "source-credit": "",
+   "attribute-values": {},
+   "direction": "backward",
+   "attributes": [
+    "translated"
+   ],
+   "ended": false,
+   "target-credit": "",
+   "end": null,
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "type": "other version",
+   "work": {
+    "languages": [
+     "spa"
+    ],
+    "title": "Blues del pescador",
+    "id": "95d7a0b0-762d-4b6c-849f-b31c99882bb7",
+    "type": "Song",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "language": "spa",
+    "iswcs": [],
+    "disambiguation": "",
+    "attributes": []
+   },
+   "begin": null
   }
  ],
  "id": "c4efc5eb-9904-309a-97a4-675a73a9494f",

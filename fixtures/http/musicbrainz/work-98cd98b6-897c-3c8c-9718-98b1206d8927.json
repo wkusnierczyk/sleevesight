@@ -2577,6 +2577,144 @@
    "attributes": [],
    "type": "wikidata",
    "direction": "backward"
+  },
+  {
+   "attribute-values": {},
+   "target-type": "work",
+   "source-credit": "",
+   "type": "arrangement",
+   "work": {
+    "language": null,
+    "iswcs": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "disambiguation": "Mediterranean folk song",
+    "title": "Miserlou",
+    "languages": [],
+    "type": "Song",
+    "id": "6f4422c2-5683-4bde-b28e-ad835229ce80"
+   },
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "attributes": [],
+   "direction": "backward",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "attribute-ids": {},
+   "end": null
+  },
+  {
+   "attribute-values": {},
+   "source-credit": "",
+   "target-type": "work",
+   "begin": null,
+   "work": {
+    "language": "ell",
+    "iswcs": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "disambiguation": "",
+    "attributes": [],
+    "title": "Μισιρλού (Misirlou)",
+    "languages": [
+     "ell"
+    ],
+    "type": "Song",
+    "id": "6e93df1f-8088-4d16-abcc-db6cde0af932"
+   },
+   "type": "arrangement",
+   "end": null,
+   "attribute-ids": {},
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "direction": "backward",
+   "attributes": [],
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "end": null,
+   "attribute-ids": {},
+   "type-id": "c1dca2cd-194c-36dd-93f8-6a359167e992",
+   "ordering-key": 5,
+   "direction": "backward",
+   "attributes": [],
+   "target-credit": "",
+   "ended": false,
+   "work": {
+    "id": "469607cd-2623-4686-804b-3c4bea5f6332",
+    "type": "Song",
+    "languages": [],
+    "title": "魔法少女まどか☆マギカ -Puella Melodia-",
+    "attributes": [],
+    "disambiguation": "",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "language": null,
+    "iswcs": []
+   },
+   "begin": null,
+   "type": "medley",
+   "source-credit": "",
+   "target-type": "work",
+   "attribute-values": {}
+  },
+  {
+   "attribute-values": {},
+   "source-credit": "",
+   "target-type": "work",
+   "work": {
+    "disambiguation": "",
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "language": "eng",
+    "iswcs": [],
+    "id": "6af8e9f1-8ad3-3572-8abe-77e1d0f501ea",
+    "type": "Song",
+    "languages": [
+     "eng"
+    ],
+    "title": "Misirlou"
+   },
+   "begin": null,
+   "type": "other version",
+   "end": null,
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "direction": "forward",
+   "attributes": [
+    "translated"
+   ],
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "type": "other version",
+   "work": {
+    "type-id": null,
+    "language": null,
+    "iswcs": [],
+    "attributes": [],
+    "disambiguation": "",
+    "languages": [],
+    "title": "Yaralı Gönlüm",
+    "id": "63fee497-f522-49a4-88ac-faaae84de8cc",
+    "type": null
+   },
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "direction": "forward",
+   "attributes": [
+    "translated"
+   ],
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "end": null,
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "attribute-values": {},
+   "target-type": "work",
+   "source-credit": ""
   }
  ],
  "disambiguation": "Dick Dale instrumental arrangement",

@@ -8,6 +8,7 @@ import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MbCredit
 import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.MbMedium
+import app.sleevesight.core.resolution.MbParentWork
 import app.sleevesight.core.resolution.MbPerformance
 import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.MbRecordingDetail
@@ -251,6 +252,8 @@ class MusicBrainzClient(
                 wikidataIds = wikidataIds(relations),
                 lyricsUrls = lyricsUrls(relations),
                 languages = languages(json),
+                type = json.string("type")?.ifEmpty { null },
+                parents = parents(relations),
                 performances =
                     relations
                         .filter { it.string("target-type") == "recording" && it.string("type") == "performance" }
@@ -327,7 +330,8 @@ class MusicBrainzClient(
         /** [RECORDING_INC] without `tags`, while no genre information is asked for (#444). */
         const val RECORDING_INC_WITHOUT_TAGS: String = "artist-credits+work-rels+artist-rels+url-rels"
 
-        const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
+        /** With `work-rels`, for the work a movement or an aria is part of, and its type (#1178). */
+        const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits+work-rels"
 
         /**
          * An album's release group (#522): its credit, its Wikidata item among its URL relationships,
@@ -405,7 +409,22 @@ class MusicBrainzClient(
                             artistMbid = artist.required("id"),
                             artistName = artist.required("name"),
                             attributes = attributes(relation),
+                            begin = relation.string("begin")?.ifEmpty { null },
                         )
+                    }
+                }
+
+        // The works a work is a part of (#1178): its `parts` relationships read backward, the whole being
+        // the target.
+        private fun parents(relations: List<JsonElement>): List<MbParentWork> =
+            relations
+                .filter {
+                    it.string("target-type") == "work" &&
+                        it.string("type") == "parts" &&
+                        it.string("direction") == "backward"
+                }.mapNotNull { relation ->
+                    relation.obj("work")?.let { work ->
+                        MbParentWork(work.required("id"), work.required("title"), work.string("type")?.ifEmpty { null })
                     }
                 }
 

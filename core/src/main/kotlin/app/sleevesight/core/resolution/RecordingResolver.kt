@@ -292,7 +292,7 @@ class RecordingResolver(
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
         } else {
-            val covered = withWork(recording, withRecording, link, work, chosen.credited)
+            val covered = withWork(track, chosen, withRecording, link, work)
             // The release a cover's original first came out on (#724), for the home screen's *Dates*:
             // one more lookup, of the original's recording with its releases, made only when there is
             // an original. One that finds nothing leaves the release out, and nothing else changes; one
@@ -309,17 +309,18 @@ class RecordingResolver(
     }
 
     private fun withWork(
-        recording: MbRecording,
+        track: NormalizedTrack,
+        chosen: Candidate,
         withRecording: Resolution,
         link: MbWorkLink,
         work: MbWork,
-        credited: Set<String>,
     ): Resolution {
-        // The track's artists: their resolved ids and the credits that stand for them ([credited]), a
+        val recording = chosen.recording
+        // The track's artists: their resolved ids and the credits that stand for them ([Candidate.credited]), a
         // band whose leader is confirmed among them. Not every credit: a collaborator the player does
         // not name, or a band only worded like one of theirs, is not ours, so their earlier recording
         // of the work is someone else's.
-        val ours = withRecording.artists.mapNotNull { it.mbid }.toSet() + credited
+        val ours = withRecording.artists.mapNotNull { it.mbid }.toSet() + chosen.credited
         // Our artists' recordings of the work, the chosen one among them: the search finds only some,
         // and MusicBrainz leaves many undated, so the chosen one need not be their first.
         val own = work.performances.filter { performance -> performance.credits.any { it.artistMbid in ours } }
@@ -331,7 +332,10 @@ class RecordingResolver(
                     (it.recordingMbid != recording.mbid || recording.firstReleaseDate == null)
             }
         val ourEarliest = (own.mapNotNull { it.date } + listOfNotNull(recording.firstReleaseDate)).minOrNull()
-        val original = originalOf(work, ours)
+        // A performance of a composed work is no cover of its earliest recording by someone else, nor
+        // is ours the earliest for predating it (#1178): with no such recording, MusicBrainz's cover mark
+        // alone decides, and no recording is named.
+        val original = originalOf(work, ours).takeUnless { composed(names, track, recording, work, ours) }
         // Someone else's recording counts as earlier only when it predates every dated one of ours.
         val predates = original != null && ourEarliest != null && isEarlier(original.date, ourEarliest)
         // From dates, a cover only when all our artists' recordings of the work are dated, since an
@@ -568,6 +572,36 @@ class RecordingResolver(
         val PERFORMER_TYPES: Set<String> =
             setOf("vocal", "instrument", "performer", "performing orchestra", "conductor")
 
+        /**
+         * MusicBrainz's work types of classical forms, lower case (#1178): a recording of a work of one,
+         * or of a part of one, is a performance of a composed work, never a cover of its earliest
+         * recording. `Song`, `Musical` and `Soundtrack` are not among them.
+         */
+        val COMPOSED_FORMS: Set<String> =
+            setOf(
+                "aria",
+                "ballet",
+                "cantata",
+                "concerto",
+                "étude",
+                "incidental music",
+                "madrigal",
+                "mass",
+                "motet",
+                "opera",
+                "operetta",
+                "oratorio",
+                "overture",
+                "partita",
+                "quartet",
+                "sonata",
+                "song-cycle",
+                "suite",
+                "symphonic poem",
+                "symphony",
+                "zarzuela",
+            )
+
         private val WORK_ROLES =
             mapOf(
                 "composer" to CreditRole.COMPOSER,
@@ -700,6 +734,56 @@ class RecordingResolver(
                 .groupBy { it.role to it.mbid }
                 .values
                 .map { same -> same.first().copy(detail = same.flatMap { it.detail }.distinct()) }
+    }
+}
+
+// Whether [work] is a composed work rather than a song (#1178), from what the answers hold already.
+// The lead: its composer is the one the title leads with ([NormalizedTrack.composer], `Mozart: …`, a
+// credited artist, #1129) and is not credited on the recording ([recording]'s credit, or [ours], the
+// ids the track's artists resolved to).
+// - A type of its own of a classical form ([RecordingResolver.COMPOSED_FORMS]): composed.
+// - `Song`: composed with the lead, or as part of a song cycle (a Lied of *Winterreise*); a song of a
+//   rock opera, or with no lead, stays a song.
+// - Any other type of its own: not composed.
+// - No type, which is no sign of a classical work: composed with the lead, or as part of a work of a
+//   classical form (a movement's sonata).
+// A songwriter the player merely credits beside the singer of a pop song or a standard keeps the cover.
+private fun composed(
+    names: NameMatcher,
+    track: NormalizedTrack,
+    recording: MbRecording,
+    work: MbWork,
+    ours: Set<String>,
+): Boolean {
+    val type = work.type?.lowercase()
+    val parents = work.parents.mapNotNull { it.type?.lowercase() }
+    val byLead = composedByLead(names, track, recording, work, ours)
+    return when (type) {
+        in RecordingResolver.COMPOSED_FORMS -> true
+        SONG -> byLead || SONG_CYCLE in parents
+        null -> byLead || parents.any { it in RecordingResolver.COMPOSED_FORMS }
+        else -> false
+    }
+}
+
+private const val SONG = "song"
+
+private const val SONG_CYCLE = "song-cycle"
+
+// Whether [work]'s composer is the one [track]'s title leads with, and not credited on [recording] (#1178).
+private fun composedByLead(
+    names: NameMatcher,
+    track: NormalizedTrack,
+    recording: MbRecording,
+    work: MbWork,
+    ours: Set<String>,
+): Boolean {
+    val onRecording = ours + recording.credits.map { it.artistMbid }
+    val lead = track.composer?.name ?: return false
+    return work.artistRelations.any { relation ->
+        relation.type == "composer" &&
+            relation.artistMbid !in onRecording &&
+            names.sameName(relation.artistName, lead)
     }
 }
 

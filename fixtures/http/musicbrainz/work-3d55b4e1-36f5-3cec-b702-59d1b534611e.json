@@ -34769,6 +34769,210 @@
    "end": null,
    "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
    "begin": null
+  },
+  {
+   "ended": false,
+   "attribute-ids": {},
+   "type": "medley",
+   "target-credit": "",
+   "ordering-key": 6,
+   "begin": null,
+   "attributes": [],
+   "target-type": "work",
+   "work": {
+    "disambiguation": "",
+    "languages": [
+     "eng"
+    ],
+    "iswcs": [],
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "id": "322b3578-1919-4fe6-9f9f-f45842617d76",
+    "language": "eng",
+    "type": "Song",
+    "title": "Chuck Berry Medley"
+   },
+   "direction": "backward",
+   "end": null,
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "c1dca2cd-194c-36dd-93f8-6a359167e992"
+  },
+  {
+   "ordering-key": 2,
+   "target-credit": "",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "attribute-ids": {},
+   "type": "medley",
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "c1dca2cd-194c-36dd-93f8-6a359167e992",
+   "work": {
+    "id": "eda92fe2-c8ad-4447-9409-094a9c3e40b2",
+    "language": "eng",
+    "title": "Rock and Roll Party Mix",
+    "type": "Song",
+    "languages": [
+     "eng"
+    ],
+    "disambiguation": "1989 mix",
+    "attributes": [],
+    "iswcs": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6"
+   },
+   "target-type": "work",
+   "direction": "backward",
+   "end": null
+  },
+  {
+   "ended": false,
+   "attribute-ids": {},
+   "type": "medley",
+   "ordering-key": 10,
+   "target-credit": "",
+   "begin": null,
+   "attributes": [],
+   "work": {
+    "id": "60f4404d-3089-4a6b-a2d2-3979fe581b41",
+    "language": "eng",
+    "type": "Song",
+    "title": "Rock n’ Roll Hall of Fame",
+    "disambiguation": "",
+    "languages": [
+     "eng"
+    ],
+    "iswcs": [],
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6"
+   },
+   "target-type": "work",
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "c1dca2cd-194c-36dd-93f8-6a359167e992"
+  },
+  {
+   "ended": false,
+   "attribute-ids": {},
+   "type": "other version",
+   "target-credit": "",
+   "begin": null,
+   "attributes": [],
+   "target-type": "work",
+   "work": {
+    "attributes": [],
+    "iswcs": [],
+    "type-id": null,
+    "languages": [],
+    "disambiguation": "",
+    "type": null,
+    "title": "Correte Beethoven",
+    "id": "1e9d06fd-9376-454d-9c38-750481e7463b",
+    "language": null
+   },
+   "direction": "forward",
+   "end": null,
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218"
+  },
+  {
+   "attributes": [
+    "translated"
+   ],
+   "target-credit": "",
+   "begin": null,
+   "type": "other version",
+   "ended": false,
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attribute-values": {},
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "id": "83a00f9b-6775-44f2-8b43-6a063d2659b8",
+    "language": "fra",
+    "type": "Song",
+    "title": "Repose Beethoven",
+    "languages": [
+     "fra"
+    ],
+    "disambiguation": "French translation",
+    "iswcs": [],
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6"
+   },
+   "target-type": "work",
+   "direction": "forward"
+  },
+  {
+   "target-credit": "",
+   "begin": null,
+   "attributes": [
+    "translated"
+   ],
+   "ended": false,
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "type": "other version",
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "target-type": "work",
+   "work": {
+    "languages": [
+     "fra"
+    ],
+    "disambiguation": "",
+    "iswcs": [],
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "id": "56fb92bd-a740-45c9-9562-2cfa5f12241f",
+    "language": "fra",
+    "title": "Roulant sur Beethoven",
+    "type": "Song"
+   },
+   "direction": "forward",
+   "end": null
+  },
+  {
+   "type": "other version",
+   "ended": false,
+   "attribute-ids": {
+    "parody": "d73de9d3-934b-419c-8c83-2e48a5773b14",
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "attributes": [
+    "parody",
+    "translated"
+   ],
+   "target-credit": "",
+   "begin": null,
+   "end": null,
+   "target-type": "work",
+   "work": {
+    "languages": [
+     "jpn"
+    ],
+    "disambiguation": "",
+    "iswcs": [],
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "id": "083b488c-1b7f-4b5b-8da9-6f72647ddc8e",
+    "language": "jpn",
+    "title": "踊るベートーヴェン",
+    "type": "Song"
+   },
+   "direction": "forward",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attribute-values": {},
+   "source-credit": ""
   }
  ],
  "disambiguation": "",
