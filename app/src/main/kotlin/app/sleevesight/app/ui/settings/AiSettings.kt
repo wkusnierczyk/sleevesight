@@ -30,7 +30,8 @@ internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, 
  * with no key saved, its switch is off and cannot be moved, and it says it needs the key (#667). A
  * provider whose selected model was found
  * unavailable ([unavailable], by provider; #540) says so under its model, and asks for another;
- * Home's note of it links to the model's row ([SettingsTarget.model], #581).
+ * Home's note of it links to the model's row ([SettingsTarget.model], #581). Last, *Retry when the
+ * AI fails* ([AiRetryRow], #1164).
  */
 @Suppress("LongParameterList") // What the rows show, and what they change.
 @Composable
@@ -46,6 +47,8 @@ internal fun AiSection(
         val gone = goneModel(provider, settings, unavailable)
         ProviderRows(provider, settings, secrets, modelName, update, open, gone)
     }
+    // Last, since it applies to whichever service is on (#1164).
+    AiRetryRow(settings, secrets, update)
 }
 
 /** [provider]'s switch, model and effort; [gone] its selected model, when found unavailable. */

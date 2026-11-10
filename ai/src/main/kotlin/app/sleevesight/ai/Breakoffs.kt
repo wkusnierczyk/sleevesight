@@ -25,6 +25,7 @@ internal fun brokeOff(
             error is NetError.Offline && error.reason == NetError.Offline.CANCELLED_BODY -> BreakoffCause.NO_END
             error is NetError.TooLarge -> BreakoffCause.TOO_LARGE
             error is NetError.Offline && error.timedOut -> BreakoffCause.TIMED_OUT
+            error is NetError.Offline && error.noNetwork -> BreakoffCause.NO_NETWORK
             else -> BreakoffCause.CONNECTION_LOST
         }
     val detail = (error as? NetError.Offline)?.reason

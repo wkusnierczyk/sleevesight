@@ -359,6 +359,22 @@ class KtorNetClientTest {
         }
 
     @Test
+    fun `a 503 to a POST keeps the wait its Retry-After asks for, for the AI calls' retry`() =
+        runTest {
+            var calls = 0
+            val result =
+                withClient(handler = {
+                    calls++
+                    respond("", HttpStatusCode.ServiceUnavailable, headersOf(HttpHeaders.RetryAfter, "60"))
+                }) { it.send(post) }
+
+            assertEquals(NetResult.Failure(NetError.Server(503, 60.seconds)), result)
+            assertEquals(1, calls)
+            // The log's line reads as before.
+            assertEquals("Server(status=503)", NetError.Server(503, 60.seconds).toString())
+        }
+
+    @Test
     fun `a 503 from a host with a limit but without the flag is Server`() =
         runTest {
             val config = NetConfig(appVersion = "test", hosts = mapOf("example.org" to HostPolicy(1.seconds)))

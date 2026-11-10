@@ -107,6 +107,7 @@ internal fun failedReason(
 private val FAILURE_TEXTS: Map<String, Int> =
     mapOf(
         "offline" to R.string.home_failure_offline,
+        "connection_failed" to R.string.home_failure_connection_failed,
         "unauthorized" to R.string.home_failure_unauthorized,
         "billing" to R.string.home_failure_billing,
         "unavailable_here" to R.string.home_failure_unavailable_here,
@@ -119,6 +120,7 @@ private val FAILURE_TEXTS: Map<String, Int> =
         "request_too_large" to R.string.home_failure_request_too_large,
         ReplyFailures.INCOMPLETE to R.string.home_failure_incomplete,
         ReplyFailures.CONNECTION_LOST to R.string.home_failure_connection_lost,
+        // A reply that timed out mid-way, and, by the same label, one that never began (#1164).
         ReplyFailures.TIMED_OUT to R.string.home_failure_timed_out,
         ReplyFailures.LENGTH_LIMIT to R.string.home_failure_length_limit,
         ReplyFailures.EMPTY to R.string.home_failure_empty,

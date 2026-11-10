@@ -88,6 +88,14 @@ interface RunControl {
         awaitCancellation()
     }
 
+    /**
+     * Whether a model call that failed for a while may be asked again (#1164, `AiRetry`), asked while
+     * it waits and right before each try again: the app's says no once a rebuild is pending (a key,
+     * the AI service or its model changed) or the run is no longer current, and the call's error then
+     * stands. The try under way finishes. By default true.
+     */
+    fun mayRetry(): Boolean = true
+
     /** A step that was granted ended: done, failed or cancelled. Reported from a `finally`. */
     fun ended(step: RunStep)
 
