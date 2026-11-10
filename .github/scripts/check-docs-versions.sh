@@ -6,7 +6,7 @@
 # (`_includes/docs-version.html`) shows it, and puts a banner on a page whose version is behind the
 # newest release notes'; a page without one would show neither, so it fails here instead. `ci.yml`
 # runs it in every CI run, from the repository's root. Every failing page is reported. The site's
-# other pages that name the version they are up to date with in their footer (#1156; the product
+# other pages that name the version they were last brought up to in their footer (#1156; the product
 # page, the privacy policy, the README page and the two tool pages) are checked the same way: a
 # release, not a typo; they have no banner, so being behind is not checked.
 #

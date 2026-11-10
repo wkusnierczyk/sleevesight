@@ -23,7 +23,7 @@ main {
 }
 @media (max-width: 700px) { main { margin: 0; border-radius: 0; border: 0; padding: 16px; } }
 /* The site's footer (`_includes/site-footer.html`): where Sleevesight is made, the licence and the
-   source, what the site does not do and the version the page is up to date with. */
+   source, what the site does not do and the version the page was last brought up to. */
 footer { max-width: 640px; margin: 0 auto 32px; padding: 0 24px; font-size: 14px; color: var(--muted); }
 footer a { color: inherit; }
 footer p { margin: 0 0 4px; }
