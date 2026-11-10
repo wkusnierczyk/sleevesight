@@ -105,7 +105,7 @@ class AlbumSource(
         val free = free(query)
         val searches = searches(query)
         val searched = if (searches) keptWeb(query) else null
-        return AlbumFound(free.drafts + searched.orEmpty(), free.unreachable, webDue = searches && searched == null)
+        return AlbumFound(free.drafts + searched.orEmpty(), free.unanswered, webDue = searches && searched == null)
     }
 
     override val searchesWeb: Boolean get() = web != null
@@ -194,12 +194,15 @@ class AlbumSource(
         // In whole milliseconds, as the table keeps it, so a line read back is the line found.
         val at = Instant.fromEpochMilliseconds(clock.now().toEpochMilliseconds())
         val asking = Asking()
-        val album = query.group?.takeIf { query.musicBrainz }?.let { asking.read(groups.releaseGroup(it), null) }
+        val album =
+            query.group
+                ?.takeIf { query.musicBrainz }
+                ?.let { asking.read(SourceId.MUSICBRAINZ, groups.releaseGroup(it), null) }
         val drafts = mutableListOf<EvidenceDraft>()
         album?.let { drafts += musicBrainzLine(it, at) }
         if (query.wikipedia) item(query, album, asking)?.let { drafts += wikiLines(it, query, at, asking) }
         lastFm?.takeIf { query.lastFm }?.let { drafts += lastFmLines(it, query, album, at, asking) }
-        return AlbumFound(drafts, asking.unreachable)
+        return AlbumFound(drafts, asking.unanswered.toList())
     }
 
     // Last.fm's lines on the album, when its answer is the album asked for: its wiki summary's
@@ -226,7 +229,7 @@ class AlbumSource(
         while (info == null && !failed && names.hasNext()) {
             val name = names.next()
             val lookup = client.albumInfo(query.artist, name)
-            val answer = asking.read(lookup, null)
+            val answer = asking.read(SourceId.LASTFM, lookup, null)
             failed = lookup is Lookup.Failed
             if (answer != null && isAlbum(answer, query, album, asking)) {
                 title = name
@@ -280,7 +283,7 @@ class AlbumSource(
             mbid == null || group == null -> false
             mbid == group || mbid in releases -> true
             listsAll || !query.musicBrainz -> false
-            else -> asking.read(groups.groupOfRelease(mbid), null)?.lowercase() == group
+            else -> asking.read(SourceId.MUSICBRAINZ, groups.groupOfRelease(mbid), null)?.lowercase() == group
         }
     }
 
@@ -301,19 +304,20 @@ class AlbumSource(
         return EvidenceDraft(SourceId.MUSICBRAINZ, Scope.RELEASE, text, "$MUSICBRAINZ_GROUP${album.mbid}", at)
     }
 
-    // Whether a source could not be asked, across one album's lookups.
+    // The sources that could not be asked, across one album's lookups, in the order they failed (#1187).
     private class Asking {
-        var unreachable = false
+        val unanswered = linkedSetOf<SourceId>()
 
-        // [found]'s value; [none] when it is not found, or failed, which is noted.
+        // [found]'s value, [source]'s answer; [none] when it is not found, or failed, which is noted.
         fun <T> read(
+            source: SourceId,
             found: Lookup<T>,
             none: T,
         ): T =
             when (found) {
                 is Lookup.Found -> found.value
                 Lookup.NotFound -> none
-                is Lookup.Failed -> none.also { unreachable = true }
+                is Lookup.Failed -> none.also { unanswered += source }
             }
     }
 
@@ -330,13 +334,14 @@ class AlbumSource(
                 group
                     ?.let {
                         asking.read(
+                            SourceId.WIKIDATA,
                             wikidata.itemsWithStatement(MUSICBRAINZ_RELEASE_GROUP, it),
                             emptyList(),
                         )
                     }.orEmpty()
             }
         return when {
-            ids.isNotEmpty() -> asking.read(wikidata.entities(ids.take(1)), emptyMap())[ids.first()]
+            ids.isNotEmpty() -> asking.read(SourceId.WIKIDATA, wikidata.entities(ids.take(1)), emptyMap())[ids.first()]
             group == null -> byName(query, asking)
             else -> null
         }
@@ -348,15 +353,22 @@ class AlbumSource(
         asking: Asking,
     ): WdEntity? {
         val titles = titlesOf(query)
-        val pages = if (titles.isEmpty()) emptyMap() else asking.read(wikipedia.pages(titles), emptyMap())
+        val pages =
+            if (titles.isEmpty()) emptyMap() else asking.read(SourceId.WIKIPEDIA, wikipedia.pages(titles), emptyMap())
         val items = titles.mapNotNull { pages[it]?.takeIf { page -> !page.disambiguation }?.item }.distinct()
-        val entities = if (items.isEmpty()) emptyMap() else asking.read(wikidata.entities(items), emptyMap())
+        val entities =
+            if (items.isEmpty()) emptyMap() else asking.read(SourceId.WIKIDATA, wikidata.entities(items), emptyMap())
         val albums =
             items.mapNotNull { entities[it] }.filter { entity ->
                 entity.values(Wd.INSTANCE_OF).any { it in ALBUM_CLASSES }
             }
         val performers = albums.flatMap { it.values(Wd.PERFORMER) }.distinct()
-        val labels = if (performers.isEmpty()) emptyMap() else asking.read(wikidata.labels(performers), emptyMap())
+        val labels =
+            if (performers.isEmpty()) {
+                emptyMap()
+            } else {
+                asking.read(SourceId.WIKIDATA, wikidata.labels(performers), emptyMap())
+            }
         return albums.firstOrNull { entity ->
             entity.values(Wd.PERFORMER).any { id -> labels[id]?.let { names.sameName(it, query.artist) } == true }
         }
@@ -371,7 +383,7 @@ class AlbumSource(
     ): List<EvidenceDraft> {
         val name = entity.label ?: query.title
         val title = entity.enwiki
-        val lead = title?.let { asking.read(wikipedia.lead(it), null) }
+        val lead = title?.let { asking.read(SourceId.WIKIPEDIA, wikipedia.lead(it), null) }
         val quoted =
             lead?.let { WikipediaSource.sentences(it, listOf(name, query.title), names) }.orEmpty().map {
                 EvidenceDraft(SourceId.WIKIPEDIA, Scope.RELEASE, it, title?.let(::articleUrl), at)
@@ -379,7 +391,7 @@ class AlbumSource(
         val producers = entity.values(PRODUCER)
         val labels = entity.values(Wd.RECORD_LABEL)
         val ids = (producers + labels).distinct()
-        val named = if (ids.isEmpty()) emptyMap() else asking.read(wikidata.labels(ids), emptyMap())
+        val named = if (ids.isEmpty()) emptyMap() else asking.read(SourceId.WIKIDATA, wikidata.labels(ids), emptyMap())
         val url = Wd.url(entity.id)
         val templated =
             listOfNotNull(

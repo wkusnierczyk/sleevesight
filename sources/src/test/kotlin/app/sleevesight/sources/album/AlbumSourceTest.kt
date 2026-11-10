@@ -393,7 +393,7 @@ class AlbumSourceTest {
         }
 
     @Test
-    fun `a source that fails is unreachable, and nothing is kept`() =
+    fun `a source that fails is unreachable, named, and nothing is kept`() =
         runTest {
             val wikipedia = Wikipedia(failing = true)
             val kept = MemoryArtistResults()
@@ -407,6 +407,8 @@ class AlbumSourceTest {
                 )
             val found = source.lookup(AlbumQuery("Sundown", "Gordon Lightfoot", "rg-sundown"))
             assertTrue(found.unreachable)
+            // Named, for the album's panel to say so (#1187).
+            assertEquals(listOf(SourceId.WIKIPEDIA), found.unanswered)
             // MusicBrainz's line stands.
             assertEquals(SourceId.MUSICBRAINZ, found.drafts.single().source)
             assertTrue(kept.keys(AlbumSource.PART).isEmpty())
@@ -489,7 +491,7 @@ class AlbumSourceTest {
             val kept = MemoryArtistResults()
             val failed = source(LastFm(other), groups = groups(failing = true), kept = kept).lookup(query)
             assertFalse(citesLastFm(failed))
-            assertTrue(failed.unreachable)
+            assertEquals(listOf(SourceId.MUSICBRAINZ), failed.unanswered)
             assertTrue(kept.keys(AlbumSource.PART).isEmpty())
         }
 
@@ -522,7 +524,7 @@ class AlbumSourceTest {
         runTest {
             val kept = MemoryArtistResults()
             val found = source(LastFm(failing = true), kept = kept).lookup(query)
-            assertTrue(found.unreachable)
+            assertEquals(listOf(SourceId.LASTFM), found.unanswered)
             assertTrue(kept.keys(AlbumSource.PART).isEmpty())
         }
 

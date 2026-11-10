@@ -66,7 +66,7 @@ class AppItemNotesTest {
             gathering?.await()
             AlbumFound(
                 listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Sundown is his tenth album.", scope = Scope.RELEASE)),
-                unreachable = albumUnreachable,
+                unanswered = if (albumUnreachable) listOf(SourceId.WIKIPEDIA) else emptyList(),
             )
         }
     private val parts =

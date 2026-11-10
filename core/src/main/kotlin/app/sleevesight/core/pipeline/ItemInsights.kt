@@ -17,7 +17,6 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.TrackLanguageSearch
-import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
 import app.sleevesight.core.sources.ArtistWebLookup
@@ -64,7 +63,9 @@ enum class InsightItem(
  * write that ([ItemPrompt.ONLY_LISTINGS_RULE]), its [evidence] holds the artist's lines for it, and
  * its card has a prompt version of its own ([ItemPrompt.ONLY_LISTINGS_VERSION]). The artist's, with
  * no line about the artist while a source its lines come from (or MusicBrainz, whose resolution
- * verifies them) did not answer on the track, is [unreachable], and [held] says which (#1163).
+ * verifies them) did not answer on the track, is [unreachable], and [held] says which (#1163); the
+ * album's, with no line while one of its own lookups, or the track's MusicBrainz, which names its
+ * release group, did not answer, has [held] too (#1187).
  */
 class ItemEvidence(
     val evidence: EvidenceSet,
@@ -85,17 +86,20 @@ class ItemEvidence(
 }
 
 /**
- * Why the artist's sources, with no line about the artist, may yet have one (#1163): the sources that
- * could not be reached ([named]), which the artist's row names rather than that the sources give
- * nothing (MusicBrainz too where Last.fm's own MusicBrainz search failed, leaving its page unverified
- * and its result provisional); those a *Retry* asks again ([retry]: Last.fm, for that search); and
- * those whose lookup failed in a way its adapter did not map ([failed], a bug, not the network),
- * which only the diagnostics name.
+ * Why the artist's sources, with no line about the artist, may yet have one (#1163), or the album's,
+ * with no line about the album (#1187): the sources that could not be reached ([named]), which the
+ * item's row names rather than that the sources give nothing (MusicBrainz too where Last.fm's own
+ * MusicBrainz search failed, leaving its page unverified and its result provisional); those of the
+ * track a *Retry* asks again ([retry]: Last.fm, for that search); whether it gathers the item's own
+ * lookups again ([gatherAgain]: the album's, which are not the track's, so a *Retry* of the track's
+ * sources does not ask them); and those whose lookup failed in a way its adapter did not map
+ * ([failed], a bug, not the network), which only the diagnostics name.
  */
 class SourcesHeld(
     val named: List<SourceId>,
     val retry: List<SourceId> = named,
     val failed: List<SourceId> = emptyList(),
+    val gatherAgain: Boolean = false,
 )
 
 /**
@@ -318,7 +322,7 @@ class ItemInsights(
             item == InsightItem.SONG -> songEvidence(own, shown, track, settings)
             item == InsightItem.ARTIST -> artistEvidence(own, shown, track, settings)
             album == null -> null
-            else -> albumEvidence(album, shown, settings, own)
+            else -> albumEvidence(album, shown, settings, own, track)
         }
     }
 
@@ -468,25 +472,32 @@ class ItemInsights(
     // them out ([artistLines]), so the album's fingerprint does not change with them (#885). With the
     // lines the search in the track's language found on the album's own article (#902), those of the
     // run's [track] evidence about a release named as the album is ([albumInLanguage]), after the
-    // album's, kept for the album with those found on its other tracks ([inLanguage], #939).
+    // album's, kept for the album with those found on its other tracks ([inLanguage], #939). With no
+    // line, the sources that could not be asked are [ItemEvidence.held] (#1187, [albumHeld]).
+    @Suppress("LongParameterList") // The album, the lines it maps to, the settings, and the track's run.
     private suspend fun albumEvidence(
         album: CardEntity.Album,
         own: EvidenceSet,
         settings: Settings,
         track: EvidenceSet,
+        run: TrackState,
     ): ItemEvidence {
         val query = queryOf(album, settings)
-        val found = albums?.let { attempt { it.lookup(query) } ?: AlbumFound(emptyList(), unreachable = true) }
+        val found = albums?.let { attempt { it.lookup(query) } }
+        // A lookup that threw (a bug, not the network): every source it would ask, failed.
+        val threw = albums != null && found == null
         val subject = LanguageSubject.Album(album.title, album.artist, album.group)
         val drafts =
             found?.drafts.orEmpty().filter { settings.isEnabled(it.source) && !it.aggregate } +
                 inLanguage(subject, albumInLanguage(album, track), settings)
         val lines = EvidenceSet.of(drafts, hasher)
+        val failed = if (threw) ALBUM_SOURCES.filter(settings::isEnabled) else emptyList()
         return ItemEvidence(
             lines,
             matching(lines.lines, own),
-            unreachable = found?.unreachable == true,
+            unreachable = found?.unreachable == true || threw,
             webDue = found?.webDue == true,
+            held = if (lines.lines.isEmpty()) albumHeld(album, run, settings, found?.unanswered, failed) else null,
         )
     }
 
@@ -988,7 +999,9 @@ class ItemInsights(
         val shown = track.evidence ?: return null
         val more = lines.filter { settings.isEnabled(it.source) && !it.aggregate }
         val set = EvidenceSet.of(evidence.evidence.lines.map(::draftOf) + more, hasher)
-        return ItemEvidence(set, matching(set.lines, shown), unreachable = evidence.unreachable)
+        // The sources not reached, while the search found nothing either (#1187).
+        val held = evidence.held?.takeIf { set.lines.isEmpty() }
+        return ItemEvidence(set, matching(set.lines, shown), unreachable = evidence.unreachable, held = held)
     }
 
     // The artist-level lines of the track's [own] evidence about the primary artist: all of them when
@@ -1536,6 +1549,32 @@ private fun heldOf(
     val named = (unreachable + listOfNotNull(SourceId.MUSICBRAINZ.takeIf { unverified })).distinct()
     val retry = (unreachable + listOfNotNull(SourceId.LASTFM.takeIf { unverified })).distinct()
     return SourcesHeld(named, retry, failed).takeIf { named.isNotEmpty() || failed.isNotEmpty() }
+}
+
+// The sources an album's lookup asks (`AlbumSource`), all failed when it throws (#1187).
+private val ALBUM_SOURCES = listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM)
+
+// Why [album]'s lookups on [track], under [settings], with no line, may yet have one (#1187;
+// [SourcesHeld]): the sources its own lookups could not reach ([unreached], asked again by gathering
+// it again); and, for an album with no release group, MusicBrainz, when the track's lookup of it did
+// not answer (its resolution names the group, without which MusicBrainz and Last.fm are not asked
+// about the album, and Wikidata by its name only), asked again as the track's *Retry* asks it, or
+// failed; with [failed], those of a lookup that threw. Null when every one answered.
+private fun albumHeld(
+    album: CardEntity.Album,
+    track: TrackState,
+    settings: Settings,
+    unreached: List<SourceId>?,
+    failed: List<SourceId>,
+): SourcesHeld? {
+    val own = unreached.orEmpty()
+    val resolving = if (album.group == null) unansweredOf(track, settings, setOf(SourceId.MUSICBRAINZ)) else emptyList()
+    val resolvingFailed = resolving.filter { track.sources[it] is SourceState.Failed }
+    val retry = resolving - resolvingFailed.toSet()
+    val named = (retry + own).distinct()
+    val all = (resolvingFailed + failed).distinct()
+    return SourcesHeld(named, retry, all, gatherAgain = own.isNotEmpty())
+        .takeIf { named.isNotEmpty() || all.isNotEmpty() }
 }
 
 // Those of [sources] [settings] switch on that ended on [track] unreachable, or failed, in their order.
