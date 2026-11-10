@@ -28,6 +28,11 @@ import app.sleevesight.core.text.trimJs
  *   MusicBrainz found no such song. A `- … Mix` is kept, since a remix is often a recording of
  *   its own there, and so is `Edit` within the title, with no ` - ` before it ("The Final Edit").
  *
+ * Beyond the simulator, a title that names a credited artist first, before a colon, as players
+ * file classical music ("Mozart: Piano Sonata No. 16 …"), gives that artist as the track's
+ * [NormalizedTrack.composer] ([ComposerPrefix], #1129). The title and the key keep the lead;
+ * MusicBrainz is searched without it ([NormalizedTrack.searchTitle]).
+ *
  * The patterns spell out JavaScript's `\s`, `\w`, `\d` and `\b`, trimming uses JavaScript's
  * whitespace, and case is matched in ASCII only, as JavaScript's `/i` without `u` does (no
  * `IGNORE_CASE`, which on the JVM and in ICU also folds `ſ` to `s`, `ı` to `i` and the Kelvin
@@ -74,6 +79,8 @@ class Normalizer(
         }
 
         val primary = credited.firstOrNull().orEmpty()
+        val composer = ComposerPrefix.find(t.trimJs(), credited, ::foldForKey)
+        composer?.let { notes += "composer: ${it.name}" }
         return NormalizedTrack(
             title = t.trimJs(),
             artists = credited,
@@ -83,6 +90,8 @@ class Normalizer(
             notes = notes,
             lookupKey = lookupKey(primary, t),
             dropped = dropped,
+            composer = composer,
+            titleArtists = composer?.let { ComposerPrefix.namedIn(t.trimJs(), credited, ::foldForKey) }.orEmpty(),
         )
     }
 

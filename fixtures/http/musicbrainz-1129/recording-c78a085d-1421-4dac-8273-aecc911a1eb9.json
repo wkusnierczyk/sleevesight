@@ -1,0 +1,48 @@
+{
+ "length": 255453,
+ "video": false,
+ "title": "Piano Sonata no. 16 in C major, K. 545: II. Andante",
+ "first-release-date": "2008",
+ "id": "c78a085d-1421-4dac-8273-aecc911a1eb9",
+ "disambiguation": "",
+ "releases": [
+  {
+   "barcode": "699487209022",
+   "release-events": [
+    {
+     "date": "2008",
+     "area": null
+    }
+   ],
+   "quality": "normal",
+   "country": null,
+   "title": "Walter Gieseking, Piano",
+   "text-representation": {
+    "language": "eng",
+    "script": "Latn"
+   },
+   "packaging": null,
+   "id": "3d7bf25f-36a9-4fbc-a9d2-81cc1aa3d8ea",
+   "status": "Official",
+   "date": "2008",
+   "packaging-id": null,
+   "release-group": {
+    "releases": [],
+    "disambiguation": "",
+    "primary-type": "Album",
+    "first-release-date": "2008",
+    "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+    "secondary-types": [
+     "Compilation"
+    ],
+    "secondary-type-ids": [
+     "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+    ],
+    "id": "b2440ed9-360c-4c75-82fc-08bbc6d62ee7",
+    "title": "Walter Gieseking, Piano"
+   },
+   "disambiguation": "",
+   "status-id": "4e304316-386d-3409-af2e-78857eec5cfe"
+  }
+ ]
+}

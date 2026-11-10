@@ -28,6 +28,15 @@ internal class FakeMusicBrainz(
     /** Each recording with its releases (#724), by its id: a cover's original's. */
     val releases: Map<String, Lookup<MbRecording>> = emptyMap(),
 ) : MusicBrainzLookup {
+    /** The search's answer by artist (#1129), [search] for an artist not here. */
+    val searchesBy = mutableMapOf<String, Lookup<List<MbRecording>>>()
+
+    /** The searches made, as (title, artist), in order. */
+    val searched = mutableListOf<Pair<String, String>>()
+
+    /** The searches by date made, as (title, artist), in order. */
+    val beforeSearched = mutableListOf<Pair<String, String>>()
+
     /** The recordings whose releases were looked up, in order. */
     val releasesAsked = mutableListOf<String>()
 
@@ -43,7 +52,10 @@ internal class FakeMusicBrainz(
     override suspend fun searchRecordings(
         title: String,
         artist: String,
-    ) = search
+    ): Lookup<List<MbRecording>> {
+        searched += title to artist
+        return searchesBy[artist] ?: search
+    }
 
     override suspend fun searchRecordingsBefore(
         title: String,
@@ -51,6 +63,7 @@ internal class FakeMusicBrainz(
         date: String,
     ): Lookup<List<MbRecording>> {
         beforeAsked += date
+        beforeSearched += title to artist
         return beforeAnswers.removeFirstOrNull() ?: before
     }
 
