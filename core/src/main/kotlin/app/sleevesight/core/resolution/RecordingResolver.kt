@@ -46,46 +46,38 @@ class RecordingResolver(
     /**
      * Resolves [track], whose length the player reports as [duration] (null when it does not).
      *
-     * The search is by [NormalizedTrack.searchTitle] (a leading composer left out) and one credited
-     * artist at a time (`searchArtists`, #1129): the next only when the one before found nothing, so
-     * at most [ARTIST_SEARCHES] searches; a failed one ends it. The results of the first that finds
-     * something are weighed as ever, against every credited artist. Those of a later one, a fallback,
-     * only when MusicBrainz credits no one the player does not: an orchestra's search finds its
-     * recordings of the work with other soloists too, and any of them could fit the title and length.
+     * One search, by [NormalizedTrack.searchTitle] (a leading composer left out) and the first credited
+     * artist, a composer the title names moved last, so a classical track is searched by its first
+     * performer (`searchArtist`, #1129). With such a composer, when that search finds nothing that fits,
+     * one more by the title as written and the composer, the search made before #1129, so a lead that
+     * is no composer (`Band: Song` by Band and a guest) still finds what it found then; its answer is
+     * used when it finds anything or fails.
      */
     suspend fun resolve(
         track: NormalizedTrack,
         duration: Duration?,
     ): Resolution {
         val title = track.searchTitle
-        val searched = searchArtists(track)
-        val (artist, search) =
-            if (title.isBlank() || track.primary.isBlank()) {
-                track.primary to null
+        if (title.isBlank() || track.primary.isBlank()) return Resolution.NONE
+        val measured = duration != null
+        val fits: (MbRecording) -> Boolean = { candidate(track, duration, it).fits }
+        val first = musicBrainz.searched(title, searchArtist(track), measured, fits)
+        val composer = track.composer?.name
+        val searched =
+            if (composer != null && first.answer !is Lookup.Failed && first.found.none(fits)) {
+                musicBrainz
+                    .searched(track.title, composer, measured, fits)
+                    .takeIf { it.answer is Lookup.Failed || it.found.isNotEmpty() } ?: first
             } else {
-                musicBrainz.searchByArtists(title, searched)
+                first
             }
-        // A fallback search's recordings count only when they credit no one the player does not.
-        val fallback = artist != searched.firstOrNull()
-        val admits: (MbRecording) -> Boolean = { !fallback || names.creditsOnly(it, track.artists) }
-        return when (search) {
-            null, is Lookup.NotFound -> Resolution.NONE
-            is Lookup.Failed -> Resolution.unreachable(search.reason)
-            is Lookup.Found -> {
-                val earlier =
-                    musicBrainz.earlierThan(search.value, title, artist, measured = duration != null) { recording ->
-                        admits(recording) &&
-                            candidate(track, duration, recording).let {
-                                it.titleMatches && it.durationMatches && (it.named.isNotEmpty() || it.led.isNotEmpty())
-                            }
-                    }
-                val found = (search.value + earlier?.recordings.orEmpty()).distinctBy { it.mbid }.filter(admits)
-                choose(
-                    track,
-                    duration,
-                    found,
-                ).let { it.copy(provisional = it.provisional || earlier?.complete == false) }
-            }
+        return when (val answer = searched.answer) {
+            is Lookup.NotFound -> Resolution.NONE
+            is Lookup.Failed -> Resolution.unreachable(answer.reason)
+            is Lookup.Found ->
+                choose(track, duration, searched.found).let {
+                    it.copy(provisional = it.provisional || searched.incomplete)
+                }
         }
     }
 
@@ -570,14 +562,6 @@ class RecordingResolver(
     }
 
     companion object {
-        /**
-         * At most this many searches by artist for a track (#1129): the first that finds something
-         * is used. Each is one MusicBrainz request, a second apart, so a track MusicBrainz does not
-         * have costs at most three more than the one search it cost before. Four, so a classical
-         * credit of a composer, a soloist, an orchestra and a conductor searches the composer too, last.
-         */
-        const val ARTIST_SEARCHES: Int = 4
-
         /** MusicBrainz's relationship types that name someone performing on a recording. */
         val PERFORMER_TYPES: Set<String> =
             setOf("vocal", "instrument", "performer", "performing orchestra", "conductor")
@@ -769,50 +753,34 @@ private val NormalizedTrack.performers: List<String>
         return if (composer != null && performers.isNotEmpty()) performers else artists
     }
 
-// Whether every credit of [recording] stands for one of [artists]: by name, as a band one of them
-// leads, under an honorific variant, or in a joint credit of theirs (#1129). For a recording a fallback
-// search found: a credit to anyone else may be another performance.
-private fun NameMatcher.creditsOnly(
-    recording: MbRecording,
-    artists: List<String>,
-): Boolean {
-    val joint = artists.flatMap { jointCredits(recording.credits, it) }.flatten().toSet()
-    return recording.credits.all { credit ->
-        credit in joint ||
-            artists.any { artist ->
-                listOf(credit.name, credit.artistName).any {
-                    sameName(it, artist) || leads(it, artist) || honorificVariant(it, artist)
-                }
-            }
-    }
-}
-
-// The credited artists [RecordingResolver.resolve] searches by, in order, at most
-// [RecordingResolver.ARTIST_SEARCHES] (#1129): as the player credits them, the first first, but a
-// composer the title names ([NormalizedTrack.composer]) last, since MusicBrainz credits a classical
-// recording to its performers and the composer's search would rarely find it.
-private fun searchArtists(track: NormalizedTrack): List<String> =
+// The credited artist [RecordingResolver.resolve] searches by (#1129): the first credited, but a
+// composer the title names ([NormalizedTrack.composer]) moved last, since MusicBrainz credits a
+// classical recording to its performers and the composer's search would rarely find it.
+private fun searchArtist(track: NormalizedTrack): String =
     track.artists
         .filter { it.isNotBlank() }
-        .ifEmpty { listOf(track.primary) }
-        .distinct()
         .sortedBy { it == track.composer?.name }
-        .take(RecordingResolver.ARTIST_SEARCHES)
+        .firstOrNull() ?: track.primary
 
-// By [title] and each of [artists] in turn, the first search that finds something, with its artist;
-// else the last one's answer. A failed search ends it: what it would have found is not known.
-private suspend fun MusicBrainzLookup.searchByArtists(
+// One search's recordings: its first page and, when that is full, those [earlierThan] found;
+// [incomplete] when those may not be all.
+private class Searched(
+    val answer: Lookup<List<MbRecording>>,
+    val found: List<MbRecording>,
+    val incomplete: Boolean,
+)
+
+// The search by [title] and [artist], with the searches by date a full first page calls for.
+private suspend fun MusicBrainzLookup.searched(
     title: String,
-    artists: List<String>,
-): Pair<String, Lookup<List<MbRecording>>> {
-    var last: Pair<String, Lookup<List<MbRecording>>>? = null
-    for (artist in artists) {
-        val answer = searchRecordings(title, artist)
-        last = artist to answer
-        val nothing = answer is Lookup.NotFound || (answer is Lookup.Found && answer.value.isEmpty())
-        if (!nothing) break
-    }
-    return checkNotNull(last)
+    artist: String,
+    measured: Boolean,
+    fits: (MbRecording) -> Boolean,
+): Searched {
+    val answer = searchRecordings(title, artist)
+    val page = (answer as? Lookup.Found)?.value ?: return Searched(answer, emptyList(), incomplete = false)
+    val earlier = earlierThan(page, title, artist, measured, fits)
+    return Searched(answer, (page + earlier?.recordings.orEmpty()).distinctBy { it.mbid }, earlier?.complete == false)
 }
 
 // A full first page may not hold the earliest recording of a title the artist recorded more often
@@ -826,7 +794,7 @@ private suspend fun MusicBrainzLookup.searchByArtists(
 // the choice is provisional and a later run asks again, when a search fails or the last is still
 // full, when nothing on a full page could be chosen with a date to search by, or when, with the
 // player's length, only lengthless recordings gave the date and none found has a length. Searched by
-// the first page's own [title] and [artist], the search title and the artist that found it (#1129).
+// the first page's own [title] and [artist] (#1129).
 private suspend fun MusicBrainzLookup.earlierThan(
     firstPage: List<MbRecording>,
     title: String,

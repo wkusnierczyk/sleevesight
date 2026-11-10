@@ -12,8 +12,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The search by title and artist (#1129): without a leading composer, which MusicBrainz's titles do
- * not have, and by each credited artist in turn while none finds anything, the composer last.
+ * The search by title and artist (#1129): one search, without a leading composer, which MusicBrainz's
+ * titles do not have, and by the first performer, the composer moved last; when it finds nothing that
+ * fits, one more by the title as written and the composer, the search made before.
  */
 class RecordingResolverArtistSearchTest {
     private val title = "Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante"
@@ -21,6 +22,7 @@ class RecordingResolverArtistSearchTest {
     private val classical =
         track("Mozart: $title", "$mozart, Khatia Buniatishvili, Academy of St. Martin in the Fields")
     private val nothing: Lookup<List<MbRecording>> = Lookup.Found(emptyList())
+    private val bach = "Johann Sebastian Bach"
 
     // MusicBrainz's recording: its own title, credited to the soloist alone here.
     private val performed =
@@ -33,7 +35,7 @@ class RecordingResolverArtistSearchTest {
         )
 
     @Test
-    fun `a classical track is searched without the composer's lead, by a performer first`() =
+    fun `a classical track is searched once, without the composer's lead, by its first performer`() =
         runTest {
             val musicBrainz =
                 FakeMusicBrainz(nothing).apply { searchesBy["Khatia Buniatishvili"] = Lookup.Found(listOf(performed)) }
@@ -44,70 +46,79 @@ class RecordingResolverArtistSearchTest {
         }
 
     @Test
-    fun `when the first artist's search finds nothing, the next one's is made`() =
-        runTest {
-            val found = recording("found", "Song", "B", 200, "1999")
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["B"] = Lookup.Found(listOf(found)) }
-            val resolution = resolve(musicBrainz, track("Song", "A, B, C"))
-            assertEquals("found", resolution.recordingMbid)
-            assertEquals(listOf("Song" to "A", "Song" to "B"), musicBrainz.searched)
-        }
-
-    @Test
-    fun `the searches by artist stop at four, however many artists are credited`() =
+    fun `without a composer, one search by the first artist, however many are credited`() =
         runTest {
             val musicBrainz = FakeMusicBrainz(nothing)
-            val resolution = resolve(musicBrainz, track("Song", "A, B, C, D, E"))
-            assertEquals(Outcome.None, resolution.outcome)
-            assertEquals(listOf("A", "B", "C", "D"), musicBrainz.searched.map { it.second })
-            assertEquals(RecordingResolver.ARTIST_SEARCHES, musicBrainz.searched.size)
+            assertEquals(Outcome.None, resolve(musicBrainz, track("Song", "A, B, C, D, E")).outcome)
+            assertEquals(listOf("Song" to "A"), musicBrainz.searched)
         }
 
     @Test
-    fun `a search that is not found counts as nothing found, and the next artist is searched`() =
-        runTest {
-            val found = recording("found", "Song", "B", 200, "1999")
-            val musicBrainz = FakeMusicBrainz(Lookup.NotFound).apply { searchesBy["B"] = Lookup.Found(listOf(found)) }
-            assertEquals("found", resolve(musicBrainz, track("Song", "A, B")).recordingMbid)
-        }
-
-    @Test
-    fun `a failed search ends the searches, and MusicBrainz could not be reached`() =
-        runTest {
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["B"] = Lookup.Failed("Timeout") }
-            val resolution = resolve(musicBrainz, track("Song", "A, B, C"))
-            assertEquals(Outcome.Unreachable, resolution.outcome)
-            assertEquals(listOf("A", "B"), musicBrainz.searched.map { it.second })
-        }
-
-    @Test
-    fun `a first search that finds something decides, even when none of it fits`() =
-        runTest {
-            val other = recording("other", "Song", "Someone Else", 200, "1999")
-            val found = recording("found", "Song", "B", 200, "1999")
-            val musicBrainz =
-                FakeMusicBrainz(Lookup.Found(listOf(other))).apply { searchesBy["B"] = Lookup.Found(listOf(found)) }
-            val resolution = resolve(musicBrainz, track("Song", "A, B"))
-            assertNull(resolution.recordingMbid)
-            assertEquals(listOf("A"), musicBrainz.searched.map { it.second })
-        }
-
-    @Test
-    fun `a title whose lead names no credited artist is searched whole, by each credited artist in turn`() =
+    fun `a title whose lead names no credited artist is searched whole, once, by the first artist`() =
         runTest {
             val musicBrainz = FakeMusicBrainz(nothing)
             resolve(musicBrainz, track("Star Wars: Main Title", "John Williams, London Symphony Orchestra"))
+            assertEquals(listOf("Star Wars: Main Title" to "John Williams"), musicBrainz.searched)
+        }
+
+    @Test
+    fun `with nothing that fits found by the performer, the title as written is searched by the composer`() =
+        runTest {
+            val musicBrainz = FakeMusicBrainz(nothing)
+            resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
+            assertEquals(listOf("Aria" to "Glenn Gould", "Bach: Aria" to bach), musicBrainz.searched)
+        }
+
+    @Test
+    fun `a performer's search that finds what fits is the only one`() =
+        runTest {
+            val both =
+                recording(
+                    "gould",
+                    "Aria",
+                    bach,
+                    200,
+                    "1981",
+                ).copy(credits = listOf(credit(bach), credit("Glenn Gould")))
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Glenn Gould"] = Lookup.Found(listOf(both)) }
+            assertEquals("gould", resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould")).recordingMbid)
+            assertEquals(listOf("Aria" to "Glenn Gould"), musicBrainz.searched)
+        }
+
+    @Test
+    fun `a lead that is no composer still finds its recording by the search as written`() =
+        runTest {
+            // `Band` is taken for a composer, so the search is by Guest, who has nothing; the search
+            // made before #1129, `Band: Song` by Band, finds Band's recording.
+            val exact = recording("exact", "Band: Song", "Band", 200, "1990")
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Band"] = Lookup.Found(listOf(exact)) }
+            assertEquals("exact", resolve(musicBrainz, track("Band: Song", "Band, Guest")).recordingMbid)
+            assertEquals(listOf("Song" to "Guest", "Band: Song" to "Band"), musicBrainz.searched)
+        }
+
+    @Test
+    fun `when the search as written finds nothing either, the first search's answer stands`() =
+        runTest {
+            // Gould's search finds a near miss, another artist's `Aria`; the composer's finds nothing.
+            val other = recording("other", "Aria", "Someone Else", 200, "1999")
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Glenn Gould"] = Lookup.Found(listOf(other)) }
+            val resolution = resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
             assertEquals(
-                listOf(
-                    "Star Wars: Main Title" to "John Williams",
-                    "Star Wars: Main Title" to "London Symphony Orchestra",
-                ),
-                musicBrainz.searched,
+                Outcome.Rejected("MusicBrainz has “Aria” by Someone Else, not by Glenn Gould"),
+                resolution.outcome,
             )
         }
 
     @Test
-    fun `the search by date of a full page is by the title and the artist that found it`() =
+    fun `a failed first search is MusicBrainz unreachable, with no search after it`() =
+        runTest {
+            val musicBrainz = FakeMusicBrainz(Lookup.Failed("Timeout"))
+            assertEquals(Outcome.Unreachable, resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould")).outcome)
+            assertEquals(listOf("Aria" to "Glenn Gould"), musicBrainz.searched)
+        }
+
+    @Test
+    fun `the search by date of a full page is by the title and the artist searched`() =
         runTest {
             val page =
                 listOf(performed) +
@@ -122,48 +133,23 @@ class RecordingResolverArtistSearchTest {
         }
 
     @Test
-    fun `the composer is searched by last, after the other credited artists`() =
-        runTest {
-            val musicBrainz = FakeMusicBrainz(nothing)
-            resolve(musicBrainz, track("Bach: Aria", "Johann Sebastian Bach, Glenn Gould"))
-            assertEquals(listOf("Aria" to "Glenn Gould", "Aria" to "Johann Sebastian Bach"), musicBrainz.searched)
-        }
-
-    @Test
     fun `with performers credited, a recording credited to the composer alone is not the track's`() =
         runTest {
-            // Gould's search finds nothing; the composer's finds an `Aria` credited to Bach alone,
-            // which may be anyone's performance.
-            val bach = "Johann Sebastian Bach"
+            // Gould's search finds nothing; the composer's finds an `Aria` credited to Bach alone, which
+            // may be anyone's performance.
             val composerOnly = recording("bach-only", "Aria", bach, 200, "1990")
             val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(listOf(composerOnly)) }
             val resolution = resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
             assertNull(resolution.recordingMbid)
-            assertEquals(
-                Outcome.Rejected("MusicBrainz has “Aria” by $bach, not by Glenn Gould"),
-                resolution.outcome,
-            )
-        }
-
-    @Test
-    fun `with performers credited, a recording crediting the composer and a performer is the track's`() =
-        runTest {
-            val bach = "Johann Sebastian Bach"
-            val both =
-                recording("gould", "Aria", bach, 200, "1981")
-                    .copy(credits = listOf(credit(bach), credit("Glenn Gould")))
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(listOf(both)) }
-            val resolution = resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
-            assertEquals("gould", resolution.recordingMbid)
+            assertEquals(Outcome.Rejected("MusicBrainz has “Aria” by $bach, not by Glenn Gould"), resolution.outcome)
         }
 
     @Test
     fun `a full page credited to the composer alone gives no date to search by`() =
         runTest {
-            val bach = "Johann Sebastian Bach"
             val page =
                 (1..MusicBrainzLookup.SEARCH_PAGE).map { recording("bach-$it", "Aria", bach, 200, "${1950 + it}") }
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy[bach] = Lookup.Found(page) }
+            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Glenn Gould"] = Lookup.Found(page) }
             resolve(musicBrainz, track("Bach: Aria", "$bach, Glenn Gould"))
             assertEquals(emptyList(), musicBrainz.beforeAsked)
         }
@@ -192,8 +178,6 @@ class RecordingResolverArtistSearchTest {
             val guests = recording("guests", "Song", "Guest", 200, "1970")
             val musicBrainz = FakeMusicBrainz(Lookup.Found(listOf(guests, exact)))
             assertEquals("exact", resolve(musicBrainz, track("Band: Song", "Band, Guest")).recordingMbid)
-            val alone = FakeMusicBrainz(Lookup.Found(listOf(exact)))
-            assertEquals("exact", resolve(alone, track("Band: Song", "Band, Guest")).recordingMbid)
         }
 
     @Test
@@ -211,46 +195,5 @@ class RecordingResolverArtistSearchTest {
             val exact = recording("exact", written, "Band", 200, "1990")
             val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(older, exact))), track(written, "Band, Guest"))
             assertEquals("exact", resolution.recordingMbid)
-        }
-
-    @Test
-    fun `a composer, a soloist, an orchestra and a conductor are all searched, the composer last`() =
-        runTest {
-            val musicBrainz = FakeMusicBrainz(nothing)
-            resolve(musicBrainz, track("Mozart: Requiem", "$mozart, Soloist, Orchestra, Conductor"))
-            assertEquals(listOf("Soloist", "Orchestra", "Conductor", mozart), musicBrainz.searched.map { it.second })
-        }
-
-    @Test
-    fun `a fallback search's recording that credits a performer the player does not is not the track's`() =
-        runTest {
-            // The soloist's search finds nothing; the orchestra's finds its recording of the work with
-            // another pianist, which fits the title and length.
-            val other =
-                recording("other", "Song", "Orchestra", 200, "1985")
-                    .copy(credits = listOf(credit("Orchestra"), credit("Other Pianist")))
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Orchestra"] = Lookup.Found(listOf(other)) }
-            val resolution = resolve(musicBrainz, track("Song", "Soloist, Orchestra"))
-            assertNull(resolution.recordingMbid)
-            assertEquals(listOf("Soloist", "Orchestra"), musicBrainz.searched.map { it.second })
-        }
-
-    @Test
-    fun `a fallback search's recording crediting only some of the player's artists is the track's`() =
-        runTest {
-            val ours = recording("ours", "Song", "Orchestra", 200, "1985")
-            val musicBrainz = FakeMusicBrainz(nothing).apply { searchesBy["Orchestra"] = Lookup.Found(listOf(ours)) }
-            assertEquals("ours", resolve(musicBrainz, track("Song", "Soloist, Orchestra, Conductor")).recordingMbid)
-        }
-
-    @Test
-    fun `the first search's recording may credit others besides, as before`() =
-        runTest {
-            val featuring =
-                recording("feat", "Song", "A", 200, "1985").copy(credits = listOf(credit("A"), credit("Someone")))
-            assertEquals(
-                "feat",
-                resolve(FakeMusicBrainz(Lookup.Found(listOf(featuring))), track("Song", "A, B")).recordingMbid,
-            )
         }
 }

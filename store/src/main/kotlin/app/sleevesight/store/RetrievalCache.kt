@@ -140,12 +140,10 @@ class RetrievalCache internal constructor(
 
     /**
      * The retrieval key of [track]: its [NormalizedTrack.lookupKey] (primary artist and title), its
-     * credited artists, in the player's order, and the work it is from, each folded as the lookup key
-     * is ([Normalizer.foldForKey]), so equivalent spellings (NFC and NFD, any case) give one key. The
+     * credited artists, sorted, and the work it is from, each folded as the lookup key is
+     * ([Normalizer.foldForKey]), so equivalent spellings (NFC and NFD, any case) give one key. The
      * adapters read the artists (each is looked up, and verified) and the work (web search filters
-     * on it), so "Song (feat. X)" and "Song" get entries of their own. The order counts: MusicBrainz
-     * is searched by the artists one at a time, in that order, up to four (#1129), so `A, B, C, D`
-     * and `A, D, B, C` may resolve differently. Then the length the player
+     * on it), so "Song (feat. X)" and "Song" get entries of their own. Then the length the player
      * reports, [duration], in whole seconds, or `-` when it reports none: resolution chooses the
      * recording by its length, so the same song at another length may resolve to another recording.
      * Each part is prefixed with its length, so no two different combinations of parts encode alike.
@@ -157,26 +155,9 @@ class RetrievalCache internal constructor(
     fun keyOf(
         track: NormalizedTrack,
         duration: Duration?,
-    ): String = key(track, duration, track.artists.map(normalizer::foldForKey))
-
-    /**
-     * [keyOf] with the credited artists sorted, as every key was before #1129: the synthesis cache's
-     * entity key of a track's card. A card is also keyed by its evidence, which differs wherever the
-     * artists' order changed what the sources found, so a card written for the same evidence is not
-     * written again (an AI request) for want of the order.
-     */
-    fun entityKeyOf(
-        track: NormalizedTrack,
-        duration: Duration?,
-    ): String = key(track, duration, track.artists.map(normalizer::foldForKey).sorted())
-
-    private fun key(
-        track: NormalizedTrack,
-        duration: Duration?,
-        artists: List<String>,
     ): String {
         val parts =
-            listOf(track.lookupKey) + artists +
+            listOf(track.lookupKey) + track.artists.map(normalizer::foldForKey).sorted() +
                 listOf(track.from?.let(normalizer::foldForKey), duration?.let { "${it.inWholeSeconds}s" })
         return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
     }

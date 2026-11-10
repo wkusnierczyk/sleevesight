@@ -56,13 +56,10 @@ class MusicBrainzSource(
      * vocals on the recording (#996), against which an artist's Instrumental tag is weighed, so a track
      * kept before is asked again rather than shown Instrumental unweighed. 11: and the work's writing
      * credits (#998), a lyricist a sign the track is sung and composers alone a hint it is not, so a
-     * track kept before is asked again. 12: a title's leading composer is left out of the search, and
-     * each further credited artist is searched by when the first finds nothing (#1129), so a track kept
-     * as *nothing found* is asked again: every kept MusicBrainz result is, once, as are Wikipedia's
-     * and Last.fm's track results (their versions raised with it), and a multi-artist track whose
-     * artists are not in alphabetical order misses for every source, its language decision and
-     * lookups included, under the retrieval key that keeps their order, its old rows left until
-     * they expire. Without
+     * track kept before is asked again. 12: a title's leading composer is left out of the search, which
+     * is by the first performer (#1129), so a track kept as *nothing found* is asked again: every kept
+     * MusicBrainz result is, once, as are Wikipedia's track results, in English and in the track's
+     * language, and Last.fm's (their versions raised with it). Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION

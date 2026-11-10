@@ -23,8 +23,8 @@ import kotlin.time.Instant
 
 /**
  * The pipeline's [PipelineCache] over [caches]: the retrieval cache for source results, the
- * synthesis cache for written cards, with the track's retrieval key, its artists sorted
- * ([RetrievalCache.entityKeyOf]), as a card's entity key.
+ * synthesis cache for written cards, with the track's retrieval key ([RetrievalCache.keyOf]) as a
+ * card's entity key.
  * [Caches] makes blocking database calls, so each runs in [io]: the caller's
  * I/O dispatcher (`Dispatchers.IO` on the JVM), which `:core` and `:store` do not name, being
  * Multiplatform-ready.
@@ -241,7 +241,7 @@ class StorePipelineCache(
             // A card about more than the track (a genre's reason, #523) keeps its subject after it,
             // past a line break: the retrieval key's parts are length-prefixed, so the two never blur.
             is CardEntity.Track ->
-                caches.retrieval.entityKeyOf(entity.track, entity.duration) + entity.subject?.let { "\n$it" }.orEmpty()
+                caches.retrieval.keyOf(entity.track, entity.duration) + entity.subject?.let { "\n$it" }.orEmpty()
             is CardEntity.Artist -> entity.mbid?.let { BY_ID + it } ?: byName(entity.name)
             is CardEntity.Album -> entity.group?.let { BY_ID + it } ?: byName(entity.artist, entity.title)
         }

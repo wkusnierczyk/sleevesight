@@ -170,9 +170,9 @@ class LanguageWikipedia(
 
         /**
          * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
-         * resolution it checks them against. 2: a classical track filed under its composer, or one
-         * whose first artist MusicBrainz does not credit, resolves on MusicBrainz (#1129), so a result
-         * kept against the earlier resolution's miss is looked up again, as the English adapter's is.
+         * resolution it checks them against. 2: a classical track filed under its composer resolves
+         * on MusicBrainz (#1129), so a result kept against the earlier resolution's miss is looked up
+         * again, as the English adapter's is.
          */
         const val EXTRACTION_VERSION: Int = 2
 

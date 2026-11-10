@@ -395,9 +395,9 @@ class WikipediaSource(
          * resolution it checks them against. 2: a joint credit resolves on MusicBrainz (#661), so a
          * result kept against the earlier resolution's miss is looked up again; [ARTIST_PART] goes
          * with it. 3: brackets a dropped pronunciation leaves empty are removed ([tidy], #850). 4: a
-         * classical track filed under its composer, or one whose first artist MusicBrainz does not
-         * credit, resolves on MusicBrainz (#1129), so a result kept against the earlier resolution's
-         * miss (a rejection for want of a MusicBrainz id) is looked up again; [ARTIST_PART] stays
+         * classical track filed under its composer resolves on MusicBrainz (#1129), so a result kept
+         * against the earlier resolution's miss (a rejection for want of a MusicBrainz id) is looked
+         * up again; [ARTIST_PART] stays
          * ([ARTIST_PART_VERSION]).
          */
         const val EXTRACTION_VERSION: Int = 4

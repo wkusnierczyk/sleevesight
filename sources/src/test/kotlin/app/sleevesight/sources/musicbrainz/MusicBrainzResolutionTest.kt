@@ -186,7 +186,7 @@ class MusicBrainzResolutionTest {
                 ),
                 resolution.artists,
             )
-            // One search: the performer first, the composer last, never reached.
+            // One search, by the first performer, the composer moved last: it finds the recording.
             assertEquals(
                 listOf(
                     "recording:\"Piano Sonata No. 16 in C Major, K. 545 \\\"Sonata facile\\\": II. Andante\" " +

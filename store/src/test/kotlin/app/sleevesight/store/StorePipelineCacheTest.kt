@@ -139,7 +139,7 @@ class StorePipelineCacheTest {
                 fixture.caches.synthesis.get(
                     SynthesisKey(
                         CardKind.INSIGHT,
-                        fixture.caches.retrieval.entityKeyOf(sundown, 213.seconds),
+                        fixture.caches.retrieval.keyOf(sundown, 213.seconds),
                         "9f2c",
                         1,
                         "e3b0",

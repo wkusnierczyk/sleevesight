@@ -218,17 +218,6 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
-   "query": "recording:\"Forever Young\" AND artist:\"Winston Hunte\"",
-   "limit": "100",
-   "fmt": "json"
-  },
-  "status": 200,
-  "file": "recording-recording-forever-young-and-artist-winston-hunte.json"
- },
- {
-  "method": "GET",
-  "url": "https://musicbrainz.org/ws/2/recording",
-  "query": {
    "query": "recording:\"Here Comes The Sun\" AND artist:\"Alexander S.\"",
    "limit": "100",
    "fmt": "json"
@@ -339,34 +328,12 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
-   "query": "recording:\"The Ode To Newfoundland\" AND artist:\"Cantus Vocum Chamber Choir\"",
-   "limit": "100",
-   "fmt": "json"
-  },
-  "status": 200,
-  "file": "recording-recording-the-ode-to-newfoundland-and-artist-cantus-vocum-chamber-choir.json"
- },
- {
-  "method": "GET",
-  "url": "https://musicbrainz.org/ws/2/recording",
-  "query": {
    "query": "recording:\"The Ode To Newfoundland\" AND artist:\"Charles Cavendish Boyle\"",
    "limit": "100",
    "fmt": "json"
   },
   "status": 200,
   "file": "recording-recording-the-ode-to-newfoundland-and-artist-charles-cavendish-boyle.json"
- },
- {
-  "method": "GET",
-  "url": "https://musicbrainz.org/ws/2/recording",
-  "query": {
-   "query": "recording:\"The Ode To Newfoundland\" AND artist:\"Hubert Parry\"",
-   "limit": "100",
-   "fmt": "json"
-  },
-  "status": 200,
-  "file": "recording-recording-the-ode-to-newfoundland-and-artist-hubert-parry.json"
  },
  {
   "method": "GET",
@@ -389,17 +356,6 @@
   },
   "status": 200,
   "file": "recording-recording-up-down-and-artist-peleboy.json"
- },
- {
-  "method": "GET",
-  "url": "https://musicbrainz.org/ws/2/recording",
-  "query": {
-   "query": "recording:\"Up Down\" AND artist:\"Tony K\"",
-   "limit": "100",
-   "fmt": "json"
-  },
-  "status": 200,
-  "file": "recording-recording-up-down-and-artist-tony-k.json"
  },
  {
   "method": "GET",
