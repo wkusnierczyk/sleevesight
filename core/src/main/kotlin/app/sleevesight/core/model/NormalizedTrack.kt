@@ -44,6 +44,18 @@ data class NormalizedTrack(
                 ?: title
 
     /**
+     * The performers (#1129): with a [composer] the title names, the credited artists the title does
+     * not name ([titleArtists]: the composer, an arranger in `(Arr. Busoni)`), when there are any;
+     * else every credited artist.
+     */
+    val performers: List<String>
+        get() {
+            val named = titleArtists.toSet() + listOfNotNull(composer?.name)
+            val performers = artists.filter { it !in named }
+            return if (composer != null && performers.isNotEmpty()) performers else artists
+        }
+
+    /**
      * The names a web page about the track is about: its title, its work and its artists, which a
      * part of a page's passage must say more than to be kept, the rest page boilerplate (#905, #929).
      */
