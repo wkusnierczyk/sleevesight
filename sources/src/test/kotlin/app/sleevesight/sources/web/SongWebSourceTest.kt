@@ -9,6 +9,7 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.testing.MemoryArtistResults
+import app.sleevesight.sources.KeptDrafts
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,19 +64,27 @@ class SongWebSourceTest {
         }
 
     @Test
-    fun `lines kept before Exa's references were decoded are searched again`() =
+    fun `lines kept before Exa's references were decoded are kept again unless they hold one`() =
         runTest {
             val now = MemoryArtistResults()
-            SongWebSource(Web(), now).search(song)
+            val found = assertNotNull(SongWebSource(Web(), now).search(song))
             val key = now.keys(SongWebSource.PART).single()
             val value = assertNotNull(now.get(SongWebSource.PART, key)).value
-            // The same entry, kept as a song's web lines were before #1165: extraction 1.
+            // Kept before #1165 (extraction 1) with no reference: the same lines, with no search, and
+            // kept again under the part's version.
             val before = MemoryArtistResults()
-            before.keep(SongWebSource.PART.copy(extraction = 1), key, value)
+            before.keep(SongWebSource.BEFORE_DECODING, key, value)
             val web = Web()
-            val source = SongWebSource(web, before)
-            assertNull(source.kept(song))
-            assertNotNull(source.search(song))
+            assertEquals(found, SongWebSource(web, before).search(song))
+            assertEquals(0, web.searches)
+            assertEquals(value, assertNotNull(before.get(SongWebSource.PART, key)).value)
+            // With a reference in a line: searched again.
+            val encoded = MemoryArtistResults()
+            val referenced = found.map { it.copy(text = it.text + " &amp; more") }
+            encoded.keep(SongWebSource.BEFORE_DECODING, key, KeptDrafts.encode(referenced))
+            val again = SongWebSource(web, encoded)
+            assertNull(again.kept(song))
+            assertEquals(found, again.search(song))
             assertEquals(1, web.searches)
         }
 

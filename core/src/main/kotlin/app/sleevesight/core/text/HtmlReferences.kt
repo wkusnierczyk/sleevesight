@@ -8,8 +8,10 @@ package app.sleevesight.core.text
  * is the text `&#039;`, as on the page.
  *
  * - By number: `&#` and ASCII digits, or `&#x` (or `&#X`) and ASCII hex digits, then `;`. Leading
- *   zeros are read however many; zero, a surrogate or a number past Unicode is U+FFFD; 128 to 159
- *   are the Windows-1252 characters browsers read them as, so `&#146;s` is `’s`.
+ *   zeros are read however many; zero, another control (but the tab, the line feed, the form feed
+ *   and the carriage return), DEL, a surrogate or a number past Unicode is U+FFFD; 128 to 159 are
+ *   the Windows-1252 characters browsers read them as, so `&#146;s` is `’s`, and the five it leaves
+ *   unassigned are U+FFFD.
  * - By name, then `;`: the markup's own (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&apos;`), Latin-1's
  *   (`&eacute;`, `&nbsp;` …) and HTML 4's punctuation and symbols (`&rsquo;`, `&ndash;`, `&hellip;`,
  *   `&euro;` …) ([NAMED]).
@@ -76,10 +78,12 @@ object HtmlReferences {
         return if (text.getOrNull(i) == ';') NAMED[text.substring(from, i)]?.let { Reference(it, i + 1) } else null
     }
 
-    // The character a browser shows for [value].
+    // The character a browser shows for [value]: U+FFFD for no character, a control (all but the tab,
+    // the line feed, the form feed and the carriage return), or one of Windows-1252's five unassigned.
     private fun pointOf(value: Int): Int =
         when {
-            value == 0 || value > Character.MAX_CODE_POINT || value in SURROGATES -> REPLACEMENT
+            value > Character.MAX_CODE_POINT || value in SURROGATES || value in REFUSED -> REPLACEMENT
+            value in CONTROLS && value !in SPACES -> REPLACEMENT
             else -> WINDOWS_1252[value] ?: value
         }
 
@@ -130,7 +134,7 @@ object HtmlReferences {
 
     /**
      * What a browser reads a reference to 128 to 159 as: Windows-1252's characters at those bytes
-     * (the HTML standard's table); the five it leaves unassigned stay as the number says.
+     * (the HTML standard's table); the five it leaves unassigned are in [REFUSED].
      */
     private val WINDOWS_1252: Map<Int, Int> =
         pairs(
@@ -151,4 +155,15 @@ object HtmlReferences {
     private const val HEX = 16
     private const val REPLACEMENT = 0xFFFD
     private val SURROGATES = Character.MIN_SURROGATE.code..Character.MAX_SURROGATE.code
+
+    // The C0 controls, and those of them a reference may give: the tab, the line feed, the form feed
+    // and the carriage return.
+    private val CONTROLS = 0 until ' '.code
+    private val SPACES = codes("09 0A 0C 0D")
+
+    // Zero, DEL, and the five numbers Windows-1252 leaves unassigned.
+    private val REFUSED = codes("00 7F 81 8D 8F 90 9D")
+
+    // [spec]'s code points, in hex, separated by spaces.
+    private fun codes(spec: String): Set<Int> = spec.split(' ').map { it.toInt(HEX) }.toSet()
 }

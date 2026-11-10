@@ -24,6 +24,7 @@ import app.sleevesight.sources.lastfm.Lru
 import app.sleevesight.sources.musicbrainz.MbAlbum
 import app.sleevesight.sources.musicbrainz.ReleaseGroups
 import app.sleevesight.sources.web.AlbumWebSearch
+import app.sleevesight.sources.web.getCarried
 import app.sleevesight.sources.wikipedia.WikipediaClient
 import app.sleevesight.sources.wikipedia.WikipediaSource
 import app.sleevesight.sources.wikipedia.articleUrl
@@ -131,7 +132,7 @@ class AlbumSource(
     override suspend fun renewWeb(query: AlbumQuery) {
         val key = webKeyOf(query)
         if (webKept.persists) {
-            webKept.get(WEB_PART, key)?.let { webKept.keep(WEB_PART, key, it.value) }
+            webKept.getCarried(WEB_PART, WEB_BEFORE_DECODING, key)?.let { webKept.keep(WEB_PART, key, it.value) }
         } else {
             remembered.get(key)?.let { remembered.put(key, it) }
         }
@@ -174,7 +175,7 @@ class AlbumSource(
     private suspend fun keptWeb(query: AlbumQuery): List<EvidenceDraft>? {
         val key = webKeyOf(query)
         return if (webKept.persists) {
-            webKept.get(WEB_PART, key)?.let { KeptDrafts.decode(it.value) }
+            webKept.getCarried(WEB_PART, WEB_BEFORE_DECODING, key)?.let { KeptDrafts.decode(it.value) }
         } else {
             remembered.get(key)
         }
@@ -467,6 +468,9 @@ class AlbumSource(
          */
         val WEB_PART: ArtistPart =
             ArtistPart("album.web", extraction = 4, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+
+        /** [WEB_PART] before Exa's references were decoded (#1165), whose lines are carried over without one. */
+        internal val WEB_BEFORE_DECODING: ArtistPart = WEB_PART.copy(extraction = 3)
 
         /** The albums whose web lines are kept in memory, without a [webKept] that keeps them. */
         const val REMEMBERED: Int = 256

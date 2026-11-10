@@ -39,7 +39,7 @@ class ArtistWebSource(
     private val names: NameMatcher,
     kept: ArtistResults = ArtistResults.None,
 ) : ArtistWebLookup {
-    private val lines = KeptWebLines(PART, kept)
+    private val lines = KeptWebLines(PART, kept, BEFORE_DECODING)
 
     override suspend fun kept(artist: ArtistWebQuery): List<EvidenceDraft>? = lines.kept(keyOf(artist))
 
@@ -81,6 +81,9 @@ class ArtistWebSource(
          */
         val PART: ArtistPart =
             ArtistPart("artist.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+
+        /** [PART] before Exa's references were decoded (#1165), whose lines are carried over without one. */
+        internal val BEFORE_DECODING: ArtistPart = PART.copy(extraction = 1)
 
         /** The artists whose web lines are kept in memory, without a [kept] that keeps them. */
         const val REMEMBERED: Int = KeptWebLines.REMEMBERED

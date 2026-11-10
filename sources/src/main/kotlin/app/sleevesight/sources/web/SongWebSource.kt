@@ -22,7 +22,7 @@ class SongWebSource(
     private val web: SongWebSearch?,
     kept: ArtistResults = ArtistResults.None,
 ) : SongWebLookup {
-    private val lines = KeptWebLines(PART, kept)
+    private val lines = KeptWebLines(PART, kept, BEFORE_DECODING)
 
     override suspend fun kept(song: SongWebQuery): List<EvidenceDraft>? = lines.kept(song.track.lookupKey)
 
@@ -57,5 +57,8 @@ class SongWebSource(
          */
         val PART: ArtistPart =
             ArtistPart("song.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+
+        /** [PART] before Exa's references were decoded (#1165), whose lines are carried over without one. */
+        internal val BEFORE_DECODING: ArtistPart = PART.copy(extraction = 1)
     }
 }

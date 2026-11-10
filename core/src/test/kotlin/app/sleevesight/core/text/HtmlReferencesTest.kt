@@ -39,7 +39,10 @@ class HtmlReferencesTest {
             "Massive Attack\u2019s \u201CTeardrop\u201D \u2013 1998",
             HtmlReferences.decode("Massive Attack&#146;s &#147;Teardrop&#148; &#150; 1998"),
         )
-        assertEquals("\u20AC \u0081", HtmlReferences.decode("&#x80; &#129;"))
+        assertEquals("\u20AC", HtmlReferences.decode("&#x80;"))
+        // The five Windows-1252 leaves unassigned.
+        val unassigned = HtmlReferences.decode("&#129; &#141; &#x8F; &#144; &#157;")
+        assertEquals("\uFFFD \uFFFD \uFFFD \uFFFD \uFFFD", unassigned)
     }
 
     @Test
@@ -50,6 +53,12 @@ class HtmlReferencesTest {
         assertEquals("\uFFFD", HtmlReferences.decode("&#x" + "F".repeat(40) + ";"))
         assertEquals("\uFFFD \uFFFD \uFFFD", HtmlReferences.decode("&#0; &#xD800; &#x110000;"))
         assertEquals("\uD83C\uDFB5", HtmlReferences.decode("&#x1F3B5;"))
+    }
+
+    @Test
+    fun `a control is the replacement character, but the tab, line feed, form feed and carriage return`() {
+        assertEquals("\uFFFD \uFFFD \uFFFD \uFFFD", HtmlReferences.decode("&#1; &#x1F; &#127; &#11;"))
+        assertEquals("a\u0009b\u000Ac\u000Cd\u000De", HtmlReferences.decode("a&#9;b&#10;c&#12;d&#13;e"))
     }
 
     @Test
