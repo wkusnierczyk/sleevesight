@@ -1,7 +1,10 @@
 package app.sleevesight.ai.google
 
 import app.sleevesight.ai.ServerSentEvents
+import app.sleevesight.ai.WAITED
 import app.sleevesight.ai.decode
+import app.sleevesight.ai.detailOf
+import app.sleevesight.ai.kindOfOffline
 import app.sleevesight.ai.maxTokensSent
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
@@ -21,8 +24,6 @@ import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
 import app.sleevesight.net.NetSecrets
-import app.sleevesight.net.RetryPolicy
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.addJsonObject
@@ -73,21 +74,16 @@ import kotlin.time.Instant
  * quota is [AiErrorKind.QUOTA_EXHAUSTED] at once ([exhaustsAQuota]): no retry mends it that day,
  * and a paid or higher tier does. A monthly spending cap reached ([reachesSpendCap]) is
  * [AiErrorKind.BILLING] at once: the billing account is blocked until its next cycle. A rate limit
- * is sent once more after its `RetryInfo.retryDelay`, else its `Retry-After`, else
- * [RetryPolicy.delayAfter]'s first wait, when that is within [RetryPolicy.maxDelay], as `:net`
- * retries another host's 429 and as `OpenAiProvider` does; a 429 was refused before it was acted
- * on, so the call is not paid twice. Otherwise it ends as [AiErrorKind.RATE_LIMITED] with the wait.
- * The model list is not sent again: a 429 there is reported as its kind.
+ * ends as [AiErrorKind.RATE_LIMITED] with the wait it asks for (its `RetryInfo.retryDelay`, else its
+ * `Retry-After`): the client sends nothing again, and the pipeline's `AiRetry` asks again within
+ * the user's *Retry when the AI fails* (#1164), the one retry of an AI call.
  *
  * @param net the process's one `NetClient`, configured with [HOST_POLICY] under [HOST].
- * @param retry the waits for a rate limit: [net]'s own `NetConfig.retry`, so both wait alike. It
- *   has no default, so no caller leaves it different by accident.
  * @param baseUrl the API's origin, for tests.
  * @param clock for a `Retry-After` given as a date.
  */
 class GoogleProvider(
     private val net: NetClient,
-    private val retry: RetryPolicy,
     private val baseUrl: String = BASE_URL,
     private val clock: Clock = Clock.System,
 ) : AiProvider {
@@ -124,8 +120,7 @@ class GoogleProvider(
                 send(CompletionEvent.Error(AiErrorKind.MODEL_NOT_FOUND))
                 return@channelFlow
             }
-            var waited = false
-            do {
+            run {
                 val reader = ContentStream(clock)
                 val events = ServerSentEvents()
 
@@ -140,24 +135,8 @@ class GoogleProvider(
                     } catch (e: StopStream) {
                         null
                     }
-                // An error status comes before any of the body, so nothing was emitted for it.
-                val refused = (result as? NetResult.Success)?.value?.takeUnless { it.isSuccess }
-                val wait = refused?.takeIf { !waited }?.let(::rateLimitWait)
-                if (wait != null) {
-                    delay(wait)
-                    waited = true
-                } else {
-                    reader.end(result)?.let { send(it) }
-                }
-            } while (wait != null)
-        }
-
-    /** The wait before sending again after [response], a rate limit; null if it is not one, or too long. */
-    private fun rateLimitWait(response: NetResponse): Duration? =
-        if (response.status == TOO_MANY_REQUESTS && kindOf(response) == AiErrorKind.RATE_LIMITED) {
-            (waitOf(response, clock.now()) ?: retry.delayAfter(1)).takeIf { it <= retry.maxDelay }
-        } else {
-            null
+                reader.end(result)?.let { send(it) }
+            }
         }
 
     private sealed interface Page {
@@ -370,7 +349,7 @@ class GoogleProvider(
 /** The kind of a request that got no usable answer from `:net`. 503 is Google's `UNAVAILABLE`: overloaded or down. */
 internal fun kindOf(error: NetError): AiErrorKind =
     when (error) {
-        is NetError.Offline -> AiErrorKind.OFFLINE
+        is NetError.Offline -> kindOfOffline(error)
         is NetError.RateLimited -> AiErrorKind.RATE_LIMITED
         is NetError.Unauthorized -> AiErrorKind.UNAUTHORIZED
         is NetError.Server -> if (error.status == UNAVAILABLE_STATUS) AiErrorKind.OVERLOADED else AiErrorKind.SERVER
@@ -483,7 +462,11 @@ internal fun errorOf(
     now: Instant,
 ): CompletionEvent.Error {
     val kind = kindOf(response)
-    return CompletionEvent.Error(kind, waitOf(response, now).takeIf { kind == AiErrorKind.RATE_LIMITED })
+    return CompletionEvent.Error(
+        kind,
+        waitOf(response, now).takeIf { kind in WAITED },
+        detail = detailOf(response),
+    )
 }
 
 private fun kindOfStatus(status: String): AiErrorKind? =

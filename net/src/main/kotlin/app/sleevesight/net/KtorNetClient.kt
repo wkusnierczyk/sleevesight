@@ -272,7 +272,7 @@ internal class KtorNetClient(
             }
 
             status.value >= HttpStatusCode.InternalServerError.value -> {
-                Attempt.Failed(NetError.Server(status.value), retryAfter())
+                retryAfter().let { Attempt.Failed(NetError.Server(status.value, it), it) }
             }
 
             else -> {

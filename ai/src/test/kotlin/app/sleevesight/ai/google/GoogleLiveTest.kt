@@ -35,7 +35,7 @@ class GoogleLiveTest {
             val hosts = mapOf(GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
             val config = NetConfig(appVersion = "0.0.0-live-test", hosts = hosts)
             NetClient(config).use { net ->
-                val provider = GoogleProvider(net, config.retry)
+                val provider = GoogleProvider(net)
                 val models = assertIs<ModelList.Listed>(provider.models(secret)).models
                 assertTrue(models.any { it.id == model }, "the default model $model is not listed")
                 val request =

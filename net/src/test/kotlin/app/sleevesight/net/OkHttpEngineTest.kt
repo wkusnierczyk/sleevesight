@@ -22,6 +22,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * What the real OkHttp engine sends, against servers on the loopback interface (no internet): nothing
@@ -88,7 +89,8 @@ class OkHttpEngineTest {
                     assertEquals("after", assertIs<NetResult.Success<NetResponse>>(result).value.body, value)
                     assertEquals(2, server.requestCount - start, value)
                 } else {
-                    assertEquals(NetResult.Failure(NetError.Server(503)), result, value)
+                    // The wait asked for is kept (#1164), past what the retries allow.
+                    assertEquals(NetResult.Failure(NetError.Server(503, value.toLong().seconds)), result, value)
                     assertEquals(1, server.requestCount - start, value)
                 }
             }

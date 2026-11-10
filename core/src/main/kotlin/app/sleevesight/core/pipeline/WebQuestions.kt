@@ -160,8 +160,8 @@ class WebQuestions(
             AiWebSearch.OFF -> {
                 val request = base.copy(prompt = question.knowledge, system = question.system ?: base.system)
                 if (!mayPay()) return WebReply("", null, null, QuestionCost(), way, refused = true)
-                val (text, end) = call(request, counted)
-                WebReply(text, end, pages = null, QuestionCost.CALL, way)
+                val made = turn(request, paying)
+                WebReply(made.text, made.end, pages = null, QuestionCost(calls = made.calls), way)
             }
             AiWebSearch.ONCE -> once(question, base, paying)
             AiWebSearch.UP_TO -> agent(question, limit, base, paying)
@@ -207,8 +207,8 @@ class WebQuestions(
             !paying.mayPay() -> WebReply("", null, pages, QuestionCost.SEARCH, AiWebSearch.ONCE, refused = true)
             else -> {
                 val request = base.copy(prompt = question.once(pages), system = question.system ?: base.system)
-                val (text, end) = call(request, paying.counted)
-                WebReply(text, end, pages, QuestionCost(searches = 1, calls = 1), AiWebSearch.ONCE)
+                val made = turn(request, paying)
+                WebReply(made.text, made.end, pages, QuestionCost(searches = 1, calls = made.calls), AiWebSearch.ONCE)
             }
         }
     }
@@ -240,11 +240,14 @@ class WebQuestions(
         private var cost = QuestionCost()
         private var failed = 0
 
+        // The turns made, which the limit bounds: a call's tries again (#1164) are paid, not turns.
+        private var turns = 0
+
         // One call, and the searches it asks for: the question's reply when it ends here, else null.
         suspend fun turn(): WebReply? {
             // Searches left, and calls: at most [limit] + 1 in all, the last never with the tool,
             // whatever the turns' calls look like (one with no query counts no search).
-            val allowed = cost.searches < limit && cost.calls < limit
+            val allowed = cost.searches < limit && turns < limit
             val request =
                 base.copy(
                     prompt = prompt,
@@ -254,8 +257,10 @@ class WebQuestions(
                     toolsAllowed = allowed,
                 )
             if (!paying.mayPay()) return refused()
-            cost += QuestionCost.CALL
-            val (text, end, turn) = turn(request, paying.counted)
+            turns++
+            val made = turn(request, paying)
+            val (text, end, turn) = made
+            cost += QuestionCost(calls = made.calls)
             val calledTools = (end as? CompletionEvent.Done)?.stopReason == StopReason.TOOL_USE && turn != null
             // Searches made and every one failed: the answer had nothing to go on, and is not kept.
             val allFailed = cost.searches > 0 && failed == cost.searches
@@ -333,38 +338,38 @@ class WebQuestions(
         val refused: Boolean = false,
     )
 
-    // One call of [request], counted: its text and its end.
-    private suspend fun call(
-        request: CompletionRequest,
-        counted: (QuestionCost) -> Unit,
-    ): Pair<String, CompletionEvent?> {
-        val (text, end) = turn(request, counted)
-        return text to end
-    }
-
-    // One call of [request], counted: its text, its end and the tool calls it ended with, if any.
+    // One call of [request], counted, under [paying]'s gate: its text, its end, the tool calls it
+    // ended with, if any, and the requests it took, its tries again (#1164, `AiRetry`) each counted.
     private suspend fun turn(
         request: CompletionRequest,
-        counted: (QuestionCost) -> Unit,
+        paying: Paying,
     ): Turn {
-        counted(QuestionCost.CALL)
+        paying.counted(QuestionCost.CALL)
+        var calls = 1
         val text = StringBuilder()
         var end: CompletionEvent? = null
         var tools: ToolTurn? = null
-        ai.provider.stream(request, ai.key).collect { event ->
-            when (event) {
-                is CompletionEvent.Delta -> text.append(event.text)
-                is CompletionEvent.ToolUse -> tools = event.turn
-                is CompletionEvent.Done, is CompletionEvent.Error -> end = event
+        val again = {
+            paying.counted(QuestionCost.CALL)
+            calls += 1
+        }
+        underTerms(paying.mayPay, again) {
+            ai.provider.stream(request, ai.key).collect { event ->
+                when (event) {
+                    is CompletionEvent.Delta -> text.append(event.text)
+                    is CompletionEvent.ToolUse -> tools = event.turn
+                    is CompletionEvent.Done, is CompletionEvent.Error -> end = event
+                }
             }
         }
-        return Turn(text.toString(), end, tools)
+        return Turn(text.toString(), end, tools, calls)
     }
 
     private data class Turn(
         val text: String,
         val end: CompletionEvent?,
         val tools: ToolTurn?,
+        val calls: Int,
     )
 
     private companion object {
