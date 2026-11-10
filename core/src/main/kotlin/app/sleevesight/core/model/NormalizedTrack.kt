@@ -16,6 +16,9 @@ package app.sleevesight.core.model
  * @property composer the credited artist the title names first, before a colon, as players file
  *   classical music ("Mozart: Piano Sonata No. 16 …", Mozart credited), with another artist credited
  *   besides: on such a track, the composer (#1129); null for none. The title keeps it; [searchTitle] leaves it out.
+ * @property titleArtists with a [composer], the credited artists the title names anywhere, the
+ *   composer and an arranger in "(Arr. Busoni)" among them (`ComposerPrefix.namedIn`): no performers;
+ *   empty without a composer.
  */
 data class NormalizedTrack(
     val title: String,
@@ -27,6 +30,7 @@ data class NormalizedTrack(
     val lookupKey: String,
     val dropped: String? = null,
     val composer: TitleComposer? = null,
+    val titleArtists: List<String> = emptyList(),
 ) {
     /**
      * The title MusicBrainz is searched by: without a leading [composer] (`Mozart: `), which

@@ -99,7 +99,11 @@ class RecordingResolver(
         val credited = fitting.filter { it.creditedArtists > 0 }
         val accepted = narrowed(credited, duration)
         val collision = collision(track, (narrowed(fitting, duration) + accepted).distinct())
-        val chosen = accepted.minWithOrNull(PREFERENCE)
+        // With a composer, those crediting the most of the track's performers first (#1129): the
+        // orchestra's recording with the conductor the player credits over its earlier one alone.
+        val performers = track.performers.takeIf { track.composer != null }.orEmpty()
+        val most = accepted.maxOfOrNull { c -> performers.count { it in c.ids } } ?: 0
+        val chosen = accepted.filter { c -> performers.count { it in c.ids } == most }.minWithOrNull(PREFERENCE)
         return when {
             collision != null -> collision
             chosen == null -> weaker(track, duration, candidates, leaders, fitting) ?: unmatched(track, candidates)
@@ -765,23 +769,26 @@ private fun NameMatcher.performedBy(
     return credits.isNotEmpty() && credits.all(standsFor(track.artists)) && credits.any(standsFor(track.performers))
 }
 
-// The performers (#1129): with a composer the title names and other artists besides, those others;
-// else every credited artist.
+// The performers (#1129): with a composer the title names, the credited artists the title does not
+// name ([NormalizedTrack.titleArtists]: the composer, an arranger in `(Arr. Busoni)`), when there
+// are any; else every credited artist.
 private val NormalizedTrack.performers: List<String>
     get() {
-        val composer = composer?.name
-        val performers = artists.filter { it != composer }
+        val named = titleArtists.toSet() + listOfNotNull(composer?.name)
+        val performers = artists.filter { it !in named }
         return if (composer != null && performers.isNotEmpty()) performers else artists
     }
 
-// The credited artist [RecordingResolver.resolve] searches by (#1129): the first credited, but a
-// composer the title names ([NormalizedTrack.composer]) moved last, since MusicBrainz credits a
-// classical recording to its performers and the composer's search would rarely find it.
-private fun searchArtist(track: NormalizedTrack): String =
-    track.artists
+// The credited artist [RecordingResolver.resolve] searches by (#1129): the first credited, but the
+// artists a title with a composer names (the composer, an arranger) moved last, since MusicBrainz
+// credits a classical recording to its performers and their search would rarely find it.
+private fun searchArtist(track: NormalizedTrack): String {
+    val performers = track.performers.toSet()
+    return track.artists
         .filter { it.isNotBlank() }
-        .sortedBy { it == track.composer?.name }
+        .sortedBy { it !in performers }
         .firstOrNull() ?: track.primary
+}
 
 // One search's recordings: its first page and, when that is full, those [earlierThan] found;
 // [incomplete] when those may not be all.
@@ -791,21 +798,30 @@ private class Searched(
     val incomplete: Boolean,
 )
 
-// With a composer the title names, when the [first] search found nothing that [fits], the search by
-// the title as written and the composer, the search made before #1129, when it finds anything or
-// fails; else [first].
+// With a composer the title names, when the [first] search found nothing that [fits] (by name or as
+// a band), the search by the title as written and the composer, the search made before #1129, and
+// both searches' recordings together, since one the first found may still be taken under a weaker
+// credit (an honorific variant, a joint credit); that search failing, it could not be reached. Else
+// [first].
 private suspend fun MusicBrainzLookup.asWritten(
     track: NormalizedTrack,
     first: Searched,
     measured: Boolean,
     fits: (MbRecording) -> Boolean,
-): Searched =
-    track.composer
-        ?.name
-        ?.takeIf { first.answer !is Lookup.Failed && first.found.none(fits) }
-        ?.let { composer -> searched(track.title, composer, measured, fits) }
-        ?.takeIf { it.answer is Lookup.Failed || it.found.isNotEmpty() }
-        ?: first
+): Searched {
+    val composer = track.composer?.name?.takeIf { first.answer !is Lookup.Failed && first.found.none(fits) }
+    val second = composer?.let { searched(track.title, it, measured, fits) }
+    return when {
+        second == null -> first
+        second.answer is Lookup.Failed -> second
+        else -> {
+            val both = (first.found + second.found).distinctBy { it.mbid }
+            val anyFound = first.answer is Lookup.Found || second.answer is Lookup.Found
+            val answer = if (anyFound) Lookup.Found(both) else first.answer
+            Searched(answer, both, first.incomplete || second.incomplete)
+        }
+    }
+}
 
 // The search by [title] and [artist], with the searches by date a full first page calls for.
 private suspend fun MusicBrainzLookup.searched(

@@ -43,6 +43,30 @@ object ComposerPrefix {
         return if (lead == null || artist == null) null else TitleComposer(artist, lead.value)
     }
 
+    /**
+     * The credited artists of [artists] that [title] names anywhere, as [find] names its composer
+     * (#1129): a run of the title's words that is the artist's last words, or their whole name, as
+     * [fold] spells them; "Bach: Partita No. 2 …: V. Chaconne (Arr. Busoni)" names Bach and Busoni.
+     * A last word alone that is an ensemble's word ("Orchestra", "Quartet") does not name an
+     * ensemble, since a work's title has them too ("Concerto for Orchestra"); its whole name does.
+     */
+    fun namedIn(
+        title: String,
+        artists: List<String>,
+        fold: (String) -> String,
+    ): List<String> {
+        val words = words(fold(title))
+        return artists.filter { artist ->
+            val name = words(fold(artist))
+            name.isNotEmpty() &&
+                (1..name.size).any { k ->
+                    val tail = name.takeLast(k)
+                    (k > 1 || tail.single() !in ENSEMBLE_WORDS || name.size == 1) &&
+                        words.windowed(k).any { it == tail }
+                }
+        }
+    }
+
     // Whether [lead]'s words are [artist]'s last ones, each before the last whole or its initial.
     private fun names(
         lead: List<String>,
@@ -61,4 +85,42 @@ object ComposerPrefix {
     // The text before the first colon, the colon and the whitespace after it. No braces: ICU reads
     // the pattern as the JVM does.
     private val LEAD = Regex("^([^:]+):$JS_WHITESPACE_CLASS+")
+
+    // Words that end ensembles' names and stand in works' titles too.
+    private val ENSEMBLE_WORDS =
+        setOf(
+            "orchestra",
+            "orchestre",
+            "orchester",
+            "orquesta",
+            "ensemble",
+            "quartet",
+            "quartett",
+            "quatuor",
+            "quintet",
+            "trio",
+            "choir",
+            "chorus",
+            "chor",
+            "philharmonic",
+            "philharmonia",
+            "philharmoniker",
+            "symphony",
+            "sinfonia",
+            "sinfonietta",
+            "players",
+            "consort",
+            "soloists",
+            "singers",
+            "band",
+            "academy",
+            "camerata",
+            "strings",
+            "brass",
+            "winds",
+            "octet",
+            "sextet",
+            "septet",
+            "duo",
+        )
 }

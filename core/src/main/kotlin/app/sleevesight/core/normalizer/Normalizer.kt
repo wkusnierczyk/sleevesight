@@ -91,6 +91,7 @@ class Normalizer(
             lookupKey = lookupKey(primary, t),
             dropped = dropped,
             composer = composer,
+            titleArtists = composer?.let { ComposerPrefix.namedIn(t.trimJs(), credited, ::foldForKey) }.orEmpty(),
         )
     }
 

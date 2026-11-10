@@ -85,4 +85,28 @@ class ComposerPrefixTest {
         val found = ComposerPrefix.find("Bach: Aria", bachs, normalizer::foldForKey)
         assertEquals(TitleComposer("Johann Sebastian Bach", "Bach: "), found)
     }
+
+    @Test
+    fun `a title names its composer and an arranger, not an ensemble by one word of its name`() {
+        val arranged =
+            normalizer.normalize(
+                "Bach: Partita No. 2 in D Minor, BWV 1004: V. Chaconne (Arr. Busoni)",
+                "Johann Sebastian Bach, Ferruccio Busoni, Hélène Grimaud",
+            )
+        assertEquals(listOf("Johann Sebastian Bach", "Ferruccio Busoni"), arranged.titleArtists)
+        val concerto = normalizer.normalize("Bartók: Concerto for Orchestra", "Béla Bartók, London Symphony Orchestra")
+        assertEquals(listOf("Béla Bartók"), concerto.titleArtists)
+        assertEquals(
+            listOf("Béla Bartók", "London Symphony Orchestra"),
+            ComposerPrefix.namedIn(
+                "Bartók: Concerto for London Symphony Orchestra",
+                concerto.artists,
+                normalizer::foldForKey,
+            ),
+        )
+        assertEquals(
+            emptyList(),
+            normalizer.normalize("Star Wars: Main Title", "John Williams, Orchestra").titleArtists,
+        )
+    }
 }
