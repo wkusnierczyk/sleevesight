@@ -159,9 +159,11 @@ class ExaWebSearch(
          * line up to ten times as long or kept for words past the cut, is missed instead of served.
          * 3: the parts that are only page boilerplate left out before the cut ([WebBoilerplate],
          * #905), so a line kept before, with a video site's footer or a store's rights line as a
-         * part of it, is looked up again.
+         * part of it, is looked up again. 4: each result's title and highlights with their HTML
+         * character references decoded ([parse], #1165), so a line kept before with `&#039;` in it is
+         * looked up again. The language searches ([ExaLanguageSearch]) share it.
          */
-        const val EXTRACTION_VERSION: Int = 3
+        const val EXTRACTION_VERSION: Int = 4
 
         // Unicode's White_Space, listed (no-break spaces, line and paragraph separators, NEL): a
         // JVM `\s` is ASCII only, and `(?U)` is not portable (D2). [cut] then finds every word

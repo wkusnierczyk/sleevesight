@@ -570,6 +570,10 @@ class AlbumSourceTest {
             val before = MemoryArtistResults()
             before.keep(AlbumSource.WEB_PART.copy(extraction = 2), key, value)
             assertTrue(source(web = web, webKept = before).lookup(query).webDue)
+            // And as kept before Exa's references were decoded (#1165): extraction 3.
+            val undecoded = MemoryArtistResults()
+            undecoded.keep(AlbumSource.WEB_PART.copy(extraction = 3), key, value)
+            assertTrue(source(web = web, webKept = undecoded).lookup(query).webDue)
         }
 
     @Test

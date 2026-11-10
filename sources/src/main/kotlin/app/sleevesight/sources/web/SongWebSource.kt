@@ -52,8 +52,10 @@ class SongWebSource(
          * app's or the AI service's, none included, kept whatever *Keep what sources said about each
          * artist* says (`PipelineWiring.TRACK_ONLY_PARTS`), and as long as the song's insight written from
          * them ([ArtistPart.keptAsHistory]: *Keep history for*), so its card's key stays the same across days.
+         * Extraction 2 (#1165): Exa's text with its HTML character references decoded
+         * (`ExaWebSearch.EXTRACTION_VERSION` 4), so a song's lines kept before are searched again.
          */
         val PART: ArtistPart =
-            ArtistPart("song.web", extraction = 1, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+            ArtistPart("song.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
     }
 }

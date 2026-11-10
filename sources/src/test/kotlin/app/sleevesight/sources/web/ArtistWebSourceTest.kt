@@ -74,6 +74,23 @@ class ArtistWebSourceTest {
         }
 
     @Test
+    fun `lines kept before Exa's references were decoded are searched again`() =
+        runTest {
+            val now = MemoryArtistResults()
+            ArtistWebSource(Web(), names, now).search(artist)
+            val key = now.keys(ArtistWebSource.PART).single()
+            val value = checkNotNull(now.get(ArtistWebSource.PART, key)).value
+            // The same entry, kept as an artist's web lines were before #1165: extraction 1.
+            val before = MemoryArtistResults()
+            before.keep(ArtistWebSource.PART.copy(extraction = 1), key, value)
+            val web = Web()
+            val source = ArtistWebSource(web, names, before)
+            assertNull(source.kept(artist))
+            checkNotNull(source.search(artist))
+            assertEquals(1, web.asked.size)
+        }
+
+    @Test
     fun `a search that finds nothing is kept so, and one that fails keeps nothing`() =
         runTest {
             val kept = MemoryArtistResults()

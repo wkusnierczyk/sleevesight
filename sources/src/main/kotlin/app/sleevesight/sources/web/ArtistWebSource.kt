@@ -76,9 +76,11 @@ class ArtistWebSource(
          * said about each artist* says (`PipelineWiring.TRACK_ONLY_PARTS`), and as long as the
          * artist's insight written from them ([ArtistPart.keptAsHistory]: *Keep history for*), so its
          * card's key stays the same across days, as an album's web lines are (`AlbumSource.WEB_PART`).
+         * Extraction 2 (#1165): Exa's text with its HTML character references decoded
+         * (`ExaWebSearch.EXTRACTION_VERSION` 4), so an artist's lines kept before are searched again.
          */
         val PART: ArtistPart =
-            ArtistPart("artist.web", extraction = 1, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
+            ArtistPart("artist.web", extraction = 2, encoding = 1, sources = setOf(SourceId.WEB), keptAsHistory = true)
 
         /** The artists whose web lines are kept in memory, without a [kept] that keeps them. */
         const val REMEMBERED: Int = KeptWebLines.REMEMBERED

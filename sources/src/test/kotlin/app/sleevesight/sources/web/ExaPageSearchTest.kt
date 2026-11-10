@@ -136,6 +136,16 @@ class ExaPageSearchTest {
         }
 
     @Test
+    fun `lines the searches kept before references were decoded are not served`() {
+        // The retrieval cache misses an entry kept under another extraction version
+        // (`RetrievalCacheTest`); Exa's lines kept before #1165 were made at version 3.
+        val search = ExaWebSearch(ReplayNetClient.ok("{}"), Secret("exa-key"), JvmAccentFolder)
+        assertEquals(4, search.extractionVersion)
+        val language = ExaLanguageSearch(ReplayNetClient.ok("{}"), Secret("exa-key"), JvmAccentFolder)
+        assertEquals(4, language.extractionVersion)
+    }
+
+    @Test
     fun aFailureIsFailed() =
         runTest {
             assertEquals(
