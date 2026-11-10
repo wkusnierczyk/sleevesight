@@ -161,6 +161,16 @@ interface ItemNotes {
     )
 
     /**
+     * [item]'s own lookups on [track] asked again (#1187, *Retry* beside the album's sources not
+     * reached, which are not the track's): its evidence gathered afresh, free, with no call; the line
+     * goes once they answer, and the insight is written only on a tap, as after any *Retry*.
+     */
+    fun gatherAgain(
+        track: TrackState,
+        item: InsightItem,
+    ) = Unit
+
+    /**
      * The album's own lines (#522) gathered for [track]'s album's insight on this track, as they come;
      * null until it is gathered (unfolded or opened): what *Sources* lists beside the track's.
      */
@@ -639,6 +649,18 @@ class AppItemNotes(
                 write(insights, key, Asked(item, track, evidence, ask, work, now, replaces))
             }
         }
+    }
+
+    // Gathered again whatever is kept (#1187), as a write would gather it; while one gathers, that one.
+    override fun gatherAgain(
+        track: TrackState,
+        item: InsightItem,
+    ) {
+        val made = parts.value
+        val now = settings.value?.takeIf { it.writeInsights && ItemInsights.offered(track) }
+        if (made == null || now == null) return
+        val insights = insightsOf(made)
+        gather(insights, track, item, now, gatheredFor(insights, track, item, now))
     }
 
     // [block] in [scope], marked with the epoch and the count of *Clear history*, held in [pending]

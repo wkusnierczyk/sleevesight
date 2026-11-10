@@ -23,6 +23,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.AlbumFound
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.synthesis.GroundingCheck
@@ -38,10 +39,15 @@ import org.junit.Test
 /**
  * An item's insight that found nothing, in the diagnostics (#1163): the line says from how many lines
  * it was to be written, and which sources of its lines could not be reached, so a "the sources give
- * nothing" names its cause; a kept one served again says it is that nothing was found.
+ * nothing" names its cause; a kept one served again says it is that nothing was found. The album's
+ * (#1187): its own lookups not reached named, and gathered again on *Retry*, with no call.
  */
 class AppItemNothingNotesTest {
     private val provider = CountingProvider().apply { reply = { GroundingCheck.NO_EVIDENCE } }
+
+    // What the album's lookup answers, and how many times it was asked.
+    private var album = AlbumFound(emptyList())
+    private var albumLookups = 0
     private val parts =
         MutableStateFlow<PipelineParts?>(
             PipelineParts(
@@ -51,6 +57,10 @@ class AppItemNothingNotesTest {
                 hasher = JvmHasher,
                 ai = AiAccess(provider, Secret("key")),
                 cache = CardCache(),
+                albums = {
+                    albumLookups++
+                    album
+                },
             ),
         )
     private val settings = MutableStateFlow<Settings?>(Settings(aiProvider = ProviderId.ANTHROPIC))
@@ -99,7 +109,7 @@ class AppItemNothingNotesTest {
             )
     }
 
-    private fun lines() = events.map(EventLine::of).filter { "artist insight" in it }
+    private fun lines(item: String = "artist") = events.map(EventLine::of).filter { "$item insight" in it }
 
     @Test
     fun `MusicBrainz not reached, the artist's nothing to write from names it in the diagnostics`() =
@@ -152,5 +162,48 @@ class AppItemNothingNotesTest {
             advanceUntilIdle()
             assertEquals(1, provider.requests)
             assertTrue(lines().single(), "kept answer served (nothing found), no call" in lines().single())
+        }
+
+    @Test
+    fun `the album's own lookup not reached is named, and a Retry gathers it again, with no call`() =
+        runTest {
+            album = AlbumFound(emptyList(), unanswered = listOf(SourceId.WIKIPEDIA))
+            val notes = notes()
+            val track = track(reached = true)
+            notes.write(track, InsightItem.ALBUM)
+            advanceUntilIdle()
+            val before = notes.item(track, InsightItem.ALBUM).first { it is ItemShown.Shown } as ItemShown.Shown
+            assertEquals(InsightState.NoEvidence, before.state)
+            assertEquals(listOf(SourceId.WIKIPEDIA), before.evidence.unanswered)
+            assertTrue(
+                lines("album").last(),
+                "nothing found from 0 lines, W unreachable, 0 calls" in lines("album").last(),
+            )
+            val asked = albumLookups
+
+            // *Retry*: Wikipedia answers with a line about the album; gathered again at once, though
+            // kept for a while as one a source could not be asked for. Offered, not written.
+            album =
+                AlbumFound(
+                    listOf(HomeFixtures.draft(SourceId.WIKIPEDIA, "Mezzanine is an album.", scope = Scope.RELEASE)),
+                )
+            notes.gatherAgain(track, InsightItem.ALBUM)
+            advanceUntilIdle()
+            assertEquals(asked + 1, albumLookups)
+            assertEquals(ItemShown.Offered, notes.item(track, InsightItem.ALBUM).first { it !is ItemShown.Gathering })
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `the album with every source answered and no line names none`() =
+        runTest {
+            val notes = notes()
+            val track = track(reached = true)
+            notes.write(track, InsightItem.ALBUM)
+            advanceUntilIdle()
+            val shown = notes.item(track, InsightItem.ALBUM).first { it is ItemShown.Shown } as ItemShown.Shown
+            assertEquals(InsightState.NoEvidence, shown.state)
+            assertTrue(shown.evidence.unanswered.isEmpty())
+            assertTrue(lines("album").last(), "nothing found from 0 lines, 0 calls" in lines("album").last())
         }
 }

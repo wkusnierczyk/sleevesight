@@ -70,6 +70,18 @@ internal class FakeItemNotes : ItemNotes {
     override fun stop(key: CardKey) {
         stops += key
     }
+
+    // The items whose own lookups were asked again (#1187), and what each then shows, if the test sets it.
+    val gatheredAgain = mutableListOf<InsightItem>()
+    var afterGathering: ItemShown? = null
+
+    override fun gatherAgain(
+        track: TrackState,
+        item: InsightItem,
+    ) {
+        gatheredAgain += item
+        afterGathering?.let { shown.value = shown.value + (item to it) }
+    }
 }
 
 /** A card's key, as the notes would carry it. */

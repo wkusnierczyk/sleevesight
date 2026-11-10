@@ -33,6 +33,7 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.ItemInsights
+import app.sleevesight.core.pipeline.SourcesHeld
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
@@ -71,6 +72,35 @@ internal class ItemContext(
      */
     val automatic: Boolean
         get() = settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER
+
+    /**
+     * The tap on *Retry* beside [item]'s sources not reached, [evidence]'s: the track's asked again
+     * ([ItemEvidence.retry], as the pipeline offers them, [retries]), and the item's own lookups gathered
+     * again ([SourcesHeld.gatherAgain]: the album's, #1187); null when neither is offered.
+     */
+    fun retryOf(
+        item: InsightItem,
+        evidence: ItemEvidence,
+    ): (() -> Unit)? {
+        val shown = track
+        val asks = retries?.ofAll(evidence.retry)
+        val gathers =
+            if (evidence.held?.gatherAgain == true && shown != null) {
+                { notes.gatherAgain(shown, item) }
+            } else {
+                null
+            }
+        return when {
+            asks == null -> gathers
+            gathers == null -> asks
+            else -> (
+                {
+                    asks()
+                    gathers()
+                }
+            )
+        }
+    }
 }
 
 /**
