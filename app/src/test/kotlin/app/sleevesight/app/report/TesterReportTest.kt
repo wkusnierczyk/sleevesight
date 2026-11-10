@@ -5,11 +5,13 @@ import app.sleevesight.app.diagnostics.PageResult
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
+import app.sleevesight.app.session.SessionMapping
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.withWeb
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.WrittenBy
@@ -62,6 +64,9 @@ class TesterReportTest {
         TesterSnapshot(at, zone, build, settings, playing, playback, position, view, events, learned)
 
     private fun TesterSnapshot.copy(view: PipelineView) =
+        TesterSnapshot(at, zone, build, settings, playing, playback, position, view, events, learned)
+
+    private fun TesterSnapshot.copy(playing: NowPlaying) =
         TesterSnapshot(at, zone, build, settings, playing, playback, position, view, events, learned)
 
     private fun allParts(snapshot: TesterSnapshot) =
@@ -153,6 +158,15 @@ class TesterReportTest {
         )) {
             assertTrue("$line in:\n$text", text.lines().contains(line))
         }
+    }
+
+    @Test
+    fun theMediaIdIsPrintedCleanedAndCut() {
+        // #1041: the id stays as the player sent it; only the printed copy is cleaned and cut.
+        val id = "spotify:track:1\u202E" + "x".repeat(1_000)
+        val text = TesterReport.nowPlaying(snapshot().copy(playing = sundown.copy(mediaId = id)))
+        val printed = ("spotify:track:1" + "x".repeat(1_000)).take(SessionMapping.MEDIA_ID_SHOWN_MAX)
+        assertTrue(text, text.lines().contains("Media id: $printed"))
     }
 
     @Test

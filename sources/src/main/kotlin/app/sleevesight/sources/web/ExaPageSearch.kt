@@ -7,6 +7,7 @@ import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearchOutcome
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.sources.isMusicBrainzPage
+import app.sleevesight.core.text.SourceText
 import app.sleevesight.net.NetBody
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetMethod
@@ -63,7 +64,7 @@ class ExaPageSearch(
         )
 
     // Each result with a highlight not all boilerplate for [subject] (null: not cleaned), once per
-    // address, in Exa's order.
+    // address, in Exa's order; its title as a person sees it ([SourceText.titleOf], #1041), none if empty.
     private fun pagesOf(
         response: ExaSearchResponse,
         subject: List<String>?,
@@ -74,7 +75,7 @@ class ExaPageSearch(
                 ExaWebSearch.snippetOf(result, PAGE_CHARACTERS) {
                     subject?.let { names -> WebBoilerplate.clean(it, result.url, names, filter::fold) } ?: it
                 }
-            WebPage(result.url, result.title, text).takeIf {
+            WebPage(result.url, SourceText.titleOf(result.title), text).takeIf {
                 text.isNotEmpty() && !isMusicBrainzPage(result.url) && seen.add(result.url)
             }
         }

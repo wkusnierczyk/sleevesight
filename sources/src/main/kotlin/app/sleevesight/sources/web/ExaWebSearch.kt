@@ -11,6 +11,7 @@ import app.sleevesight.core.pipeline.songReviewQuery
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.text.SourceText
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetBody
 import app.sleevesight.net.NetClient
@@ -179,22 +180,22 @@ class ExaWebSearch(
 
         /**
          * The result's highlights joined as Exa joins its own fragments, whitespace collapsed, and
-         * [cut] to at most [max], [LINE_CHARACTERS] for a source's line.
+         * [cut] to at most [max], [LINE_CHARACTERS] for a source's line. Cleaned ([SourceText], #1041)
+         * before the cut, so the cut counts only the characters a person sees; after [clean], so a
+         * chord sheet's zero-width spaces still mark where its chords end ([WebBoilerplate]).
          */
         internal fun snippetOf(
             result: ExaResult,
             max: Int = LINE_CHARACTERS,
             clean: (String) -> String = { it },
-        ): String =
-            cut(
-                clean(
-                    result.highlights
-                        .map { it.replace(WHITESPACE, " ").trim() }
-                        .filter { it.isNotEmpty() }
-                        .joinToString(SEPARATOR),
-                ),
-                max,
-            )
+        ): String {
+            val joined =
+                result.highlights
+                    .map { it.replace(WHITESPACE, " ").trim() }
+                    .filter { it.isNotEmpty() }
+                    .joinToString(SEPARATOR)
+            return cut(SourceText.clean(clean(joined)).replace(WHITESPACE, " ").trim(), max)
+        }
 
         /**
          * A source's line for [result]: its highlights joined as [snippetOf] joins them, without
