@@ -89,8 +89,10 @@ internal class TrackRun(
     // *Retry* names (#724), a provisional one among them (#728), the other `Unreachable` ones kept so.
     // An adapter that threw (a bug, not the network) is not asked again; a source that was off then
     // is looked up as usual. When MusicBrainz, unreachable then, is asked again, so is a source that
-    // rejected a match for want of what it resolves (#1069, `Rejection.withoutMusicBrainz`): its
-    // verdict was reached against the failed resolution, and the one made now may confirm the match.
+    // rejected a match for want of what it resolves (#1069, `Rejection.withoutMusicBrainz`), or left
+    // lines unverified (#1163: Last.fm's artist, with no MusicBrainz id to check it by): its verdict
+    // was reached against the failed resolution, and the one made now may confirm the match. Last.fm
+    // asks nothing anew for an artist the artist cache keeps (#238).
     private val keptBefore: Map<SourceId, SourceState> =
         input.again
             ?.let { again ->
@@ -470,9 +472,11 @@ internal class TrackRun(
         // What tells one line from another for the run's evidence: its source, scope and words.
         fun triple(draft: EvidenceDraft) = Triple(draft.source, draft.scope, draft.text)
 
-        // Whether [before] rejected a match only for want of what MusicBrainz resolves (#1069).
+        // Whether [before] rejected a match only for want of what MusicBrainz resolves (#1069), or left
+        // lines unverified (#1163), with MusicBrainz unreachable: judged against no resolution.
         fun waitedOnMusicBrainz(before: SourceState): Boolean =
-            before is SourceState.Done && before.result.rejections.any { it.withoutMusicBrainz }
+            before is SourceState.Done &&
+                (before.result.rejections.any { it.withoutMusicBrainz } || before.result.unverified.isNotEmpty())
 
         // Whether a source's state from an earlier run is kept rather than asked again (#192).
         fun keeps(before: SourceState): Boolean =

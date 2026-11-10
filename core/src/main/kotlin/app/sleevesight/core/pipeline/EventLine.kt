@@ -138,15 +138,28 @@ private object AskAiLines {
         "ask ai     ${e.key}: ${question(e.question)}, " +
             when (e.outcome) {
                 AiOutcome.ANSWERED -> "answered"
-                AiOutcome.NOTHING_FOUND -> "nothing found"
+                AiOutcome.NOTHING_FOUND -> "nothing found" + nothingFrom(e)
                 AiOutcome.FAILED -> "failed" + (e.failure?.let { " ($it)" } ?: "")
                 AiOutcome.STOPPED -> "stopped"
             } +
             ", ${count(e.cost.calls, "call", "calls")}, ${count(e.cost.searches, "web search", "web searches")}, " +
             latency
 
+    // What an item's insight that found nothing was to be written from (#1163): " from 0 lines, MB
+    // unreachable" when no call was made, MusicBrainz not reached; nothing where the event does not say.
+    private fun nothingFrom(e: PipelineEvent.AiEnded): String {
+        val lines = e.lines ?: return ""
+        val unanswered = e.unanswered.joinToString(", ") { it.tag }
+        val failed = e.failed.joinToString(", ") { it.tag }
+        return " from ${count(lines, "line", "lines")}" +
+            (if (unanswered.isEmpty()) "" else ", $unanswered unreachable") +
+            if (failed.isEmpty()) "" else ", $failed failed"
+    }
+
     fun kept(e: PipelineEvent.AiKept): String =
-        "ask ai     ${e.key}: ${question(e.question)}, kept answer served, no call, " +
+        "ask ai     ${e.key}: ${question(e.question)}, kept answer served" +
+            (if (e.nothingFound) " (nothing found)" else "") +
+            ", no call, " +
             (e.writtenAt?.let { "written $it" } ?: "written at a time not kept") +
             (e.automatic?.let { ", ${asked(it)}" } ?: "") +
             ", ${e.provider.name.lowercase()} ${e.model}"

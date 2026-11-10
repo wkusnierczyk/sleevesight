@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
@@ -20,6 +21,7 @@ import app.sleevesight.core.pipeline.KeptItem
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.QuestionCost
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.WriteGates
 import app.sleevesight.core.pipeline.WrittenBy
@@ -130,6 +132,14 @@ enum class ItemAsk {
 
     /** Its row unfolded at a new track's start, under an automatic mode: as the track's own writing is. */
     BY_ITSELF,
+
+    /**
+     * Its row left unfolded by a tap, or its page left open, asked again under an automatic mode as
+     * the track's evidence changes (#1163): as [OPENED], but not by the lines a *Retry* of a source
+     * brings, which write nothing unasked (`CoordinatorState.itemCallAllowed`); the tap's own opening
+     * is [OPENED], which writes whatever came before.
+     */
+    KEPT_OPEN,
 }
 
 /** The song's, the artist's and the album's insights under *Key insights* (#522), as Home and their pages show them. */
@@ -322,7 +332,8 @@ class AppItemNotes(
     // so switching that on, or giving the key, gathers it again; and whether it takes the lines found in the track's
     // language, and where those are kept (`ItemInsights.takesInLanguage`, #939: *Search in the track's
     // language* off or not, and *Keep what sources said about each artist*), so switching either
-    // gathers it again.
+    // gathers it again; and the sources that did not answer on the track (#1163), which the artist's
+    // evidence names, so a retry that answers gathers it again, though it brings no line.
     private data class Gathered(
         val item: InsightItem,
         val lookupKey: String,
@@ -332,6 +343,7 @@ class AppItemNotes(
         val searchesWeb: Boolean,
         val inLanguage: Boolean,
         val keepsArtists: Boolean,
+        val unanswered: Set<SourceId>,
     )
 
     // The insights shown, by key, oldest first, at most [KEPT].
@@ -710,7 +722,8 @@ class AppItemNotes(
         val made = parts.value
         val same =
             now != null && made != null && insightsOf(made).key(asked.item, asked.track, asked.evidence, now) == key
-        val mode = asked.ask != ItemAsk.BY_ITSELF || now?.writeAutomatically != WriteAutomatically.NEVER
+        val unasked = asked.ask == ItemAsk.BY_ITSELF || asked.ask == ItemAsk.KEPT_OPEN
+        val mode = !unasked || now?.writeAutomatically != WriteAutomatically.NEVER
         // The service selected now, the one the parts carry and the card's (`ItemInsights.key` asks
         // the first two): a switch waits for the rebuild that brings the new service.
         val service = now?.aiProvider == key.provider && made?.ai?.provider?.id == key.provider
@@ -905,7 +918,16 @@ class AppItemNotes(
         insights.searchesWeb(item, now),
         insights.takesInLanguage(item, now),
         insights.takesInLanguage(item, now) && now.keepArtistResults,
+        unansweredOn(track),
     )
+
+    // The sources whose lookup on [track] ended unreachable, failed, or was left provisional (#1163).
+    private fun unansweredOn(track: TrackState): Set<SourceId> =
+        track.sources
+            .filterValues { state ->
+                val result = (state as? SourceState.Done)?.result
+                state is SourceState.Failed || result?.outcome == Outcome.Unreachable || result?.provisional == true
+            }.keys
 
     // [first]'s insight, kept meanwhile (another track of the artist or album wrote it), with no call,
     // or written; each state shown while no *Clear history* came since it started. Before an album's
@@ -996,7 +1018,7 @@ class AppItemNotes(
         val settled = next.ended ?: AiOutcome.ANSWERED.takeIf { again && showKept(insights, key, asked) }
         if (settled != null) {
             showEnded(insights, next, writing)
-            question.end(settled, (next.shown as? InsightState.Failed)?.reason)
+            question.end(settled, (next.shown as? InsightState.Failed)?.reason, next.asked.evidence)
             return
         }
         question.ask(key)
@@ -1015,7 +1037,11 @@ class AppItemNotes(
                     writing.show,
                 )
             }
-        if (last == null) question.notAsked() else question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason)
+        if (last == null) {
+            question.notAsked()
+        } else {
+            question.end(outcomeOf(last), (last as? InsightState.Failed)?.reason, asked.evidence)
+        }
     }
 
     // What [next], a write that ended on the way, shows: its state; for a web search that failed where a
@@ -1067,16 +1093,29 @@ class AppItemNotes(
             paid(more)
         }
 
-        // Ended as [outcome], with what it cost, if it was asked.
+        // Ended as [outcome], with what it cost, if it was asked; one that found nothing with what it
+        // was to be written from, [evidence]'s lines and the sources not reached (#1163).
         fun end(
             outcome: AiOutcome,
             failure: String? = null,
+            evidence: ItemEvidence? = null,
         ) {
             val at = started ?: return
             started = null
+            val nothing = evidence?.takeIf { outcome == AiOutcome.NOTHING_FOUND }
             note(
                 work,
-                PipelineEvent.AiEnded(track.normalized.lookupKey, question, outcome, cost, clock.now() - at, failure),
+                PipelineEvent.AiEnded(
+                    track.normalized.lookupKey,
+                    question,
+                    outcome,
+                    cost,
+                    clock.now() - at,
+                    failure,
+                    lines = nothing?.evidence?.lines?.size,
+                    unanswered = nothing?.unanswered.orEmpty(),
+                    failed = nothing?.failed.orEmpty(),
+                ),
             )
         }
 
@@ -1283,7 +1322,7 @@ class AppItemNotes(
                 }
         if (kept != null) {
             val evidence = asked.evidence
-            note(asked.work, kept(asked.track, key, AiQuestion.Item(asked.item), kept.writtenAt))
+            note(asked.work, kept(asked.track, key, AiQuestion.Item(asked.item), kept))
             val entry = Entry(kept.state, kept.writtenAt ?: clock.now(), evidence)
             publish(asked.work) { shown.update { it.with(key, entry) } }
         }
@@ -1421,24 +1460,26 @@ class AppItemNotes(
                     val next = if (other != null && !stale(other, play)) kept else kept.with(key, entry)
                     next.also { added = it !== kept }
                 }
-                if (added) events(kept(track, key, AiQuestion.Item(item), kept.writtenAt))
+                if (added) events(kept(track, key, AiQuestion.Item(item), kept))
             }
         }.invokeOnCompletion { reading.update { it - key } }
     }
 
-    // [key]'s answer to [question], kept, written at [writtenAt], served for [track] (#851).
+    // [key]'s answer to [question], [kept], served for [track] (#851): when it was written, and whether
+    // it is that nothing was found (#1163).
     private fun kept(
         track: TrackState,
         key: CardKey,
         question: AiQuestion,
-        writtenAt: Instant?,
+        kept: KeptItem,
     ) = PipelineEvent.AiKept(
         track.normalized.lookupKey,
         question,
         key.provider,
         key.model,
-        writtenAt,
+        kept.writtenAt,
         automatic = false,
+        nothingFound = kept.state == InsightState.NoEvidence,
     )
 
     // Whether [key]'s insight on [track] may be asked for ([open]), and if so, marked as being written,
