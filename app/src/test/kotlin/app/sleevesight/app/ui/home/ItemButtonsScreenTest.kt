@@ -304,7 +304,7 @@ class ItemButtonsScreenTest {
                     val context =
                         ItemContext(null, onDemand, Notes, false, {}, { _, _, _ -> }, readAloud = null)
                     val folds = itemFolds(memory, long, NewTrackFold.FOLDED)
-                    ItemRows(itemRows(long, "Gordon Lightfoot"), false, folds, context) {}
+                    ItemRows(itemRows(long, normalizer.normalize(long)), false, folds, context) {}
                 }
             }
             compose.waitForIdle()
