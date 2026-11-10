@@ -49,30 +49,37 @@ class RecordingResolver(
      * The search is by [NormalizedTrack.searchTitle] (a leading composer left out) and one credited
      * artist at a time (`searchArtists`, #1129): the next only when the one before found nothing, so
      * at most [ARTIST_SEARCHES] searches; a failed one ends it. The results of the first that finds
-     * something are weighed as ever, against every credited artist.
+     * something are weighed as ever, against every credited artist. Those of a later one, a fallback,
+     * only when MusicBrainz credits no one the player does not: an orchestra's search finds its
+     * recordings of the work with other soloists too, and any of them could fit the title and length.
      */
     suspend fun resolve(
         track: NormalizedTrack,
         duration: Duration?,
     ): Resolution {
         val title = track.searchTitle
+        val searched = searchArtists(track)
         val (artist, search) =
             if (title.isBlank() || track.primary.isBlank()) {
                 track.primary to null
             } else {
-                musicBrainz.searchByArtists(title, searchArtists(track))
+                musicBrainz.searchByArtists(title, searched)
             }
+        // A fallback search's recordings count only when they credit no one the player does not.
+        val fallback = artist != searched.firstOrNull()
+        val admits: (MbRecording) -> Boolean = { !fallback || names.creditsOnly(it, track.artists) }
         return when (search) {
             null, is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(search.reason)
             is Lookup.Found -> {
                 val earlier =
                     musicBrainz.earlierThan(search.value, title, artist, measured = duration != null) { recording ->
-                        candidate(track, duration, recording).let {
-                            it.titleMatches && it.durationMatches && (it.named.isNotEmpty() || it.led.isNotEmpty())
-                        }
+                        admits(recording) &&
+                            candidate(track, duration, recording).let {
+                                it.titleMatches && it.durationMatches && (it.named.isNotEmpty() || it.led.isNotEmpty())
+                            }
                     }
-                val found = (search.value + earlier?.recordings.orEmpty()).distinctBy { it.mbid }
+                val found = (search.value + earlier?.recordings.orEmpty()).distinctBy { it.mbid }.filter(admits)
                 choose(
                     track,
                     duration,
@@ -761,6 +768,24 @@ private val NormalizedTrack.performers: List<String>
         val performers = artists.filter { it != composer }
         return if (composer != null && performers.isNotEmpty()) performers else artists
     }
+
+// Whether every credit of [recording] stands for one of [artists]: by name, as a band one of them
+// leads, under an honorific variant, or in a joint credit of theirs (#1129). For a recording a fallback
+// search found: a credit to anyone else may be another performance.
+private fun NameMatcher.creditsOnly(
+    recording: MbRecording,
+    artists: List<String>,
+): Boolean {
+    val joint = artists.flatMap { jointCredits(recording.credits, it) }.flatten().toSet()
+    return recording.credits.all { credit ->
+        credit in joint ||
+            artists.any { artist ->
+                listOf(credit.name, credit.artistName).any {
+                    sameName(it, artist) || leads(it, artist) || honorificVariant(it, artist)
+                }
+            }
+    }
+}
 
 // The credited artists [RecordingResolver.resolve] searches by, in order, at most
 // [RecordingResolver.ARTIST_SEARCHES] (#1129): as the player credits them, the first first, but a

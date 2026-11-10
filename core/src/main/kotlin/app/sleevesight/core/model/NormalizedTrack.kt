@@ -14,8 +14,8 @@ package app.sleevesight.core.model
  *   `Off Vocal Version`), as the title had it; null for none. LRCLIB is asked only when it names no
  *   other recording than the song's own (#997, `LibraryQuery.of`).
  * @property composer the credited artist the title names first, before a colon, as players file
- *   classical music ("Mozart: Piano Sonata No. 16 …", Mozart credited): on such a track, the
- *   composer (#1129); null for none. The title keeps it; [searchTitle] leaves it out.
+ *   classical music ("Mozart: Piano Sonata No. 16 …", Mozart credited), with another artist credited
+ *   besides: on such a track, the composer (#1129); null for none. The title keeps it; [searchTitle] leaves it out.
  */
 data class NormalizedTrack(
     val title: String,

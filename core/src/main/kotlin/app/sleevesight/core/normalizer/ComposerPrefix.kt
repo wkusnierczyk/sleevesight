@@ -16,6 +16,13 @@ import app.sleevesight.core.text.JS_WHITESPACE_CLASS
  * the last may be an initial ("J.S. Bach:", "C.P.E. Bach:"); the last is whole. A lead that names
  * no credited artist ("Interlude: …", "Star Wars: Main Title") is no composer, and the title is
  * searched as it is. Of several credited artists it could name, the first credited.
+ *
+ * Only with another artist credited besides: a lead that names the only credited artist ("Chopin:
+ * Nocturne …" by Frédéric Chopin alone) is no composer, since with no performer named, any recording
+ * credited to them with that title would do; the title is searched whole, as before.
+ *
+ * Not recognised: a catalogue's surname-first form ("MOZART, W.A.: Piano Sonata …", as Naxos files
+ * it), whose words are not the artist's last ones; its title is searched whole.
  */
 object ComposerPrefix {
     /** The credited artist of [artists] that [title]'s lead names, with the lead; null for none. */
@@ -26,7 +33,13 @@ object ComposerPrefix {
     ): TitleComposer? {
         val lead = LEAD.find(title)?.takeIf { it.value.length < title.length }
         val words = lead?.let { words(fold(it.groupValues[1])) }.orEmpty()
-        val artist = artists.takeIf { words.isNotEmpty() }?.firstOrNull { names(words, words(fold(it))) }
+        val artist =
+            artists.takeIf { words.isNotEmpty() && it.distinct().size > 1 }?.firstOrNull {
+                names(
+                    words,
+                    words(fold(it)),
+                )
+            }
         return if (lead == null || artist == null) null else TitleComposer(artist, lead.value)
     }
 

@@ -29,10 +29,10 @@ class ComposerPrefixTest {
     fun `the lead may be the whole name, its last words, or initials before the surname, any case or accent`() {
         val cases =
             listOf(
-                "Wolfgang Amadeus Mozart: Requiem" to "Wolfgang Amadeus Mozart",
+                "Wolfgang Amadeus Mozart: Requiem" to "Wolfgang Amadeus Mozart, Wiener Philharmoniker",
                 "Vaughan Williams: The Lark Ascending" to "Ralph Vaughan Williams, Hilary Hahn",
                 "J.S. Bach: Goldberg Variations, BWV 988: Aria" to "Johann Sebastian Bach, Glenn Gould",
-                "C.P.E. Bach: Solfeggio" to "Carl Philipp Emanuel Bach",
+                "C.P.E. Bach: Solfeggio" to "Carl Philipp Emanuel Bach, Andreas Staier",
                 "SAINT-SAENS: The Swan" to "Camille Saint-Saëns, Yo-Yo Ma",
                 "Gould: Interview" to "Johann Sebastian Bach, Glenn Gould",
             )
@@ -49,15 +49,20 @@ class ComposerPrefixTest {
     fun `a lead that names no credited artist is no composer, and the title is searched whole`() {
         val cases =
             listOf(
-                "Star Wars: Main Title" to "John Williams",
-                "Interlude: The Night" to "Artist",
+                "Star Wars: Main Title" to "John Williams, London Symphony Orchestra",
+                "Interlude: The Night" to "Artist, Guest",
                 // Not the last words of the name, nor an initial of them.
-                "Amadeus: Overture" to "Wolfgang Amadeus Mozart",
-                "Wolfgang: Overture" to "Wolfgang Amadeus Mozart",
-                "M.: Overture" to "Wolfgang Amadeus Mozart",
+                "Amadeus: Overture" to "Wolfgang Amadeus Mozart, Pianist",
+                "Wolfgang: Overture" to "Wolfgang Amadeus Mozart, Pianist",
+                "M.: Overture" to "Wolfgang Amadeus Mozart, Pianist",
                 // No whitespace after the colon, or nothing after it.
-                "Mozart:Requiem" to "Wolfgang Amadeus Mozart",
-                "Re: Stacks" to "Bon Iver",
+                "Mozart:Requiem" to "Wolfgang Amadeus Mozart, Pianist",
+                "Re: Stacks" to "Bon Iver, Guest",
+                // The only credited artist: no performer named beside them.
+                "Mozart: Requiem" to "Wolfgang Amadeus Mozart",
+                "Chopin: Nocturne in E-Flat Major, Op. 9 No. 2" to "Frédéric Chopin",
+                // A catalogue's surname-first form, not recognised.
+                "MOZART, W.A.: Piano Sonata No. 16" to "Wolfgang Amadeus Mozart, Pianist",
             )
         for ((title, artists) in cases) {
             val track = normalizer.normalize(title, artists)
@@ -69,7 +74,7 @@ class ComposerPrefixTest {
 
     @Test
     fun `the search title is the title whole once the title no longer starts with the lead`() {
-        val track = normalizer.normalize("Mozart: Requiem", "Wolfgang Amadeus Mozart")
+        val track = normalizer.normalize("Mozart: Requiem", "Wolfgang Amadeus Mozart, Wiener Philharmoniker")
         assertEquals("Requiem", track.searchTitle)
         assertEquals("Моцарт: Реквием", track.copy(title = "Моцарт: Реквием").searchTitle)
     }
