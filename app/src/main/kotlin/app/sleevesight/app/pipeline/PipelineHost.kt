@@ -380,12 +380,10 @@ class PipelineHost(
      * unfolded at a new track's start, or a page left open as the track changes), the app on screen
      * too, and the coordinator's own rules for the track's automatic writing
      * ([CoordinatorState.writesItself]: the first action, *Saver*'s expiry, *On track skip (auto)*),
-     * whatever the key insight came to.
+     * whatever the key insight came to; while the run is one *Retry* started, only on a tap
+     * ([CoordinatorState.itemCallAllowed], #1163).
      */
-    fun itemCallAllowed(ask: ItemAsk): Boolean {
-        val now = snapshot.value
-        return now.allowed && (ask != ItemAsk.BY_ITSELF || (now.visible && now.writesItself))
-    }
+    fun itemCallAllowed(ask: ItemAsk): Boolean = snapshot.value.itemCallAllowed(ask)
 
     /** An activity started (`MainActivity.onStart`). */
     fun activityStarted() {
