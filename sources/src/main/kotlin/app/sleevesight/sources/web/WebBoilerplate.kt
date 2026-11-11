@@ -62,7 +62,9 @@ internal object WebBoilerplate {
             parts.withIndex().flatMap { (i, part) ->
                 // A separator the line starts or ends with stays: it shows the quote goes on.
                 if (part.isEmpty()) return@flatMap if (i == 0 || i == parts.lastIndex) listOf(part) else emptyList()
-                if (onlyBoilerplate(part, site, words, fold)) emptyList() else listOf(withoutEdges(part, site))
+                // A part that is only a streaming page's navigation, cut or not, goes too ("Log in Resize …").
+                val trimmed = withoutEdges(part, site)
+                if (trimmed.isEmpty() || onlyBoilerplate(part, site, words, fold)) emptyList() else listOf(trimmed)
             }
         if (kept.none { it.isNotEmpty() }) return ""
         return kept.joinToString(SEPARATOR).trim()
@@ -103,7 +105,7 @@ internal object WebBoilerplate {
      * ([EDGES]: a streaming page's "Sign up Log in Resize main navigation", and what a cut leaves of
      * it at the start, "in Resize main navigation"), with the dashes, bars and bullets it leaves
      * there; never inside the part, so no fact goes (#955). [part] as it came when nothing is
-     * trimmed, or if nothing would be left.
+     * trimmed; empty when the part is only that text.
      */
     internal fun withoutEdges(
         part: String,
@@ -113,7 +115,7 @@ internal object WebBoilerplate {
         var text = part
         start.find(text)?.let { text = text.substring(it.range.last + 1).trimStart { c -> c in LEFT_OVER } }
         end.find(text)?.let { text = text.substring(0, it.range.first).trimEnd { c -> c in LEFT_OVER } }
-        return text.ifEmpty { part }
+        return text
     }
 
     // [part] with its site's known page text and any page's fixed sentences set aside, each leaving the separator.
@@ -360,14 +362,17 @@ internal object WebBoilerplate {
 
     /**
      * Each kind of site's interface text at a part's start and at its end: one phrase or more, the
-     * first at the start may be what a cut left of "Sign up Log in" ("in Resize main navigation",
-     * "up Log in Resize …"), only before a whole phrase.
+     * first at the start, after any dashes, bars or bullets, may be what a cut left of "Sign up Log
+     * in" ("in Resize main navigation", "• up Log in Resize …"), only before a whole phrase.
      */
     private val EDGES: Map<Site, Pair<Regex, Regex>> =
         mapOf(
             Site.STREAMING to
                 Pair(
-                    Regex("^(?:(?:(?:Sign ?)?up ?)?(?:Log ?)?in\\b)?(?:$BETWEEN$STREAMING_INTERFACE)+", IGNORE_CASE),
+                    Regex(
+                        "^$BETWEEN(?:(?:(?:Sign ?)?up ?)?(?:Log ?)?in\\b)?(?:$BETWEEN$STREAMING_INTERFACE)+",
+                        IGNORE_CASE,
+                    ),
                     Regex("(?:$BETWEEN$STREAMING_INTERFACE)+$BETWEEN$", IGNORE_CASE),
                 ),
         )

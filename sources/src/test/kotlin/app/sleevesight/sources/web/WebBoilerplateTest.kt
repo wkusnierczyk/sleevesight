@@ -400,4 +400,24 @@ class WebBoilerplateTest {
         assertEquals(singleFacts, singleLine("https://music.apple.com/album/fixture", highlight))
         for (url in sites.filterNot { "spotify" in it }) assertEquals(highlight, singleLine(url, highlight), url)
     }
+
+    @Test
+    fun `a part that is only a streaming page's navigation, cut or not, goes without leaving a separator`() {
+        for (navigation in listOf("Log in Resize main navigation", "up Log in Resize main navigation")) {
+            assertEquals("", singleLine("https://open.spotify.com/album/fixture", navigation), navigation)
+            assertEquals(
+                singleFacts,
+                singleLine("https://open.spotify.com/album/fixture", navigation, singleFacts),
+                navigation,
+            )
+        }
+    }
+
+    @Test
+    fun `what a cut leaves of a streaming page's navigation goes after a bullet at a part's start`() {
+        assertEquals(
+            "Single 2026",
+            singleLine("https://open.spotify.com/album/fixture", "• in Resize main navigation Single 2026"),
+        )
+    }
 }
