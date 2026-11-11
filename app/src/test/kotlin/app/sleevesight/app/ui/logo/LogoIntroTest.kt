@@ -21,13 +21,16 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.AppGraph
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.idleUntil
 import app.sleevesight.app.now
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -54,6 +57,18 @@ class LogoIntroTest {
     val compose = createEmptyComposeRule()
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
+
+    /**
+     * The graph's settings in memory ([MemoryStore]), read and changed on the test's thread (#831),
+     * as `IntroSettingTest` has them (#1140): over their file, [theSettingOffPlaysNoIntro]'s update
+     * and the settings' collection ran on DataStore's own threads and `Dispatchers.IO`, which
+     * [idleUntil] does not drive, and in CI the setting was not read back within its limit. The
+     * file's own reads and writes are `SettingsStoreTest`'s.
+     */
+    @Before
+    fun inMemorySettings() {
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
+    }
 
     @Before
     fun holdTheClock() {
