@@ -284,7 +284,9 @@ class AnthropicProviderTest {
                         ),
                     )
                 }
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.OVERLOADED)), events)
+            // Its text was generated (#1196).
+            val overloaded = CompletionEvent.Error(AiErrorKind.OVERLOADED, generated = true)
+            assertEquals(listOf(CompletionEvent.Delta("Half"), overloaded), events)
         }
 
     @Test
@@ -300,8 +302,11 @@ class AnthropicProviderTest {
                     )
                 }
             // `message_start`'s output count is preliminary, so not taken (#1196); the text was generated.
-            val breakoff = Breakoff(BreakoffCause.NO_END, Usage(3, 0), generated = true)
-            assertEquals(CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff), events.last())
+            val breakoff = Breakoff(BreakoffCause.NO_END, Usage(3, 0))
+            assertEquals(
+                CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff, generated = true),
+                events.last(),
+            )
         }
 
     @Test
@@ -534,8 +539,7 @@ class AnthropicProviderTest {
                     )
                 val events = provider(net).stream(request, key).toList()
                 // Its text was generated (#1196).
-                val generated = breakoff.copy(generated = true)
-                val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = generated)
+                val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff, generated = true)
                 assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events, "ended by $error")
             }
         }

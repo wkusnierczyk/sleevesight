@@ -186,19 +186,39 @@ class AiRetryThroughClientsTest {
         }
 
     @Test
-    fun `an Anthropic reply cut short after it began is asked again, one cut mid-thought is not`() =
+    fun `an Anthropic reply that failed before any of it was generated is asked again, one after is not`() =
         runTest {
-            // `message_start`'s output count is preliminary, there for every reply; a thinking delta is
-            // reasoning generated, and billed, though not passed on.
-            val start = """data: {"type":"message_start","message":{"usage":{"input_tokens":3,"output_tokens":1}}}"""
+            // `message_start`'s output count is preliminary, there for every reply; a thinking delta, a
+            // block that begins with content, or a tool call's start is some of the reply generated,
+            // and billed, though not passed on; whether the stream is then cut or the service sends
+            // an overload error.
+            val start = """{"type":"message_start","message":{"usage":{"input_tokens":3,"output_tokens":1}}}"""
+            val overloaded = """{"type":"error","error":{"type":"overloaded_error","message":"m"}}"""
             val thinking =
+                """{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}"""
+            val thought =
+                """{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Hm"}}"""
+            val emptyText = """{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}"""
+            val text = """{"type":"content_block_start","index":0,"content_block":{"type":"text","text":"Hal"}}"""
+            val thoughtAtStart =
+                """{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"Hm"}}"""
+            val tool =
+                """{"type":"content_block_start","index":0,""" +
+                    """"content_block":{"type":"tool_use","id":"t","name":"web_search","input":{}}}"""
+            val cases =
                 listOf(
-                    """data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}""",
-                    "",
-                    """data: {"type":"content_block_delta","index":0,""" +
-                        """"delta":{"type":"thinking_delta","thinking":"Hm"}}""",
-                ).joinToString("\n")
-            for ((lines, sent) in listOf(start to 2, "$start\n\n$thinking" to 1)) {
+                    listOf(start) to 2,
+                    listOf(start, overloaded) to 2,
+                    listOf(start, thinking) to 2,
+                    listOf(start, emptyText) to 2,
+                    listOf(start, thinking, thought) to 1,
+                    listOf(start, thinking, thought, overloaded) to 1,
+                    listOf(start, tool, overloaded) to 1,
+                    listOf(start, text) to 1,
+                    listOf(start, thoughtAtStart) to 1,
+                )
+            for ((first, sent) in cases) {
+                val label = first.drop(1).joinToString(" ").ifEmpty { "message_start" }
                 var calls = 0
                 val net =
                     object : NetClient {
@@ -210,8 +230,11 @@ class AiRetryThroughClientsTest {
                         ): NetResult<NetResponse> {
                             calls++
                             if (calls == 1) {
-                                (lines + "\n").lines().forEach { onLine(it) }
-                                // The stream ends there, with no end of the reply.
+                                // Then the stream ends, with no end of the reply, or the error ends it.
+                                first.forEach {
+                                    onLine("data: $it")
+                                    onLine("")
+                                }
                             } else {
                                 recorded("anthropic/messages-stream.sse").lines().forEach { onLine(it) }
                             }
@@ -221,14 +244,14 @@ class AiRetryThroughClientsTest {
                         override fun close() = Unit
                     }
                 val events = retrying(AnthropicProvider(net), 30.seconds).stream(request, key).toList()
-                assertEquals(sent, calls, lines)
+                assertEquals(sent, calls, label)
                 if (sent == 1) {
-                    val error = events.single() as CompletionEvent.Error
-                    assertEquals(AiErrorKind.INCOMPLETE, error.kind, lines)
-                    assertEquals(BreakoffCause.NO_END, error.breakoff?.cause, lines)
-                    assertEquals(true, error.breakoff?.generated, lines)
+                    val error = events.last() as CompletionEvent.Error
+                    val kind = if (first.last() == overloaded) AiErrorKind.OVERLOADED else AiErrorKind.INCOMPLETE
+                    assertEquals(kind, error.kind, label)
+                    assertEquals(true, error.generated, label)
                 } else {
-                    assertIs<CompletionEvent.Done>(events.last(), lines)
+                    assertIs<CompletionEvent.Done>(events.last(), label)
                 }
             }
         }

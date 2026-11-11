@@ -209,13 +209,19 @@ sealed interface CompletionEvent {
      * [AiErrorKind.INCOMPLETE] only, when the client can tell. [detail] names what failed, for the
      * diagnostics (#1164), never with a message or the reply's text: the transport's label for a
      * failed connection (`SocketException (ECONNRESET)`), the HTTP status of an error answer
-     * (`HTTP 503`), or the service's own code for an error it sent in the stream.
+     * (`HTTP 503`), or the service's own code for an error it sent in the stream. [generated]:
+     * whether any of the reply had been generated before it failed (#1196), whatever the failure (a
+     * breakoff, or an error the service sent mid-reply): text, a tool call, or reasoning the service
+     * streamed (Anthropic's thinking), passed on or not, which the service bills, so the call is not
+     * asked again (`AiRetry`). Reasoning a service does not stream (OpenAI's, Google's) cannot be
+     * seen, so it is false for them until text comes.
      */
     data class Error(
         val kind: AiErrorKind,
         val retryAfter: Duration? = null,
         val breakoff: Breakoff? = null,
         val detail: String? = null,
+        val generated: Boolean = false,
     ) : CompletionEvent {
         init {
             require(breakoff == null || kind == AiErrorKind.INCOMPLETE) {
@@ -229,18 +235,14 @@ sealed interface CompletionEvent {
  * How a reply broke off before its end ([AiErrorKind.INCOMPLETE]), for the card to say and the
  * diagnostics to record, never with the text (#665): its [cause]; the tokens the service had counted
  * by then ([usage]: Anthropic counts the input when the reply begins and the output only near its
- * end, not taking its first, preliminary count, OpenAI both only at the end, so they are often
- * zero); the transport's label for the failure ([detail], such as `SocketTimeoutException`), null
- * when the stream simply ended; and whether any of the reply had been generated ([generated],
- * #1196): text, a tool call, or reasoning the service streamed (Anthropic's thinking), passed on or
- * not, which the service bills, so the reply is not asked again (`AiRetry`). Reasoning a service
- * does not stream (OpenAI's, Google's) cannot be seen, so it is false for them until text comes.
+ * end, not taking its first, preliminary count (#1196), OpenAI both only at the end, so they are
+ * often zero); and the transport's label for the failure ([detail], such as
+ * `SocketTimeoutException`), null when the stream simply ended.
  */
 data class Breakoff(
     val cause: BreakoffCause,
     val usage: Usage,
     val detail: String? = null,
-    val generated: Boolean = false,
 )
 
 /** Why a reply that had begun did not reach its end. */

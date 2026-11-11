@@ -151,7 +151,7 @@ internal class MessageStream(
             reason != null -> finished(reason)
             result is NetResult.Failure -> listOf(end(failure(result.error)))
             result is NetResult.Success && !result.value.isSuccess -> listOf(end(errorOf(result.value, clock.now())))
-            else -> listOf(end(brokeOff(null, usage(), generated)))
+            else -> listOf(end(brokeOff(null, usage())))
         }
     }
 
@@ -159,15 +159,17 @@ internal class MessageStream(
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
             error is NetError.RateLimited -> failedWith(error, AiErrorKind.RATE_LIMITED)
-            started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, usage(), generated)
+            started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, usage())
             else -> failedWith(error, kindOf(error))
         }
 
     private fun usage() = Usage(inputTokens, outputTokens)
 
+    // The terminal [event]; an error with whether any of the reply was generated before it (#1196),
+    // whatever ended it: a breakoff, or an error the service sent mid-reply.
     private fun end(event: CompletionEvent): CompletionEvent {
         ended = true
-        return event
+        return if (event is CompletionEvent.Error && generated) event.copy(generated = true) else event
     }
 
     // Anthropic reports the usage so far in each event that carries it; the latest counts win.
@@ -244,9 +246,19 @@ private class ContentBlock(
 
 /**
  * Whether a block's start ([block]) shows some of the reply generated (#1196): any but a text or a
- * thinking block, which begin empty, their content coming in deltas.
+ * thinking block that begins empty, its content to come in deltas; one that begins with some text,
+ * thinking or signature already has some.
  */
 private fun startsGenerated(block: JsonObject?): Boolean =
-    block != null && (block["type"] as? JsonPrimitive)?.content !in EMPTY_AT_START
+    block != null &&
+        ((block["type"] as? JsonPrimitive)?.content !in EMPTY_AT_START || CARRIED.any { !emptyIn(block, it) })
 
+// Whether [block]'s [field] is missing or an empty string.
+private fun emptyIn(
+    block: JsonObject,
+    field: String,
+): Boolean = (block[field] as? JsonPrimitive)?.takeIf { it.isString }?.content.isNullOrEmpty()
+
+// The blocks that may begin empty, and the fields their content comes in.
 private val EMPTY_AT_START = setOf("text", "thinking")
+private val CARRIED = listOf("text", "thinking", "signature")
