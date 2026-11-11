@@ -114,10 +114,17 @@ class InsightPromptTest {
                 "Primary artist: Wolfgang Amadeus Mozart\n" +
                 "Performers: Khatia Buniatishvili\n" +
                 "</track>",
-            InsightPrompt.trackBlock(k545, normalizer.normalize(k545)),
+            InsightPrompt.trackBlock(k545, normalizer.normalize(k545), performers = true),
         )
         val sundown = FixtureEvidence.nowPlaying(1)
-        assertFalse("Performers:" in InsightPrompt.trackBlock(sundown, normalizer.normalize(sundown)))
+        val pop = InsightPrompt.trackBlock(sundown, normalizer.normalize(sundown), performers = true)
+        assertFalse("Performers:" in pop)
+        // The key insight's user message has it; the block without the flag, as the genre reason's
+        // prompt takes it, does not.
+        val normalized = normalizer.normalize(k545)
+        val evidence = FixtureEvidence.of(1)
+        assertTrue("\nPerformers: Khatia Buniatishvili\n" in InsightPrompt.user(k545, normalized, evidence))
+        assertFalse("Performers:" in InsightPrompt.trackBlock(k545, normalized))
     }
 
     @Test

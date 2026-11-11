@@ -178,16 +178,19 @@ object InsightPrompt {
         nowPlaying: NowPlaying,
         normalized: NormalizedTrack,
         evidence: EvidenceSet,
-    ): String = trackBlock(nowPlaying, normalized) + "\n\n" + evidenceBlock(evidence)
+    ): String = trackBlock(nowPlaying, normalized, performers = true) + "\n\n" + evidenceBlock(evidence)
 
     /**
      * The track as the player reports it, and as normalized, fenced in `<track>`, each field on one
-     * line. For a title that leads with its composer (#1195), its performers too
-     * (`NormalizedTrack.performers`), which [RECORDING_RULE] tells this recording by.
+     * line. With [performers] (the key insight's, [user]), for a title that leads with its composer
+     * (#1195), its performers too (`NormalizedTrack.performers`), which [RECORDING_RULE] tells this
+     * recording by. Without it (the genre reason's, `GenreReasonPrompt.user`, whose version and keys
+     * stay), the block is as before for every track.
      */
     internal fun trackBlock(
         nowPlaying: NowPlaying,
         normalized: NormalizedTrack,
+        performers: Boolean = false,
     ): String =
         buildString {
             appendLine("<track>")
@@ -196,7 +199,7 @@ object InsightPrompt {
             nowPlaying.album?.let { appendLine("Release: ${oneLine(it)}") }
             appendLine("Normalized title: ${oneLine(normalized.title)}")
             appendLine("Primary artist: ${oneLine(normalized.primary)}")
-            if (normalized.composer != null) {
+            if (performers && normalized.composer != null) {
                 appendLine("Performers: ${oneLine(normalized.performers.joinToString(", "))}")
             }
             normalized.from?.let { appendLine("From: ${oneLine(it)}") }
