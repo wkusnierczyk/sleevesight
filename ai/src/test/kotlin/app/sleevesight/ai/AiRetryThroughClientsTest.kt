@@ -155,6 +155,182 @@ class AiRetryThroughClientsTest {
         }
 
     @Test
+    fun `a connection that failed before the request was written is asked again, one after it was sent is not`() =
+        runTest {
+            for (client in clients) {
+                for ((unsent, sent) in listOf(true to 2, false to 1)) {
+                    var calls = 0
+                    val net =
+                        ReplayNetClient {
+                            calls++
+                            if (calls == 1) {
+                                failure(NetError.Offline("SocketException (ECONNRESET)", unsent))
+                            } else {
+                                ok(client.reply)
+                            }
+                        }
+                    val events = retrying(client.make(net), 30.seconds).stream(request, key).toList()
+                    val label = "${client.reply.take(20)} unsent=$unsent"
+                    assertEquals(sent, net.requests.size, label)
+                    if (unsent) {
+                        assertIs<CompletionEvent.Done>(events.last(), label)
+                    } else {
+                        assertEquals(
+                            AiErrorKind.CONNECTION_FAILED,
+                            (events.single() as CompletionEvent.Error).kind,
+                            label,
+                        )
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun `an Anthropic reply that failed before any of it was generated is asked again, one after is not`() =
+        runTest {
+            // `message_start`'s output count is preliminary, there for every reply; a thinking delta, a
+            // block that begins with content, or a tool call's start is some of the reply generated,
+            // and billed, though not passed on; whether the stream is then cut or the service sends
+            // an overload error.
+            val start = """{"type":"message_start","message":{"usage":{"input_tokens":3,"output_tokens":1}}}"""
+            val overloaded = """{"type":"error","error":{"type":"overloaded_error","message":"m"}}"""
+            val thinking =
+                """{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}"""
+            val thought =
+                """{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Hm"}}"""
+            val emptyText = """{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}"""
+            val text = """{"type":"content_block_start","index":0,"content_block":{"type":"text","text":"Hal"}}"""
+            val thoughtAtStart =
+                """{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"Hm"}}"""
+            val tool =
+                """{"type":"content_block_start","index":0,""" +
+                    """"content_block":{"type":"tool_use","id":"t","name":"web_search","input":{}}}"""
+            val cases =
+                listOf(
+                    listOf(start) to 2,
+                    listOf(start, overloaded) to 2,
+                    listOf(start, thinking) to 2,
+                    listOf(start, emptyText) to 2,
+                    listOf(start, thinking, thought) to 1,
+                    listOf(start, thinking, thought, overloaded) to 1,
+                    listOf(start, tool, overloaded) to 1,
+                    listOf(start, text) to 1,
+                    listOf(start, thoughtAtStart) to 1,
+                )
+            for ((first, sent) in cases) {
+                val label = first.drop(1).joinToString(" ").ifEmpty { "message_start" }
+                var calls = 0
+                val net =
+                    object : NetClient {
+                        override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+
+                        override suspend fun stream(
+                            request: NetRequest,
+                            onLine: suspend (String) -> Unit,
+                        ): NetResult<NetResponse> {
+                            calls++
+                            if (calls == 1) {
+                                // Then the stream ends, with no end of the reply, or the error ends it.
+                                first.forEach {
+                                    onLine("data: $it")
+                                    onLine("")
+                                }
+                            } else {
+                                recorded("anthropic/messages-stream.sse").lines().forEach { onLine(it) }
+                            }
+                            return NetResult.Success(NetResponse(200, emptyMap(), ByteArray(0)))
+                        }
+
+                        override fun close() = Unit
+                    }
+                val events = retrying(AnthropicProvider(net), 30.seconds).stream(request, key).toList()
+                assertEquals(sent, calls, label)
+                if (sent == 1) {
+                    val error = events.last() as CompletionEvent.Error
+                    val kind = if (first.last() == overloaded) AiErrorKind.OVERLOADED else AiErrorKind.INCOMPLETE
+                    assertEquals(kind, error.kind, label)
+                    assertEquals(true, error.generated, label)
+                } else {
+                    assertIs<CompletionEvent.Done>(events.last(), label)
+                }
+            }
+        }
+
+    @Test
+    fun `an OpenAI or Google reply that failed before any of it was generated is asked again, one after is not`() =
+        runTest {
+            val created = """{"type":"response.created","response":{"status":"in_progress"}}"""
+            val reasoning =
+                """{"type":"response.output_item.added","output_index":0,""" +
+                    """"item":{"id":"rs","type":"reasoning","summary":[]}}"""
+            val summary = """{"type":"response.reasoning_summary_text.delta","delta":"Hm"}"""
+            val call =
+                """{"type":"response.output_item.done","output_index":0,"item":{"type":"function_call",""" +
+                    """"call_id":"c","name":"web_search","arguments":"{}"}}"""
+            val failed = """{"error":{"code":503,"message":"m","status":"UNAVAILABLE"}}"""
+            val counted = """{"usageMetadata":{"promptTokenCount":3}}"""
+            val thought = """{"candidates":[{"content":{"parts":[{"text":"Hm","thought":true}],"role":"model"}}]}"""
+            val cases =
+                listOf(
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created), 2),
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created, reasoning), 1),
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created, summary), 1),
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created, call), 1),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(failed), 2),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(counted), 2),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(thought), 1),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(thought, failed), 1),
+                )
+            for ((make, first, sent) in cases) {
+                val reply =
+                    if (first.first() ==
+                        created
+                    ) {
+                        "openai/responses-stream.sse"
+                    } else {
+                        "google/stream-generate-content.sse"
+                    }
+                val net = FirstCut(first, recorded(reply))
+                val events = retrying(make(net), 30.seconds).stream(request, key).toList()
+                val label = first.joinToString(" ")
+                assertEquals(sent, net.calls, label)
+                if (sent == 1) {
+                    assertEquals(true, (events.last() as CompletionEvent.Error).generated, label)
+                } else {
+                    assertIs<CompletionEvent.Done>(events.last(), label)
+                }
+            }
+        }
+
+    /** A stream whose first try sends [first] (each event's data) and then ends; the rest, [reply]. */
+    private class FirstCut(
+        private val first: List<String>,
+        private val reply: String,
+    ) : NetClient {
+        var calls = 0
+
+        override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+
+        override suspend fun stream(
+            request: NetRequest,
+            onLine: suspend (String) -> Unit,
+        ): NetResult<NetResponse> {
+            calls++
+            if (calls == 1) {
+                first.forEach {
+                    onLine("data: $it")
+                    onLine("")
+                }
+            } else {
+                reply.lines().forEach { onLine(it) }
+            }
+            return NetResult.Success(NetResponse(200, emptyMap(), ByteArray(0)))
+        }
+
+        override fun close() = Unit
+    }
+
+    @Test
     fun `a reply cut off by the network gone, before any text, is not asked again and says the connection was lost`() =
         runTest {
             var calls = 0

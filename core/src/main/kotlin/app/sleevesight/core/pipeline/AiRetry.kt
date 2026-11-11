@@ -29,11 +29,12 @@ import kotlin.time.TimeSource
  * insights, *Ask AI*), from the one place its client is handed to the pipeline (`AiAccess`).
  *
  * A call that fails as busy ([AiErrorKind.RATE_LIMITED], [AiErrorKind.OVERLOADED]), with its
- * connection failed or not made in time ([AiErrorKind.CONNECTION_FAILED],
- * [AiErrorKind.CONNECT_TIMED_OUT]), or with its reply cut short, its connection lost or its stream
- * ended early ([AiErrorKind.INCOMPLETE]) is asked again, after a wait that doubles each time
- * ([FIRST_WAIT], then twice as long, each with up to a quarter more at random, so the clients a
- * service refused together do not come back together), or after the wait the service asked for
+ * connection not made, at all or in time, before the request was written
+ * ([AiErrorKind.CONNECT_FAILED], [AiErrorKind.CONNECT_TIMED_OUT]), or with its reply cut short, its
+ * connection lost or its stream ended early ([AiErrorKind.INCOMPLETE]), before any of it was
+ * generated (#1196), is asked again, after a wait that doubles each time ([FIRST_WAIT], then
+ * twice as long, each with up to a quarter more at random, so the clients a service refused
+ * together do not come back together), or after the wait the service asked for
  * (`retryAfter`) when that is longer, while the next try starts within [allowance] of the first
  * failure; the last wait is shortened to what is left, when at least [FIRST_WAIT] is, for one last
  * try at its end. A wait the service asked for is kept as asked, so one longer than what is left
@@ -41,20 +42,28 @@ import kotlin.time.TimeSource
  * failure's arrival, not from the end of its stream. A try under way when the allowance runs out
  * runs to its end. With no network ([AiErrorKind.OFFLINE], or a reply cut off by it,
  * [BreakoffCause.NO_NETWORK]), a timeout after the request was sent ([AiErrorKind.TIMED_OUT], or a
- * reply that fell silent, [BreakoffCause.TIMED_OUT]: likely billed, and likely to again), a reply
- * too long ([BreakoffCause.TOO_LARGE]), or any other failure, which no retry mends soon, the error is
- * the call's at once. The service's clients retry
- * nothing themselves: this is the one retry of an AI call.
+ * reply that fell silent, [BreakoffCause.TIMED_OUT]: likely billed, and likely to again), a
+ * connection that failed after the request may have been sent ([AiErrorKind.CONNECTION_FAILED]: a
+ * reset or an early end, which the service may have acted on, and billed), any failure once some
+ * of the reply was generated, shown or not ([CompletionEvent.Error.generated]: a breakoff, or an
+ * overload the service sent mid-reply; or a breakoff with output tokens in its final count: a
+ * thinking model cut off mid-thought, billed for its thinking), a reply too long
+ * ([BreakoffCause.TOO_LARGE]), or any other failure, which no retry mends soon, the error is the
+ * call's at once. The service's clients retry nothing themselves: this is the one retry of an AI
+ * call.
  *
  * Nothing new is shown while it asks again: the caller sees one call, which ends later. A reply that
  * broke off after some of its text, or a tool call, reached the caller is not asked again: the caller
  * has shown that text, and a new reply would follow it. The tries cost what they cost: a busy refusal
- * is not billed, but a reply that broke off may be, for what it had written.
+ * and a connection never made are not billed, but a reply that broke off before any of it was
+ * generated may be, for its input; and reasoning that leaves no sign in the stream (Google's,
+ * before its first part or count) cannot be seen, so a reply cut off during it is asked again.
  *
  * A Stop cancels the collection, and with it any wait and try. The caller's [AiCallTerms], set around
  * its call ([underTerms]), go with it: its gate, asked while waiting and right before each try again,
- * ends the tries once it closes (the track changed, the app left); and each try again is counted to
- * it, as the caller counted the first, so what the call cost counts every request sent. [allowance]
+ * ends the tries once it closes, by the caller's own rule (for the insight, a rebuild pending or
+ * another run current; the app leaving the screen does not close it); and each try again is counted
+ * to it, as the caller counted the first, so what the call cost counts every request sent. [allowance]
  * is read once per call, as it starts. [ended] hears, for the diagnostics, each try that failed
  * (with the wait before the next, if any) and each that ended other than at its reply's end
  * ([PipelineEvent.AiTried]).
@@ -91,7 +100,7 @@ class AiRetry(
                     return@flow
                 }
                 // The caller's gate is asked while waiting and right before the next try: once it says
-                // no (the track changed, the app left), the wait ends and no request is sent.
+                // no, the wait ends and no request is sent.
                 val open = waitOpen(wait, terms)
                 // Never a try past the total, but for the scheduling's own lateness: the last wait,
                 // shortened to end on it, ends a little after it on a real clock.
@@ -165,9 +174,13 @@ class AiRetry(
 
     // Whether [error] is asked again: one of [RETRIED]; a reply cut short only when its connection
     // was lost or its stream ended early, not when it timed out (likely billed, and likely to again),
-    // was too long, or the network went away.
+    // was too long, or the network went away; and none once some of the reply was generated,
+    // whatever ended it, which the service bills (#1196): a thinking model cut off mid-thought.
     private fun retried(error: CompletionEvent.Error): Boolean =
-        error.kind in RETRIED && (error.breakoff?.cause ?: BreakoffCause.NO_END) in BROKEN_OFF
+        error.kind in RETRIED &&
+            (error.breakoff?.cause ?: BreakoffCause.NO_END) in BROKEN_OFF &&
+            !error.generated &&
+            (error.breakoff?.usage?.outputTokens ?: 0L) <= 0L
 
     /**
      * The wait before try [attempt] + 1 after [error], with [left] of the allowance; null to give up.
@@ -235,14 +248,16 @@ class AiRetry(
         private const val MAX_DOUBLINGS = 10
 
         /**
-         * The failures asked again: busy, a connection that failed or could not be made in time, a
-         * reply cut short. Not a timeout after the request was sent ([AiErrorKind.TIMED_OUT]).
+         * The failures asked again: busy, a connection that could not be made, at all or in time,
+         * a reply cut short. Not a timeout after the request was sent ([AiErrorKind.TIMED_OUT]), nor
+         * a connection that failed once it may have been sent ([AiErrorKind.CONNECTION_FAILED],
+         * #1196): the service may have acted on either.
          */
         val RETRIED: Set<AiErrorKind> =
             setOf(
                 AiErrorKind.RATE_LIMITED,
                 AiErrorKind.OVERLOADED,
-                AiErrorKind.CONNECTION_FAILED,
+                AiErrorKind.CONNECT_FAILED,
                 AiErrorKind.CONNECT_TIMED_OUT,
                 AiErrorKind.INCOMPLETE,
             )

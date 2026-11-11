@@ -202,6 +202,9 @@ internal class KtorNetClient(
         // Set once a streamed 2xx body begins: a failure after it is final, wherever it is caught.
         // A request timeout mid-stream, for one, leaves `execute` as Ktor's timeout exception.
         val stream = StreamProgress()
+        // Set once the engine begins to write the request's body (#1196): a failure before it, while
+        // connecting or in the TLS handshake, left the host nothing to act on.
+        val written = BodyProgress()
         return try {
             http
                 .prepareRequest {
@@ -213,7 +216,7 @@ internal class KtorNetClient(
                     request.body?.let { body ->
                         // Validated before, so the media type parses.
                         val type = checkNotNull(parseContentType(body.contentType))
-                        setBody(OneShotContent(body.text.encodeToByteArray(), type))
+                        setBody(OneShotContent(body.text.encodeToByteArray(), type, written))
                     }
                     request.timeout?.let { timeout { requestTimeoutMillis = it.inWholeMilliseconds } }
                 }.execute { response -> classify(request, response, policy, onLine, stream) }
@@ -225,7 +228,8 @@ internal class KtorNetClient(
             currentCoroutineContext().ensureActive()
             // Timeouts, refused connections, DNS failures and dropped connections are all
             // IOExceptions in Ktor 3. Only the type is kept: a message can carry the URL.
-            Attempt.Failed(NetError.Offline(offlineReason(e)), final = stream.began)
+            val unsent = request.body != null && !written.began
+            Attempt.Failed(NetError.Offline(offlineReason(e), unsent), final = stream.began)
         } catch (e: IllegalArgumentException) {
             // A check in Ktor or OkHttp that validation did not foresee. Its message can quote a
             // header value, so it is reported by a fixed label.
@@ -235,6 +239,16 @@ internal class KtorNetClient(
 
     /** Whether an attempt's streamed body has begun. */
     private class StreamProgress {
+        var began: Boolean = false
+    }
+
+    /**
+     * Whether the engine has begun to write an attempt's request body (#1196): OkHttp reads it
+     * ([OneShotContent.readFrom]) only once the connection is made and the headers are written, so a
+     * failure before it came while connecting.
+     */
+    private class BodyProgress {
+        @Volatile
         var began: Boolean = false
     }
 
@@ -367,15 +381,19 @@ internal class KtorNetClient(
 
     /**
      * A body sent as a stream, which OkHttp marks one-shot: it cannot replay it for a follow-up of
-     * its own. Each attempt makes a new one.
+     * its own. Each attempt makes a new one. [written] is told as the engine begins to write it.
      */
     private class OneShotContent(
         private val bytes: ByteArray,
         override val contentType: ContentType,
+        private val written: BodyProgress,
     ) : OutgoingContent.ReadChannelContent() {
         override val contentLength: Long get() = bytes.size.toLong()
 
-        override fun readFrom(): ByteReadChannel = ByteReadChannel(bytes)
+        override fun readFrom(): ByteReadChannel {
+            written.began = true
+            return ByteReadChannel(bytes)
+        }
     }
 
     private companion object {

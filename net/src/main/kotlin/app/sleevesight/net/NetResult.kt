@@ -21,10 +21,14 @@ sealed interface NetError {
     /**
      * No response, or none to its end: no connection, a DNS failure, a timeout, a dropped
      * connection. [reason] is the exception's type, as `offlineReason` labels it, or a fixed label
-     * of `:net`'s own ([CANCELLED_BODY]).
+     * of `:net`'s own ([CANCELLED_BODY]). [unsent]: the failure came before any of the request's
+     * body was written (#1196): while connecting, or in the TLS handshake, so the host cannot have
+     * acted on it. Known only for a request with a body: false for one without, and once its body
+     * began, whether or not it all left.
      */
     data class Offline(
         val reason: String,
+        val unsent: Boolean = false,
     ) : NetError {
         /**
          * Whether it was one of the client's timeouts: to connect, between two packets, or for the

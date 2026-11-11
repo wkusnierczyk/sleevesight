@@ -44,6 +44,10 @@ internal class ResponseStream(
 ) {
     private var started = false
     private var refused = false
+
+    // Whether any of the response was generated (#1196): text, a refusal, a call's arguments,
+    // reasoning begun or streamed, or an output item done.
+    private var generated = false
     private var ended = false
     private val items = mutableListOf<JsonObject>()
 
@@ -54,6 +58,7 @@ internal class ResponseStream(
     /** The events that [data] makes, if any: two for the end of a response that calls tools. */
     fun read(data: String): List<CompletionEvent> {
         val event = if (ended) null else decode<WireEvent>(data)
+        generated = generated || (event != null && generates(event))
         return when {
             ended -> {
                 emptyList()
@@ -162,9 +167,11 @@ internal class ResponseStream(
             else -> failedWith(error, kindOf(error))
         }
 
+    // The terminal [event]; an error with whether any of the response was generated before it
+    // (#1196), whatever ended it, as Anthropic's `MessageStream` does.
     private fun end(event: CompletionEvent): CompletionEvent {
         ended = true
-        return event
+        return if (event is CompletionEvent.Error && generated) event.copy(generated = true) else event
     }
 
     /** The usage is the response's own, in the terminal event; a response without it counts none. */
@@ -212,3 +219,23 @@ internal class ResponseStream(
         val REFUSED = CompletionEvent.Done(NO_USAGE, StopReason.REFUSAL)
     }
 }
+
+/**
+ * Whether [event] shows some of the response generated (#1196): a delta of its text, refusal, a
+ * call's arguments or its reasoning, any output item done, or a reasoning item begun, which is
+ * billed as it reasons though nothing of it is streamed.
+ */
+private fun generates(event: WireEvent): Boolean =
+    event.type in GENERATING ||
+        (event.type.startsWith(REASONING) && event.type.endsWith(".delta")) ||
+        (event.type == "response.output_item.added" && event.item?.get("type") == JsonPrimitive("reasoning"))
+
+private val GENERATING =
+    setOf(
+        "response.output_text.delta",
+        "response.refusal.delta",
+        "response.function_call_arguments.delta",
+        "response.output_item.done",
+    )
+
+private const val REASONING = "response.reasoning"
