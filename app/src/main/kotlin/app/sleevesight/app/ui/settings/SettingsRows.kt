@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -101,6 +102,32 @@ internal fun Hint(
     val key = LocalResources.current.getResourceEntryName(text)
     // Its tap reaches into its own padding below it, not into the row after it (#874).
     Description(key, stringResource(text), Modifier.padding(vertical = HINT_PADDING), reach = HINT_PADDING)
+}
+
+/**
+ * A heading over a group of rows, [over] by title (#946): [title] drawn as a row's title is, and a
+ * screen reader hears it as a heading, with [summary] under it, folded to one line as a row's
+ * description is ([Description], #847). Not a setting of its own: a search that shows only some
+ * rows shows it while any of [over] shows, as a [Hint] over rows.
+ */
+@Composable
+internal fun HeadingRow(
+    title: String,
+    summary: String,
+    over: List<String>,
+) {
+    val search = LocalRowSearch.current
+    if (search?.filtering == true && over.none { search.shows(it) }) return
+    val color = MaterialTheme.colorScheme.onSurface
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
+        Text(
+            searchMarked(title),
+            modifier = Modifier.testTag(ROW_TITLE_TAG).semantics { heading() },
+            style = MaterialTheme.typography.bodyLarge,
+            color = color,
+        )
+        Description(title, summary, color = color, reach = TAP_BELOW)
+    }
 }
 
 /**

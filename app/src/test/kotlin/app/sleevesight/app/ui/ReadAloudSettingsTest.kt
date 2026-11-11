@@ -83,9 +83,9 @@ class ReadAloudSettingsTest {
     private fun button(label: Int) = compose.onNode(hasText(text(label)) and isSelectable())
 
     @Test
-    fun theRowsShowTheirDefaultsUnderTheLineOnWhatReads() =
+    fun theRowsShowTheirDefaultsUnderTheirHeading() =
         showInsights {
-            compose.onNodeWithText(text(R.string.settings_read_aloud_hint)).performScrollTo()
+            compose.onNodeWithText(text(R.string.settings_read_aloud)).performScrollTo()
             button(R.string.settings_read_aloud_lower).performScrollTo().assertIsSelected()
             compose.onNodeWithText(text(R.string.settings_read_aloud_lower_detail)).assertExists()
             compose.onNodeWithText(text(R.string.settings_read_track_line)).performScrollTo().assertIsOff()
