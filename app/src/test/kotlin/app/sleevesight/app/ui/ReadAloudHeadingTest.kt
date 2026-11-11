@@ -166,6 +166,29 @@ class ReadAloudHeadingTest {
             }
         }
 
+    @Test
+    fun aSearchThatFindsOnlyAnotherInsightsRowLeavesTheHeadingOut() =
+        show {
+            val ask = text(R.string.settings_search_with_ai)
+            compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextReplacement(ask)
+            compose.waitForIdle()
+            // *Insights* shows, filtered to the row found.
+            val found = hasText(ask) and hasTestTag(ROW_TITLE_TAG) and !hasSetTextAction()
+            waitFor(found)
+            compose.onNode(found, useUnmergedTree = true).performScrollTo()
+            assertTrue(
+                "another Insights row is filtered out",
+                compose
+                    .onAllNodes(hasText(MUSIC) and hasTestTag(ROW_TITLE_TAG), useUnmergedTree = true)
+                    .fetchSemanticsNodes()
+                    .isEmpty(),
+            )
+            assertTrue(
+                "no heading over rows that do not show",
+                compose.onAllNodes(title, useUnmergedTree = true).fetchSemanticsNodes().isEmpty(),
+            )
+        }
+
     private companion object {
         const val HEADING = "Read aloud"
         const val DESCRIPTION =

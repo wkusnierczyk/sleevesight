@@ -51,7 +51,10 @@ internal fun ReadAloudRows(
     ) { on -> update { it.copy(readNewInsightsAloud = on) } }
 }
 
-/** A row titled [title], found by it, [summary] and the [heading] over it. */
+/**
+ * A row titled [title], found by it, [summary] and the [heading] over it: [indexRow] with the
+ * heading spread into its texts, which detekt's `SpreadOperator` refuses.
+ */
 private fun headed(
     title: String,
     summary: String,
