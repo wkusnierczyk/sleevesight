@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -66,7 +66,7 @@ internal class LetterLook(
  * How a letter looks in each state, the one place that says so, for its chip ([LetterChip]) and
  * its sample in the legend ([LetterSample], #723): [LetterState.SHOWN], filled as a genre marked in
  * its panel is (`chipColours(marked = true)`); [LetterState.UNVERIFIED], filled mid grey (`outline`,
- * #951), the letter white or dark, whichever reads better on it ([readableOn]);
+ * #951), darkened if need be so its letter is 4.5:1 on it ([unverifiedColours]);
  * [LetterState.HIDDEN], a solid outline in the text's colour, a little heavier ([HIDDEN_OUTLINE]),
  * and no fill; [LetterState.DIMMED], a faint hairline (`outlineVariant`), no fill, the letter quieter
  * (still 4.5:1 on the panel, `onSurfaceVariant`).
@@ -77,7 +77,10 @@ internal fun LetterState.look(): LetterLook {
     val (marked, onMarked) = chipColours(marked = true)
     return when (this) {
         LetterState.SHOWN -> LetterLook(marked, null, onMarked)
-        LetterState.UNVERIFIED -> LetterLook(colors.outline, null, readableOn(colors.outline, colors))
+        LetterState.UNVERIFIED -> {
+            val (fill, ink) = unverifiedColours(colors.outline, colors.surface, colors.onSurface)
+            LetterLook(fill, null, ink)
+        }
         LetterState.HIDDEN ->
             LetterLook(Color.Transparent, BorderStroke(HIDDEN_OUTLINE, colors.onSurface), colors.onSurface)
         LetterState.DIMMED ->
@@ -86,20 +89,36 @@ internal fun LetterState.look(): LetterLook {
 }
 
 /**
- * The letter's colour on [fill]: white, or the darker of the scheme's surface and its text, whichever
- * has the more contrast with it (white on the light scheme's grey, the dark surface on the dark
- * one's); the scheme may be the phone's own colours.
+ * The unverified chip's fill and its letter's colour (#951), from the scheme's [outline], [surface]
+ * and [onSurface]: the letter white, or the darker of the surface and its text, whichever has the more
+ * contrast with [outline]; the fill [outline], darkened (for a light letter) or lightened (for a dark
+ * one) a step ([SHADE_STEP]) at a time until the letter is [MIN_CONTRAST] on it (WCAG): white on the
+ * default light scheme's `#757780` is 4.46:1, so it fills `#6f717a`; the dark scheme's `#8f9099`
+ * passes as it is. Should no step reach it, the letter is the better of white and black.
  */
-private fun readableOn(
-    fill: Color,
-    colors: ColorScheme,
-): Color {
-    val dark = if (colors.surface.luminance() < colors.onSurface.luminance()) colors.surface else colors.onSurface
-    return if (contrast(Color.White, fill) >= contrast(dark, fill)) Color.White else dark
+internal fun unverifiedColours(
+    outline: Color,
+    surface: Color,
+    onSurface: Color,
+): Pair<Color, Color> {
+    val dark = if (surface.luminance() < onSurface.luminance()) surface else onSurface
+    val ink = if (contrast(Color.White, outline) >= contrast(dark, outline)) Color.White else dark
+    val toward = if (ink.luminance() > outline.luminance()) Color.Black else Color.White
+    var fill = outline
+    var steps = 0
+    while (contrast(ink, fill) < MIN_CONTRAST && steps < MAX_SHADE_STEPS) {
+        fill = lerp(fill, toward, SHADE_STEP)
+        steps++
+    }
+    return if (contrast(ink, fill) >= MIN_CONTRAST) {
+        fill to ink
+    } else {
+        outline to if (contrast(Color.White, outline) >= contrast(Color.Black, outline)) Color.White else Color.Black
+    }
 }
 
-// The contrast ratio of two colours, as WCAG counts it.
-private fun contrast(
+/** The contrast ratio of two colours, as WCAG counts it. */
+internal fun contrast(
     a: Color,
     b: Color,
 ): Float {
@@ -118,12 +137,13 @@ private fun contrast(
  * source to show or hide its results.* in the names' column. Each button is read by its words
  * (*Explain the source chips, button, collapsed*), the pill not; the rows are read as text, their
  * samples hidden from a screen reader. Each tap hands the focus to the control that takes the tapped
- * one's place.
+ * one's place. [modifier] goes on its outside: the developer mark's inset, with the table in it.
  */
 @Composable
 internal fun Legend(
     width: Dp,
     gap: Dp,
+    modifier: Modifier = Modifier,
 ) {
     var open by remember { mutableStateOf(false) }
     val handoff = rememberFocusHandoff()
@@ -131,7 +151,7 @@ internal fun Legend(
     val heading = remember { FocusRequester() }
     val style = MaterialTheme.typography.bodySmall
     val colour = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(modifier = Modifier.testTag(SOURCES_LEGEND_TAG)) {
+    Column(modifier = modifier.testTag(SOURCES_LEGEND_TAG)) {
         if (!open) {
             val explain = stringResource(R.string.home_sources_legend_explain)
             val collapsed = stringResource(R.string.home_fold_collapsed)
@@ -283,8 +303,12 @@ private val LEGEND_TARGET = 48.dp
 private val PILL_PADDING_H = 9.dp
 private val PILL_PADDING_V = 2.dp
 
-// WCAG's offset in a contrast ratio.
+// WCAG's offset in a contrast ratio; the least contrast of a letter on its chip, as WCAG asks of
+// text; how far each step of the unverified fill moves toward black or white, and how many it may take.
 private const val CONTRAST_OFFSET = 0.05f
+private const val MIN_CONTRAST = 4.5f
+private const val SHADE_STEP = 0.05f
+private const val MAX_SHADE_STEPS = 40
 
 /** The test tag of the table's legend (#723). */
 const val SOURCES_LEGEND_TAG: String = "sources-legend"

@@ -103,19 +103,26 @@ private val FOUND_ALONE: Map<Outcome, Scope> =
 
 /**
  * Where [chip]'s first unverified line is in the list as it shows with the sources [hidden] hide
- * (#951): after the evidence [lines] shown, among the [unverified] lines shown; null while its lines
- * are hidden, or for a source with none.
+ * (#951), and its entry's key ([unverifiedKey]): after the evidence [lines] shown, among the
+ * [unverified] lines shown; null while its lines are hidden, or for a source with none.
  */
 internal fun firstUnverified(
     chip: SourceChip,
     lines: List<EvidenceLine>,
     unverified: List<EvidenceDraft>,
     hidden: Set<SourceId>,
-): Int? {
-    if (chip.filters.any { it in hidden }) return null
-    val at = unverified.filter { it.source !in hidden }.indexOfFirst { it.source in chip.filters }
-    return at.takeIf { it >= 0 }?.let { lines.count { line -> line.source !in hidden } + it }
+): Pair<Int, String>? {
+    val shown = unverified.withIndex().filter { it.value.source !in hidden }
+    val at = shown.indexOfFirst { it.value.source in chip.filters }
+    return if (chip.filters.any { it in hidden } || at < 0) {
+        null
+    } else {
+        lines.count { it.source !in hidden } + at to unverifiedKey(shown[at].index)
+    }
 }
+
+/** The key of the list's entry of the unverified line at [index] among the track's (#951). */
+internal fun unverifiedKey(index: Int): String = "unverified:$index"
 
 /**
  * Whether [this] is a rejected match whose every rejection was only for want of what MusicBrainz

@@ -44,6 +44,20 @@ internal class LineFocus(
     val requesters: Map<String, BringIntoViewRequester> =
         evidence?.lines.orEmpty().associate { it.id to BringIntoViewRequester() }
 
+    // Each unverified line's way into view (#951), by its entry's key, made as its row first asks.
+    private val unverified = mutableMapOf<String, BringIntoViewRequester>()
+
+    /** The way into view of the unverified line of entry [key] (#951). */
+    fun unverifiedRequester(key: String): BringIntoViewRequester = unverified.getOrPut(key) { BringIntoViewRequester() }
+
+    /** Scrolls to the unverified line of entry [key], unflashed: a chip that showed it again (#951). */
+    fun reveal(key: String) {
+        flash = Flash(key, ++taps, flashes = false)
+    }
+
+    /** The way into view of the line or unverified entry [id]. */
+    fun requester(id: String): BringIntoViewRequester? = requesters[id] ?: unverified[id]
+
     /**
      * Hides [chip]'s lines, or shows them if any were hidden; on showing them, scrolls to the
      * first, unflashed, and returns its place in the list as it now shows, for the fold to unfold
@@ -130,7 +144,7 @@ internal fun rememberLineFocus(
         // The line may have been hidden, or folded away, until this tap: it is laid out in the
         // next frame.
         withFrameNanos { }
-        focus.requesters[flash.id]?.bringIntoView()
+        focus.requester(flash.id)?.bringIntoView()
         if (flash.flashes) delay(FLASH)
         focus.flashed(flash)
     }

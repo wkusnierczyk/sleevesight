@@ -92,6 +92,13 @@ internal fun developerMarkHeight(): Dp {
 }
 
 /**
+ * How far the mark sets its content in at each side while [LocalDeveloperMark] is on, none while it
+ * is off: for what sits under marked content and keeps its columns (Sources' legend, #951).
+ */
+@Composable
+internal fun developerMarkInset(): Dp = if (LocalDeveloperMark.current) PADDING_H else 0.dp
+
+/**
  * [content], shown only in developer mode, in a column (its children [spacing] apart), marked as
  * such while [LocalDeveloperMark] is on: an outline ([OUTLINE] wide, rounded) in
  * [developerMarkColor], with a little room inside, and across its top edge near the end a small

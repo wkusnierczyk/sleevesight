@@ -248,7 +248,7 @@ private sealed interface Entry {
         val line: EvidenceDraft,
         index: Int,
     ) : Entry {
-        override val key: String = "unverified:$index"
+        override val key: String = unverifiedKey(index)
     }
 
     class Rejected(
@@ -286,7 +286,7 @@ private fun Entries(
 
                     is Entry.Unverified -> {
                         if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
-                        UnverifiedRow(entry.line, tagWidth)
+                        UnverifiedRow(entry.line, tagWidth, focus.unverifiedRequester(entry.key))
                     }
 
                     is Entry.Rejected -> {
@@ -409,8 +409,12 @@ private fun Where(
 private fun UnverifiedRow(
     line: EvidenceDraft,
     tagWidth: Dp,
+    requester: BringIntoViewRequester,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(4.dp)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.bringIntoViewRequester(requester).padding(4.dp),
+    ) {
         Tag(line.source.tag, tagWidth)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(line.text, style = MaterialTheme.typography.bodySmall)

@@ -20,11 +20,13 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -60,6 +62,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import kotlin.math.abs
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 /**
  * A source whose lines are all unverified in *Sources*' table (#951): Last.fm on *Madryt* by Kult,
@@ -208,6 +211,46 @@ class SourcesUnverifiedScreenTest {
         }
 
     @Test
+    fun showingThemAgainBelowALongListUnfoldsToThemAndScrollsThemIntoView() {
+        val facts = (1..20).map { draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val sources =
+            mapOf(
+                SourceId.MUSICBRAINZ to done(evidence = facts),
+                SourceId.LASTFM to
+                    done(
+                        Outcome.ArtistArticle,
+                        unverified = listOf(draft(SourceId.LASTFM, kult, scope = Scope.ARTIST)),
+                    ),
+            )
+        val track = track(sources = sources, evidence = EvidenceSet.of(facts, JvmHasher))
+        val state =
+            NowPlayingState(
+                PipelineView(track, aiReady = true),
+                track.nowPlaying,
+                PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+                settings = Settings(),
+            )
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        NowPlayingContent(state, NowPlayingActions(normalizer::normalize))
+                    }
+                }
+            }
+            scenario.onActivity {
+                unfold()
+                // Folded past the first screenful: Last.fm's line is not in the list yet.
+                assertEquals(false, shown(kult))
+                tap(CHIP_PREFIX + "L")
+                tap(CHIP_PREFIX + "L")
+                compose.waitForIdle()
+                compose.onNodeWithText(kult).assertIsDisplayed()
+            }
+        }
+    }
+
+    @Test
     fun aSourceWithCitedLinesHidesItsUnverifiedLinesWithThem() {
         val maybe = "Perhaps Gordon Lightfoot wrote it in 1973."
         val sources =
@@ -265,9 +308,11 @@ class SourcesUnverifiedScreenTest {
                     "grey ${hex(fillOf(grey))}, verified ${hex(fillOf(black))}",
                     distance(fillOf(grey), fillOf(black)) > DISTINCT,
                 )
-                // Its letter reads on it.
+                // Its letter at least 4.5:1 on it, as drawn (WCAG; the colours themselves in
+                // `UnverifiedColoursTest`).
                 val ink = darkestOrLightest(grey, fillOf(grey))
-                assertTrue("letter ${hex(ink)} on ${hex(fillOf(grey))}", distance(ink, fillOf(grey)) > DISTINCT * 2)
+                val ratio = contrast(ComposeColor(ink), ComposeColor(fillOf(grey)))
+                assertTrue("letter ${hex(ink)} on ${hex(fillOf(grey))}: $ratio", ratio >= 4.5f)
                 tap(CHIP_PREFIX + "L")
                 val hidden = picture(CHIP_PREFIX + "L")
                 val fill = fillOf(hidden)

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,7 @@ import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
+import app.sleevesight.app.ui.theme.developerMarkInset
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
@@ -258,12 +260,14 @@ internal fun SourceTable(
 ) {
     if (rows.isEmpty()) return
     val width = chipColumnWidth(rows.map { it.source.tag })
+    // Set in as the mark sets the table in, while it is marked, so the legend keeps its columns.
+    val inset = if (details) developerMarkInset() else 0.dp
     if (details) {
         DeveloperMark { Table(rows, width, true, lines, unverified, focus, fold) }
     } else {
         Table(rows, width, false, lines, unverified, focus, fold)
     }
-    Legend(width, COLUMN_GAP)
+    Legend(width, COLUMN_GAP, Modifier.padding(horizontal = inset))
 }
 
 @Suppress("LongParameterList") // What the table shows, each its own.
@@ -295,7 +299,16 @@ private fun Table(
             // Lines shown again are unfolded to, wherever they fall in the list; a source's
             // unverified lines, after every evidence line shown, when it has no other (#951).
             SourceRow(row, width, state, onlyUnverified, lines, details) {
-                (focus.toggle(row) ?: firstUnverified(row, lines, unverified, focus.hidden))?.let(fold::reach)
+                val reached = focus.toggle(row)
+                if (reached != null) {
+                    fold.reach(reached)
+                } else {
+                    // Unfolded to the first, and scrolled to it (#951).
+                    firstUnverified(row, lines, unverified, focus.hidden)?.let { (place, key) ->
+                        fold.reach(place)
+                        focus.reveal(key)
+                    }
+                }
             }
         }
     }
