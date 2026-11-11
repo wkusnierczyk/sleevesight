@@ -14,10 +14,10 @@ package app.sleevesight.sources.web
  * streaming page's "song and lyrics by"), and no
  * word beyond the subject's names (the track's title, its work and its artists, or the album and
  * its artist) and a page's words ([PAGE_WORDS]: "official video", "chords", "YouTube", a site's
- * address). Every other part stays exactly as it came, boilerplate and all: earlier versions that
- * cut boilerplate out of a part took facts with it ("- Likes: 98K ## Description …", "is Am G D."),
- * and dropping a real fact costs more than keeping a little noise. A line whose parts all go gives
- * no line.
+ * address). Every other part stays as it came, boilerplate and all, but for a streaming page's
+ * navigation at its start or its end ([withoutEdges], #955): earlier versions that cut boilerplate
+ * out of a part took facts with it ("- Likes: 98K ## Description …", "is Am G D."), and dropping a
+ * real fact costs more than keeping a little noise. A line whose parts all go gives no line.
  *
  * The known page text is set aside only on its own kind of site, by the result's address ([Site]),
  * by the kinds of page met on thinly documented tracks (the #767 phone round, 2026-11-04):
@@ -62,7 +62,10 @@ internal object WebBoilerplate {
             parts.withIndex().flatMap { (i, part) ->
                 // A separator the line starts or ends with stays: it shows the quote goes on.
                 if (part.isEmpty()) return@flatMap if (i == 0 || i == parts.lastIndex) listOf(part) else emptyList()
-                if (onlyBoilerplate(part, site, words, fold)) emptyList() else listOf(part)
+                // Judged without a streaming page's navigation at its edges, so a cut bit of it ("Log in Resize …")
+                // neither keeps a part of names only nor is kept as a part of its own.
+                val trimmed = withoutEdges(part, site)
+                if (trimmed.isEmpty() || onlyBoilerplate(trimmed, site, words, fold)) emptyList() else listOf(trimmed)
             }
         if (kept.none { it.isNotEmpty() }) return ""
         return kept.joinToString(SEPARATOR).trim()
@@ -96,6 +99,24 @@ internal object WebBoilerplate {
                 return entries.firstOrNull { site -> site.hosts.any { host == it || host.endsWith(".$it") } } ?: OTHER
             }
         }
+    }
+
+    /**
+     * [part], a part that stays, without its [site]'s interface text at its start and its end
+     * ([EDGES]: a streaming page's "Sign up Log in Resize main navigation", and what a cut leaves of
+     * it at the start, "in Resize main navigation"), with the dashes, bars and bullets it leaves
+     * there; never inside the part, so no fact goes (#955). [part] as it came when nothing is
+     * trimmed; empty when the part is only that text.
+     */
+    internal fun withoutEdges(
+        part: String,
+        site: Site,
+    ): String {
+        val (start, end) = EDGES[site] ?: return part
+        var text = part
+        start.find(text)?.let { text = text.substring(it.range.last + 1).trimStart { c -> c in LEFT_OVER } }
+        end.find(text)?.let { text = text.substring(0, it.range.first).trimEnd { c -> c in LEFT_OVER } }
+        return text
     }
 
     // [part] with its site's known page text and any page's fixed sentences set aside, each leaving the separator.
@@ -331,6 +352,31 @@ internal object WebBoilerplate {
                     "ECAD verificado obra #\\d+ em \\S+",
                 ),
         ).mapValues { (_, rules) -> rules.map { Regex(it, IGNORE_CASE) } }
+
+    // A streaming page's navigation, each phrase whole words; also in [PASSAGES].
+    private const val STREAMING_INTERFACE: String =
+        "(?<![\\p{L}\\p{N}])(?:Skip to main content|Premium ?Support ?Download|Sign ?up ?Log ?in|" +
+            "Resize main navigation)(?![\\p{L}\\p{N}])"
+
+    // What may stand between two phrases of the interface: spaces, dashes, bars, bullets.
+    private const val BETWEEN: String = "[\\s|•·,;–—-]*"
+
+    /**
+     * Each kind of site's interface text at a part's start and at its end: one phrase or more, the
+     * first at the start, after any dashes, bars or bullets, may be what a cut left of "Sign up Log
+     * in" ("in Resize main navigation", "• up Log in Resize …"), only before a whole phrase.
+     */
+    private val EDGES: Map<Site, Pair<Regex, Regex>> =
+        mapOf(
+            Site.STREAMING to
+                Pair(
+                    Regex(
+                        "^$BETWEEN(?:(?:(?:Sign ?)?up ?)?(?:Log ?)?in\\b)?(?:$BETWEEN$STREAMING_INTERFACE)+",
+                        IGNORE_CASE,
+                    ),
+                    Regex("(?:$BETWEEN$STREAMING_INTERFACE)+$BETWEEN$", IGNORE_CASE),
+                ),
+        )
 
     /** A lyrics site's fixed sentences, whole, which no prose has, and a part only of a rights line: on any page. */
     private val ANY_PAGE: List<Regex> =
