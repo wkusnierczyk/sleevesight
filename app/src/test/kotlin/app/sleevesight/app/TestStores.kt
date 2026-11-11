@@ -84,7 +84,9 @@ class MemoryStore(
  * The settings over [data], in memory by default, read and written on the caller's thread
  * (`Dispatchers.Unconfined`, #1107): `waitForIdle` and the main looper do not wait for
  * `Dispatchers.IO`, the store's own default, so on a busy machine a screen's settings could still
- * be unread when the test looked (#622).
+ * be unread when the test looked (#622). A screen test saves on `Dispatchers.Main.immediate` too
+ * (#1183): saves on `Dispatchers.Default` could land in the store before the screen redrew, so a
+ * check right after a wait for the store could still see the old value.
  */
 fun memorySettings(
     data: DataStore<Preferences> = MemoryStore(),

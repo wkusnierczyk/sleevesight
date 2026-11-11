@@ -22,9 +22,9 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.MUSICBRAINZ_WAIT_SLIDER_TAG
 import app.sleevesight.app.ui.settings.MUSICBRAINZ_WAIT_VALUE_TAG
@@ -61,11 +61,12 @@ class MusicBrainzWaitSettingTest {
     val compose = createEmptyComposeRule()
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val settings = SettingsStore(MemoryStore())
+    private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
 
-    // One at a time, in order: two saves in quick succession land as made.
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
+    // On the main thread, so one at a time and in order: two saves in quick succession land as made;
+    // and with the screen, so a wait for a save has no other thread to wait on (#1183).
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {

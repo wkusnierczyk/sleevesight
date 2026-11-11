@@ -33,11 +33,13 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
@@ -88,11 +90,11 @@ class SettingsScreenTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
+    private val settings = memorySettings()
+    private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
 
     /** Where the screen saves, as the process's scope in the app: it outlives the screen. */
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
@@ -375,8 +377,11 @@ class SettingsScreenTest {
 
     @Test
     fun aKeyIsSavedThoughTheScreenGoesFirst() {
-        val flaky = FlakyDataStore(stores.open("gated-secrets"))
-        val gatedSecrets = SecretStore(flaky, testCipher())
+        // In memory, read and written on the main thread, as the fixture's keys (#1183): over a file,
+        // with the save on the main thread, the save's steps between DataStore's threads and the main
+        // one did not run while `waitFor` waited, and the write never started.
+        val flaky = FlakyDataStore(MemoryStore())
+        val gatedSecrets = SecretStore(flaky, testCipher(), dispatcher = Dispatchers.Unconfined)
         val gate = CompletableDeferred<Unit>()
         show(secretStore = gatedSecrets) {
             flaky.writeGate = gate

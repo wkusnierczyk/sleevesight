@@ -68,7 +68,7 @@ class SettingsSearchTest {
     // In memory, and read on the main thread, as `SettingsKeyLinksTest`'s (#622).
     private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {

@@ -49,7 +49,7 @@ class LookUpAgainSettingTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     // What each clear was told: whether the track on Home is looked up again.
     private val clears = mutableListOf<Boolean>()

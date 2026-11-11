@@ -16,13 +16,13 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.openSection
 import app.sleevesight.core.settings.Dismissable
@@ -37,7 +37,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -52,35 +51,30 @@ class MissingPlayerNoteTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val stores by lazy { TestStores(tmp.root) }
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
         saves.cancel()
-        stores.close()
     }
 
     private fun count(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().size
 
     private fun paragraphs(id: Int) = app.getString(id).split("\n\n")
 
-    private val store by lazy { SettingsStore(stores.open("settings")) }
+    private val store = memorySettings()
 
     private fun settings(block: () -> Unit) {
         val settings = store
-        val secrets = SecretStore(stores.open("secrets"), testCipher())
+        val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
                     SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
                 }
             }
-            // The screen draws once the settings have loaded, off the main thread.
+            // The screen draws once the settings have loaded.
             compose.waitUntil(
                 WAIT_MS,
             ) { compose.onAllNodesWithTag(SEARCH_FIELD_TAG).fetchSemanticsNodes().isNotEmpty() }

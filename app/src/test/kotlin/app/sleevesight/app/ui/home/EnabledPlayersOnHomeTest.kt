@@ -18,15 +18,15 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsCodec
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.openSection
@@ -44,7 +44,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -58,17 +57,12 @@ class EnabledPlayersOnHomeTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val stores by lazy { TestStores(tmp.root) }
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
         saves.cancel()
-        stores.close()
     }
 
     private val openedAt = mutableListOf<SettingsTarget>()
@@ -149,8 +143,8 @@ class EnabledPlayersOnHomeTest {
 
     @Test
     fun theSwitchUnderPlayersTurnsItOn() {
-        val settings = SettingsStore(stores.open("settings"))
-        val secrets = SecretStore(stores.open("secrets"), testCipher())
+        val settings = memorySettings()
+        val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
