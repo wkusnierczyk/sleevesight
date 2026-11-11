@@ -214,7 +214,7 @@ object ArtistFacts {
             state.evidence?.without(JvmHasher) { it.id in call.leftOut }?.let { sent ->
                 val artistSent = sent.lines.filter { it.scope == Scope.ARTIST }
                 Triple(
-                    InsightPrompt.system(allowModel).length +
+                    InsightPrompt.system(allowModel, composed = state.normalized.composer != null).length +
                         InsightPrompt.user(state.nowPlaying, state.normalized, sent).length,
                     artistSent.sumOf { InsightPrompt.evidenceLine(it).length + 1 },
                     artistSent,

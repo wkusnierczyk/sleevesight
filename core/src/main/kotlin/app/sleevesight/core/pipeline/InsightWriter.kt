@@ -57,8 +57,13 @@ internal class InsightWriter(
 
     // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
     // Its dates in the form the parts give as each call is made (#957), not when the run began: a tap may
-    // come after the phone's language or region changed. The card's key does not hold the form.
-    private val system: String get() = InsightPrompt.system(allowModel, dates = parts.dateForm())
+    // come after the phone's language or region changed. The card's key does not hold the form. For a
+    // title that leads with its composer, the rule on another recording of its work too (#1195).
+    private val system: String
+        get() = InsightPrompt.system(allowModel, dates = parts.dateForm(), composed = composed)
+
+    // Whether the track's title leads with its composer (#1195): its prompt's rules and its card's version.
+    private val composed = track.composer != null
 
     // Whether the run fell back to the whole evidence (#239), after `NO_EVIDENCE` to a prompt that
     // left lines out: every later call of the run, a tapped Retry too, goes straight to it.
@@ -450,7 +455,7 @@ internal class InsightWriter(
             kind = CardKind.INSIGHT,
             entity = CardEntity.Track(track, nowPlaying.duration),
             evidenceFingerprint = evidence.fingerprint,
-            promptVersion = InsightPrompt.VERSION,
+            promptVersion = InsightPrompt.version(composed),
             styleHash = styleHash(parts.hasher),
             provider = provider,
             model = model,

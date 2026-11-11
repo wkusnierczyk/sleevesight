@@ -7,6 +7,7 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.sources.LanguageItems
 import app.sleevesight.core.sources.LanguageQuery
+import app.sleevesight.core.sources.LocalName
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.fixtures.Fixtures
@@ -50,6 +51,13 @@ class ClassicalSearchTitleTest {
         title: String,
         snippet: String,
     ) = filter.isAbout(track, title, snippet, "https://page.example/")
+
+    // As the track's own lines are judged (`ExaWebSearch`, `ExaLanguageSearch`, #1195).
+    private fun recording(
+        track: NormalizedTrack,
+        title: String,
+        snippet: String,
+    ) = filter.isAbout(track, title, snippet, "https://page.example/", recording = true)
 
     @Test
     fun `the track web search leaves out the composer's lead and quotes the work`() {
@@ -97,7 +105,7 @@ class ClassicalSearchTitleTest {
     }
 
     @Test
-    fun `a page on the sonata that names the work and a performer is kept, one on another sonata is not`() =
+    fun `a page on the sonata naming a performer is kept, not one naming only the composer or another sonata`() =
         runTest {
             val net = ReplayNetClient.recorded("web/exa-$RECORDING.response.json")
             val result =
@@ -117,10 +125,11 @@ class ClassicalSearchTitleTest {
                 ),
             )
             assertEquals(
+                // Not `classicalnotes.example`'s page, on the sonata naming only Mozart: it may be about
+                // another recording, and the track's own lines are taken as facts about this one (#1195).
                 listOf(
                     "https://pianoguide.example/mozart/piano-sonata-16-k545",
                     "https://streaming.example/track/k545-andante-buniatishvili",
-                    "https://classicalnotes.example/mozart-sonata-facile",
                 ),
                 result.evidence.map { it.url },
             )
@@ -139,6 +148,126 @@ class ClassicalSearchTitleTest {
         assertFalse(about(k545, "Notes", "The Piano Sonata No. 16 in C major, K. 545, a recording of note."))
         assertFalse(about(k545, "Notes", "Khatia Buniatishvili plays the Piano Sonata No. 11 in A major, K. 331."))
         assertTrue(filter.canCheck(k545))
+    }
+
+    @Test
+    fun `the track's own lines want a performer on a composer-led title's page, the Song insight's not (#1195)`() {
+        val composerOnly = "Mozart wrote the Piano Sonata No. 16 in C major, K. 545 in 1788; Wolfgang Amadeus Mozart."
+        val otherPianist = "Wolfgang Amadeus Mozart's Piano Sonata No. 16 in C major, K. 545, as Pires recorded it."
+        val performer = "Khatia Buniatishvili plays the Piano Sonata No. 16 in C major, K.545 slowly."
+        val conductor = "The Academy of St. Martin in the Fields and the Piano Sonata No. 16 in C major, K. 545."
+        val whole = "Piano Sonata No. 16 in C major, K. 545 \"Sonata facile\": II. Andante, Wolfgang Amadeus Mozart."
+        for (snippet in listOf(composerOnly, otherPianist)) {
+            assertFalse(recording(k545, "Notes", snippet), snippet)
+            assertTrue(about(k545, "Notes", snippet), "the Song insight's, about the work: $snippet")
+        }
+        for (snippet in listOf(performer, conductor)) assertTrue(recording(k545, "Notes", snippet), snippet)
+        // The title as searched, whole, wants a performer too: the composer alone is any recording's.
+        assertFalse(recording(k545, "Notes", whole))
+        assertTrue(about(k545, "Notes", whole), "the Song insight's")
+        assertTrue(recording(k545, "Notes", "$whole Khatia Buniatishvili."))
+        // What no rule kept before is not kept now: a page on another sonata, one naming no artist.
+        assertFalse(recording(k545, "Notes", "Khatia Buniatishvili plays the Piano Sonata No. 11 in A major, K. 331."))
+        assertFalse(recording(k545, "Notes", "The Piano Sonata No. 16 in C major, K. 545, a recording of note."))
+        // Titled after the composer alone, without the work: dropped, as before.
+        assertFalse(recording(k545, "Wolfgang Amadeus Mozart", performer))
+    }
+
+    @Test
+    fun `a composer-led title with no work part wants a performer on the track's own lines (#1195)`() {
+        val sonata =
+            normalizer.normalize(
+                "Mozart: Piano Sonata No. 16 in C Major, K. 545",
+                "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
+            )
+        val nocturne =
+            normalizer.normalize("Chopin: Nocturne in E-Flat Major, Op. 9 No. 2", "Frédéric Chopin, Jan Lisiecki")
+        assertEquals(null, sonata.searchWork)
+        assertEquals(null, nocturne.searchWork)
+        val pages =
+            listOf(
+                sonata to "Piano Sonata No. 16 in C Major, K. 545" to "Khatia Buniatishvili",
+                nocturne to "Nocturne in E-Flat Major, Op. 9 No. 2" to "Jan Lisiecki",
+            )
+        for ((named, performer) in pages) {
+            val (track, title) = named
+            val composer = track.composer!!.name
+            val other = "$title by $composer, as Pires recorded it."
+            assertFalse(recording(track, "Notes", other), title)
+            assertTrue(about(track, "Notes", other), "the Song insight's: $title")
+            assertTrue(recording(track, "Notes", "$title by $composer, played by $performer."), title)
+        }
+    }
+
+    @Test
+    fun `the language search's track named by its Wikidata label wants a performer too (#1195)`() {
+        val russian = Languages.ofCode("ru")!!
+        val items =
+            LanguageItems(
+                song = LocalName("Q1", SONATA_RU, null),
+                artists =
+                    mapOf(
+                        "Wolfgang Amadeus Mozart" to LocalName("Q254", MOZART_RU, null),
+                        "Khatia Buniatishvili" to LocalName("Q463010", BUNIATISHVILI_RU, null),
+                    ),
+            )
+        val native = ExaLanguageQuery.nativeTrack(LanguageQuery(k545, Resolution.NONE, russian), items)
+        assertEquals(SONATA_RU, native.title)
+        assertEquals(null, native.searchWork)
+        val other = "$SONATA_RU: сочинение $MOZART_RU, запись Пирес."
+        assertFalse(recording(native, "Заметки", other))
+        assertTrue(about(native, "Заметки", other), "the Song insight's")
+        assertTrue(recording(native, "Заметки", "$SONATA_RU: играет $BUNIATISHVILI_RU."))
+    }
+
+    @Test
+    fun `the search in the track's language wants a performer under the language's names too (#1195)`() =
+        runTest {
+            val russian = Languages.ofCode("ru")!!
+            val items =
+                LanguageItems(
+                    artists =
+                        mapOf(
+                            "Wolfgang Amadeus Mozart" to LocalName("Q254", MOZART_RU, null),
+                            "Khatia Buniatishvili" to LocalName("Q463010", BUNIATISHVILI_RU, null),
+                        ),
+                )
+            val native = ExaLanguageQuery.nativeTrack(LanguageQuery(k545, Resolution.NONE, russian), items)
+            assertEquals(listOf(BUNIATISHVILI_RU, "Academy of St. Martin in the Fields"), native.performers)
+            val work = "Piano Sonata No. 16 in C major, K. 545"
+            val pages =
+                listOf(
+                    "https://composer.example/k545" to "$MOZART_RU написал $work в 1788 году для начинающих.",
+                    "https://other.example/k545-pires" to "$work в исполнении Марии Жоау Пирес, сочинение $MOZART_RU.",
+                    "https://performer.example/k545" to "$BUNIATISHVILI_RU играет $work медленно и тихо.",
+                )
+            val body =
+                pages.joinToString(",", """{"results":[""", "]}") { (url, snippet) ->
+                    """{"url":"$url","title":"Notes","highlights":["$snippet"]}"""
+                }
+            val result =
+                ExaLanguageSearch(ReplayNetClient.ok(body), Secret("k"), JvmAccentFolder, clock)
+                    .lookup(LanguageQuery(k545, Resolution.NONE, russian), items)
+            assertEquals(listOf("https://performer.example/k545"), result.evidence.map { it.url })
+        }
+
+    @Test
+    fun `a track whose title names no composer is judged the same for its own lines (#1195)`() {
+        val sundown = normalizer.normalize("Sundown", "Gordon Lightfoot")
+        val pages =
+            listOf(
+                "Star Wars" to "Star Wars: Main Title, John Williams's fanfare.",
+                "Film music" to "Star Wars: Main Title, John Williams's fanfare.",
+                "John Williams" to "Star Wars: Main Title, his fanfare.",
+                "Film music" to "Star Wars, John Williams's score for the film.",
+                "Sundown" to "Gordon Lightfoot's Sundown, a 1974 single.",
+                "Gordon Lightfoot" to "Sundown and other songs.",
+            )
+        for (track in listOf(starWars, starWarsLso, sundown)) {
+            for ((title, snippet) in pages) {
+                assertEquals(about(track, title, snippet), recording(track, title, snippet), "$title: $snippet")
+            }
+        }
     }
 
     @Test
@@ -255,5 +384,8 @@ class ClassicalSearchTitleTest {
 
     private companion object {
         const val RECORDING = "1179-k545-andante"
+        const val MOZART_RU = "Вольфганг Амадей Моцарт"
+        const val BUNIATISHVILI_RU = "Хатия Буниатишвили"
+        const val SONATA_RU = "Соната для фортепиано № 16"
     }
 }
