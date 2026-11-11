@@ -202,4 +202,24 @@ class SourceFindingTest {
         assertEquals("", listText(emptyList(), words))
         assertEquals("a, b, c and d", listText(listOf("a", "b", "c", "d"), words))
     }
+
+    @Test
+    fun aFindingFromUnverifiedLinesAloneSaysSoAfterItAndNoOtherStatusDoes() {
+        // Last.fm's artist found, its lines all unverified (#951): no line of its own in the evidence.
+        val lastFm = chip(SourceId.LASTFM, Outcome.ArtistArticle)
+        assertEquals(
+            "Found the artist (unverified)",
+            statusText(lastFm.status, false, finding(lastFm, emptyList()), words, unverified = true),
+        )
+        assertEquals(
+            "Found the track (unverified)",
+            statusText(chip().status, false, finding(chip(), emptyList()), words, unverified = true),
+        )
+        // Not a status that is no finding.
+        val none = chip(outcome = Outcome.None)
+        assertEquals(
+            app.getString(R.string.home_source_none),
+            statusText(none.status, false, finding(none, emptyList()), words, unverified = true),
+        )
+    }
 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -173,13 +174,13 @@ internal fun SourcesBody(
     val lines = shownLines.evidence?.lines.orEmpty()
     val unverified = track?.let(::unverifiedLines).orEmpty()
     val entries = entriesOf(track, shownLines.evidence, hidden, details)
-    // The lines the chips hide: with every entry hidden, the count still shows.
-    val filtered = lines.count { it.source in hidden }
+    // The lines the chips hide, unverified ones too (#951): with every entry hidden, the count still shows.
+    val filtered = lines.count { it.source in hidden } + unverified.count { it.source in hidden }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Of every line, hidden ones too, so the column does not move when a chip hides some.
         val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
         val chips = shown.chips
-        SourceTable(tableRows(chips, shownLines.evidence, details), details, lines, focus, fold)
+        SourceTable(tableRows(chips, shownLines.evidence, details), details, lines, focus, fold, unverified)
         Notes(sourceNotes(chips, shown.offline), openSettings, shown.retry, afterRetry)
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
@@ -210,9 +211,9 @@ internal fun SourcesBody(
 }
 
 /**
- * The list's entries for [track]: the lines shown ([evidence], its own with its album's, #522) but
- * those of the [hidden] sources, its unverified lines, and with grounding [details] the matches
- * rejected.
+ * The list's entries for [track]: the lines shown ([evidence], its own with its album's, #522) and
+ * its unverified lines (#951), but those of the [hidden] sources, and with grounding [details] the
+ * matches rejected.
  */
 private fun entriesOf(
     track: TrackState?,
@@ -224,7 +225,10 @@ private fun entriesOf(
     val unverified = track?.let(::unverifiedLines).orEmpty()
     val rejected = if (details) track?.let(::rejectedMatches).orEmpty() else emptyList()
     return lines.filter { it.source !in hidden }.map(Entry::Line) +
-        unverified.mapIndexed { index, line -> Entry.Unverified(line, index) } +
+        unverified
+            .withIndex()
+            .filter { it.value.source !in hidden }
+            .map { (index, line) -> Entry.Unverified(line, index) } +
         rejected.mapIndexed { index, match -> Entry.Rejected(match, index) }
 }
 
@@ -245,7 +249,7 @@ private sealed interface Entry {
         val line: EvidenceDraft,
         index: Int,
     ) : Entry {
-        override val key: String = "unverified:$index"
+        override val key: String = unverifiedKey(index)
     }
 
     class Rejected(
@@ -283,7 +287,7 @@ private fun Entries(
 
                     is Entry.Unverified -> {
                         if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
-                        UnverifiedRow(entry.line, tagWidth)
+                        UnverifiedRow(entry.line, tagWidth, entry.key, focus)
                     }
 
                     is Entry.Rejected -> {
@@ -406,8 +410,20 @@ private fun Where(
 private fun UnverifiedRow(
     line: EvidenceDraft,
     tagWidth: Dp,
+    id: String,
+    focus: LineFocus,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(4.dp)) {
+    // Its way into view, for a chip that shows it again to scroll to (#951), known to [focus] while
+    // the row is composed.
+    val requester = remember { BringIntoViewRequester() }
+    DisposableEffect(focus, id, requester) {
+        val forget = focus.register(id, requester)
+        onDispose { forget() }
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.bringIntoViewRequester(requester).padding(4.dp),
+    ) {
         Tag(line.source.tag, tagWidth)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(line.text, style = MaterialTheme.typography.bodySmall)

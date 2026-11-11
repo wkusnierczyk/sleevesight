@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -135,8 +136,7 @@ class DeveloperMarkHomeTest {
             val legend = compose.onNodeWithTag(SOURCES_LEGEND_TAG, useUnmergedTree = true).fetchSemanticsNode()
             val inMark = hasTestTag(SOURCES_LEGEND_TAG) and hasAnyAncestor(hasTestTag(DEVELOPER_MARK_TAG))
             assertEquals(0, compose.onAllNodes(inMark, useUnmergedTree = true).fetchSemanticsNodes().size)
-            assertEquals(0, marked(app.getString(R.string.home_sources_legend_shown)))
-            assertEquals(0, marked(app.getString(R.string.home_sources_legend_tap)))
+            assertEquals(0, marked(app.getString(R.string.home_sources_legend_explain)))
             val mark =
                 compose
                     .onAllNodes(
@@ -148,6 +148,35 @@ class DeveloperMarkHomeTest {
             val legendTop = legend.positionInRoot.y
             assertTrue("legend at $legendTop, mark ends at $markBottom", legendTop >= markBottom)
         }
+
+    @Test
+    fun theSourcesLegendKeepsTheMarkedTablesColumns() =
+        show(details, marked = true) {
+            // Closed: the pill's end at the chips', the words at the names' start (#951).
+            val chipEnd = right(CHIP_PREFIX + "MB")
+            val nameStart = left(STATUS_PREFIX + "MB")
+            assertEquals(chipEnd, right(SOURCES_LEGEND_PILL_TAG), 2f)
+            assertEquals(nameStart, leftOf(app.getString(R.string.home_sources_legend_explain)), 2f)
+            // Open: each row's text at the names' start too.
+            compose.onNodeWithTag(SOURCES_LEGEND_ASK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            for (row in listOf(R.string.home_sources_legend_verified, R.string.home_sources_legend_tap)) {
+                assertEquals(app.getString(row), nameStart, leftOf(app.getString(row)), 2f)
+            }
+        }
+
+    private fun bounds(tag: String) =
+        compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+    private fun right(tag: String) = bounds(tag).right
+
+    private fun left(tag: String) = bounds(tag).left
+
+    private fun leftOf(text: String) =
+        compose
+            .onNodeWithText(text, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot.left
 
     @Test
     fun withMarkingOffTheDetailsShowUnmarked() =

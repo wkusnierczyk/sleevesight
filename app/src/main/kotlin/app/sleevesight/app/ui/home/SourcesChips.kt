@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,8 @@ import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
+import app.sleevesight.app.ui.theme.developerMarkInset
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -240,8 +243,12 @@ private fun linkedNote(
  * of the sources that are off and the statuses that are diagnostics show too, the whole table in
  * the developer mark (#536). A screen reader reads a chip that filters as a switch, its source's
  * name, with its lines shown or hidden, and then what it found; a dimmed one's row as text, its
- * name and what it found. Under the table, outside the mark, its legend ([Legend], #723).
+ * name and what it found. A source whose lines are all [unverified] (#951) has a chip as one with
+ * lines has, filled grey while they show ([LetterState.UNVERIFIED]), its state saying they are
+ * unverified, and its row says what it found with *(unverified)* after it. Under the table, outside
+ * the mark, its legend ([Legend], #723, #951), in the table's columns.
  */
+@Suppress("LongParameterList") // What the table shows, each its own.
 @Composable
 internal fun SourceTable(
     rows: List<SourceChip>,
@@ -249,38 +256,60 @@ internal fun SourceTable(
     lines: List<EvidenceLine>,
     focus: LineFocus,
     fold: SourcesFold,
+    unverified: List<EvidenceDraft> = emptyList(),
 ) {
     if (rows.isEmpty()) return
+    val width = chipColumnWidth(rows.map { it.source.tag })
+    // Set in as the mark sets the table in, while it is marked, so the legend keeps its columns.
+    val inset = if (details) developerMarkInset() else 0.dp
     if (details) {
-        DeveloperMark { Table(rows, true, lines, focus, fold) }
+        DeveloperMark { Table(rows, width, true, lines, unverified, focus, fold) }
     } else {
-        Table(rows, false, lines, focus, fold)
+        Table(rows, width, false, lines, unverified, focus, fold)
     }
-    Legend()
+    Legend(width, COLUMN_GAP, Modifier.padding(horizontal = inset))
 }
 
+@Suppress("LongParameterList") // What the table shows, each its own.
 @Composable
 private fun Table(
     rows: List<SourceChip>,
+    width: Dp,
     details: Boolean,
     lines: List<EvidenceLine>,
+    unverified: List<EvidenceDraft>,
     focus: LineFocus,
     fold: SourcesFold,
 ) {
-    val width = chipColumnWidth(rows.map { it.source.tag })
     Column(
         modifier = Modifier.testTag(SOURCES_TABLE_TAG),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
     ) {
         for (row in rows) {
+            val verified = row.own(lines).isNotEmpty()
+            val onlyUnverified = !verified && row.ownUnverified(unverified).isNotEmpty()
+            val shown = row.filters.none { it in focus.hidden }
             val state =
                 when {
-                    row.own(lines).isEmpty() -> LetterState.DIMMED
-                    row.filters.none { it in focus.hidden } -> LetterState.SHOWN
-                    else -> LetterState.HIDDEN
+                    !verified && !onlyUnverified -> LetterState.DIMMED
+                    !shown -> LetterState.HIDDEN
+                    verified -> LetterState.SHOWN
+                    else -> LetterState.UNVERIFIED
                 }
-            // Lines shown again are unfolded to, wherever they fall in the list.
-            SourceRow(row, width, state, lines, details) { focus.toggle(row)?.let(fold::reach) }
+            // Lines shown again are unfolded to, wherever they fall in the list; a source's
+            // unverified lines, after every evidence line shown, when it has no other (#951).
+            SourceRow(row, width, state, onlyUnverified, lines, details) {
+                val reached = focus.toggle(row)
+                if (reached != null) {
+                    fold.reach(reached)
+                } else {
+                    // Unfolded to the first, and scrolled to it (#951).
+                    firstUnverified(row, lines, unverified, focus.hidden)?.let { (place, key) ->
+                        fold.reach(place)
+                        focus.reveal(key)
+                    }
+                }
+            }
         }
     }
 }
@@ -296,7 +325,8 @@ private val ChipStatus.wentWrong: Boolean
 
 /**
  * One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what
- * it found, from its own lines among [lines] (#768).
+ * it found, from its own lines among [lines] (#768), marked *(unverified)* when they are all
+ * [unverified] (#951).
  */
 @Suppress("LongParameterList") // The row, its letter's column and state, what it found from, and what a tap does.
 @Composable
@@ -304,6 +334,7 @@ private fun SourceRow(
     chip: SourceChip,
     width: Dp,
     state: LetterState,
+    unverified: Boolean,
     lines: List<EvidenceLine>,
     details: Boolean,
     onToggle: () -> Unit,
@@ -321,7 +352,7 @@ private fun SourceRow(
                 .heightIn(min = ROW_HEIGHT),
     ) {
         Box(Modifier.width(width), contentAlignment = Alignment.CenterEnd) {
-            LetterChip(chip, name, state, onToggle)
+            LetterChip(chip, name, state, unverified, onToggle)
         }
         // A dimmed chip's row is read as one text, its name and what it found; a switch's says its
         // name itself, so the name here is not read again.
@@ -337,7 +368,7 @@ private fun SourceRow(
             // With grounding details, a failure and a rejected match in the error colour, as the
             // status chips had them (#440).
             val colors = MaterialTheme.colorScheme
-            val status = statusText(chip, lines, details)
+            val status = statusText(chip, lines, details, unverified)
             val style = MaterialTheme.typography.bodySmall
             val tag = Modifier.testTag(STATUS_PREFIX + chip.key)
             val color = if (details && chip.status.wentWrong) colors.error else colors.onSurfaceVariant
@@ -350,14 +381,17 @@ private fun SourceRow(
 
 /**
  * A source's letter as a chip, drawn as a genre chip is but without its 48 dp laid out
- * ([CompactChipFrame]), in its [state]'s look ([look]): filled while its lines show, outlined while
- * hidden, and dimmed with none, then not a button, nor a node a screen reader stops on.
+ * ([CompactChipFrame]), in its [state]'s look ([look]): filled while its lines show (grey while they
+ * are all [unverified], #951), outlined while hidden, and dimmed with none, then not a button, nor a
+ * node a screen reader stops on. A screen reader hears it as a switch, its state saying whether its
+ * lines show, and that they are unverified when they are.
  */
 @Composable
 private fun LetterChip(
     chip: SourceChip,
     name: String,
     state: LetterState,
+    unverified: Boolean,
     onToggle: () -> Unit,
 ) {
     val look = state.look()
@@ -368,9 +402,16 @@ private fun LetterChip(
             Modifier.clearAndSetSemantics {}
         } else {
             val label = stringResource(R.string.home_source_filter, name)
-            val shown = state == LetterState.SHOWN
+            val shown = state != LetterState.HIDDEN
             val said =
-                stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
+                stringResource(
+                    when {
+                        unverified && shown -> R.string.home_source_unverified_shown
+                        unverified -> R.string.home_source_unverified_hidden
+                        shown -> R.string.home_source_lines_shown
+                        else -> R.string.home_source_lines_hidden
+                    },
+                )
             Modifier
                 .semantics(mergeDescendants = true) {}
                 .clickable(onClickLabel = label, role = Role.Switch, onClick = onToggle)

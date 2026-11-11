@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
@@ -99,6 +100,30 @@ private val FOUND_ALONE: Map<Outcome, Scope> =
         Outcome.ArtistArticle to Scope.ARTIST,
         Outcome.OriginalSong to Scope.ORIGINAL_SONG,
     )
+
+/**
+ * Where [chip]'s first unverified line is in the list as it shows with the sources [hidden] hide
+ * (#951), and its entry's key ([unverifiedKey]): after the evidence [lines] shown, among the
+ * [unverified] lines shown; null while its lines are hidden, or for a source with none.
+ */
+internal fun firstUnverified(
+    chip: SourceChip,
+    lines: List<EvidenceLine>,
+    unverified: List<EvidenceDraft>,
+    hidden: Set<SourceId>,
+): Pair<Int, String>? {
+    val shown = unverified.withIndex().filter { it.value.source !in hidden }
+    // Its own, as [SourceChip.ownUnverified] has them: its sources', in its language.
+    val at = shown.indexOfFirst { it.value.source in chip.filters && it.value.found == chip.language }
+    return if (chip.filters.any { it in hidden } || at < 0) {
+        null
+    } else {
+        lines.count { it.source !in hidden } + at to unverifiedKey(shown[at].index)
+    }
+}
+
+/** The key of the list's entry of the unverified line at [index] among the track's (#951). */
+internal fun unverifiedKey(index: Int): String = "unverified:$index"
 
 /**
  * Whether [this] is a rejected match whose every rejection was only for want of what MusicBrainz

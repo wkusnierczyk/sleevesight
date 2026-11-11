@@ -586,13 +586,8 @@ class SourcesTableScreenTest {
             assertEquals(0, count(SOURCES_NOTE_TAG))
         }
 
-    private val legendWords =
-        listOf(
-            R.string.home_sources_legend_shown,
-            R.string.home_sources_legend_hidden,
-            R.string.home_sources_legend_none,
-            R.string.home_sources_legend_tap,
-        )
+    // The closed legend's words (#951); the open legend's are in `SourcesLegendScreenTest`.
+    private val legendWords = listOf(R.string.home_sources_legend_explain)
 
     private fun bounds(tag: String) =
         compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().let {
@@ -600,7 +595,7 @@ class SourcesTableScreenTest {
         }
 
     @Test
-    fun theLegendShowsUnderTheTableBeforeTheNoteWithItsFourTexts() =
+    fun theLegendShowsUnderTheTableBeforeTheNote() =
         show(mixed) {
             // Folded: no table, no legend.
             assertEquals(0, count(SOURCES_LEGEND_TAG))
@@ -610,18 +605,12 @@ class SourcesTableScreenTest {
                 val found = compose.onAllNodes(inLegend, useUnmergedTree = true).fetchSemanticsNodes()
                 assertEquals(text(word), 1, found.size)
             }
+            assertEquals(1, count(SOURCES_LEGEND_ASK_TAG))
             val (_, tableBottom) = bounds(SOURCES_TABLE_TAG)
             val (legendTop, legendBottom) = bounds(SOURCES_LEGEND_TAG)
             val (noteTop, _) = bounds(SOURCES_NOTE_TAG)
             assertTrue("legend at $legendTop, table ends at $tableBottom", legendTop >= tableBottom)
             assertTrue("legend ends at $legendBottom, note at $noteTop", legendBottom <= noteTop)
-            // The words in a line, the second line under them.
-            val shown = compose.onNodeWithText(text(R.string.home_sources_legend_shown), useUnmergedTree = true)
-            val none = compose.onNodeWithText(text(R.string.home_sources_legend_none), useUnmergedTree = true)
-            val tap = compose.onNodeWithText(text(R.string.home_sources_legend_tap), useUnmergedTree = true)
-            val first = shown.fetchSemanticsNode()
-            assertEquals(first.positionInRoot.y, none.fetchSemanticsNode().positionInRoot.y, 1f)
-            assertTrue(tap.fetchSemanticsNode().positionInRoot.y >= first.positionInRoot.y + first.size.height)
         }
 
     @Test
@@ -631,34 +620,6 @@ class SourcesTableScreenTest {
             assertEquals(0, count(SOURCES_TABLE_TAG))
             assertEquals(0, count(SOURCES_LEGEND_TAG))
             for (word in legendWords) assertEquals(text(word), 0, countText(text(word)))
-        }
-
-    @Test
-    fun aScreenReaderFindsNoNodeOfTheLegend() =
-        show(mixed) {
-            unfold()
-            // Every node of it, its words too, hidden from accessibility services; none merges.
-            val nodes =
-                compose
-                    .onAllNodes(
-                        hasTestTag(SOURCES_LEGEND_TAG) or hasAnyAncestor(hasTestTag(SOURCES_LEGEND_TAG)),
-                        useUnmergedTree = true,
-                    ).fetchSemanticsNodes()
-            assertTrue("${nodes.size} nodes", nodes.size >= 1 + legendWords.size)
-            for (node in nodes) {
-                assertTrue("${node.config}", SemanticsProperties.HideFromAccessibility in node.config)
-                assertFalse("${node.config}", node.config.isMergingSemanticsOfDescendants)
-                assertFalse("${node.config}", SemanticsActions.OnClick in node.config)
-            }
-            // Nor is a word of it read as part of another node.
-            for (word in legendWords) {
-                val readElsewhere =
-                    compose
-                        .onAllNodes(hasText(text(word), substring = true))
-                        .fetchSemanticsNodes()
-                        .filterNot { SemanticsProperties.HideFromAccessibility in it.config }
-                assertEquals(text(word), emptyList<SemanticsNode>(), readElsewhere)
-            }
         }
 
     // The chip as drawn, its rounded shape and no more, scrolled into view.

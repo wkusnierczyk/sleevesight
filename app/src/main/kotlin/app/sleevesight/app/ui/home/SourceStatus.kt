@@ -18,7 +18,8 @@ import app.sleevesight.core.model.SourceId
 
 /**
  * What [chip]'s row in *Sources*' table says it found (#662), from its own lines among [lines]
- * ([finding], #768), in the resources' words.
+ * ([finding], #768), in the resources' words; marked unverified when all its lines are [unverified]
+ * (#951).
  */
 @Suppress("SpreadOperator") // A handful of arguments, passed straight through.
 @Composable
@@ -26,15 +27,18 @@ internal fun statusText(
     chip: SourceChip,
     lines: List<EvidenceLine>,
     details: Boolean,
+    unverified: Boolean = false,
 ): String {
     val resources = LocalResources.current
-    return statusText(chip.status, details, finding(chip, lines)) { id, args -> resources.getString(id, *args) }
+    val words = Words { id, args -> resources.getString(id, *args) }
+    return statusText(chip.status, details, finding(chip, lines), words, unverified)
 }
 
 /**
  * What a source's row in *Sources*' table says it found (#662), in [words]: a lookup that found
  * something, what it found ([finding], #768: *Found the track and the artist*, *Found pages about
- * the track*); any other status as it is. The statuses that are diagnostics show only with
+ * the track*), with *(unverified)* after it when all its lines are [unverified] (#951: *Found the
+ * artist (unverified)*); any other status as it is. The statuses that are diagnostics show only with
  * grounding [details]: a match rejected, outside them, is nothing found (unless only for want of
  * MusicBrainz while it could not be reached, #1069), and a finding kept from an earlier lookup says
  * so ("Found the track (kept)") only with them.
@@ -44,6 +48,7 @@ internal fun statusText(
     details: Boolean,
     finding: Finding?,
     words: Words,
+    unverified: Boolean = false,
 ): String =
     when (status) {
         ChipStatus.Release -> words.get(R.string.home_source_release)
@@ -52,7 +57,10 @@ internal fun statusText(
         ChipStatus.NeedsKey -> words.get(R.string.home_source_needs_key)
         ChipStatus.ModelAllowed -> words.get(R.string.home_source_model_allowed)
         is ChipStatus.Done -> {
-            val found = finding?.let { findingText(it, words) } ?: outcomeText(status, details, words)
+            val found =
+                finding?.let { findingText(it, words) }?.let {
+                    if (unverified) words.get(R.string.home_source_unverified, it) else it
+                } ?: outcomeText(status, details, words)
             if (status.cached && details) words.get(R.string.home_source_cached, found) else found
         }
     }
