@@ -1,0 +1,8 @@
+Fixed in 0.6.4:
+- Titles with "- Mono Remastered" are found.
+- Classical: found by the performer; the album insight is about this recording.
+- AI: "no connection" only when offline; retried for a time you choose (Settings, AI services).
+- Artist and Album say when a source was not reached, with Retry.
+- Key insights uses what the song, artist and album found.
+- Song row: the title as under the cover; the panel names the version.
+- Genre tags in the chips' order; apostrophes in cited titles.
