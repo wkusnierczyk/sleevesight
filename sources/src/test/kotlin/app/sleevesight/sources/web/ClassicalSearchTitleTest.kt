@@ -7,6 +7,7 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.sources.LanguageItems
 import app.sleevesight.core.sources.LanguageQuery
+import app.sleevesight.core.sources.LocalName
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.fixtures.Fixtures
@@ -171,6 +172,37 @@ class ClassicalSearchTitleTest {
     }
 
     @Test
+    fun `the search in the track's language wants a performer under the language's names too (#1195)`() =
+        runTest {
+            val russian = Languages.ofCode("ru")!!
+            val items =
+                LanguageItems(
+                    artists =
+                        mapOf(
+                            "Wolfgang Amadeus Mozart" to LocalName("Q254", MOZART_RU, null),
+                            "Khatia Buniatishvili" to LocalName("Q463010", BUNIATISHVILI_RU, null),
+                        ),
+                )
+            val native = ExaLanguageQuery.nativeTrack(LanguageQuery(k545, Resolution.NONE, russian), items)
+            assertEquals(listOf(BUNIATISHVILI_RU, "Academy of St. Martin in the Fields"), native.performers)
+            val work = "Piano Sonata No. 16 in C major, K. 545"
+            val pages =
+                listOf(
+                    "https://composer.example/k545" to "$MOZART_RU написал $work в 1788 году для начинающих.",
+                    "https://other.example/k545-pires" to "$work в исполнении Марии Жоау Пирес, сочинение $MOZART_RU.",
+                    "https://performer.example/k545" to "$BUNIATISHVILI_RU играет $work медленно и тихо.",
+                )
+            val body =
+                pages.joinToString(",", """{"results":[""", "]}") { (url, snippet) ->
+                    """{"url":"$url","title":"Notes","highlights":["$snippet"]}"""
+                }
+            val result =
+                ExaLanguageSearch(ReplayNetClient.ok(body), Secret("k"), JvmAccentFolder, clock)
+                    .lookup(LanguageQuery(k545, Resolution.NONE, russian), items)
+            assertEquals(listOf("https://performer.example/k545"), result.evidence.map { it.url })
+        }
+
+    @Test
     fun `a track whose title names no composer is judged the same for its own lines (#1195)`() {
         val sundown = normalizer.normalize("Sundown", "Gordon Lightfoot")
         val pages =
@@ -303,5 +335,7 @@ class ClassicalSearchTitleTest {
 
     private companion object {
         const val RECORDING = "1179-k545-andante"
+        const val MOZART_RU = "Вольфганг Амадей Моцарт"
+        const val BUNIATISHVILI_RU = "Хатия Буниатишвили"
     }
 }

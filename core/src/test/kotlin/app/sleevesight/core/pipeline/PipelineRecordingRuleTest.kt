@@ -87,12 +87,33 @@ class PipelineRecordingRuleTest {
         }
 
     @Test
-    fun `a composer-led track's card is kept and read under its own version`() =
+    fun `of the cards kept from version 10, only the composer-led track's is written again, once, under 12`() =
         runTest {
+            // The cards as version 10 kept them: each track's card, keyed by version 10.
+            val written = MemoryCache()
+            written(k545, FakeProvider { FakeProvider.done("It is a sonata [W1].") }, written)
+            written(sundown, FakeProvider { FakeProvider.done("It is a song [W1].") }, written)
             val cache = MemoryCache()
-            written(k545, FakeProvider { FakeProvider.done("It is a sonata [W1].") }, cache)
+            written.cards.forEach { (key, text) -> cache.cards[key.copy(promptVersion = InsightPrompt.VERSION)] = text }
+            assertEquals(2, cache.cards.size)
+            assertTrue(cache.cards.keys.all { it.promptVersion == InsightPrompt.VERSION })
+
+            val first = FakeProvider { FakeProvider.done("It is a sonata [W1].") }
+            val rewritten = written(k545, first, cache)
+            assertEquals(1, first.requests.size, "the composer-led track's card, written afresh")
+            assertFalse(rewritten.cached)
+            assertEquals(InsightPrompt.RECORDING_VERSION, rewritten.writtenBy?.promptVersion)
+
+            val pop = FakeProvider()
+            val kept = written(sundown, pop, cache)
+            assertEquals(0, pop.requests.size, "any other track's card, read as kept")
+            assertTrue(kept.cached)
+            assertEquals(InsightPrompt.VERSION, kept.writtenBy?.promptVersion)
+
             val again = FakeProvider()
-            assertTrue(written(k545, again, cache).cached)
-            assertEquals(0, again.requests.size)
+            val read = written(k545, again, cache)
+            assertEquals(0, again.requests.size, "once only")
+            assertTrue(read.cached)
+            assertEquals(InsightPrompt.RECORDING_VERSION, read.writtenBy?.promptVersion)
         }
 }
