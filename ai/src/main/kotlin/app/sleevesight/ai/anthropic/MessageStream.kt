@@ -45,6 +45,10 @@ internal class MessageStream(
     private var outputTokens = 0L
     private var stopReason: StopReason? = null
     private var started = false
+
+    // Whether any of the reply was generated (#1196): a block other than an empty text or thinking
+    // one began (a tool call, redacted thinking), or any delta came, thinking and signatures included.
+    private var generated = false
     private var ended = false
     private val blocks = sortedMapOf<Int, ContentBlock>()
 
@@ -92,7 +96,8 @@ internal class MessageStream(
         when (event.type) {
             "message_start" -> {
                 started = true
-                event.message?.usage?.let(::count)
+                // Its output count is preliminary (#1196): taken only from `message_delta`'s.
+                event.message?.usage?.let { count(it.copy(outputTokens = null)) }
                 null
             }
 
@@ -100,15 +105,12 @@ internal class MessageStream(
                 val index = event.index
                 val block = event.contentBlock
                 if (index != null && block != null) blocks[index] = ContentBlock(block)
+                generated = generated || startsGenerated(block)
                 null
             }
 
             "content_block_delta" -> {
-                val delta = event.delta
-                event.index?.let { blocks[it] }?.add(delta)
-                delta?.takeIf { it.type == "text_delta" }?.text?.takeIf { it.isNotEmpty() }?.let {
-                    CompletionEvent.Delta(it)
-                }
+                delta(event)
             }
 
             "message_delta" -> {
@@ -127,6 +129,17 @@ internal class MessageStream(
             }
         }
 
+    // A block's delta, added to it: a text's passed on; any, thinking and signatures included, is
+    // some of the reply generated (#1196).
+    private fun delta(event: WireEvent): CompletionEvent? {
+        val delta = event.delta ?: return null
+        generated = true
+        event.index?.let { blocks[it] }?.add(delta)
+        return delta.takeIf { it.type == "text_delta" }?.text?.takeIf { it.isNotEmpty() }?.let {
+            CompletionEvent.Delta(it)
+        }
+    }
+
     /**
      * The terminal events after the transport finished with [result] (null when the stream was
      * stopped here), or none if they were emitted already.
@@ -138,7 +151,7 @@ internal class MessageStream(
             reason != null -> finished(reason)
             result is NetResult.Failure -> listOf(end(failure(result.error)))
             result is NetResult.Success && !result.value.isSuccess -> listOf(end(errorOf(result.value, clock.now())))
-            else -> listOf(end(brokeOff(null, usage())))
+            else -> listOf(end(brokeOff(null, usage(), generated)))
         }
     }
 
@@ -146,7 +159,7 @@ internal class MessageStream(
     private fun failure(error: NetError): CompletionEvent.Error =
         when {
             error is NetError.RateLimited -> failedWith(error, AiErrorKind.RATE_LIMITED)
-            started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, usage())
+            started && (error is NetError.Offline || error is NetError.TooLarge) -> brokeOff(error, usage(), generated)
             else -> failedWith(error, kindOf(error))
         }
 
@@ -228,3 +241,12 @@ private class ContentBlock(
     private fun inputJson(): JsonObject =
         input.toString().takeIf { it.isNotBlank() }?.let { decode<JsonObject>(it) } ?: JsonObject(emptyMap())
 }
+
+/**
+ * Whether a block's start ([block]) shows some of the reply generated (#1196): any but a text or a
+ * thinking block, which begin empty, their content coming in deltas.
+ */
+private fun startsGenerated(block: JsonObject?): Boolean =
+    block != null && (block["type"] as? JsonPrimitive)?.content !in EMPTY_AT_START
+
+private val EMPTY_AT_START = setOf("text", "thinking")

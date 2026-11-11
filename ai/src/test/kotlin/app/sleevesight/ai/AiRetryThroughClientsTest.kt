@@ -186,10 +186,19 @@ class AiRetryThroughClientsTest {
         }
 
     @Test
-    fun `a reply cut short once the service counted output is not asked again, one before it counted any is`() =
+    fun `an Anthropic reply cut short after it began is asked again, one cut mid-thought is not`() =
         runTest {
-            // Anthropic's reply begins with what it has counted; a thinking model's thinking adds to it.
-            for ((usage, sent) in listOf(""""input_tokens":3,"output_tokens":1""" to 1, """"input_tokens":3""" to 2)) {
+            // `message_start`'s output count is preliminary, there for every reply; a thinking delta is
+            // reasoning generated, and billed, though not passed on.
+            val start = """data: {"type":"message_start","message":{"usage":{"input_tokens":3,"output_tokens":1}}}"""
+            val thinking =
+                listOf(
+                    """data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}""",
+                    "",
+                    """data: {"type":"content_block_delta","index":0,""" +
+                        """"delta":{"type":"thinking_delta","thinking":"Hm"}}""",
+                ).joinToString("\n")
+            for ((lines, sent) in listOf(start to 2, "$start\n\n$thinking" to 1)) {
                 var calls = 0
                 val net =
                     object : NetClient {
@@ -201,8 +210,7 @@ class AiRetryThroughClientsTest {
                         ): NetResult<NetResponse> {
                             calls++
                             if (calls == 1) {
-                                onLine("""data: {"type":"message_start","message":{"usage":{$usage}}}""")
-                                onLine("")
+                                (lines + "\n").lines().forEach { onLine(it) }
                                 // The stream ends there, with no end of the reply.
                             } else {
                                 recorded("anthropic/messages-stream.sse").lines().forEach { onLine(it) }
@@ -213,13 +221,14 @@ class AiRetryThroughClientsTest {
                         override fun close() = Unit
                     }
                 val events = retrying(AnthropicProvider(net), 30.seconds).stream(request, key).toList()
-                assertEquals(sent, calls, usage)
+                assertEquals(sent, calls, lines)
                 if (sent == 1) {
                     val error = events.single() as CompletionEvent.Error
-                    assertEquals(AiErrorKind.INCOMPLETE, error.kind, usage)
-                    assertEquals(BreakoffCause.NO_END, error.breakoff?.cause, usage)
+                    assertEquals(AiErrorKind.INCOMPLETE, error.kind, lines)
+                    assertEquals(BreakoffCause.NO_END, error.breakoff?.cause, lines)
+                    assertEquals(true, error.breakoff?.generated, lines)
                 } else {
-                    assertIs<CompletionEvent.Done>(events.last(), usage)
+                    assertIs<CompletionEvent.Done>(events.last(), lines)
                 }
             }
         }

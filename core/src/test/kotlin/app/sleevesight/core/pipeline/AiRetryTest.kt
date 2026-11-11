@@ -429,17 +429,21 @@ class AiRetryTest {
         }
 
     @Test
-    fun `a reply cut short whose breakoff counts output tokens is not asked again`() =
+    fun `a reply cut short once some of it was generated, or whose final count has output, is not asked again`() =
         runTest {
-            // A thinking model cut off mid-thought: no text yet, but its thinking counted, and billed.
-            for (cause in listOf(BreakoffCause.NO_END, BreakoffCause.CONNECTION_LOST)) {
-                val failed = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(cause, Usage(9, 1)))
+            // A thinking model cut off mid-thought: no text yet, but its thinking generated, and billed.
+            val breakoffs =
+                listOf(BreakoffCause.NO_END, BreakoffCause.CONNECTION_LOST).flatMap { cause ->
+                    listOf(Breakoff(cause, Usage(9, 1)), Breakoff(cause, Usage(9, 0), generated = true))
+                }
+            for (breakoff in breakoffs) {
+                val failed = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
                 val provider = Scripted(this, listOf(failed), answer)
                 assertEquals(
                     listOf<CompletionEvent>(failed),
                     retrying(provider, 30.seconds).stream(request, KEY).toList(),
                 )
-                assertEquals(1, provider.starts.size, cause.name)
+                assertEquals(1, provider.starts.size, breakoff.toString())
             }
         }
 

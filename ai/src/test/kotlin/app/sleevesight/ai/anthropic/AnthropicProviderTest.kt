@@ -288,7 +288,7 @@ class AnthropicProviderTest {
         }
 
     @Test
-    fun `a stream that ends before message_stop is incomplete, as having no end, with the tokens counted`() =
+    fun `a stream that ends before message_stop is incomplete, as having no end, with what was generated`() =
         runTest {
             val (events, _) =
                 events {
@@ -299,7 +299,8 @@ class AnthropicProviderTest {
                         ),
                     )
                 }
-            val breakoff = Breakoff(BreakoffCause.NO_END, Usage(3, 1))
+            // `message_start`'s output count is preliminary, so not taken (#1196); the text was generated.
+            val breakoff = Breakoff(BreakoffCause.NO_END, Usage(3, 0), generated = true)
             assertEquals(CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff), events.last())
         }
 
@@ -532,7 +533,9 @@ class AnthropicProviderTest {
                         end = error,
                     )
                 val events = provider(net).stream(request, key).toList()
-                val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
+                // Its text was generated (#1196).
+                val generated = breakoff.copy(generated = true)
+                val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = generated)
                 assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events, "ended by $error")
             }
         }

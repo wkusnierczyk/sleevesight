@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
+import app.sleevesight.core.ai.Breakoff
 import app.sleevesight.core.ai.BreakoffCause
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
@@ -31,8 +32,8 @@ import kotlin.time.TimeSource
  * A call that fails as busy ([AiErrorKind.RATE_LIMITED], [AiErrorKind.OVERLOADED]), with its
  * connection not made, at all or in time, before the request was written
  * ([AiErrorKind.CONNECT_FAILED], [AiErrorKind.CONNECT_TIMED_OUT]), or with its reply cut short, its
- * connection lost or its stream ended early ([AiErrorKind.INCOMPLETE]), before the service counted
- * any of its output (#1196), is asked again, after a wait that doubles each time ([FIRST_WAIT], then
+ * connection lost or its stream ended early ([AiErrorKind.INCOMPLETE]), before any of it was
+ * generated (#1196), is asked again, after a wait that doubles each time ([FIRST_WAIT], then
  * twice as long, each with up to a quarter more at random, so the clients a service refused
  * together do not come back together), or after the wait the service asked for
  * (`retryAfter`) when that is longer, while the next try starts within [allowance] of the first
@@ -44,17 +45,19 @@ import kotlin.time.TimeSource
  * [BreakoffCause.NO_NETWORK]), a timeout after the request was sent ([AiErrorKind.TIMED_OUT], or a
  * reply that fell silent, [BreakoffCause.TIMED_OUT]: likely billed, and likely to again), a
  * connection that failed after the request may have been sent ([AiErrorKind.CONNECTION_FAILED]: a
- * reset or an early end, which the service may have acted on, and billed), a reply cut short whose
- * breakoff counts output tokens (a thinking model cut off mid-thought, billed for its thinking), a
- * reply too long ([BreakoffCause.TOO_LARGE]), or any other failure, which no retry mends soon, the
- * error is the call's at once. The service's clients retry nothing themselves: this is the one retry
- * of an AI call.
+ * reset or an early end, which the service may have acted on, and billed), a reply cut short once
+ * some of it was generated, shown or not ([Breakoff.generated], or output tokens in its final
+ * count: a thinking model cut off mid-thought, billed for its thinking), a reply too long
+ * ([BreakoffCause.TOO_LARGE]), or any other failure, which no retry mends soon, the error is the
+ * call's at once. The service's clients retry nothing themselves: this is the one retry of an AI
+ * call.
  *
  * Nothing new is shown while it asks again: the caller sees one call, which ends later. A reply that
  * broke off after some of its text, or a tool call, reached the caller is not asked again: the caller
  * has shown that text, and a new reply would follow it. The tries cost what they cost: a busy refusal
- * and a connection never made are not billed, but a reply that broke off before the service counted
- * any output may be, for its input (services often count the output only at the end).
+ * and a connection never made are not billed, but a reply that broke off before any of it was
+ * generated may be, for its input; and reasoning a service does not stream (OpenAI's, Google's)
+ * cannot be seen, so a reply cut off during it is asked again.
  *
  * A Stop cancels the collection, and with it any wait and try. The caller's [AiCallTerms], set around
  * its call ([underTerms]), go with it: its gate, asked while waiting and right before each try again,
@@ -171,11 +174,12 @@ class AiRetry(
 
     // Whether [error] is asked again: one of [RETRIED]; a reply cut short only when its connection
     // was lost or its stream ended early, not when it timed out (likely billed, and likely to again),
-    // was too long, or the network went away; and not when its breakoff counts output tokens, which
-    // the service bills (#1196): a thinking model cut off mid-thought.
+    // was too long, or the network went away; and not once some of it was generated, which the
+    // service bills (#1196): a thinking model cut off mid-thought.
     private fun retried(error: CompletionEvent.Error): Boolean =
         error.kind in RETRIED &&
             (error.breakoff?.cause ?: BreakoffCause.NO_END) in BROKEN_OFF &&
+            error.breakoff?.generated != true &&
             (error.breakoff?.usage?.outputTokens ?: 0L) <= 0L
 
     /**
