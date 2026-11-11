@@ -62,9 +62,10 @@ internal object WebBoilerplate {
             parts.withIndex().flatMap { (i, part) ->
                 // A separator the line starts or ends with stays: it shows the quote goes on.
                 if (part.isEmpty()) return@flatMap if (i == 0 || i == parts.lastIndex) listOf(part) else emptyList()
-                // A part that is only a streaming page's navigation, cut or not, goes too ("Log in Resize …").
+                // Judged without a streaming page's navigation at its edges, so a cut bit of it ("Log in Resize …")
+                // neither keeps a part of names only nor is kept as a part of its own.
                 val trimmed = withoutEdges(part, site)
-                if (trimmed.isEmpty() || onlyBoilerplate(part, site, words, fold)) emptyList() else listOf(trimmed)
+                if (trimmed.isEmpty() || onlyBoilerplate(trimmed, site, words, fold)) emptyList() else listOf(trimmed)
             }
         if (kept.none { it.isNotEmpty() }) return ""
         return kept.joinToString(SEPARATOR).trim()

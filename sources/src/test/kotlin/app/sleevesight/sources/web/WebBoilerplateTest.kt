@@ -420,4 +420,16 @@ class WebBoilerplateTest {
             singleLine("https://open.spotify.com/album/fixture", "• in Resize main navigation Single 2026"),
         )
     }
+
+    @Test
+    fun `a part of a streaming page's cut navigation and the subject's names only goes`() {
+        assertEquals("", lineOf("https://open.spotify.com/track/fixture", "Log in Resize main navigation Sundown"))
+        assertEquals(
+            "",
+            singleLine(
+                "https://open.spotify.com/album/fixture",
+                "up Log in Resize main navigation เมื่อไหร่จะมี (มีใจให้กัน)",
+            ),
+        )
+    }
 }
