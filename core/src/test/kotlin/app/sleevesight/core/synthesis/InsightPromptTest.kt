@@ -61,6 +61,88 @@ class InsightPromptTest {
     }
 
     @Test
+    fun `a composer-led track's prompt has its own version, any other track's is version 10's (#1195)`() {
+        // Never 11: the rejected variant kept in `design/prompts/` has it.
+        assertEquals(12, InsightPrompt.RECORDING_VERSION)
+        assertEquals(InsightPrompt.RECORDING_VERSION, InsightPrompt.version(composed = true))
+        assertEquals(InsightPrompt.VERSION, InsightPrompt.version(composed = false))
+    }
+
+    @Test
+    fun `the system prompt for a composer-led track (#1195)`() {
+        assertEquals(stored("insight-system-composed.txt"), InsightPrompt.system(allowModel = false, composed = true))
+    }
+
+    @Test
+    fun `only a composer-led track's rules have the rule on another recording, after the one on a name (#1195)`() {
+        assertEquals(
+            "- Other recordings of this composed work share its title. A line about another recording of this " +
+                "work (by other performers, or by these performers at another time) is not about this track, " +
+                "whatever its source or scope: leave it out. A reissue or remaster of this same recording is " +
+                "this track.",
+            InsightPrompt.RECORDING_RULE,
+        )
+        for (allowModel in listOf(false, true)) {
+            val plain = InsightPrompt.system(allowModel)
+            val composed = InsightPrompt.system(allowModel, composed = true)
+            assertFalse(InsightPrompt.RECORDING_RULE in plain)
+            assertEquals(InsightPrompt.rules(allowModel), InsightPrompt.rules(allowModel, composed = false))
+            assertEquals(
+                plain.replace(
+                    InsightPrompt.SAME_NAME_RULE + "\n",
+                    InsightPrompt.SAME_NAME_RULE + "\n" + InsightPrompt.RECORDING_RULE + "\n",
+                ),
+                composed,
+            )
+        }
+    }
+
+    @Test
+    fun `a composer-led track's block names its performers, any other track's is as before (#1195)`() {
+        val k545 =
+            FixtureEvidence.nowPlaying(1).copy(
+                title = "Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante",
+                artists = "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
+                album = "Mozart: Piano Concertos Nos. 20 & 23",
+            )
+        assertEquals(
+            "<track>\n" +
+                "Title: Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante\n" +
+                "Artists: Wolfgang Amadeus Mozart, Khatia Buniatishvili\n" +
+                "Release: Mozart: Piano Concertos Nos. 20 & 23\n" +
+                "Normalized title: Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante\n" +
+                "Primary artist: Wolfgang Amadeus Mozart\n" +
+                "Performers: Khatia Buniatishvili\n" +
+                "</track>",
+            InsightPrompt.trackBlock(k545, normalizer.normalize(k545), performers = true),
+        )
+        val sundown = FixtureEvidence.nowPlaying(1)
+        val pop = InsightPrompt.trackBlock(sundown, normalizer.normalize(sundown), performers = true)
+        assertFalse("Performers:" in pop)
+        // The key insight's user message has it; the block without the flag, as the genre reason's
+        // prompt takes it, does not.
+        val normalized = normalizer.normalize(k545)
+        val evidence = FixtureEvidence.of(1)
+        assertTrue("\nPerformers: Khatia Buniatishvili\n" in InsightPrompt.user(k545, normalized, evidence))
+        assertFalse("Performers:" in InsightPrompt.trackBlock(k545, normalized))
+        // Credited to the composer and the arranger the title names alone: no one to call a performer.
+        val arranged =
+            FixtureEvidence.nowPlaying(1).copy(
+                title = "Bach: Partita No. 2 in D Minor, BWV 1004: V. Chaconne (Arr. Busoni)",
+                artists = "Johann Sebastian Bach, Ferruccio Busoni",
+            )
+        val arrangedNormalized = normalizer.normalize(arranged)
+        assertTrue(arrangedNormalized.composer != null)
+        assertFalse("Performers:" in InsightPrompt.trackBlock(arranged, arrangedNormalized, performers = true))
+        // With a performer besides them, only the performer.
+        val grimaud = arranged.copy(artists = "Johann Sebastian Bach, Ferruccio Busoni, Hélène Grimaud")
+        assertTrue(
+            "\nPerformers: Hélène Grimaud\n" in
+                InsightPrompt.trackBlock(grimaud, normalizer.normalize(grimaud), performers = true),
+        )
+    }
+
+    @Test
     fun `the system prompt, model knowledge off`() {
         assertEquals(stored("insight-system.txt"), InsightPrompt.system(allowModel = false))
     }

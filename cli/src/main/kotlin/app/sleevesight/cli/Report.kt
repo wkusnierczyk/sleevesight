@@ -232,7 +232,14 @@ class Report(
             }
         }
         appendLine()
-        appendLine("${billed(calls)} (prompt version ${InsightPrompt.VERSION}).")
+        // A composer-led track's insight has its own version (#1195), so a run may hold two.
+        val versions =
+            tried
+                .map { InsightPrompt.version(it.value.state.normalized.composer != null) }
+                .distinct()
+                .sorted()
+        val named = if (versions.size == 1) "version" else "versions"
+        appendLine("${billed(calls)} (prompt $named ${versions.joinToString(" and ")}).")
         appendLine()
     }
 

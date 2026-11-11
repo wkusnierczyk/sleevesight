@@ -53,7 +53,16 @@ follows as in `Hob. I:94`, a quoted nickname left out, `Piano Sonata No. 16 in C
 none when what is left has no digit, a number or a catalogue number, as `Symphony` of `Symphony
 "Surprise"` or `Star Wars` would be too generic), and its filter (`RecordingFilter.isAbout`) takes a page that names the title as searched or the work, and
 still a credited artist by full name, as before: a page on the sonata naming Buniatishvili, or
-naming Wolfgang Amadeus Mozart, counts for the Song insight; one on another sonata does not. Every
+naming Wolfgang Amadeus Mozart, counts for the Song insight; one on another sonata does not. The
+track's own lines (the track web search and the one in its language) are taken by the key insight as
+facts about this recording, so there a page must also name a performer, whether it names the work
+or the whole title (`isAbout`'s `recording`, #1195): a page on K. 545 naming Mozart alone may be
+about another pianist's recording, its year or its label. This holds for every title that leads with
+its composer, one with no work part (`Mozart: Piano Sonata No. 16 in C Major, K. 545`) and one the
+language search names by its Wikidata label among them; a track credited to its composer alone has
+no other performer, and the composer counts. The key
+insight's prompt for such a track also says that a line about another recording of the work is not
+about this track (`InsightPrompt.RECORDING_RULE`, #1195), as the album's does (#1130). Every
 other title is searched exactly as before (`Star Wars: Main Title`). Two sources keep the whole
 title on purpose: **Last.fm** and **LRCLIB** hold the names the players send, the lead included.
 Checked 2026-11-10: Last.fm has a track page with tags (`classical`, `instrumental`) for
