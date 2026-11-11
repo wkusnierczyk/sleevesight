@@ -313,7 +313,11 @@ class OpenAiProviderTest {
                 )
             for ((event, kind) in cases) {
                 val (events, _) = events { ok(sse(created, delta("Half"), event, completed())) }
-                assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(kind)), events, event)
+                assertEquals(
+                    listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(kind, generated = true)),
+                    events,
+                    event,
+                )
             }
         }
 
@@ -347,7 +351,11 @@ class OpenAiProviderTest {
         runTest {
             val (events, _) = events { ok(sse(created, delta("Half"))) }
             val incomplete =
-                CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(BreakoffCause.NO_END, Usage(0, 0)))
+                CompletionEvent.Error(
+                    AiErrorKind.INCOMPLETE,
+                    breakoff = Breakoff(BreakoffCause.NO_END, Usage(0, 0)),
+                    generated = true,
+                )
             assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 
@@ -376,6 +384,11 @@ class OpenAiProviderTest {
                     NetError.Offline("SocketException (ECONNRESET)") to
                         CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
                     NetError.Offline("SSLException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    // One that failed before the request was written is told apart (#1196).
+                    NetError.Offline("SSLHandshakeException", unsent = true) to
+                        CompletionEvent.Error(AiErrorKind.CONNECT_FAILED),
+                    NetError.Offline("SocketTimeoutException", unsent = true) to
+                        CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),
@@ -528,7 +541,7 @@ class OpenAiProviderTest {
                 }
             val events = provider(net).stream(request, key).toList()
             val breakoff = Breakoff(BreakoffCause.TIMED_OUT, Usage(0, 0), "SocketTimeoutException")
-            val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
+            val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff, generated = true)
             assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events)
         }
 

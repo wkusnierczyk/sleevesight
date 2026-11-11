@@ -50,8 +50,13 @@ object ReplyFailures {
             // The network gone mid-reply (#1164): a connection lost, in the same words.
             BreakoffCause.NO_NETWORK -> CONNECTION_LOST
             BreakoffCause.NO_END, BreakoffCause.TOO_LARGE, null ->
-                // A connection not made in time reads as any other timeout (#1164).
-                if (error.kind == AiErrorKind.CONNECT_TIMED_OUT) TIMED_OUT else error.kind.name.lowercase()
+                when (error.kind) {
+                    // A connection not made in time reads as any other timeout (#1164).
+                    AiErrorKind.CONNECT_TIMED_OUT -> TIMED_OUT
+                    // One not made at all, as any other failed connection (#1196).
+                    AiErrorKind.CONNECT_FAILED -> AiErrorKind.CONNECTION_FAILED.name.lowercase()
+                    else -> error.kind.name.lowercase()
+                }
         }
 
     /**

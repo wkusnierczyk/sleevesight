@@ -284,11 +284,13 @@ class AnthropicProviderTest {
                         ),
                     )
                 }
-            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.OVERLOADED)), events)
+            // Its text was generated (#1196).
+            val overloaded = CompletionEvent.Error(AiErrorKind.OVERLOADED, generated = true)
+            assertEquals(listOf(CompletionEvent.Delta("Half"), overloaded), events)
         }
 
     @Test
-    fun `a stream that ends before message_stop is incomplete, as having no end, with the tokens counted`() =
+    fun `a stream that ends before message_stop is incomplete, as having no end, with what was generated`() =
         runTest {
             val (events, _) =
                 events {
@@ -299,8 +301,12 @@ class AnthropicProviderTest {
                         ),
                     )
                 }
-            val breakoff = Breakoff(BreakoffCause.NO_END, Usage(3, 1))
-            assertEquals(CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff), events.last())
+            // `message_start`'s output count is preliminary, so not taken (#1196); the text was generated.
+            val breakoff = Breakoff(BreakoffCause.NO_END, Usage(3, 0))
+            assertEquals(
+                CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff, generated = true),
+                events.last(),
+            )
         }
 
     @Test
@@ -380,6 +386,11 @@ class AnthropicProviderTest {
                     NetError.Offline("SocketException (ECONNRESET)") to
                         CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
                     NetError.Offline("SSLException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    // One that failed before the request was written is told apart (#1196).
+                    NetError.Offline("SSLHandshakeException", unsent = true) to
+                        CompletionEvent.Error(AiErrorKind.CONNECT_FAILED),
+                    NetError.Offline("SocketTimeoutException", unsent = true) to
+                        CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),
@@ -529,7 +540,8 @@ class AnthropicProviderTest {
                         end = error,
                     )
                 val events = provider(net).stream(request, key).toList()
-                val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff)
+                // Its text was generated (#1196).
+                val incomplete = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = breakoff, generated = true)
                 assertEquals(listOf(CompletionEvent.Delta("Half"), incomplete), events, "ended by $error")
             }
         }

@@ -41,6 +41,8 @@ class AiFailureWordsTest {
     @Test
     fun aConnectionThatFailedOnAWorkingNetworkSaysItDropped() {
         assertEquals("the connection dropped", words(AiErrorKind.CONNECTION_FAILED))
+        // One not made before the request was written, in the same words (#1196).
+        assertEquals("the connection dropped", words(AiErrorKind.CONNECT_FAILED))
     }
 
     @Test

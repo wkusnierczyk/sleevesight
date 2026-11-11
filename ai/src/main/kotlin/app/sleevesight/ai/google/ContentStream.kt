@@ -32,6 +32,10 @@ internal class ContentStream(
     private var outputTokens = 0L
     private var stopReason: StopReason? = null
     private var started = false
+
+    // Whether any of the reply was generated (#1196): a part of a candidate, thoughts included, or
+    // output tokens counted.
+    private var generated = false
     private var ended = false
 
     /** Set when an event's data was not JSON this client can read; the stream should be stopped. */
@@ -68,6 +72,13 @@ internal class ContentStream(
         chunk.promptFeedback?.blockReason?.let { stopReason = StopReason.REFUSAL }
         val candidate = chunk.candidates.firstOrNull()
         candidate?.finishReason?.let { stopReason = stopReasonOf(it) }
+        generated = generated ||
+            candidate
+                ?.content
+                ?.parts
+                .orEmpty()
+                .isNotEmpty() ||
+            outputTokens > 0
         val text =
             candidate
                 ?.content
@@ -107,9 +118,11 @@ internal class ContentStream(
             else -> failedWith(error, kindOf(error))
         }
 
+    // The terminal [event]; an error with whether any of the reply was generated before it (#1196),
+    // whatever ended it, as Anthropic's `MessageStream` does.
     private fun end(event: CompletionEvent): CompletionEvent {
         ended = true
-        return event
+        return if (event is CompletionEvent.Error && generated) event.copy(generated = true) else event
     }
 
     // The thinking tokens are billed as output (the pricing page: "Output price (including thinking

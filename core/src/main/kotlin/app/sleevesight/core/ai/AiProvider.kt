@@ -209,13 +209,20 @@ sealed interface CompletionEvent {
      * [AiErrorKind.INCOMPLETE] only, when the client can tell. [detail] names what failed, for the
      * diagnostics (#1164), never with a message or the reply's text: the transport's label for a
      * failed connection (`SocketException (ECONNRESET)`), the HTTP status of an error answer
-     * (`HTTP 503`), or the service's own code for an error it sent in the stream.
+     * (`HTTP 503`), or the service's own code for an error it sent in the stream. [generated]:
+     * whether any of the reply had been generated before it failed (#1196), whatever the failure (a
+     * breakoff, or an error the service sent mid-reply): text, a refusal, a tool call or its
+     * arguments, or reasoning the stream shows (Anthropic's thinking, OpenAI's reasoning item begun
+     * or its summary, Google's thought parts or output counted), passed on or not, which the service
+     * bills, so the call is not asked again (`AiRetry`). Reasoning that leaves no sign in the stream
+     * (Google's, before its first part or count) cannot be seen, so it is false until one comes.
      */
     data class Error(
         val kind: AiErrorKind,
         val retryAfter: Duration? = null,
         val breakoff: Breakoff? = null,
         val detail: String? = null,
+        val generated: Boolean = false,
     ) : CompletionEvent {
         init {
             require(breakoff == null || kind == AiErrorKind.INCOMPLETE) {
@@ -229,8 +236,9 @@ sealed interface CompletionEvent {
  * How a reply broke off before its end ([AiErrorKind.INCOMPLETE]), for the card to say and the
  * diagnostics to record, never with the text (#665): its [cause]; the tokens the service had counted
  * by then ([usage]: Anthropic counts the input when the reply begins and the output only near its
- * end, OpenAI both only at the end, so they are often zero); and the transport's label for the
- * failure ([detail], such as `SocketTimeoutException`), null when the stream simply ended.
+ * end, not taking its first, preliminary count (#1196), OpenAI both only at the end, so they are
+ * often zero); and the transport's label for the failure ([detail], such as
+ * `SocketTimeoutException`), null when the stream simply ended.
  */
 data class Breakoff(
     val cause: BreakoffCause,
@@ -293,10 +301,20 @@ enum class AiErrorKind {
 
     /**
      * The connection to the service failed or dropped before its reply began, on a network that
-     * was there (#1164): reset, refused, closed, or a TLS failure. A reply that had begun and then
-     * lost its connection is [INCOMPLETE] instead.
+     * was there (#1164): reset, refused, closed, or a TLS failure, once the request may have been
+     * sent; the service may have acted on it, so it is not asked again (#1196). One that failed
+     * before the request was written is [CONNECT_FAILED]. A reply that had begun and then lost its
+     * connection is [INCOMPLETE] instead.
      */
     CONNECTION_FAILED,
+
+    /**
+     * The connection to the service could not be made (#1196): refused, reset or closed while
+     * connecting, or its TLS handshake failed, before any of the request was written
+     * (`NetError.Offline.unsent`). The request never reached it, so it is asked again (`AiRetry`).
+     * Named as [CONNECTION_FAILED] is.
+     */
+    CONNECT_FAILED,
 
     /**
      * The service did not answer in time: the request was sent, and no reply began within the
