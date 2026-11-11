@@ -65,8 +65,7 @@ class AiRetrySettingTest {
     private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
 
-    // On the main thread, so one at a time and in order: two saves in quick succession land as made;
-    // and with the screen, so a wait for a save has no other thread to wait on (#1183).
+    // On the main thread, with the screen, so a wait for a save has no other thread to wait on (#1183).
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
