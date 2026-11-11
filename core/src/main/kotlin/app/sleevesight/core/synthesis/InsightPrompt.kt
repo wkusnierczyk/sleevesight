@@ -118,20 +118,38 @@ object InsightPrompt {
      * card kept keeps its dates as written, and raising the version would pay again for every card
      * kept only to change their form. The rule's form is no part of the card's key, so a card is read
      * as written whatever form the phone now asks for.
+     *
+     * A track whose title leads with its composer has [RECORDING_VERSION] in its card's key in place
+     * of this one, for the rule on another recording of its work ([RECORDING_RULE], #1195).
      */
     const val VERSION: Int = 10
+
+    /**
+     * The version in the card's key for a track whose title leads with its composer
+     * (`NormalizedTrack.composer`, #1195): version 10 with [RECORDING_RULE] in its rules and the
+     * track's performers in its `<track>` block. Its own number, so a card such a track kept from
+     * version 10, written without the rule, is written afresh, once, when next shown, and no other
+     * track's card is (as `ItemPrompt.ONLY_LISTINGS_VERSION` does for the song's). 12, not 11: 11 is
+     * the rejected variant kept in `design/prompts/`, never shipped, and a number is never reused.
+     */
+    const val RECORDING_VERSION: Int = 12
+
+    /** The version in the card's key for a track whose title leads with its composer or not ([composed]). */
+    fun version(composed: Boolean): Int = if (composed) RECORDING_VERSION else VERSION
 
     /**
      * The system prompt: everything fixed for a listener, the same for every track, the built-in
      * style with its rule on dates in [dates]' form ([dateRule]). With
      * [allowModel] (the *Model's own knowledge* switch), the model may add one sentence of its own,
      * cited `[AI]`. [userStyle] is the user's style for this card (D14), or null for the built-in
-     * style alone.
+     * style alone. With [composed] (a track whose title leads with its composer, #1195), the rules
+     * hold [RECORDING_RULE] too; the prompt is otherwise the same.
      */
     fun system(
         allowModel: Boolean,
         userStyle: String? = null,
         dates: DateForm = DateForm.APP,
+        composed: Boolean = false,
     ): String =
         buildString {
             appendLine(ROLE)
@@ -147,7 +165,7 @@ object InsightPrompt {
             }
             appendLine()
             appendLine(CONTRACT_HEADING)
-            appendLine(rules(allowModel))
+            appendLine(rules(allowModel, composed))
             appendLine()
             append(REPLY)
         }
@@ -162,7 +180,11 @@ object InsightPrompt {
         evidence: EvidenceSet,
     ): String = trackBlock(nowPlaying, normalized) + "\n\n" + evidenceBlock(evidence)
 
-    /** The track as the player reports it, and as normalized, fenced in `<track>`, each field on one line. */
+    /**
+     * The track as the player reports it, and as normalized, fenced in `<track>`, each field on one
+     * line. For a title that leads with its composer (#1195), its performers too
+     * (`NormalizedTrack.performers`), which [RECORDING_RULE] tells this recording by.
+     */
     internal fun trackBlock(
         nowPlaying: NowPlaying,
         normalized: NormalizedTrack,
@@ -174,6 +196,9 @@ object InsightPrompt {
             nowPlaying.album?.let { appendLine("Release: ${oneLine(it)}") }
             appendLine("Normalized title: ${oneLine(normalized.title)}")
             appendLine("Primary artist: ${oneLine(normalized.primary)}")
+            if (normalized.composer != null) {
+                appendLine("Performers: ${oneLine(normalized.performers.joinToString(", "))}")
+            }
             normalized.from?.let { appendLine("From: ${oneLine(it)}") }
             append("</track>")
         }
@@ -266,10 +291,14 @@ object InsightPrompt {
      * 9's on counts ([COUNTS_RULE]), a web page's reading ([WEB_READING_RULE]), readings of the
      * model's own ([NO_READING_RULE]) and the final text ([FINAL_TEXT_RULE]); and version 10's on
      * a web page's facts ([WEB_FACT_RULE]), in place of the shared [WEB_READING_RULE], which it
-     * extends, so the genre reason stays as it was judged.
+     * extends, so the genre reason stays as it was judged. With [composed], [RECORDING_RULE] after
+     * [SAME_NAME_RULE] (#1195).
      */
-    fun rules(allowModel: Boolean): String =
-        listOf(
+    fun rules(
+        allowModel: Boolean,
+        composed: Boolean = false,
+    ): String =
+        listOfNotNull(
             CITATION_RULE,
             EVIDENCE_RULE,
             TRANSLATION_RULE,
@@ -278,6 +307,7 @@ object InsightPrompt {
             ORIGINAL_SONG_RULE,
             ARTIST_RULE,
             SAME_NAME_RULE,
+            RECORDING_RULE.takeIf { composed },
             WEB_GENRE_RULE,
             WEB_FACT_RULE,
             NO_READING_RULE,
@@ -348,6 +378,20 @@ object InsightPrompt {
     /** The rule on a web line about another song or artist of the same name. */
     const val SAME_NAME_RULE: String =
         "- A web line may be about another song or artist of the same name; ignore what does not fit."
+
+    /**
+     * The rule on another recording of the work (#1195), for a track whose title leads with its
+     * composer only ([RECORDING_VERSION]): such a title is shared by every recording of the work,
+     * and a page on another pianist's K. 545, its year or its label, names the work and the composer
+     * as this one's does. Its lines may come from any source and scope, the song's, the artist's and
+     * the album's lines the insight takes (#1131) among them. As the album's rule
+     * (`ItemPrompt.ALBUM_RECORDING_RULE`, #1130): a reissue or remaster of this same recording is
+     * still this track. The `<track>` block gives the performers ([trackBlock]).
+     */
+    const val RECORDING_RULE: String =
+        "- Other recordings of this composed work share its title. A line about another recording of this " +
+            "work (by other performers, or by these performers at another time) is not about this track, " +
+            "whatever its source or scope: leave it out. A reissue or remaster of this same recording is this track."
 
     /**
      * The rule on the track's length (#722): the player already shows it, so a sentence on it, from
