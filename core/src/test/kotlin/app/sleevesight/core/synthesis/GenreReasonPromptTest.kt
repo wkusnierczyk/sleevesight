@@ -41,6 +41,32 @@ class GenreReasonPromptTest {
 
     private fun stored(name: String): String = Fixtures.text("prompts/$name").removeSuffix("\n")
 
+    @Test
+    fun `a composer-led track's user message is as before, with no performers line (#1195)`() {
+        // The key insight's prompt names the performers for such a track (`InsightPrompt.RECORDING_RULE`);
+        // the genre reason's keeps its version 6 and its keys, so its text stays as it was.
+        val k545 =
+            playing.copy(
+                title = "Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante",
+                artists = "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
+                album = "Mozart: Piano Concertos Nos. 20 & 23",
+            )
+        val normalized = Normalizer(JvmAccentFolder).normalize(k545)
+        assertTrue(normalized.composer != null)
+        assertEquals(
+            "<genre>\nClassical\n</genre>\n\n" +
+                "<track>\n" +
+                "Title: Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante\n" +
+                "Artists: Wolfgang Amadeus Mozart, Khatia Buniatishvili\n" +
+                "Release: Mozart: Piano Concertos Nos. 20 & 23\n" +
+                "Normalized title: Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante\n" +
+                "Primary artist: Wolfgang Amadeus Mozart\n" +
+                "</track>\n\n" +
+                "<evidence>\n(none)\n</evidence>",
+            GenreReasonPrompt.user(k545, normalized, EvidenceSet.of(emptyList(), JvmHasher), "Classical"),
+        )
+    }
+
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test

@@ -13,7 +13,8 @@ import app.sleevesight.core.normalizer.AccentFolder
  *   title that leads with its composer is named as it is searched, without the lead
  *   ([NormalizedTrack.searchTitle], #1179), or by its work part ([NormalizedTrack.searchWork]:
  *   `Piano Sonata No. 16 in C Major, K. 545` for its `II. Andante`), since a page on the music
- *   names the work and seldom the movement as the player titles it;
+ *   names the work and seldom the movement as the player titles it; for the track's own lines, a
+ *   page about such a title names a performer too ([isAbout]'s `recording`, #1195);
  * - it names a credited artist, a *distinctive* one when the track has one ([requiredArtists]:
  *   Van Morrison for Them and Van Morrison, since "them" is in any text);
  * - its own title does not name such an artist without the song. A page titled after the artist
@@ -40,14 +41,32 @@ class RecordingFilter(
      * Whether a result with [title], [snippet] and [url] is about [track]. Without [wholeWords] (the
      * search in a language whose script puts no spaces between words, #902: Thai, Japanese, Chinese),
      * a name counts wherever it stands in the text, not only between word boundaries.
+     *
+     * With [recording] (the track's own lines, which the key insight takes as facts about this
+     * recording, #1195), a result about a track whose title leads with its composer
+     * ([NormalizedTrack.composer]) must also name one of the track's performers
+     * ([NormalizedTrack.performers]), a distinctive one when there is one, as an album's does
+     * ([isAboutAlbum]), whether it names the work part ([NormalizedTrack.searchWork]) or the whole
+     * title: a page naming the music and its composer alone may be about another recording of it
+     * (another pianist's K. 545, its year, its label). A track credited to its composer alone has no
+     * other performer to name, and the composer counts. Without [recording] (the Song insight, about
+     * the work, `design/classical.md`), the composer is enough; a track with no composer's lead is
+     * judged the same either way.
      */
+    @Suppress("LongParameterList") // The track, the result's three parts, and how they are read.
     fun isAbout(
         track: NormalizedTrack,
         title: String?,
         snippet: String,
         url: String,
         wholeWords: Boolean = true,
-    ): Boolean = names(song(track), requiredArtists(track), title, snippet, url, wholeWords)
+        recording: Boolean = false,
+    ): Boolean {
+        val artists = requiredArtists(track)
+        val about = names(song(track), artists, title, snippet, url, wholeWords)
+        if (!about || !recording || track.composer == null) return about
+        return names(song(track), requiredArtists(track.performers), title, snippet, url, wholeWords)
+    }
 
     // What a result about [track] must name, each given as its alternatives: the title as searched or
     // its work part (#1179), and the work it is from.

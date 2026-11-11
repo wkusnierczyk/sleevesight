@@ -100,8 +100,8 @@ class ExaLanguageSearch(
         val unspaced = query.language.scripts.any { it.unspaced }
         val subject = listOfNotNull(native.title, native.from, track.title, track.from) + native.artists + track.artists
         return ExaWebSearch.lines(response, clock.now(), subject.distinct(), filter::fold) { result, snippet ->
-            filter.isAbout(native, result.title, snippet, result.url, wholeWords = !unspaced) ||
-                filter.isAbout(track, result.title, snippet, result.url)
+            filter.isAbout(native, result.title, snippet, result.url, wholeWords = !unspaced, recording = true) ||
+                filter.isAbout(track, result.title, snippet, result.url, recording = true)
         }
     }
 }
@@ -148,8 +148,9 @@ internal object ExaLanguageQuery {
     /**
      * [query]'s track as the language names it: its title in the language's script (the track's own
      * when written in a script other than Latin, else Wikidata's label in the language), each
-     * credited artist likewise, and the work it is from, when the player named one, as Wikidata names
-     * it in the language; each as the track has it where neither does.
+     * credited artist likewise (the composer its title leads with and the artists it names among them,
+     * #1195), and the work it is from, when the player named one, as Wikidata names it in the
+     * language; each as the track has it where neither does.
      */
     fun nativeTrack(
         query: LanguageQuery,
@@ -161,12 +162,18 @@ internal object ExaLanguageQuery {
             name: String,
             label: String?,
         ): String = if (Script.of(name) != null) name else label?.takeIf { it.isNotBlank() } ?: name
-        val artists = track.artists.map { native(it, items.artists[it]?.label) }
+
+        fun artist(name: String): String = native(name, items.artists[name]?.label)
+        // The composer and the artists the title names, named as the artists are, so the performers a
+        // page naming only the work must name (`RecordingFilter.isAbout`, #1195) are this track's,
+        // never the composer under the language's name for him.
         return track.copy(
             title = native(track.title, items.song?.label),
-            artists = artists,
-            primary = native(track.primary, items.artists[track.primary]?.label),
+            artists = track.artists.map(::artist),
+            primary = artist(track.primary),
             from = track.from?.let { from -> native(from, items.comes.firstOrNull()?.label) },
+            composer = track.composer?.let { it.copy(name = artist(it.name)) },
+            titleArtists = track.titleArtists.map(::artist),
         )
     }
 }
