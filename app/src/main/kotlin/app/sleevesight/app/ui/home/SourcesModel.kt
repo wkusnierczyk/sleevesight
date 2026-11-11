@@ -113,7 +113,8 @@ internal fun firstUnverified(
     hidden: Set<SourceId>,
 ): Pair<Int, String>? {
     val shown = unverified.withIndex().filter { it.value.source !in hidden }
-    val at = shown.indexOfFirst { it.value.source in chip.filters }
+    // Its own, as [SourceChip.ownUnverified] has them: its sources', in its language.
+    val at = shown.indexOfFirst { it.value.source in chip.filters && it.value.found == chip.language }
     return if (chip.filters.any { it in hidden } || at < 0) {
         null
     } else {

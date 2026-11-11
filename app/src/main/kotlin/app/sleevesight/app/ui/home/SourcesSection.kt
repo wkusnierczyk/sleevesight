@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -286,7 +287,7 @@ private fun Entries(
 
                     is Entry.Unverified -> {
                         if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
-                        UnverifiedRow(entry.line, tagWidth, focus.unverifiedRequester(entry.key))
+                        UnverifiedRow(entry.line, tagWidth, entry.key, focus)
                     }
 
                     is Entry.Rejected -> {
@@ -409,8 +410,16 @@ private fun Where(
 private fun UnverifiedRow(
     line: EvidenceDraft,
     tagWidth: Dp,
-    requester: BringIntoViewRequester,
+    id: String,
+    focus: LineFocus,
 ) {
+    // Its way into view, for a chip that shows it again to scroll to (#951), known to [focus] while
+    // the row is composed.
+    val requester = remember { BringIntoViewRequester() }
+    DisposableEffect(focus, id, requester) {
+        val forget = focus.register(id, requester)
+        onDispose { forget() }
+    }
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.bringIntoViewRequester(requester).padding(4.dp),

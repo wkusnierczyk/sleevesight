@@ -44,11 +44,22 @@ internal class LineFocus(
     val requesters: Map<String, BringIntoViewRequester> =
         evidence?.lines.orEmpty().associate { it.id to BringIntoViewRequester() }
 
-    // Each unverified line's way into view (#951), by its entry's key, made as its row first asks.
+    // Each unverified line's way into view (#951), by its entry's key, while its row is composed: its
+    // row registers it from an effect ([register]), outside composition. Only read when a scroll
+    // runs, so not snapshot state.
     private val unverified = mutableMapOf<String, BringIntoViewRequester>()
 
-    /** The way into view of the unverified line of entry [key] (#951). */
-    fun unverifiedRequester(key: String): BringIntoViewRequester = unverified.getOrPut(key) { BringIntoViewRequester() }
+    /**
+     * Registers [requester] as the way into view of the unverified line of entry [key] (#951); returns
+     * what forgets it again, unless another row has since registered its own.
+     */
+    fun register(
+        key: String,
+        requester: BringIntoViewRequester,
+    ): () -> Unit {
+        unverified[key] = requester
+        return { if (unverified[key] === requester) unverified.remove(key) }
+    }
 
     /** Scrolls to the unverified line of entry [key], unflashed: a chip that showed it again (#951). */
     fun reveal(key: String) {
