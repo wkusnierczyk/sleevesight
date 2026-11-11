@@ -389,6 +389,8 @@ class AnthropicProviderTest {
                     // One that failed before the request was written is told apart (#1196).
                     NetError.Offline("SSLHandshakeException", unsent = true) to
                         CompletionEvent.Error(AiErrorKind.CONNECT_FAILED),
+                    NetError.Offline("SocketTimeoutException", unsent = true) to
+                        CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),

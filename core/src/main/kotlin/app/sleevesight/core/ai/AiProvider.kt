@@ -211,10 +211,11 @@ sealed interface CompletionEvent {
      * failed connection (`SocketException (ECONNRESET)`), the HTTP status of an error answer
      * (`HTTP 503`), or the service's own code for an error it sent in the stream. [generated]:
      * whether any of the reply had been generated before it failed (#1196), whatever the failure (a
-     * breakoff, or an error the service sent mid-reply): text, a tool call, or reasoning the service
-     * streamed (Anthropic's thinking), passed on or not, which the service bills, so the call is not
-     * asked again (`AiRetry`). Reasoning a service does not stream (OpenAI's, Google's) cannot be
-     * seen, so it is false for them until text comes.
+     * breakoff, or an error the service sent mid-reply): text, a refusal, a tool call or its
+     * arguments, or reasoning the stream shows (Anthropic's thinking, OpenAI's reasoning item begun
+     * or its summary, Google's thought parts or output counted), passed on or not, which the service
+     * bills, so the call is not asked again (`AiRetry`). Reasoning that leaves no sign in the stream
+     * (Google's, before its first part or count) cannot be seen, so it is false until one comes.
      */
     data class Error(
         val kind: AiErrorKind,

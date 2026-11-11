@@ -8,8 +8,8 @@ import kotlin.time.Duration
 
 /**
  * The kind of a request to which no answer came at all (#1164): the timeout to connect, which the
- * request never got past, is [AiErrorKind.CONNECT_TIMED_OUT]; any other timeout, after it was sent,
- * [AiErrorKind.TIMED_OUT];
+ * request never got past, or any timeout before the request was written ([NetError.Offline.unsent]),
+ * is [AiErrorKind.CONNECT_TIMED_OUT]; any other timeout, after it was sent, [AiErrorKind.TIMED_OUT];
  * no network to send on ([NetError.Offline.noNetwork]) is [AiErrorKind.OFFLINE], "no connection";
  * any other failure, on a network that was there (a connection reset, refused or closed, a TLS
  * failure), is [AiErrorKind.CONNECT_FAILED] when it came before any of the request was written
@@ -19,6 +19,8 @@ import kotlin.time.Duration
 internal fun kindOfOffline(error: NetError.Offline): AiErrorKind =
     when {
         error.connectTimedOut -> AiErrorKind.CONNECT_TIMED_OUT
+        // Any timeout before the request was written is one to connect (#1196).
+        error.timedOut && error.unsent -> AiErrorKind.CONNECT_TIMED_OUT
         error.timedOut -> AiErrorKind.TIMED_OUT
         error.noNetwork -> AiErrorKind.OFFLINE
         error.unsent -> AiErrorKind.CONNECT_FAILED

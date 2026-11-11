@@ -257,6 +257,80 @@ class AiRetryThroughClientsTest {
         }
 
     @Test
+    fun `an OpenAI or Google reply that failed before any of it was generated is asked again, one after is not`() =
+        runTest {
+            val created = """{"type":"response.created","response":{"status":"in_progress"}}"""
+            val reasoning =
+                """{"type":"response.output_item.added","output_index":0,""" +
+                    """"item":{"id":"rs","type":"reasoning","summary":[]}}"""
+            val summary = """{"type":"response.reasoning_summary_text.delta","delta":"Hm"}"""
+            val call =
+                """{"type":"response.output_item.done","output_index":0,"item":{"type":"function_call",""" +
+                    """"call_id":"c","name":"web_search","arguments":"{}"}}"""
+            val failed = """{"error":{"code":503,"message":"m","status":"UNAVAILABLE"}}"""
+            val counted = """{"usageMetadata":{"promptTokenCount":3}}"""
+            val thought = """{"candidates":[{"content":{"parts":[{"text":"Hm","thought":true}],"role":"model"}}]}"""
+            val cases =
+                listOf(
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created), 2),
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created, reasoning), 1),
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created, summary), 1),
+                    Triple({ net: NetClient -> OpenAiProvider(net) }, listOf(created, call), 1),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(failed), 2),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(counted), 2),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(thought), 1),
+                    Triple({ net: NetClient -> GoogleProvider(net) }, listOf(thought, failed), 1),
+                )
+            for ((make, first, sent) in cases) {
+                val reply =
+                    if (first.first() ==
+                        created
+                    ) {
+                        "openai/responses-stream.sse"
+                    } else {
+                        "google/stream-generate-content.sse"
+                    }
+                val net = FirstCut(first, recorded(reply))
+                val events = retrying(make(net), 30.seconds).stream(request, key).toList()
+                val label = first.joinToString(" ")
+                assertEquals(sent, net.calls, label)
+                if (sent == 1) {
+                    assertEquals(true, (events.last() as CompletionEvent.Error).generated, label)
+                } else {
+                    assertIs<CompletionEvent.Done>(events.last(), label)
+                }
+            }
+        }
+
+    /** A stream whose first try sends [first] (each event's data) and then ends; the rest, [reply]. */
+    private class FirstCut(
+        private val first: List<String>,
+        private val reply: String,
+    ) : NetClient {
+        var calls = 0
+
+        override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+
+        override suspend fun stream(
+            request: NetRequest,
+            onLine: suspend (String) -> Unit,
+        ): NetResult<NetResponse> {
+            calls++
+            if (calls == 1) {
+                first.forEach {
+                    onLine("data: $it")
+                    onLine("")
+                }
+            } else {
+                reply.lines().forEach { onLine(it) }
+            }
+            return NetResult.Success(NetResponse(200, emptyMap(), ByteArray(0)))
+        }
+
+        override fun close() = Unit
+    }
+
+    @Test
     fun `a reply cut off by the network gone, before any text, is not asked again and says the connection was lost`() =
         runTest {
             var calls = 0

@@ -56,8 +56,8 @@ import kotlin.time.TimeSource
  * broke off after some of its text, or a tool call, reached the caller is not asked again: the caller
  * has shown that text, and a new reply would follow it. The tries cost what they cost: a busy refusal
  * and a connection never made are not billed, but a reply that broke off before any of it was
- * generated may be, for its input; and reasoning a service does not stream (OpenAI's, Google's)
- * cannot be seen, so a reply cut off during it is asked again.
+ * generated may be, for its input; and reasoning that leaves no sign in the stream (Google's,
+ * before its first part or count) cannot be seen, so a reply cut off during it is asked again.
  *
  * A Stop cancels the collection, and with it any wait and try. The caller's [AiCallTerms], set around
  * its call ([underTerms]), go with it: its gate, asked while waiting and right before each try again,
