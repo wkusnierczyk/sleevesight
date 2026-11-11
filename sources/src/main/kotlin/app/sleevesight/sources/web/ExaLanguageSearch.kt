@@ -100,8 +100,8 @@ class ExaLanguageSearch(
         val unspaced = query.language.scripts.any { it.unspaced }
         val subject = listOfNotNull(native.title, native.from, track.title, track.from) + native.artists + track.artists
         return ExaWebSearch.lines(response, clock.now(), subject.distinct(), filter::fold) { result, snippet ->
-            filter.isAbout(native, result.title, snippet, result.url, wholeWords = !unspaced) ||
-                filter.isAbout(track, result.title, snippet, result.url)
+            filter.isAbout(native, result.title, snippet, result.url, wholeWords = !unspaced, recording = true) ||
+                filter.isAbout(track, result.title, snippet, result.url, recording = true)
         }
     }
 }

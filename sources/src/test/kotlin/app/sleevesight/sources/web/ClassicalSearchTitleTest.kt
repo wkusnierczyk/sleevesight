@@ -51,6 +51,13 @@ class ClassicalSearchTitleTest {
         snippet: String,
     ) = filter.isAbout(track, title, snippet, "https://page.example/")
 
+    // As the track's own lines are judged (`ExaWebSearch`, `ExaLanguageSearch`, #1195).
+    private fun recording(
+        track: NormalizedTrack,
+        title: String,
+        snippet: String,
+    ) = filter.isAbout(track, title, snippet, "https://page.example/", recording = true)
+
     @Test
     fun `the track web search leaves out the composer's lead and quotes the work`() {
         val request = ExaSearchRequest.of(k545)
@@ -97,7 +104,7 @@ class ClassicalSearchTitleTest {
     }
 
     @Test
-    fun `a page on the sonata that names the work and a performer is kept, one on another sonata is not`() =
+    fun `a page on the sonata naming a performer is kept, not one naming only the composer or another sonata`() =
         runTest {
             val net = ReplayNetClient.recorded("web/exa-$RECORDING.response.json")
             val result =
@@ -117,10 +124,11 @@ class ClassicalSearchTitleTest {
                 ),
             )
             assertEquals(
+                // Not `classicalnotes.example`'s page, on the sonata naming only Mozart: it may be about
+                // another recording, and the track's own lines are taken as facts about this one (#1195).
                 listOf(
                     "https://pianoguide.example/mozart/piano-sonata-16-k545",
                     "https://streaming.example/track/k545-andante-buniatishvili",
-                    "https://classicalnotes.example/mozart-sonata-facile",
                 ),
                 result.evidence.map { it.url },
             )
@@ -139,6 +147,46 @@ class ClassicalSearchTitleTest {
         assertFalse(about(k545, "Notes", "The Piano Sonata No. 16 in C major, K. 545, a recording of note."))
         assertFalse(about(k545, "Notes", "Khatia Buniatishvili plays the Piano Sonata No. 11 in A major, K. 331."))
         assertTrue(filter.canCheck(k545))
+    }
+
+    @Test
+    fun `the track's own lines want a performer on a page naming only the work, the Song insight's do not (#1195)`() {
+        val composerOnly = "Mozart wrote the Piano Sonata No. 16 in C major, K. 545 in 1788; Wolfgang Amadeus Mozart."
+        val otherPianist = "Wolfgang Amadeus Mozart's Piano Sonata No. 16 in C major, K. 545, as Pires recorded it."
+        val performer = "Khatia Buniatishvili plays the Piano Sonata No. 16 in C major, K.545 slowly."
+        val conductor = "The Academy of St. Martin in the Fields and the Piano Sonata No. 16 in C major, K. 545."
+        val whole = "Piano Sonata No. 16 in C major, K. 545 \"Sonata facile\": II. Andante, Wolfgang Amadeus Mozart."
+        for (snippet in listOf(composerOnly, otherPianist)) {
+            assertFalse(recording(k545, "Notes", snippet), snippet)
+            assertTrue(about(k545, "Notes", snippet), "the Song insight's, about the work: $snippet")
+        }
+        for (snippet in listOf(performer, conductor)) assertTrue(recording(k545, "Notes", snippet), snippet)
+        // The title as searched, whole, keeps today's rule: any credited artist, the composer too.
+        assertTrue(recording(k545, "Notes", whole))
+        // What no rule kept before is not kept now: a page on another sonata, one naming no artist.
+        assertFalse(recording(k545, "Notes", "Khatia Buniatishvili plays the Piano Sonata No. 11 in A major, K. 331."))
+        assertFalse(recording(k545, "Notes", "The Piano Sonata No. 16 in C major, K. 545, a recording of note."))
+        // Titled after the composer alone, without the work: dropped, as before.
+        assertFalse(recording(k545, "Wolfgang Amadeus Mozart", performer))
+    }
+
+    @Test
+    fun `a track whose title names no composer is judged the same for its own lines (#1195)`() {
+        val sundown = normalizer.normalize("Sundown", "Gordon Lightfoot")
+        val pages =
+            listOf(
+                "Star Wars" to "Star Wars: Main Title, John Williams's fanfare.",
+                "Film music" to "Star Wars: Main Title, John Williams's fanfare.",
+                "John Williams" to "Star Wars: Main Title, his fanfare.",
+                "Film music" to "Star Wars, John Williams's score for the film.",
+                "Sundown" to "Gordon Lightfoot's Sundown, a 1974 single.",
+                "Gordon Lightfoot" to "Sundown and other songs.",
+            )
+        for (track in listOf(starWars, starWarsLso, sundown)) {
+            for ((title, snippet) in pages) {
+                assertEquals(about(track, title, snippet), recording(track, title, snippet), "$title: $snippet")
+            }
+        }
     }
 
     @Test

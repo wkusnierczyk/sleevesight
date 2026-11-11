@@ -128,7 +128,7 @@ class ExaWebSearch(
         retrievedAt: Instant,
     ): WebLines =
         lines(response, retrievedAt, track.subjectNames, filter::fold) { result, snippet ->
-            filter.isAbout(track, result.title, snippet, result.url)
+            filter.isAbout(track, result.title, snippet, result.url, recording = true)
         }
 
     companion object {
