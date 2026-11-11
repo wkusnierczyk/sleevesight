@@ -155,6 +155,76 @@ class AiRetryThroughClientsTest {
         }
 
     @Test
+    fun `a connection that failed before the request was written is asked again, one after it was sent is not`() =
+        runTest {
+            for (client in clients) {
+                for ((unsent, sent) in listOf(true to 2, false to 1)) {
+                    var calls = 0
+                    val net =
+                        ReplayNetClient {
+                            calls++
+                            if (calls == 1) {
+                                failure(NetError.Offline("SocketException (ECONNRESET)", unsent))
+                            } else {
+                                ok(client.reply)
+                            }
+                        }
+                    val events = retrying(client.make(net), 30.seconds).stream(request, key).toList()
+                    val label = "${client.reply.take(20)} unsent=$unsent"
+                    assertEquals(sent, net.requests.size, label)
+                    if (unsent) {
+                        assertIs<CompletionEvent.Done>(events.last(), label)
+                    } else {
+                        assertEquals(
+                            AiErrorKind.CONNECTION_FAILED,
+                            (events.single() as CompletionEvent.Error).kind,
+                            label,
+                        )
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun `a reply cut short once the service counted output is not asked again, one before it counted any is`() =
+        runTest {
+            // Anthropic's reply begins with what it has counted; a thinking model's thinking adds to it.
+            for ((usage, sent) in listOf(""""input_tokens":3,"output_tokens":1""" to 1, """"input_tokens":3""" to 2)) {
+                var calls = 0
+                val net =
+                    object : NetClient {
+                        override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+
+                        override suspend fun stream(
+                            request: NetRequest,
+                            onLine: suspend (String) -> Unit,
+                        ): NetResult<NetResponse> {
+                            calls++
+                            if (calls == 1) {
+                                onLine("""data: {"type":"message_start","message":{"usage":{$usage}}}""")
+                                onLine("")
+                                // The stream ends there, with no end of the reply.
+                            } else {
+                                recorded("anthropic/messages-stream.sse").lines().forEach { onLine(it) }
+                            }
+                            return NetResult.Success(NetResponse(200, emptyMap(), ByteArray(0)))
+                        }
+
+                        override fun close() = Unit
+                    }
+                val events = retrying(AnthropicProvider(net), 30.seconds).stream(request, key).toList()
+                assertEquals(sent, calls, usage)
+                if (sent == 1) {
+                    val error = events.single() as CompletionEvent.Error
+                    assertEquals(AiErrorKind.INCOMPLETE, error.kind, usage)
+                    assertEquals(BreakoffCause.NO_END, error.breakoff?.cause, usage)
+                } else {
+                    assertIs<CompletionEvent.Done>(events.last(), usage)
+                }
+            }
+        }
+
+    @Test
     fun `a reply cut off by the network gone, before any text, is not asked again and says the connection was lost`() =
         runTest {
             var calls = 0

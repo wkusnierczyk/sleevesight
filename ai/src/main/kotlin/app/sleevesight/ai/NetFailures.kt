@@ -12,13 +12,16 @@ import kotlin.time.Duration
  * [AiErrorKind.TIMED_OUT];
  * no network to send on ([NetError.Offline.noNetwork]) is [AiErrorKind.OFFLINE], "no connection";
  * any other failure, on a network that was there (a connection reset, refused or closed, a TLS
- * failure), is [AiErrorKind.CONNECTION_FAILED].
+ * failure), is [AiErrorKind.CONNECT_FAILED] when it came before any of the request was written
+ * ([NetError.Offline.unsent], #1196), else [AiErrorKind.CONNECTION_FAILED]: a reset or an early end
+ * after the request was sent, which the service may have acted on, and billed.
  */
 internal fun kindOfOffline(error: NetError.Offline): AiErrorKind =
     when {
         error.connectTimedOut -> AiErrorKind.CONNECT_TIMED_OUT
         error.timedOut -> AiErrorKind.TIMED_OUT
         error.noNetwork -> AiErrorKind.OFFLINE
+        error.unsent -> AiErrorKind.CONNECT_FAILED
         else -> AiErrorKind.CONNECTION_FAILED
     }
 

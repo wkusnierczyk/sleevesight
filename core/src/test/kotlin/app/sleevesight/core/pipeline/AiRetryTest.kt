@@ -106,7 +106,7 @@ class AiRetryTest {
         }
 
     @Test
-    fun `a failed connection, one not made in time and a reply cut short before its text are asked again`() =
+    fun `a connection not made, one not made in time and a reply cut short before its text are asked again`() =
         runTest {
             val cut =
                 CompletionEvent.Error(
@@ -115,9 +115,13 @@ class AiRetryTest {
                 )
             val failures =
                 listOf(
-                    CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    CompletionEvent.Error(AiErrorKind.CONNECT_FAILED),
                     CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     cut,
+                    CompletionEvent.Error(
+                        AiErrorKind.INCOMPLETE,
+                        breakoff = Breakoff(BreakoffCause.CONNECTION_LOST, Usage(9, 0)),
+                    ),
                 )
             for (failed in failures) {
                 val provider = Scripted(this, listOf(failed), answer)
@@ -130,7 +134,7 @@ class AiRetryTest {
         runTest {
             val offline = CompletionEvent.Error(AiErrorKind.OFFLINE, detail = "UnknownHostException")
             val provider =
-                Scripted(this, listOf(CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED)), listOf(offline), answer)
+                Scripted(this, listOf(CompletionEvent.Error(AiErrorKind.CONNECT_FAILED)), listOf(offline), answer)
             assertEquals(listOf<CompletionEvent>(offline), retrying(provider, 30.seconds).stream(request, KEY).toList())
             assertEquals(listOf(0L, 2_000L), provider.starts)
         }
@@ -412,6 +416,30 @@ class AiRetryTest {
                     retrying(provider, 30.seconds).stream(request, KEY).toList(),
                 )
                 assertEquals(1, provider.starts.size, failed.toString())
+            }
+        }
+
+    @Test
+    fun `a connection that failed once the request may have been sent is not asked again`() =
+        runTest {
+            val failed = CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED, detail = "SocketException (ECONNRESET)")
+            val provider = Scripted(this, listOf(failed), answer)
+            assertEquals(listOf<CompletionEvent>(failed), retrying(provider, 30.seconds).stream(request, KEY).toList())
+            assertEquals(listOf(0L), provider.starts)
+        }
+
+    @Test
+    fun `a reply cut short whose breakoff counts output tokens is not asked again`() =
+        runTest {
+            // A thinking model cut off mid-thought: no text yet, but its thinking counted, and billed.
+            for (cause in listOf(BreakoffCause.NO_END, BreakoffCause.CONNECTION_LOST)) {
+                val failed = CompletionEvent.Error(AiErrorKind.INCOMPLETE, breakoff = Breakoff(cause, Usage(9, 1)))
+                val provider = Scripted(this, listOf(failed), answer)
+                assertEquals(
+                    listOf<CompletionEvent>(failed),
+                    retrying(provider, 30.seconds).stream(request, KEY).toList(),
+                )
+                assertEquals(1, provider.starts.size, cause.name)
             }
         }
 

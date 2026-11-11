@@ -404,6 +404,9 @@ class GoogleProviderTest {
                     NetError.Offline("SocketException (ECONNRESET)") to
                         CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
                     NetError.Offline("SSLException") to CompletionEvent.Error(AiErrorKind.CONNECTION_FAILED),
+                    // One that failed before the request was written is told apart (#1196).
+                    NetError.Offline("SSLHandshakeException", unsent = true) to
+                        CompletionEvent.Error(AiErrorKind.CONNECT_FAILED),
                     NetError.Offline("ConnectTimeoutException") to CompletionEvent.Error(AiErrorKind.CONNECT_TIMED_OUT),
                     NetError.Offline("SocketTimeoutException") to CompletionEvent.Error(AiErrorKind.TIMED_OUT),
                     NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),

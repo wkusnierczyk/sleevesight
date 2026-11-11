@@ -293,10 +293,20 @@ enum class AiErrorKind {
 
     /**
      * The connection to the service failed or dropped before its reply began, on a network that
-     * was there (#1164): reset, refused, closed, or a TLS failure. A reply that had begun and then
-     * lost its connection is [INCOMPLETE] instead.
+     * was there (#1164): reset, refused, closed, or a TLS failure, once the request may have been
+     * sent; the service may have acted on it, so it is not asked again (#1196). One that failed
+     * before the request was written is [CONNECT_FAILED]. A reply that had begun and then lost its
+     * connection is [INCOMPLETE] instead.
      */
     CONNECTION_FAILED,
+
+    /**
+     * The connection to the service could not be made (#1196): refused, reset or closed while
+     * connecting, or its TLS handshake failed, before any of the request was written
+     * (`NetError.Offline.unsent`). The request never reached it, so it is asked again (`AiRetry`).
+     * Named as [CONNECTION_FAILED] is.
+     */
+    CONNECT_FAILED,
 
     /**
      * The service did not answer in time: the request was sent, and no reply began within the
