@@ -38,6 +38,15 @@ class AiRetryCodecTest {
         assertEquals(Settings.DEFAULT_AI_RETRY, SettingsCodec.read(prefs).aiRetry)
     }
 
+    @Test
+    fun aStoredRetryOffTheSettingsStopsReadsAsTheDefault() {
+        // Only the app writes it, always one of the stops; anything else is not taken as given (#1196).
+        for (stored in listOf(1L, 45_000L, 61_000L, 2_048_000L, Long.MAX_VALUE)) {
+            val prefs = mutablePreferencesOf(longPreferencesKey(KEY) to stored)
+            assertEquals(stored.toString(), Settings.DEFAULT_AI_RETRY, SettingsCodec.read(prefs).aiRetry)
+        }
+    }
+
     private companion object {
         const val KEY = "ai.retry_ms"
     }

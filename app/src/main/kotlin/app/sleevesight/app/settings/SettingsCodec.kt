@@ -147,7 +147,8 @@ internal object SettingsCodec {
             aiWebSearch = enumOf(prefs[AI_WEB_SEARCH]) ?: defaults.aiWebSearch,
             trackLanguageSearch = enumOf(prefs[TRACK_LANGUAGE_SEARCH]) ?: defaults.trackLanguageSearch,
             musicBrainzWait = prefs[MUSICBRAINZ_WAIT_MS]?.takeIf { it >= 0 }?.milliseconds ?: defaults.musicBrainzWait,
-            aiRetry = prefs[AI_RETRY_MS]?.takeIf { it >= 0 }?.milliseconds ?: defaults.aiRetry,
+            // Only one of the setting's stops (#1196): any other stored value reads as the default.
+            aiRetry = prefs[AI_RETRY_MS]?.milliseconds?.takeIf { it in Settings.AI_RETRIES } ?: defaults.aiRetry,
             readAloudMusic = enumOf(prefs[READ_ALOUD_MUSIC]) ?: defaults.readAloudMusic,
             readTrackLineFirst = prefs[READ_TRACK_LINE] ?: defaults.readTrackLineFirst,
             readNewInsightsAloud = prefs[READ_NEW_INSIGHTS] ?: defaults.readNewInsightsAloud,
