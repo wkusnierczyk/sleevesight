@@ -242,6 +242,70 @@ class OkHttpEngineTest {
         }
 
     @Test
+    fun `a POST that fails to connect is Offline before it was sent`() =
+        runTest {
+            // A port nothing listens on any more: the connection is refused.
+            val closed = MockWebServer().apply { start() }
+            val url = closed.url("/paid").toString()
+            closed.close()
+
+            val result = KtorNetClient(once, okHttpEngine(), NetLog.NONE).use { it.stream(paid(url)) { } }
+
+            val refused = assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertTrue(refused.unsent, refused.reason)
+            assertFalse(refused.timedOut, refused.reason)
+        }
+
+    @Test
+    fun `a POST whose TLS handshake fails is Offline before it was sent`() =
+        runTest {
+            // The server speaks plain HTTP, so the client's handshake fails before the request is written.
+            val tls =
+                server
+                    .url("/paid")
+                    .newBuilder()
+                    .scheme("https")
+                    .build()
+                    .toString()
+
+            val result = KtorNetClient(once, okHttpEngine(), NetLog.NONE).use { it.stream(paid(tls)) { } }
+
+            val failed = assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertTrue(failed.unsent, failed.reason)
+        }
+
+    @Test
+    fun `a POST whose connection drops after its body was sent is Offline, not before it was sent`() =
+        runTest {
+            server.enqueue(dropped())
+
+            val result =
+                KtorNetClient(
+                    once,
+                    okHttpEngine(),
+                    NetLog.NONE,
+                ).use { it.stream(paid(server.url("/paid").toString())) { } }
+
+            val dropped = assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertFalse(dropped.unsent, dropped.reason)
+            assertEquals("{}", server.takeRequest().body?.utf8())
+        }
+
+    @Test
+    fun `a request without a body is never said to be unsent, as nothing tells when it was written`() =
+        runTest {
+            val closed = MockWebServer().apply { start() }
+            val url = closed.url("/a").toString()
+            closed.close()
+
+            val result = KtorNetClient(once, okHttpEngine(), NetLog.NONE).use { it.send(NetRequest(url)) }
+
+            assertFalse(assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error).unsent)
+        }
+
+    private fun paid(url: String) = NetRequest(url, NetMethod.POST, body = NetBody("{}", "application/json"))
+
+    @Test
     fun `a lost connection is named by the platform's own IOException among its causes, with its errno only`() {
         // Android's libcore throws a SocketException caused by an ErrnoException, which is no IOException.
         val abort = "recvfrom failed: ECONNABORTED (Software caused connection abort)"

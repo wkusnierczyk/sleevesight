@@ -152,7 +152,7 @@ class RedactionTest {
                 }
 
             assertTrue(result is NetResult.Failure && result.error is NetError.Offline)
-            val line = "GET https://example.org/a {0 headers} -> Offline(reason=IOException) in 0 ms"
+            val line = "GET https://example.org/a {0 headers} -> Offline(reason=IOException, unsent=false) in 0 ms"
             assertEquals(
                 listOf(
                     "$line (attempt 1), retrying in 500ms",
