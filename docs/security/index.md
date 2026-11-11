@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.6.3
+docs_version: 0.6.4
 nav:
-  - id: results-for-063
+  - id: results-for-064
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.6.3
+## Results for 0.6.4
 
-Checked on 9 November 2026, on the code of release 0.6.3.
+Checked on 11 November 2026, on the code of release 0.6.4.
 
-- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use. One known vulnerability is left in the tools that build the app, of medium severity: the Kotlin version Gradle itself uses to compile the build's own scripts, fixed with Gradle 9.9 and tracked in [#1108](https://github.com/wkusnierczyk/sleevesight/issues/1108); none of it goes into the app.
+- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app: the last one, in the Kotlin version Gradle itself uses, is fixed with Gradle 9.9 ([#1108](https://github.com/wkusnierczyk/sleevesight/issues/1108)).
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code. The slowdown a misbehaving player could cause with a very long album name, left from 0.6.1, is fixed. Two new low-risk problems the review found in the new code are fixed before the release: a very long album name from a player could freeze the now-playing screen, and, with *Look up the track again* set to *On request*, a cover left turned over could look a cleared track up without being asked.
+- **Security review:** no way found to reach your keys or your data in the new code. Text from players and web pages now loses invisible characters, and a player's title, artists and album are capped in length. Two low-risk problems the review found in the new code are fixed before the release: for a classical track, web results about another recording of the same work could be taken as facts about this one; and after certain failed replies, the AI service could be asked again, which may cost one call's price again.
 
 ## What is checked
 
