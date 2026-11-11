@@ -341,4 +341,63 @@ class WebBoilerplateTest {
         val adapter = ExaWebSearch(ReplayNetClient.ok("{}"), Secret("test-exa-key"), JvmAccentFolder)
         assertTrue(adapter.extractionVersion >= 3)
     }
+
+    // The facts of #955's single on open.spotify.com: its year, its length, its date and its rights line.
+    private val singleFacts =
+        "Single # เมื่อไหร่จะมี (มีใจให้กัน) •2026• 1 song, 3 min 34 sec List # Title 1 3:34 " +
+            "May 6, 2026 © 2026 BLVCKHEART"
+
+    // The line kept for #955's single at [url] with [highlights].
+    private fun singleLine(
+        url: String,
+        vararg highlights: String,
+    ): String =
+        ExaWebSearch.lineOf(
+            ExaResult(url, "เมื่อไหร่จะมี (มีใจให้กัน) - BLVCKHEART", highlights.toList()),
+            listOf("เมื่อไหร่จะมี (มีใจให้กัน)", "BLVCKHEART"),
+            filter::fold,
+        )
+
+    @Test
+    fun `a streaming page's sign-up and navigation at a part's start go, its facts stay`() {
+        // S4 of #955.
+        assertEquals(
+            singleFacts,
+            singleLine("https://open.spotify.com/album/fixture", "Sign upLog in Resize main navigation $singleFacts"),
+        )
+    }
+
+    @Test
+    fun `what a cut leaves of a streaming page's navigation at a part's start goes, its facts stay`() {
+        // S6 of #955: the highlight starts inside "Log in".
+        assertEquals(
+            singleFacts,
+            singleLine("https://open.spotify.com/album/fixture", "in Resize main navigation $singleFacts"),
+        )
+    }
+
+    @Test
+    fun `a streaming page's navigation at a part's end goes, and in each part of a line`() {
+        assertEquals(
+            "$singleFacts ... Sundown 1974",
+            singleLine(
+                "https://open.spotify.com/album/fixture",
+                "$singleFacts • Skip to main content",
+                "Premium Support Download Sundown 1974 Sign up Log in",
+            ),
+        )
+    }
+
+    @Test
+    fun `a streaming page's navigation inside a part is kept, the edges trimmed`() {
+        val middle = "Sundown, 1974: the page said Sign up Log in Resize main navigation above the 3:33 track"
+        assertEquals(middle, singleLine("https://open.spotify.com/track/fixture", "Sign up Log in $middle"))
+    }
+
+    @Test
+    fun `a streaming page's navigation is trimmed only on a streaming site`() {
+        val highlight = "Sign upLog in Resize main navigation $singleFacts"
+        assertEquals(singleFacts, singleLine("https://music.apple.com/album/fixture", highlight))
+        for (url in sites.filterNot { "spotify" in it }) assertEquals(highlight, singleLine(url, highlight), url)
+    }
 }
