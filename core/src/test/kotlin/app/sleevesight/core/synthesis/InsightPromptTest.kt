@@ -125,6 +125,21 @@ class InsightPromptTest {
         val evidence = FixtureEvidence.of(1)
         assertTrue("\nPerformers: Khatia Buniatishvili\n" in InsightPrompt.user(k545, normalized, evidence))
         assertFalse("Performers:" in InsightPrompt.trackBlock(k545, normalized))
+        // Credited to the composer and the arranger the title names alone: no one to call a performer.
+        val arranged =
+            FixtureEvidence.nowPlaying(1).copy(
+                title = "Bach: Partita No. 2 in D Minor, BWV 1004: V. Chaconne (Arr. Busoni)",
+                artists = "Johann Sebastian Bach, Ferruccio Busoni",
+            )
+        val arrangedNormalized = normalizer.normalize(arranged)
+        assertTrue(arrangedNormalized.composer != null)
+        assertFalse("Performers:" in InsightPrompt.trackBlock(arranged, arrangedNormalized, performers = true))
+        // With a performer besides them, only the performer.
+        val grimaud = arranged.copy(artists = "Johann Sebastian Bach, Ferruccio Busoni, Hélène Grimaud")
+        assertTrue(
+            "\nPerformers: Hélène Grimaud\n" in
+                InsightPrompt.trackBlock(grimaud, normalizer.normalize(grimaud), performers = true),
+        )
     }
 
     @Test

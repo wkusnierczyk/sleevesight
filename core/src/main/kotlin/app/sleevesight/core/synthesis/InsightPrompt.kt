@@ -184,8 +184,10 @@ object InsightPrompt {
      * The track as the player reports it, and as normalized, fenced in `<track>`, each field on one
      * line. With [performers] (the key insight's, [user]), for a title that leads with its composer
      * (#1195), its performers too (`NormalizedTrack.performers`), which [RECORDING_RULE] tells this
-     * recording by. Without it (the genre reason's, `GenreReasonPrompt.user`, whose version and keys
-     * stay), the block is as before for every track.
+     * recording by; not when the track credits no one but the composer and the artists the title
+     * names (`Liszt: … (Arr. Busoni)` by Liszt and Busoni), whom the line would call performers.
+     * Without it (the genre reason's, `GenreReasonPrompt.user`, whose version and keys stay), the
+     * block is as before for every track.
      */
     internal fun trackBlock(
         nowPlaying: NowPlaying,
@@ -199,7 +201,7 @@ object InsightPrompt {
             nowPlaying.album?.let { appendLine("Release: ${oneLine(it)}") }
             appendLine("Normalized title: ${oneLine(normalized.title)}")
             appendLine("Primary artist: ${oneLine(normalized.primary)}")
-            if (performers && normalized.composer != null) {
+            if (performers && normalized.composer?.name?.let { it !in normalized.performers } == true) {
                 appendLine("Performers: ${oneLine(normalized.performers.joinToString(", "))}")
             }
             normalized.from?.let { appendLine("From: ${oneLine(it)}") }
