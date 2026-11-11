@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
@@ -99,6 +100,22 @@ private val FOUND_ALONE: Map<Outcome, Scope> =
         Outcome.ArtistArticle to Scope.ARTIST,
         Outcome.OriginalSong to Scope.ORIGINAL_SONG,
     )
+
+/**
+ * Where [chip]'s first unverified line is in the list as it shows with the sources [hidden] hide
+ * (#951): after the evidence [lines] shown, among the [unverified] lines shown; null while its lines
+ * are hidden, or for a source with none.
+ */
+internal fun firstUnverified(
+    chip: SourceChip,
+    lines: List<EvidenceLine>,
+    unverified: List<EvidenceDraft>,
+    hidden: Set<SourceId>,
+): Int? {
+    if (chip.filters.any { it in hidden }) return null
+    val at = unverified.filter { it.source !in hidden }.indexOfFirst { it.source in chip.filters }
+    return at.takeIf { it >= 0 }?.let { lines.count { line -> line.source !in hidden } + it }
+}
 
 /**
  * Whether [this] is a rejected match whose every rejection was only for want of what MusicBrainz

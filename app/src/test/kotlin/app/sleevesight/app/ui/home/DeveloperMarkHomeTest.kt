@@ -135,8 +135,7 @@ class DeveloperMarkHomeTest {
             val legend = compose.onNodeWithTag(SOURCES_LEGEND_TAG, useUnmergedTree = true).fetchSemanticsNode()
             val inMark = hasTestTag(SOURCES_LEGEND_TAG) and hasAnyAncestor(hasTestTag(DEVELOPER_MARK_TAG))
             assertEquals(0, compose.onAllNodes(inMark, useUnmergedTree = true).fetchSemanticsNodes().size)
-            assertEquals(0, marked(app.getString(R.string.home_sources_legend_shown)))
-            assertEquals(0, marked(app.getString(R.string.home_sources_legend_tap)))
+            assertEquals(0, marked(app.getString(R.string.home_sources_legend_explain)))
             val mark =
                 compose
                     .onAllNodes(

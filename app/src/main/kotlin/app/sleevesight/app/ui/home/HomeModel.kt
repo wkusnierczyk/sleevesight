@@ -172,6 +172,13 @@ internal data class SourceChip(
     fun own(lines: List<EvidenceLine>): List<EvidenceLine> =
         lines.filter { it.source in filters && it.found == language }
 
+    /**
+     * The unverified lines of [drafts] that are this chip's own (#951), as [own] picks its evidence
+     * lines: its sources', found in its [language].
+     */
+    fun ownUnverified(drafts: List<EvidenceDraft>): List<EvidenceDraft> =
+        drafts.filter { it.source in filters && it.found == language }
+
     /** Its key among the table's rows, in its test tags: the source's tag, with the language after a colon. */
     val key: String get() = language?.let { "${source.tag}:$it" } ?: source.tag
 }

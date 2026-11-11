@@ -173,13 +173,13 @@ internal fun SourcesBody(
     val lines = shownLines.evidence?.lines.orEmpty()
     val unverified = track?.let(::unverifiedLines).orEmpty()
     val entries = entriesOf(track, shownLines.evidence, hidden, details)
-    // The lines the chips hide: with every entry hidden, the count still shows.
-    val filtered = lines.count { it.source in hidden }
+    // The lines the chips hide, unverified ones too (#951): with every entry hidden, the count still shows.
+    val filtered = lines.count { it.source in hidden } + unverified.count { it.source in hidden }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Of every line, hidden ones too, so the column does not move when a chip hides some.
         val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
         val chips = shown.chips
-        SourceTable(tableRows(chips, shownLines.evidence, details), details, lines, focus, fold)
+        SourceTable(tableRows(chips, shownLines.evidence, details), details, lines, focus, fold, unverified)
         Notes(sourceNotes(chips, shown.offline), openSettings, shown.retry, afterRetry)
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
@@ -210,9 +210,9 @@ internal fun SourcesBody(
 }
 
 /**
- * The list's entries for [track]: the lines shown ([evidence], its own with its album's, #522) but
- * those of the [hidden] sources, its unverified lines, and with grounding [details] the matches
- * rejected.
+ * The list's entries for [track]: the lines shown ([evidence], its own with its album's, #522) and
+ * its unverified lines (#951), but those of the [hidden] sources, and with grounding [details] the
+ * matches rejected.
  */
 private fun entriesOf(
     track: TrackState?,
@@ -224,7 +224,10 @@ private fun entriesOf(
     val unverified = track?.let(::unverifiedLines).orEmpty()
     val rejected = if (details) track?.let(::rejectedMatches).orEmpty() else emptyList()
     return lines.filter { it.source !in hidden }.map(Entry::Line) +
-        unverified.mapIndexed { index, line -> Entry.Unverified(line, index) } +
+        unverified
+            .withIndex()
+            .filter { it.value.source !in hidden }
+            .map { (index, line) -> Entry.Unverified(line, index) } +
         rejected.mapIndexed { index, match -> Entry.Rejected(match, index) }
 }
 
