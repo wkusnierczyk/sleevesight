@@ -14,6 +14,7 @@ import android.speech.tts.TextToSpeech
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.settings.PlayerRemovedReceiver
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,8 +39,16 @@ class UninstalledPlayersTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val graph get() = app.graph
 
+    /**
+     * The graph's settings in memory ([MemoryStore]), read and changed on the caller's thread (#814),
+     * as `IntroSettingTest` has them (#1140): over their file, the update here and the settings'
+     * reads ran on DataStore's own threads and `Dispatchers.IO`, which [idleUntil] does not drive, and
+     * in CI a check once read the settings from before this update. The file's own reads and writes
+     * are `SettingsStoreTest`'s.
+     */
     @Before
     fun listPlayers() {
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore(), settingsDispatcher = Dispatchers.Unconfined) }
         val packages = shadowOf(app.packageManager)
         packages.installPackage(
             PackageInfo().apply {
