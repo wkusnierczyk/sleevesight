@@ -33,13 +33,43 @@ export LC_ALL=C GIT_LITERAL_PATHSPECS=1
 marker='# sleevesight hook dispatcher'
 trailer_key=Dropped
 
-work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+# Nothing that can fail runs before the check knows that a merge is being committed: a commit that is
+# not a merge must never be held up by the check's own trouble (no scratch space, a git error). Once
+# it is checking a merge, such trouble refuses the merge, saying so: a merge not checked is not passed.
+work=
+finished=0
+# shellcheck disable=SC2329 # run by the trap below
+on_exit() {
+  local status=$?
+  [ -z "$work" ] || rm -rf "$work"
+  if [ "$finished" -eq 0 ] && [ "$status" -ne 0 ]; then
+    printf >&2 'merge-check: the check itself failed (exit %s, see above), so the merge was not checked.\n' "$status"
+  fi
+}
+trap on_exit EXIT
+
+# finish <status>: exits with it, as the check's own decision.
+finish() {
+  finished=1
+  exit "$1"
+}
+
+# merging: whether a merge is being committed in this checkout (`MERGE_HEAD` is there). Any error
+# reads as no. (`--git-path` is relative to the current directory, the top level in a hook.)
+merging() {
+  local f
+  f=$(git rev-parse --git-path MERGE_HEAD 2>/dev/null) && [ -n "$f" ] && [ -f "$f" ]
+}
+
+# scratch: the check's scratch directory, into $work.
+scratch() {
+  work=$(mktemp -d)
+}
 
 # Whether git will run this checkout's `commit-msg`, and so the check with its trailers.
 commit_msg_installed() {
   local hook
-  hook=$(git rev-parse --path-format=absolute --git-path hooks)/commit-msg
+  hook=$(git rev-parse --git-path hooks 2>/dev/null)/commit-msg || return 1
   [ -x "$hook" ] && grep -qE "^$marker\$|merge-check" "$hook"
 }
 
@@ -215,8 +245,7 @@ check() {
 # check_merge <message file or ""> <use trailers: 0|1>: the merge being committed in this checkout.
 check_merge() {
   local msg=$1 tree theirs failed=0 merge_head
-  merge_head=$(git rev-parse --path-format=absolute --git-path MERGE_HEAD)
-  [ -f "$merge_head" ] || return 0
+  merge_head=$(git rev-parse --git-path MERGE_HEAD)
   : >"$work/trailers"
   [ -z "$msg" ] || read_trailers "$msg"
   tree=$(git write-tree)
@@ -239,19 +268,27 @@ check_merge() {
 
 case "${1:-}" in
   pre-commit)
+    merging || finish 0
     # With the commit-msg hook in place the check waits for the message, there.
-    commit_msg_installed && exit 0
-    check_merge "" 0 ;;
+    if commit_msg_installed; then finish 0; fi
+    scratch
+    check_merge "" 0 || finish 1
+    finish 0 ;;
   pre-merge-commit)
     # No MERGE_HEAD yet: nothing to check here (see the top).
     if ! commit_msg_installed; then
       printf >&2 'merge-check: no commit-msg hook, so this merge is not checked for lines it leaves out.\n'
       printf >&2 'Run .githooks/install to add it.\n'
-    fi ;;
+    fi
+    finish 0 ;;
   commit-msg)
-    check_merge "$2" 1 ;;
+    merging || finish 0
+    scratch
+    check_merge "$2" 1 || finish 1
+    finish 0 ;;
   replay)
     shift
+    scratch
     failed=0
     for merge in "$@"; do
       commit=$(git rev-parse --verify "$merge^{commit}")
@@ -269,8 +306,8 @@ case "${1:-}" in
         printf 'merge-check: %s ok\n' "$(git rev-parse --short "$commit")" >&2
       fi
     done
-    exit "$failed" ;;
+    finish "$failed" ;;
   *)
     printf >&2 'usage: merge-check pre-commit | pre-merge-commit | commit-msg <file> | replay <merge>...\n'
-    exit 2 ;;
+    finish 2 ;;
 esac

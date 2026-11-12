@@ -84,8 +84,20 @@ on theirs 'theirs' append 'eleven, theirs'
 git -C "$repo" checkout -q work
 expect 'clean merge' 0 '' 'merge-check' git merge -q --no-edit theirs
 
-# A commit that is not a merge passes.
+# A commit that is not a merge passes, even where the check could not run (no scratch space).
 expect 'not a merge' 0 '' '' sh -c 'echo x >g.txt && git add g.txt && git commit -qm g'
+# (A `mktemp` that fails: macOS's falls back to a directory of its own when `TMPDIR` is unusable.)
+mkdir "$top/nomktemp" "$top/nogit"
+printf '#!/bin/sh\necho "mktemp: no scratch space" >&2\nexit 1\n' >"$top/nomktemp/mktemp"
+chmod +x "$top/nomktemp/mktemp"
+echo y >"$repo/g.txt"
+git -C "$repo" add g.txt
+expect 'not a merge, no scratch space' 0 '' '' env PATH="$top/nomktemp:$PATH" TMPDIR=/dev/null git commit -qm g2
+# (A `git` that fails, for the check run by hand: git puts its own first on the path of a hook.)
+printf '#!/bin/sh\necho "git: broken" >&2\nexit 128\n' >"$top/nogit/git"
+chmod +x "$top/nogit/git"
+echo msg >"$top/msg"
+expect 'not a merge, git fails' 0 '' '' env PATH="$top/nogit:$PATH" .githooks/merge-check commit-msg "$top/msg"
 
 # The conflict resolved to one side: refused, naming the lines and the commit that added them, but
 # not line two, which both sides changed.
@@ -97,6 +109,8 @@ expect 'trailer for another file' 1 'eleven, theirs' '' git commit -qm Merge -m 
 expect 'trailer with no reason' 1 'eleven, theirs' '' git commit -qm Merge -m 'Dropped: f.txt'
 expect 'trailer in the body, not the last paragraph' 1 'eleven, theirs' '' \
   git commit -qm Merge -m 'Dropped: f.txt: in the body' -m 'More text after it.'
+expect 'a merge, no scratch space: refused, saying so' 1 'merge was not checked' '' \
+  env PATH="$top/nomktemp:$PATH" git commit -qm Merge -m 'Dropped: f.txt: the old wording stays'
 expect 'trailer' 0 '' '' git commit -qm Merge -m 'Dropped: f.txt: the old wording stays'
 expect 'replay of the excused merge' 0 '' '' .githooks/merge-check replay HEAD
 
