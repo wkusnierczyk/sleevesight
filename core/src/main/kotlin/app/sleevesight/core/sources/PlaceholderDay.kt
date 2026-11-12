@@ -12,8 +12,8 @@ import app.sleevesight.core.text.DateWhen
 object PlaceholderDay {
     /**
      * [date], as MusicBrainz gives it, at the precision it is said at beside [others], the dates of
-     * the other releases of its release group (or of its recording, for the recording's first
-     * release), as MusicBrainz gives them: a January 1 (`2016-01-01`) as its year alone (`2016`)
+     * the other releases of the same release group, as MusicBrainz gives them (a release of another
+     * group, a compilation, counts for nothing): a January 1 (`2016-01-01`) as its year alone (`2016`)
      * when one of [others] is a later day of that year, a sign the day is a placeholder; any other
      * date as given. Only a full day counts among [others]: a year or a month alone shows nothing
      * of the day, and an undated or unreadable one counts for nothing.

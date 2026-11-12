@@ -70,8 +70,11 @@ class MusicBrainzSource(
      * again. 15: such a year is marked as one (`ReleaseDate.placeholderDay`), which a year
      * MusicBrainz gives alone is not, and a title's earliest release is a day before the year alone
      * it is in (`ReleaseDate.byPrecision`), so a result kept at 14, its years unmarked, is asked
-     * again. Without
-     * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
+     * again. 16: the first release's January 1 is weighed against the same evidence as the album's
+     * sentences, the pool's releases of its own release group, no longer the recording's releases in
+     * every group, so a first release kept as a year for a compilation's later day is asked again.
+     * Without [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart
+     * ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
 
@@ -108,4 +111,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 15
+private const val EXTRACTION_VERSION = 16

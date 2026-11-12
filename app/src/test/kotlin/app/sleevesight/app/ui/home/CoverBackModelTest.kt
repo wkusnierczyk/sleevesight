@@ -142,6 +142,20 @@ class CoverBackModelTest {
     }
 
     @Test
+    fun aYearKeptForAPlaceholderDayIsEarlierThanTheSameYearGivenAlone() {
+        // #1203: g-a's 2016-01-01, kept as 2016 for a placeholder day, stands for a full day, which
+        // comes before g-b's 2016 alone.
+        val track =
+            releasedOn(
+                idol,
+                "rec-eyes",
+                ReleaseDate("Greatest Hits", "2016", "g-b", "Album"),
+                ReleaseDate("Greatest Hits", "2016", "g-a", "Album", placeholderDay = true),
+            )
+        assertEquals(AlbumPick.Groups("g-a", listOf("g-b")), albumPick(track, idol))
+    }
+
+    @Test
     fun severalAlbumsOfTheNameNotToldApartSayItRatherThanNoTracklist() {
         val track =
             releasedOn(

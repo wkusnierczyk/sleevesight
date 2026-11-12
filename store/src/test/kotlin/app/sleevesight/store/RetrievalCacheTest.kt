@@ -394,7 +394,7 @@ class RetrievalCacheTest {
             )
         val encoded = RetrievalCodec.encode(result)
         assertEquals(result.releaseDates, assertNotNull(RetrievalCodec.decode(encoded)).releaseDates)
-        assertEquals(1, Regex("\"placeholderDay\"").findAll(encoded).count())
+        assertEquals(1, encoded.split("\"placeholderDay\"").size - 1)
     }
 
     @Test

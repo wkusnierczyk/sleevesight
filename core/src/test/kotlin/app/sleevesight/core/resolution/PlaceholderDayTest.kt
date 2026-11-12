@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 
 /**
  * MusicBrainz's January 1 said as its year alone when a later day of that year is known for the same
- * release group, or the same recording (#1203): *A/B* (KALEO) is dated `2016-01-01` by an Icelandic
+ * release group (#1203): *A/B* (KALEO) is dated `2016-01-01` by an Icelandic
  * digital release, and `2016-06-10` everywhere else. The date never moves to the later release.
  */
 class PlaceholderDayTest {
@@ -131,7 +131,7 @@ class PlaceholderDayTest {
     }
 
     @Test
-    fun `a track's first release on January 1, a later release of the recording that year, is said as the year`() =
+    fun `a track's first release on January 1, a later release of its group that year, is said as the year`() =
         runTest {
             val early = MbRelease("r-is", "A/B", "2016-01-01", MbReleaseGroup("g-ab", "A/B", "Album"))
             val later = MbRelease("r-us", "A/B", "2016-06-10", MbReleaseGroup("g-ab", "A/B", "Album"))
@@ -142,6 +142,7 @@ class PlaceholderDayTest {
             val searched = FakeMusicBrainz(Lookup.Found(listOf(song)))
             val first = resolve(searched, track("Way Down We Go", "KALEO"), 219).firstRelease
             // The release dated 1 January stays the first release: only its date is said as the year.
+            // The compilation, in another group, counts for nothing.
             assertEquals("2016", first?.date)
             assertEquals("r-is", first?.releaseMbid)
             assertEquals("g-ab", first?.releaseGroupMbid)
@@ -160,32 +161,45 @@ class PlaceholderDayTest {
             assertEquals("r-ny", first?.releaseMbid)
         }
 
-    // What each place says of one release group's first release, for a track on every release of the
-    // group ([releases], the first dated [first], as MusicBrainz dates the group and the recording):
-    // the album's own sentence (its title's release as kept), an edition's sentence (the group's date
-    // as kept), the track's first release, and the album insight's line (the group's date beside the
-    // dates its lookup lists).
+    // What each place says of one release group's first release ([group], dated [first], as
+    // MusicBrainz dates the group and the chosen recording), for a track whose search finds
+    // [recordings], each a recording's releases, the first the chosen one (dated [first]): the album's
+    // own sentence (its title's release as kept), an edition's sentence (the group's date as kept), the
+    // track's first release, and the album insight's line (the group's date beside the dates its lookup
+    // lists: every release of the group, of whichever recording).
     private suspend fun everywhere(
         first: String,
-        vararg releases: MbRelease,
+        group: String,
+        vararg recordings: List<MbRelease>,
     ): List<String?> {
-        val song = recording("song", "Song", "Artist", 200, first).copy(releases = releases.toList())
-        val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(song))), track("Song", "Artist"))
-        val original = releases.first { it.date == first }.title
-        val kept = resolution.releaseDates.filter { it.group == "g" }
+        val songs =
+            recordings.mapIndexed { i, releases ->
+                val dated = releases.mapNotNull { it.date }.minBy { ReleaseDate.byPrecision(it) }
+                recording("song-$i", "Song", "Artist", 200, if (i == 0) first else dated).copy(releases = releases)
+            }
+        val resolution = resolve(FakeMusicBrainz(Lookup.Found(songs)), track("Song", "Artist"))
+        val inGroup = recordings.flatMap { it }.filter { it.releaseGroup?.mbid == group }
+        val original = recordings.first().first { it.date == first }.title
+        val kept = resolution.releaseDates.filter { it.group == group }
         return listOf(
             kept.single { it.title == original }.date,
             PlaceholderDay.asKept(first, kept),
             resolution.firstRelease?.date,
-            PlaceholderDay.said(first, releases.map { it.date }),
+            PlaceholderDay.said(first, inGroup.map { it.date }),
         )
     }
+
+    private suspend fun everywhere(
+        first: String,
+        vararg releases: MbRelease,
+    ): List<String?> = everywhere(first, "g", releases.toList())
 
     private fun release(
         id: String,
         title: String,
         date: String,
-    ) = MbRelease(id, title, date, MbReleaseGroup("g", "Original", "Album"))
+        group: String = "g",
+    ) = MbRelease(id, title, date, MbReleaseGroup(group, title, "Album"))
 
     @Test
     fun `every place says a group's first release the same`() =
@@ -221,5 +235,29 @@ class PlaceholderDayTest {
                     ),
                 )
             }
+            // A single alone in its group, also on a compilation of another group later that year:
+            // the compilation is no sign of the single's day.
+            assertEquals(
+                List(4) { "2016-01-01" },
+                everywhere(
+                    "2016-01-01",
+                    "g-s",
+                    listOf(
+                        release("r-s", "S", "2016-01-01", "g-s"),
+                        release("r-hits", "Hits 2016", "2016-11-18", "g-hits"),
+                    ),
+                ),
+            )
+            // The chosen recording only on *A/B*'s Icelandic release; another recording in the pool on
+            // the group's later releases that year.
+            assertEquals(
+                List(4) { "2016" },
+                everywhere(
+                    "2016-01-01",
+                    "g",
+                    listOf(release("r-is", "A/B", "2016-01-01")),
+                    listOf(release("r-us", "A/B", "2016-06-10"), release("r-uk", "A/B", "2016-06-10")),
+                ),
+            )
         }
 }
