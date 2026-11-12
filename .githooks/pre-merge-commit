@@ -1,3 +1,5 @@
 #!/bin/sh
-# Before git records a merge commit itself (a merge with no conflicts): the branch guard.
-exec "$(dirname "$0")/guard-branch"
+# Before git records a merge commit itself (a merge with no conflicts): the branch guard, and a note if
+# the merge check cannot run (`merge-check`; `commit-msg` checks the merge).
+"$(dirname "$0")/guard-branch" || exit
+exec "$(dirname "$0")/merge-check" pre-merge-commit
