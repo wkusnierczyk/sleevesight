@@ -46,6 +46,12 @@ on() {
 # edit <line number> <text>: replaces a line of f.txt; append <text>: adds one at its end.
 edit() { awk -v n="$1" -v t="$2" 'NR == n { print t; next } { print }' f.txt >f.new && mv f.new f.txt; }
 append() { printf '%s\n' "$1" >>f.txt; }
+# write <file> <line>...: writes a file of those lines.
+write() {
+  local file=$1
+  shift
+  printf '%s\n' "$@" >"$file"
+}
 
 # expect <case> <exit> <text the output has, or ""> <text it must not have, or ""> <command>...: runs
 # the command in the repository and checks its exit status and output.
@@ -169,6 +175,30 @@ mkdir "$repo/sub"
 expect 'diff.relative, replay from a subdirectory' 1 'five, theirs' '' \
   sh -c "cd sub && ../.githooks/merge-check replay $bad"
 expect 'diff.interHunkContext' 1 'five, theirs' '' git merge -q --no-edit -s ours theirs
+
+# Paths with a tab, a newline or a backslash are read as they are: lines dropped from new files with
+# a tab or a newline in their names are found, and a file with `\n` (a backslash and an n) in its
+# name, which both sides changed in the same place, is resolved to one side.
+fresh
+nl='
+'
+on theirs 'theirs' write "$(printf 'tab\tname.txt')" 'added, tab'
+on theirs 'theirs 2' write "new${nl}line.txt" 'added, newline'
+git -C "$repo" checkout -q work
+expect 'a newline in a path' 1 'added, newline' '' git merge -q --no-edit -s ours theirs
+expect 'a tab in a path' 1 'added, tab' '' git commit --no-edit
+git -C "$repo" merge --abort 2>/dev/null || true
+
+fresh
+on work 'base 2' write 'back\nslash.txt' one two three
+git -C "$repo" branch -f theirs work
+on work 'ours' write 'back\nslash.txt' one 'two, ours' three
+on theirs 'theirs' write 'back\nslash.txt' one 'two, theirs' three
+git -C "$repo" checkout -q work
+(cd "$repo" && git merge -q --no-edit theirs >/dev/null 2>&1) || true
+git -C "$repo" checkout -q --ours 'back\nslash.txt'
+git -C "$repo" add 'back\nslash.txt'
+expect 'a backslash in a path' 0 '' '' git commit --no-edit
 
 # A file the current side renamed: compared under its new name.
 fresh
