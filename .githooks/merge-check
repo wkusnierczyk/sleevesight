@@ -9,7 +9,9 @@
 # leading and trailing whitespace, unless
 #   - the line is blank or whitespace only;
 #   - the current side changed the same lines of the base, or lines next to them (the two edits meet,
-#     so git made it a conflict, and keeping one side there is the resolution, not a loss);
+#     so git made it a conflict, and keeping one side there is the resolution, not a loss); both
+#     sides' changes are found with the diff algorithm `git merge` uses: `diff.algorithm` if set,
+#     histogram if not (see `diff_algorithm`);
 #   - the current side deleted the file; or
 #   - the merge commit's message has a trailer `Dropped: <path>: <why>` for the file, which carries
 #     the choice into the pull request's commits and their reviews. The path is exact, in one of three
@@ -17,6 +19,11 @@
 #     backticks (`Dropped: `f.txt`: why`), or quoted as git quotes paths (`Dropped: "a:b\n.txt": why`,
 #     with `\"`, `\\`, `\t`, `\n` and octal escapes such as `\303`), the only form for a path with a
 #     colon, a newline or another control character. A refusal prints the trailer for each file.
+# Where the two commits have more than one merge base (a criss-cross history, which `git merge` merges
+# against a base of its own made of them all), the rule is applied from each, and a line counts only
+# if it is left out from every one: from one base alone, a line the merge saw as already there can
+# look added. Where they have none (`--allow-unrelated-histories`), the base is the empty tree, as for
+# `git merge`.
 # The incoming side's renames are followed, and the current side's too, so a renamed file is
 # compared with what it became in the result: under either side's new name (both renamed it), or,
 # by rename detection from the incoming commit to the result, under a name the resolution gave it.
@@ -93,15 +100,27 @@ commit_msg_installed() {
 }
 
 # The commit message without its comments and anything below the scissors line of `commit -v`.
+# Comments start with git's comment string: `core.commentString` or `core.commentChar`, one setting
+# under two names (git 2.45 added the first), so the last one set wins, as in git; `#` if neither is
+# set. With `auto`, git picks the first of `#;@!$%^&|:` that starts no line of the message it began
+# with, which the file no longer shows once edited: lines starting with any of them are taken as
+# comments then. (Too many lines left out only hides a trailer, which refuses the merge.)
 clean_message() {
   local c st=0
-  c=$(git config --get core.commentChar) || st=$?
-  case "$st" in 0) ;; 1) c= ;; *) die "git config failed (exit $st)" ;; esac
-  case "$c" in '' | auto) c='#' ;; esac
+  c=$(git config --get-regexp '^core\.comment(char|string)$') || st=$?
+  case "$st" in
+    0) c=${c##*$'\n'}   # the last one set: "<key> <value>"
+       case "$c" in *' '*) c=${c#* } ;; *) c= ;; esac ;;
+    1) c= ;;
+    *) die "git config failed (exit $st)" ;;
+  esac
+  [ -n "$c" ] || c='#'
   MC_COMMENT=$c awk '
-    BEGIN { c = ENVIRON["MC_COMMENT"] }
-    $0 == c " ------------------------ >8 ------------------------" { exit }
-    index($0, c) != 1 { print }
+    BEGIN { c = ENVIRON["MC_COMMENT"]; auto = (tolower(c) == "auto"); cands = "#;@!$%^&|:"
+            scissors = " ------------------------ >8 ------------------------" }
+    function comment(s) { return auto ? index(cands, substr(s, 1, 1)) > 0 && s != "" : index(s, c) == 1 }
+    comment($0) && substr($0, (auto ? 1 : length(c)) + 1) == scissors { exit }
+    !comment($0) { print }
   ' "$1"
 }
 
@@ -193,11 +212,22 @@ excused() {
 # Every `git diff` here, with each option a user's configuration could change pinned to git's default
 # (or to what `git merge` uses), so the hunks and paths are the same in every clone: no external diff
 # or text conversion, no colour, the whole tree from any directory (`diff.relative`), hunks not joined
-# across unchanged lines (`diff.interHunkContext`), one algorithm (`diff.algorithm`), no sliding of
-# hunks (`diff.indentHeuristic`), rename detection as the merge sees it (`diff.renameLimit`).
+# across unchanged lines (`diff.interHunkContext`), no sliding of hunks (`diff.indentHeuristic`), rename
+# detection as the merge sees it (`diff.renameLimit`). The algorithm is added by `diff_algorithm`.
 diff_opts=(--no-ext-diff --no-textconv --no-color --no-relative --inter-hunk-context=0
-  --diff-algorithm=myers --no-indent-heuristic --src-prefix=a/ --dst-prefix=b/ -l7000)
+  --no-indent-heuristic --src-prefix=a/ --dst-prefix=b/ -l7000)
 gdiff() { git diff "${diff_opts[@]}" "$@"; }
+
+# diff_algorithm: adds to `diff_opts` the algorithm `git merge` (its `ort` strategy) finds conflicts
+# with: `diff.algorithm` if it is set (`git merge` reads it, `git merge-tree` does not), histogram if
+# not. Another algorithm can line the hunks up differently and miss a conflict git raised. (A merge
+# run with `-X diff-algorithm=...` is not seen: one that differs may need a `Dropped:` trailer.)
+diff_algorithm() {
+  local v st=0
+  v=$(git config --get diff.algorithm) || st=$?
+  case "$st" in 0) ;; 1) v=histogram ;; *) die "git config failed (exit $st)" ;; esac
+  diff_opts+=("--diff-algorithm=$v")
+}
 
 # blob_diff <blob> <blob> <file>: the `-U0` diff between two blobs (for binary blobs, no hunks).
 # added_file <blob> <file>: the same for a file the base does not have, all of it added (an insertion
@@ -214,19 +244,23 @@ added_file() {
 # is_file <mode>: whether an entry of that mode is a file (not a link, a submodule or a directory).
 is_file() { case "$1" in 100644 | 100755) return 0 ;; esac; return 1; }
 
-# entry_at <tree> <path>: the entry at <path> in <tree>, into `e_mode` and `e_oid`, both empty if there
-# is none. file_at <tree> <path>: the same, and whether it is a file.
+# Functions that answer in variables take their names as arguments and give their own variables a
+# prefix of their own (`ea_`, `ra_`, `lo_`, `an_`), so that the caller's names are never theirs.
+#
+# entry_at <tree> <path> <mode var> <object var>: the entry at <path> in <tree>, its mode and object
+# into the variables named, both empty if there is none. file_at: the same, and whether it is a file.
 entry_at() {
-  local rec
-  e_mode='' e_oid=''
+  local ea_rec ea_mode='' ea_oid=''
   git ls-tree -z --full-tree "$1" -- "$2" >"$work/entry" || die "git ls-tree failed (exit $?)"
-  while IFS= read -r -d '' rec; do
-    [ "${rec#*"$tab"}" = "$2" ] || continue
-    rec=${rec%%"$tab"*}   # "<mode> <type> <object>"
-    e_mode=${rec%% *} e_oid=${rec##* }
+  while IFS= read -r -d '' ea_rec; do
+    [ "${ea_rec#*"$tab"}" = "$2" ] || continue
+    ea_rec=${ea_rec%%"$tab"*}   # "<mode> <type> <object>"
+    ea_mode=${ea_rec%% *} ea_oid=${ea_rec##* }
   done <"$work/entry"
+  printf -v "$3" '%s' "$ea_mode"
+  printf -v "$4" '%s' "$ea_oid"
 }
-file_at() { entry_at "$1" "$2" && is_file "$e_mode"; }
+file_at() { entry_at "$@" && is_file "${!3}"; }
 
 # dropped <ours hunks> <ours deleted the file: 0|1> <result content> <theirs diff>: the incoming side's
 # added lines that the result lacks, outside the current side's hunks, as `<line number>\t<line>`.
@@ -259,24 +293,32 @@ dropped() {
   ' "$1" "$3" "$4"
 }
 
-# raw <from> <to>: `git diff --raw -z -M` between two commits, into the arrays `r_st` (status letter),
-# `r_old` and `r_new` (paths), `r_oblob`, `r_nblob`, `r_omode` and `r_mode` (the old and new modes). The paths are read
-# NUL-delimited as git writes them and stay in variables from there on, so every byte but NUL
-# survives (tabs, newlines, backslashes); they are never put in a line-based file or an `awk -v`.
+# raw <from> <to> <prefix>: `git diff --raw -z -M` between two commits (or trees), into the arrays
+# `<prefix>_st` (status letter), `<prefix>_old` and `<prefix>_new` (paths), `<prefix>_oblob`,
+# `<prefix>_nblob`, `<prefix>_omode` and `<prefix>_mode` (the old and new blobs and modes); the caller
+# declares them. The paths are read NUL-delimited as git writes them and stay in variables from
+# there on, so every byte but NUL survives (tabs, newlines, backslashes); they are never put in a
+# line-based file or an `awk -v`.
 raw() {
-  local meta p1 p2 omode nmode oblob nblob st i=0
-  r_st=() r_old=() r_new=() r_oblob=() r_nblob=() r_omode=() r_mode=()
+  local ra_meta ra_old ra_new ra_omode ra_nmode ra_oblob ra_nblob ra_st ra_i=0 ra_p=$3
+  case "$ra_p" in '' | *[!a-z_]*) die "raw: bad prefix $ra_p" ;; esac
+  eval "${ra_p}_st=() ${ra_p}_old=() ${ra_p}_new=() ${ra_p}_oblob=() ${ra_p}_nblob=() ${ra_p}_omode=() ${ra_p}_mode=()"
   # Into a file first, so that a git error stops the check rather than passing it.
   gdiff --raw -z -M --no-abbrev "$1" "$2" >"$work/raw" || die "git diff failed (exit $?)"
-  while IFS= read -r -d '' meta; do
-    IFS= read -r -d '' p1
-    p2=$p1
+  # shellcheck disable=SC2034 # read by the code `eval` runs, below
+  while IFS= read -r -d '' ra_meta; do
+    IFS= read -r -d '' ra_old
+    ra_new=$ra_old
     # meta: ":<old mode> <new mode> <old blob> <new blob> <status>"
-    read -r omode nmode oblob nblob st <<<"${meta#:}"
-    case "$st" in R* | C*) IFS= read -r -d '' p2 ;; esac
-    r_st[i]=${st:0:1} r_old[i]=$p1 r_new[i]=$p2 r_oblob[i]=$oblob r_nblob[i]=$nblob
-    r_omode[i]=$omode r_mode[i]=$nmode
-    i=$((i + 1))
+    read -r ra_omode ra_nmode ra_oblob ra_nblob ra_st <<<"${ra_meta#:}"
+    case "$ra_st" in R* | C*) IFS= read -r -d '' ra_new ;; esac
+    ra_st=${ra_st:0:1}
+    # (Bash 3.2 has no `printf -v` into an array element: the values stay variables in the code `eval`
+    # runs, which holds only the checked prefix.)
+    eval "${ra_p}_st[ra_i]=\$ra_st ${ra_p}_old[ra_i]=\$ra_old ${ra_p}_new[ra_i]=\$ra_new"
+    eval "${ra_p}_oblob[ra_i]=\$ra_oblob ${ra_p}_nblob[ra_i]=\$ra_nblob"
+    eval "${ra_p}_omode[ra_i]=\$ra_omode ${ra_p}_mode[ra_i]=\$ra_nmode"
+    ra_i=$((ra_i + 1))
   done <"$work/raw"
 }
 
@@ -297,118 +339,175 @@ read_trailers() {
     die 'could not read the trailers'
 }
 
-# check <ours> <theirs> <result tree>: reports what the result drops of what <theirs> added, and fails
-# if any of it is not excused. (Only the wording of a refusal, the commits named and their subjects,
-# is left to commands whose failure is not checked.)
-check() {
-  local ours=$1 theirs=$2 tree=$3 base st=0 short i j status old new oblob nblob
-  local ostatus onew oblob2 omode2 path shown ours_all report=$work/report refused=0
-  local o_st o_old o_new o_nblob o_mode t_st t_old t_new t_oblob t_nblob t_omode t_mode m_st m_old m_new
-  local moves_read=0
-  base=$(git merge-base "$ours" "$theirs") || st=$?
-  case "$st" in 0) ;; 1) return 0 ;; *) die "git merge-base failed (exit $st)" ;; esac   # 1: unrelated
-  short=$(git rev-parse --short "$theirs") || die "git rev-parse failed for $theirs"
-  raw "$base" "$ours"
-  o_st=(${r_st[@]+"${r_st[@]}"}) o_old=(${r_old[@]+"${r_old[@]}"})
-  o_new=(${r_new[@]+"${r_new[@]}"}) o_nblob=(${r_nblob[@]+"${r_nblob[@]}"}) o_mode=(${r_mode[@]+"${r_mode[@]}"})
-  raw "$base" "$theirs"
-  t_st=(${r_st[@]+"${r_st[@]}"}) t_old=(${r_old[@]+"${r_old[@]}"}) t_new=(${r_new[@]+"${r_new[@]}"})
-  t_oblob=(${r_oblob[@]+"${r_oblob[@]}"}) t_nblob=(${r_nblob[@]+"${r_nblob[@]}"})
-  t_omode=(${r_omode[@]+"${r_omode[@]}"}) t_mode=(${r_mode[@]+"${r_mode[@]}"})
-  : >"$report"
-  for ((i = 0; i < ${#t_st[@]}; i++)); do
-    status=${t_st[i]} old=${t_old[i]} new=${t_new[i]} oblob=${t_oblob[i]} nblob=${t_nblob[i]}
-    case "$status" in A | M | R | T) ;; *) continue ;; esac
+# locate <theirs> <result tree> <incoming path> <current side's status> <its new path> <path to try>
+#   <path var> <mode var> <object var>: where the incoming side's file is in the result: the path, and
+# the entry there (mode and object, both empty if there is none), into the variables named. Tried in
+# turn: <path to try>; the current side's new name (both sides renamed the file, and the resolution
+# kept the current side's name); the incoming path (the current side renamed it, and the resolution
+# kept the old name); and the name the resolution gave it itself, found by rename detection from the
+# incoming commit to the result (a move into a directory of the same name too). If none is a file,
+# the path stays <path to try>. Fails where a submodule is found: not text, not checked.
+locate() {
+  local lo_theirs=$1 lo_tree=$2 lo_new=$3 lo_ostatus=$4 lo_onew=$5 lo_path=$6 lo_mode lo_oid lo_j
+  # shellcheck disable=SC2034 # filled by `raw`, declared here to stay local
+  local lm_st=() lm_old=() lm_new=() lm_oblob=() lm_nblob=() lm_omode=() lm_mode=()
+  if ! file_at "$lo_tree" "$lo_path" lo_mode lo_oid; then
+    [ "$lo_mode" != 160000 ] || return 1
+    if [ "$lo_ostatus" = R ] && file_at "$lo_tree" "$lo_onew" lo_mode lo_oid; then
+      lo_path=$lo_onew
+    elif file_at "$lo_tree" "$lo_new" lo_mode lo_oid; then
+      lo_path=$lo_new
+    else
+      raw "$lo_theirs" "$lo_tree" lm
+      for ((lo_j = 0; lo_j < ${#lm_st[@]}; lo_j++)); do
+        if [ "${lm_st[lo_j]}" = R ] && [ "${lm_old[lo_j]}" = "$lo_new" ]; then
+          lo_path=${lm_new[lo_j]}
+          break
+        fi
+      done
+      file_at "$lo_tree" "$lo_path" lo_mode lo_oid || [ "$lo_mode" != 160000 ] || return 1
+    fi
+  fi
+  printf -v "$7" '%s' "$lo_path"
+  printf -v "$8" '%s' "$lo_mode"
+  printf -v "$9" '%s' "$lo_oid"
+}
+
+# analyse <ours> <theirs> <result tree> <base> <prefix>: what the result leaves out of what <theirs>
+# added since <base>, file by file, into the arrays `<prefix>_new` (the path in <theirs>),
+# `<prefix>_path` (where the file is in the result) and `<prefix>_mode` (the result's entry there,
+# empty if none), which the caller declares, and the lines, as `<line number>\t<line>`, into
+# `$work/drop.<prefix>.<index>`. Files with nothing left out are not listed.
+analyse() {
+  local an_ours=$1 an_theirs=$2 an_tree=$3 an_base=$4 an_p=$5 an_i an_j an_n=0 an_status an_old an_new
+  local an_oblob an_nblob an_ostatus an_onew an_oblob2 an_omode2 an_path an_ours_all an_mode an_oid
+  # shellcheck disable=SC2034 # filled by `raw`, declared here to stay local
+  local o_st=() o_old=() o_new=() o_oblob=() o_nblob=() o_omode=() o_mode=()
+  local t_st=() t_old=() t_new=() t_oblob=() t_nblob=() t_omode=() t_mode=()
+  case "$an_p" in '' | *[!a-z_]*) die "analyse: bad prefix $an_p" ;; esac
+  eval "${an_p}_new=() ${an_p}_path=() ${an_p}_mode=()"
+  raw "$an_base" "$an_ours" o
+  raw "$an_base" "$an_theirs" t
+  for ((an_i = 0; an_i < ${#t_st[@]}; an_i++)); do
+    an_status=${t_st[an_i]} an_old=${t_old[an_i]} an_new=${t_new[an_i]}
+    an_oblob=${t_oblob[an_i]} an_nblob=${t_nblob[an_i]}
+    # (A type change, `T`, is never from one file to another: a file's mode change is `M`.)
+    case "$an_status" in A | M | R) ;; *) continue ;; esac
     # Text only: not a link or a submodule, before or after (binary files have no hunks, below).
-    is_file "${t_mode[i]}" || continue
-    [ "$status" = A ] || is_file "${t_omode[i]}" || continue
+    is_file "${t_mode[an_i]}" || continue
+    [ "$an_status" = A ] || is_file "${t_omode[an_i]}" || continue
     # Only where the result is not the incoming side's file can something be missing.
-    entry_at "$tree" "$new"
-    [ "$e_oid" != "$nblob" ] || continue
+    entry_at "$an_tree" "$an_new" an_mode an_oid
+    [ "$an_oid" != "$an_nblob" ] || continue
 
     # The current side's change to the same base file (for an added file, its own addition of the
-    # same path), and where the file is in the result.
-    ostatus='' onew='' oblob2='' omode2=''
-    for ((j = 0; j < ${#o_st[@]}; j++)); do
-      if [ "$status" = A ]; then
-        [ "${o_st[j]}" = A ] && [ "${o_new[j]}" = "$new" ] || continue
+    # same path).
+    an_ostatus='' an_onew='' an_oblob2='' an_omode2=''
+    for ((an_j = 0; an_j < ${#o_st[@]}; an_j++)); do
+      if [ "$an_status" = A ]; then
+        [ "${o_st[an_j]}" = A ] && [ "${o_new[an_j]}" = "$an_new" ] || continue
       else
-        [ "${o_st[j]}" != A ] && [ "${o_old[j]}" = "$old" ] || continue
+        [ "${o_st[an_j]}" != A ] && [ "${o_old[an_j]}" = "$an_old" ] || continue
       fi
-      ostatus=${o_st[j]} onew=${o_new[j]} oblob2=${o_nblob[j]} omode2=${o_mode[j]}
+      an_ostatus=${o_st[an_j]} an_onew=${o_new[an_j]} an_oblob2=${o_nblob[an_j]} an_omode2=${o_mode[an_j]}
       break
     done
-    ours_all=0
-    path=$new
+    an_ours_all=0
+    an_path=$an_new
     : >"$work/ours.diff"
-    case "$ostatus" in
+    case "$an_ostatus" in
       A) printf '@@ -0,0 +1 @@\n' >"$work/ours.diff" ;;
-      D) ours_all=1 ;;
-      M | T | R)
-        # The current side made it a link or a submodule: not text any more.
-        is_file "$omode2" || continue
-        blob_diff "$oblob" "$oblob2" "$work/ours.diff"
+      D) an_ours_all=1 ;;
+      # The current side made the file a link or a submodule: not text any more.
+      T) continue ;;
+      M | R)
+        # (A guard: git reports a change of type as `T`, never as `M` or `R`.)
+        is_file "$an_omode2" || continue
+        blob_diff "$an_oblob" "$an_oblob2" "$work/ours.diff"
         # A file only the current side renamed is in the result under its new name.
-        if [ "$ostatus" = R ] && [ "$status" != R ]; then path=$onew; fi ;;
+        if [ "$an_ostatus" = R ] && [ "$an_status" != R ]; then an_path=$an_onew; fi ;;
     esac
-    # Not there as a file: the resolution kept another name. Both sides renamed the file (kept under
-    # the current side's name), the current side renamed it and the resolution kept the old name, or
-    # the resolution moved it itself (found by rename detection from the incoming commit to the
-    # result), into a directory of the same name too. A submodule there is not text: not checked.
-    if ! file_at "$tree" "$path"; then
-      [ "$e_mode" != 160000 ] || continue
-      if [ "$ostatus" = R ] && file_at "$tree" "$onew"; then
-        path=$onew
-      elif file_at "$tree" "$new"; then
-        path=$new
-      else
-        if [ "$moves_read" -eq 0 ]; then
-          raw "$theirs" "$tree"
-          m_st=(${r_st[@]+"${r_st[@]}"}) m_old=(${r_old[@]+"${r_old[@]}"}) m_new=(${r_new[@]+"${r_new[@]}"})
-          moves_read=1
-        fi
-        for ((j = 0; j < ${#m_st[@]}; j++)); do
-          if [ "${m_st[j]}" = R ] && [ "${m_old[j]}" = "$new" ]; then
-            path=${m_new[j]}
-            break
-          fi
-        done
-        file_at "$tree" "$path" || [ "$e_mode" != 160000 ] || continue
-      fi
-    fi
-    # Here `e_mode` and `e_oid` are the entry at `path`.
-    if is_file "$e_mode"; then
-      git cat-file blob "$e_oid" >"$work/result" || die "git cat-file failed for $e_oid"
+    locate "$an_theirs" "$an_tree" "$an_new" "$an_ostatus" "$an_onew" "$an_path" an_path an_mode an_oid ||
+      continue
+    if is_file "$an_mode"; then
+      git cat-file blob "$an_oid" >"$work/result" || die "git cat-file failed for $an_oid"
     else
       : >"$work/result"
     fi
 
-    if [ "$status" = A ]; then
-      added_file "$nblob" "$work/theirs.diff"
+    if [ "$an_status" = A ]; then
+      added_file "$an_nblob" "$work/theirs.diff"
     else
-      blob_diff "$oblob" "$nblob" "$work/theirs.diff"
+      blob_diff "$an_oblob" "$an_nblob" "$work/theirs.diff"
     fi
-    dropped "$work/ours.diff" "$ours_all" "$work/result" "$work/theirs.diff" >"$work/dropped" ||
+    dropped "$work/ours.diff" "$an_ours_all" "$work/result" "$work/theirs.diff" >"$work/drop.$an_p.$an_n" ||
       die 'could not compare the lines'
-    [ -s "$work/dropped" ] || continue
+    [ -s "$work/drop.$an_p.$an_n" ] || continue
+    eval "${an_p}_new[an_n]=\$an_new ${an_p}_path[an_n]=\$an_path ${an_p}_mode[an_n]=\$an_mode"
+    an_n=$((an_n + 1))
+  done
+}
 
+# check <ours> <theirs> <result tree>: reports what the result drops of what <theirs> added, and fails
+# if any of it is not excused. (Only the wording of a refusal, the commits named and their subjects,
+# is left to commands whose failure is not checked.)
+check() {
+  local ours=$1 theirs=$2 tree=$3 bases base st=0 first=1 short i j found path new shown
+  local report=$work/report refused=0 args n prev
+  # shellcheck disable=SC2034 # filled by `analyse`, declared here to stay local
+  local f_new=() f_path=() f_mode=() g_new=() g_path=() g_mode=()
+  bases=$(git merge-base --all "$ours" "$theirs") || st=$?
+  case "$st" in
+    0) ;;
+    1) bases=$(git hash-object -t tree /dev/null) || die "git hash-object failed (exit $?)" ;;  # unrelated
+    *) die "git merge-base failed (exit $st)" ;;
+  esac
+  short=$(git rev-parse --short "$theirs") || die "git rev-parse failed for $theirs"
+  for base in $bases; do
+    if [ "$first" -eq 1 ]; then
+      analyse "$ours" "$theirs" "$tree" "$base" f
+      first=0
+      continue
+    fi
+    # Another base: a line counts only if it is left out from this one too.
+    analyse "$ours" "$theirs" "$tree" "$base" g
+    for ((i = 0; i < ${#f_new[@]}; i++)); do
+      [ -s "$work/drop.f.$i" ] || continue
+      found=
+      for ((j = 0; j < ${#g_new[@]}; j++)); do
+        if [ "${g_new[j]}" = "${f_new[i]}" ]; then found=$j; break; fi
+      done
+      if [ -z "$found" ]; then
+        : >"$work/drop.f.$i"
+      else
+        awk 'FILENAME == ARGV[1] { both[$0] = 1; next } $0 in both' "$work/drop.g.$found" "$work/drop.f.$i" \
+          >"$work/drop.both" || die "could not compare the bases"
+        mv "$work/drop.both" "$work/drop.f.$i" || die "could not compare the bases"
+      fi
+    done
+  done
+
+  : >"$report"
+  for ((i = 0; i < ${#f_new[@]}; i++)); do
+    [ -s "$work/drop.f.$i" ] || continue
+    path=${f_path[i]} new=${f_new[i]}
     shown=$(trailer_path "$path")
     if excused "$path" || { [ "$path" != "$new" ] && excused "$new"; }; then
       printf 'merge-check: %s: %s line(s) of %s left out, as its Dropped: trailer says.\n' \
-        "$shown" "$(wc -l <"$work/dropped" | tr -d ' ')" "$short" >&2
+        "$shown" "$(wc -l <"$work/drop.f.$i" | tr -d ' ')" "$short" >&2
       continue
     fi
     refused=1
     {
       printf '\n%s' "$shown"
-      is_file "$e_mode" || printf ' (not in the result)'
+      is_file "${f_mode[i]}" || printf ' (not in the result)'
       printf '\n'
       # The incoming commit that added each line, by blame on the incoming side.
-      local args=() n prev=
-      while IFS=$'\t' read -r n _; do args+=(-L "$n,$n"); done <"$work/dropped"
+      args=() prev=
+      while IFS=$'\t' read -r n _; do args+=(-L "$n,$n"); done <"$work/drop.f.$i"
       git blame -l -s "${args[@]}" "$theirs" -- "$new" 2>/dev/null | awk '{ sub(/^\^/, ""); print $1 }' >"$work/blame" ||
         : >"$work/blame"
-      paste "$work/blame" "$work/dropped" | while IFS=$'\t' read -r sha n line; do
+      paste "$work/blame" "$work/drop.f.$i" | while IFS=$'\t' read -r sha n line; do
         if [ "$sha" != "$prev" ]; then
           if [ -n "$sha" ]; then
             printf '  %s\n' "$(git log -1 --format='%h %s' "$sha" 2>/dev/null || echo "$sha")"
@@ -440,6 +539,7 @@ check_merge() {
   merge_head=$(git rev-parse --git-path MERGE_HEAD) || die 'git rev-parse failed'
   [ -f "$merge_head" ] || die "no $merge_head"
   : >"$work/trailers"
+  diff_algorithm
   [ -z "$msg" ] || read_trailers "$msg"
   tree=$(git write-tree) || die "git write-tree failed (exit $?)"
   while read -r theirs; do
@@ -482,6 +582,7 @@ case "${1:-}" in
   replay)
     shift
     scratch
+    diff_algorithm
     failed=0
     for merge in "$@"; do
       commit=$(git rev-parse --verify "$merge^{commit}") || die "not a commit: $merge"

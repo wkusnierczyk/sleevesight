@@ -132,7 +132,7 @@ expect 'a merge, no scratch space: refused, saying so' 1 'merge was not checked'
   env PATH="$top/nomktemp:$PATH" git commit -qm Merge -m 'Dropped: f.txt: the old wording stays'
 # A git command of the check that fails, during a merge that would pass: refused, saying so.
 printf 'Merge\n\nDropped: f.txt: the old wording stays\n' >"$top/excuse"
-for sub in merge-base diff ls-tree cat-file write-tree interpret-trailers; do
+for sub in merge-base diff ls-tree cat-file write-tree interpret-trailers config; do
   expect "a merge, git $sub fails: refused, saying so" 3 'merge was not checked' '' \
     env PATH="$top/failgit:$PATH" MC_FAIL=$sub .githooks/merge-check commit-msg "$top/excuse"
 done
@@ -179,13 +179,14 @@ git -C "$repo" reset -q --hard HEAD~1
 expect 'no conflicts, -s ours, trailer at once' 0 '' '' \
   git merge -q -s ours -m Merge -m 'Dropped: f.txt: not wanted here' theirs
 
-# Diff settings that change hunks or paths change nothing: the current side's edits to lines two and
-# eight stay two hunks (not one hiding line five between them), and a replay from a subdirectory with
-# `diff.relative` still sees the whole tree.
+# Diff settings that change hunks or paths change nothing (but `diff.algorithm`, which `git merge`
+# reads too: below): the current side's edits to lines two and eight stay two hunks (not one hiding
+# line five between them), and a replay from a subdirectory with `diff.relative` still sees the whole
+# tree.
 fresh
 git -C "$repo" config diff.interHunkContext 10
 git -C "$repo" config diff.relative true
-git -C "$repo" config diff.algorithm histogram
+git -C "$repo" config diff.indentHeuristic true
 git -C "$repo" config diff.noprefix true
 git -C "$repo" config color.ui always
 on work 'ours' sh -c "$(declare -f edit); edit 2 'two, ours'; edit 8 'eight, ours'"
@@ -196,6 +197,67 @@ mkdir "$repo/sub"
 expect 'diff.relative, replay from a subdirectory' 1 'five, theirs' '' \
   sh -c "cd sub && ../.githooks/merge-check replay $bad"
 expect 'diff.interHunkContext' 1 'five, theirs' '' git merge -q --no-edit -s ours theirs
+
+# The check finds conflicts with the diff algorithm `git merge` uses, and a merge resolved with
+# `-X ours`, which keeps the current side in each conflict, passes. histogram, git's default for a
+# merge: base line 5, a blank line, is one the current side replaces by histogram's alignment, next to
+# `T4i`, so git makes it a conflict; myers would not. Then myers, set by `diff.algorithm`, which
+# `git merge` reads: there it is the other way round, at `T5m`.
+fresh
+on work 'base 2' write h.txt b a '}' '' '' a '' '}' b '' '' a a b
+git -C "$repo" branch -f theirs work
+on work 'ours' write h.txt O1m a '' '' O5i a O6i '' O7i '}' O9m '' O11m a O13m O14m
+on theirs 'theirs' write h.txt b a '}' T3i '' T4i '' T5i a T6i '' '}' b '' a b T14i
+git -C "$repo" checkout -q work
+expect 'a conflict by the histogram diff, -X ours' 0 '' 'merge-check' git merge -q --no-edit -X ours theirs
+fresh
+git -C "$repo" config diff.algorithm myers
+on work 'base 2' write h.txt a a '}' '' '}' a b '' '}'
+git -C "$repo" branch -f theirs work
+on work 'ours' write h.txt a a '}' '' O4i a O6i b O9m
+on theirs 'theirs' write h.txt a a '}' T5m a T6i '' '}' Tend
+git -C "$repo" checkout -q work
+expect 'a conflict by the myers diff, diff.algorithm, -X ours' 0 '' 'merge-check' git merge -q --no-edit -X ours theirs
+
+# A criss-cross history, with two merge bases: `a` adds X, `c` adds Y, each merges the other's commit,
+# then `a` deletes both. Merging `c` is clean (from the base git makes of both, `c` changed nothing)
+# and leaves X and Y out; from either base alone, one of them would look added by `c`.
+fresh
+on work 'c: Y' sh -c "$(declare -f write); write f.txt one two Y three four five six seven eight nine ten"
+git -C "$repo" branch c
+git -C "$repo" checkout -q theirs
+on theirs 'a: X' sh -c "$(declare -f write); write f.txt one two three four five six seven eight nine X ten"
+(cd "$repo" && git checkout -q c && git merge -q --no-edit theirs~0 >/dev/null)
+(cd "$repo" && git checkout -q theirs && git merge -q --no-edit c~1 >/dev/null)
+on theirs 'a: no X, no Y' sh -c "$(declare -f write); write f.txt one two three four five six seven eight nine ten"
+[ "$(git -C "$repo" merge-base --all theirs c | wc -l)" -eq 2 ] || { echo '::error::criss-cross: not two bases'; failures=$((failures + 1)); }
+expect 'criss-cross, two merge bases' 0 '' 'merge-check' git merge -q --no-edit c
+
+# Unrelated histories: the base is the empty tree, so a file the incoming side added and the
+# resolution left out is found.
+fresh
+(cd "$repo" && git checkout -q --orphan other && git rm -qrf . && write g.txt 'g, theirs' && git add g.txt &&
+  git commit -qm other && git checkout -q work)
+before=$(git -C "$repo" rev-parse HEAD)
+expect 'unrelated histories, dropped' 1 'g, theirs' '' git merge -q --no-edit --allow-unrelated-histories -s ours other
+# (Back to before the merge, whether it was refused or, wrongly, recorded.)
+git -C "$repo" reset -q --hard "$before"
+expect 'unrelated histories, kept' 0 '' 'merge-check' git merge -q --no-edit --allow-unrelated-histories other
+
+# The comment string: `core.commentString` (git 2.45), and `auto`, where git may pick another
+# character than `#`. The comments below the trailer are not part of the last paragraph.
+conflicted
+git -C "$repo" config core.commentString '//'
+printf 'Merge\n\nDropped: f.txt: the old wording stays\n// Please enter a commit message.\n//\n// Lines starting with %s will be ignored.\n// More.\n' \
+  "'//'" >"$top/comments"
+expect 'core.commentString' 0 '' '' .githooks/merge-check commit-msg "$top/comments"
+git -C "$repo" config --unset core.commentString
+git -C "$repo" config core.commentChar auto
+sed 's|^//|;|' "$top/comments" >"$top/comments.auto"
+expect 'core.commentChar auto' 0 '' '' .githooks/merge-check commit-msg "$top/comments.auto"
+git -C "$repo" config core.commentChar '%'
+expect 'core.commentChar, another character' 1 'eleven, theirs' '' .githooks/merge-check commit-msg "$top/comments.auto"
+git -C "$repo" merge --abort
 
 # Paths with a tab, a newline or a backslash are read as they are: lines dropped from new files with
 # a tab or a newline in their names are found, and a file with `\n` (a backslash and an n) in its
