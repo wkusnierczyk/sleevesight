@@ -123,6 +123,10 @@ cli/build/install/sleevesight-cli/bin/sleevesight-cli keys-qr   # a setup code o
 
 `live` reads the keys from `SLEEVESIGHT_*_API_KEY` variables or `~/.config/sleevesight/keys.env`; each insight is a paid call on your key. Run it with no arguments for the options; [Building and the pipeline CLI](design/development.md) has them all.
 
+## Contributing
+
+Bug reports and ideas are welcome: [open an issue](https://github.com/wkusnierczyk/sleevesight/issues/new/choose), or write to [support@sleevesight.app](mailto:support@sleevesight.app). Code contributions open after the launch on Google Play; see [CONTRIBUTING.md](CONTRIBUTING.md). Security problems: [SECURITY.md](SECURITY.md). Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
 [GPL-3.0](LICENSE), except the two photos in `assets/brand/`, each under its own licence ([listed there](https://github.com/wkusnierczyk/sleevesight/tree/main/assets/brand)).
