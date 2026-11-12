@@ -955,7 +955,10 @@ private suspend fun MusicBrainzLookup.earlierThan(
 // The earliest first-release date on [page] of a recording that [fits] (title, length, an artist
 // credited by name or a band's), and, with the player's length ([measured]), of one whose length is
 // known when there is one, as the choice prefers it; [Bound.certain] false when only lengthless ones
-// gave it. Null when none fits with a date.
+// gave it. Null when none fits with a date. Earliest as the choice orders dates ([byPrecision],
+// #1203): of `2015` and `2015-08-07`, the day, since the year alone could not be chosen over it.
+// MusicBrainz's search reads a bound by the year or month as the whole of it (`[* TO 1973]` finds
+// `1973-10-10`), so the bound is sent as the date is written.
 private fun dateToSearchBy(
     page: List<MbRecording>,
     measured: Boolean,
@@ -964,7 +967,7 @@ private fun dateToSearchBy(
     val fitting = page.filter { fits(it) && it.firstReleaseDate != null }
     val withLength = fitting.filter { it.lengthMs != null }
     val preferred = withLength.takeIf { measured && it.isNotEmpty() } ?: fitting
-    return preferred.mapNotNull { it.firstReleaseDate }.minOrNull()?.let {
+    return preferred.mapNotNull { it.firstReleaseDate }.minByOrNull(::byPrecision)?.let {
         Bound(
             it,
             !measured || withLength.isNotEmpty(),

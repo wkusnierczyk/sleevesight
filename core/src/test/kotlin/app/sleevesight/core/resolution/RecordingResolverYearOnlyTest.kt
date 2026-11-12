@@ -43,10 +43,11 @@ class RecordingResolverYearOnlyTest {
         runTest {
             val search =
                 listOf(
-                    recording("later", "Song", "Artist", 200, "2016-01-01"),
-                    recording("earlier", "Song", "Artist", 200, "2015"),
+                    recording("a-later", "Song", "Artist", 200, "2016-01-01"),
+                    recording("z-earlier", "Song", "Artist", 200, "2015"),
                 )
-            assertEquals("earlier", chosen(search))
+            // Ids that order the other way, so only the date picks it.
+            assertEquals("z-earlier", chosen(search))
         }
 
     @Test

@@ -110,6 +110,17 @@ class RecordingResolverEarlierTest {
         }
 
     @Test
+    fun `the search by date is by the earliest date as the choice orders them, a day before its year alone`() =
+        runTest {
+            // #1203: of a 1978 take dated by the year alone and the October 1978 bootleg, the bootleg's
+            // date bounds the search, since the year alone could not be chosen over it.
+            val page = listOf(recording("year-only", "Dream On", "Aerosmith", 268, "1978")) + fullPage.dropLast(1)
+            val musicBrainz = musicBrainz(page = page)
+            assertEquals("studio", resolve(musicBrainz, track("Dream On", "Aerosmith"), 267).recordingMbid)
+            assertEquals(listOf("1978-10"), musicBrainz.beforeAsked)
+        }
+
+    @Test
     fun `a full search by date is followed by one by its own earliest date, up to three`() =
         runTest {
             // Hundreds of live releases: the search by 1978-10 is full, its earliest fit 1975; the

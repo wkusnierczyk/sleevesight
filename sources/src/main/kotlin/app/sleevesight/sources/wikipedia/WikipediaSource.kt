@@ -398,9 +398,11 @@ class WikipediaSource(
          * classical track filed under its composer resolves on MusicBrainz (#1129), so a result kept
          * against the earlier resolution's miss (a rejection for want of a MusicBrainz id) is looked
          * up again; [ARTIST_PART] stays
-         * ([ARTIST_PART_VERSION]).
+         * ([ARTIST_PART_VERSION]). 5: a recording dated by its year alone no longer beats one dated to
+         * a day in that year (#1203), so a result kept against the recording chosen before is looked
+         * up again; [ARTIST_PART] stays.
          */
-        const val EXTRACTION_VERSION: Int = 4
+        const val EXTRACTION_VERSION: Int = 5
 
         private val json = Json { encodeDefaults = false }
 

@@ -172,9 +172,11 @@ class LanguageWikipedia(
          * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
          * resolution it checks them against. 2: a classical track filed under its composer resolves
          * on MusicBrainz (#1129), so a result kept against the earlier resolution's miss is looked up
-         * again, as the English adapter's is.
+         * again, as the English adapter's is. 3: a recording dated by its year alone no longer beats
+         * one dated to a day in that year (#1203), so a result kept against the recording chosen
+         * before is looked up again, as the English adapter's is.
          */
-        const val EXTRACTION_VERSION: Int = 2
+        const val EXTRACTION_VERSION: Int = 3
 
         /**
          * The song's title in the language's script: the track's own, when written in a script other
