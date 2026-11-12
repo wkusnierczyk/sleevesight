@@ -82,11 +82,15 @@ class MusicBrainzYearOnlyTest {
         }
 
     @Test
-    fun `the album's earliest release in 2016 is MusicBrainz's Icelandic one, dated 1 January`() =
+    fun `the album's January 1, beside its releases of 10 June that year, is said as 2016`() =
         runTest {
-            // MusicBrainz dates it as a day (`2016-01-01`, a digital release in Iceland), not as a
-            // year, so *Dates* says the day; the album's other 2016 releases are of 10 June.
-            val ab = resolve(219.seconds).releaseDates.filter { it.title == "A/B" }
-            assertEquals("2016-01-01", ab.mapNotNull { it.date }.filter { it.startsWith("2016") }.min())
+            // MusicBrainz dates *A/B*'s earliest release, a digital one in Iceland, `2016-01-01`, and
+            // its other 2016 releases `2016-06-10`: the day is a placeholder, and *Dates* says the
+            // year (#1203), never the later release's day. The 2026 deluxe edition keeps its own.
+            val ab = resolve(219.seconds).releaseDates.filter { it.group == "6e65ab09-d837-43d4-a541-b93f5f8b2672" }
+            assertEquals(
+                mapOf("A/B" to "2016", "A/B (Deluxe Edition)" to "2026-06-10"),
+                ab.associate { it.title to it.date },
+            )
         }
 }

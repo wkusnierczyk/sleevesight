@@ -9,7 +9,7 @@ import kotlin.test.assertIs
 
 /**
  * What the MusicBrainz client gives an album's insight (#522, #885): a release group with its
- * releases' ids, and the group a release is of. The answers are written for the test in the shape
+ * releases' ids and dates, and the group a release is of. The answers are written for the test in the shape
  * of MusicBrainz's `release-group/<id>?inc=artist-credits+url-rels+releases` and
  * `release/<id>?inc=release-groups` (ids made up, `00000000-…`); not MusicBrainz's data.
  */
@@ -20,6 +20,8 @@ class MusicBrainzAlbumTest {
             val net = ReplayNetClient.ok(GROUP)
             val album = assertIs<Lookup.Found<MbAlbum>>(MusicBrainzClient(net).releaseGroup(GROUP_ID)).value
             assertEquals(listOf(RELEASE_1, RELEASE_2), album.releaseIds)
+            // The dated ones' dates (#1203), by which its first release's date is said.
+            assertEquals(listOf("1974-01"), album.releaseDates)
             assertEquals("Sundown", album.title)
             val request = net.sent.single()
             assertEquals("https://musicbrainz.org/ws/2/release-group/$GROUP_ID", request.url)
@@ -66,7 +68,8 @@ class MusicBrainzAlbumTest {
               "first-release-date":"1974-01",
               "artist-credit":[{"name":"Gordon Lightfoot","joinphrase":"",
                 "artist":{"id":"00000000-0000-4000-8000-0000000000c1","name":"Gordon Lightfoot"}}],
-              "releases":[{"id":"$RELEASE_1","title":"Sundown"},{"id":"$RELEASE_2","title":"Sundown"}]}"""
+              "releases":[{"id":"$RELEASE_1","title":"Sundown","date":"1974-01"},
+                {"id":"$RELEASE_2","title":"Sundown","date":""}]}"""
 
         const val RELEASE =
             """{"id":"$RELEASE_2","title":"Sundown",

@@ -1,0 +1,58 @@
+package app.sleevesight.core.sources
+
+import app.sleevesight.core.text.DateWhen
+
+/**
+ * How precisely a release's date is said (#1203). MusicBrainz's January 1 is often no day at all
+ * but a year written as one, by an import that knew only the year: *A/B*'s (KALEO) first release, a
+ * digital one in Iceland, is dated `2016-01-01`, and every other release of its group that year
+ * `2016-06-10`. Such a date is said as its year alone. The date never moves to the later release:
+ * only how precisely it is said changes.
+ */
+object PlaceholderDay {
+    /**
+     * [date], as MusicBrainz gives it, at the precision it is said at beside [others], the dates of
+     * the other releases of the same release group, as MusicBrainz gives them (a release of another
+     * group, a compilation, counts for nothing): a January 1 (`2016-01-01`) as its year alone (`2016`)
+     * when one of [others] is a later day of that year, a sign the day is a placeholder; any other
+     * date as given. Only a full day counts among [others]: a year or a month alone shows nothing
+     * of the day, and an undated or unreadable one counts for nothing.
+     */
+    fun said(
+        date: String,
+        others: Iterable<String?>,
+    ): String {
+        val year = DateWhen.of(date)?.year
+        val later =
+            januaryFirst(date) &&
+                others.any { other ->
+                    val day = other?.let(DateWhen::of) as? DateWhen.Day
+                    day != null && day.year == year && (day.month != 1 || day.day != 1)
+                }
+        return if (later) year.orEmpty() else date
+    }
+
+    /**
+     * [date], a release group's first-release date as MusicBrainz's lookup of the group gives it, as
+     * precisely as [kept], the track's releases of that group as [ReleaseDate.collapse] keeps them,
+     * say it: a January 1 as its year alone when one of [kept] is that year said for a placeholder
+     * day ([ReleaseDate.placeholderDay]), so an edition's sentence says its original's date as the
+     * original's own sentence does (*A/B*'s group `2016-01-01`, its release kept as `2016`); any other
+     * date as given. A year MusicBrainz gives alone is no such sign: beside `2000` and `2020-05-04`,
+     * nothing later in 2000, a group's `2000-01-01` keeps its day, as [said] keeps it.
+     */
+    fun asKept(
+        date: String,
+        kept: Iterable<ReleaseDate>,
+    ): String {
+        val year = DateWhen.of(date)?.year
+        val lowered = januaryFirst(date) && kept.any { it.placeholderDay && it.date == year }
+        return if (lowered) year.orEmpty() else date
+    }
+
+    /** Whether [date], as MusicBrainz gives it, is a January 1 written to the day (`2016-01-01`). */
+    fun januaryFirst(date: String): Boolean {
+        val day = DateWhen.of(date) as? DateWhen.Day ?: return false
+        return day.month == 1 && day.day == 1
+    }
+}
