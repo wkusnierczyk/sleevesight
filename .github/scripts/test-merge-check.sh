@@ -147,6 +147,24 @@ git -C "$repo" reset -q --hard HEAD~1
 expect 'no conflicts, -s ours, trailer at once' 0 '' '' \
   git merge -q -s ours -m Merge -m 'Dropped: f.txt: not wanted here' theirs
 
+# Diff settings that change hunks or paths change nothing: the current side's edits to lines two and
+# eight stay two hunks (not one hiding line five between them), and a replay from a subdirectory with
+# `diff.relative` still sees the whole tree.
+fresh
+git -C "$repo" config diff.interHunkContext 10
+git -C "$repo" config diff.relative true
+git -C "$repo" config diff.algorithm histogram
+git -C "$repo" config diff.noprefix true
+git -C "$repo" config color.ui always
+on work 'ours' sh -c "$(declare -f edit); edit 2 'two, ours'; edit 8 'eight, ours'"
+on theirs 'theirs' edit 5 'five, theirs'
+git -C "$repo" checkout -q work
+bad=$(cd "$repo" && git commit-tree -p work -p theirs -m Merge 'work^{tree}')
+mkdir "$repo/sub"
+expect 'diff.relative, replay from a subdirectory' 1 'five, theirs' '' \
+  sh -c "cd sub && ../.githooks/merge-check replay $bad"
+expect 'diff.interHunkContext' 1 'five, theirs' '' git merge -q --no-edit -s ours theirs
+
 # A file the current side renamed: compared under its new name.
 fresh
 on work 'ours' sh -c "git mv f.txt g.txt && awk 'NR == 2 { print \"two, ours\"; next } { print }' g.txt >g.new && mv g.new g.txt"

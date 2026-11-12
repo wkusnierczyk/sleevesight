@@ -29,6 +29,8 @@
 #                                          other parent, their tree, their message); exit 1 if any fails
 set -euo pipefail
 export LC_ALL=C GIT_LITERAL_PATHSPECS=1
+# Settings that would change a diff's hunks (its context, `-u5`) or call another program for it.
+unset GIT_DIFF_OPTS GIT_EXTERNAL_DIFF
 
 marker='# sleevesight hook dispatcher'
 trailer_key=Dropped
@@ -101,9 +103,18 @@ excused() {
   ' "$work/trailers"
 }
 
+# Every `git diff` here, with each option a user's configuration could change pinned to git's default
+# (or to what `git merge` uses), so the hunks and paths are the same in every clone: no external diff
+# or text conversion, no colour, the whole tree from any directory (`diff.relative`), hunks not joined
+# across unchanged lines (`diff.interHunkContext`), one algorithm (`diff.algorithm`), no sliding of
+# hunks (`diff.indentHeuristic`), rename detection as the merge sees it (`diff.renameLimit`).
+diff_opts=(--no-ext-diff --no-textconv --no-color --no-relative --inter-hunk-context=0
+  --diff-algorithm=myers --no-indent-heuristic --src-prefix=a/ --dst-prefix=b/ -l7000)
+gdiff() { git diff "${diff_opts[@]}" "$@"; }
+
 # blob_diff <blob> <blob>: the `-U0` diff between two blobs. added_file <blob>: the same for a file the
 # base does not have, all of it added (an insertion before line 1).
-blob_diff() { git diff --no-ext-diff --no-textconv --no-color -U0 "$1" "$2"; }
+blob_diff() { gdiff -U0 "$1" "$2"; }
 added_file() {
   printf '@@ -0,0 +1 @@\n'
   git cat-file blob "$1" | sed 's/^/+/'
@@ -150,7 +161,7 @@ raw() {
     read -r _ nmode oblob nblob st <<<"${meta#:}"
     case "$st" in R* | C*) IFS= read -r -d '' p2 ;; esac
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${st:0:1}" "$p1" "$p2" "$oblob" "$nblob" "$nmode" >>"$3"
-  done < <(git diff --no-ext-diff --raw -z -M --no-abbrev "$1" "$2")
+  done < <(gdiff --raw -z -M --no-abbrev "$1" "$2")
 }
 
 # read_trailers <message file>: the values of its `Dropped:` trailers, one per line, into
@@ -170,7 +181,7 @@ check() {
   raw "$base" "$theirs" "$work/theirs.raw"
   raw "$base" "$ours" "$work/ours.raw"
   # Paths where the result is not the incoming side's file: only there can something be missing.
-  git diff --no-ext-diff --name-only -z --no-renames "$theirs" "$tree" | tr '\0' '\n' >"$work/differ"
+  gdiff --name-only -z --no-renames "$theirs" "$tree" | tr '\0' '\n' >"$work/differ"
   : >"$report"
   while IFS=$'\t' read -r -u 3 status old new oblob nblob mode; do
     case "$status" in A | M | R | T) ;; *) continue ;; esac
