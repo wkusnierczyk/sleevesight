@@ -11,13 +11,17 @@
 #   - the current side changed the same lines of the base, or lines next to them (the two edits meet,
 #     so git made it a conflict, and keeping one side there is the resolution, not a loss);
 #   - the current side deleted the file; or
-#   - the merge commit's message has a trailer `Dropped: <path>: <why>` for the file (the exact path,
-#     which may be in backticks, then a colon and a reason), which carries the choice into the pull
-#     request's commits and their reviews.
+#   - the merge commit's message has a trailer `Dropped: <path>: <why>` for the file, which carries
+#     the choice into the pull request's commits and their reviews. The path is exact, in one of three
+#     forms: plain (`Dropped: f.txt: why`, no colon in the path, a space after the colon), in
+#     backticks (`Dropped: `f.txt`: why`), or quoted as git quotes paths (`Dropped: "a:b\n.txt": why`,
+#     with `\"`, `\\`, `\t`, `\n` and octal escapes such as `\303`), the only form for a path with a
+#     colon, a newline or another control character. A refusal prints the trailer for each file.
 # The incoming side's renames are followed, and the current side's too, so a renamed file is
 # compared with what it became in the result: under either side's new name (both renamed it), or,
 # by rename detection from the incoming commit to the result, under a name the resolution gave it.
-# Binary files, symbolic links and submodules are not checked.
+# Binary files, symbolic links and submodules are not checked, nor is a file that is a submodule on
+# either side or in the result (a file turned into a submodule, or back).
 #
 # When: the decision is taken in `commit-msg`, the only hook that sees both the merge and its message.
 # git runs it for a merge concluded with `git commit` (after conflicts) and for one `git merge`
@@ -41,7 +45,10 @@ trailer_key=Dropped
 # Nothing that can fail runs before the check knows that a merge is being committed: a commit that is
 # not a merge must never be held up by the check's own trouble (no scratch space, a git error). Once
 # it is checking a merge, such trouble refuses the merge, saying so: a merge not checked is not passed.
+# The analysis does not rely on `set -e` for this (it is off in a function called in a condition):
+# every command its decision depends on has its status checked, and a failure calls `die`.
 work=
+tab=$'\t' bs=\\
 finished=0
 # shellcheck disable=SC2329 # run by the trap below
 on_exit() {
@@ -57,6 +64,13 @@ trap on_exit EXIT
 finish() {
   finished=1
   exit "$1"
+}
+
+# die <what failed>: the check's own failure. It exits at once, from any depth (never call it in a
+# subshell), and `on_exit` says that the merge was not checked.
+die() {
+  printf >&2 'merge-check: %s\n' "$*"
+  exit 3
 }
 
 # merging: whether a merge is being committed in this checkout (`MERGE_HEAD` is there). Any error
@@ -80,8 +94,9 @@ commit_msg_installed() {
 
 # The commit message without its comments and anything below the scissors line of `commit -v`.
 clean_message() {
-  local c
-  c=$(git config --get core.commentChar || true)
+  local c st=0
+  c=$(git config --get core.commentChar) || st=$?
+  case "$st" in 0) ;; 1) c= ;; *) die "git config failed (exit $st)" ;; esac
   case "$c" in '' | auto) c='#' ;; esac
   MC_COMMENT=$c awk '
     BEGIN { c = ENVIRON["MC_COMMENT"] }
@@ -90,18 +105,86 @@ clean_message() {
   ' "$1"
 }
 
+# needs_quote <path>: whether a trailer can name <path> only in the quoted form: it has a colon, a
+# quote, a backslash, a backtick or a control character (a tab, a newline), or starts with a space.
+needs_quote() {
+  case "$1" in *[:\"\\\`]* | *[[:cntrl:]]* | ' '*) return 0 ;; esac
+  return 1
+}
+
+# trailer_path <path>: <path> as a trailer names it: plain, or quoted where it needs to be, as git
+# quotes paths (bytes above 127 are left as they are, which the reading accepts too).
+trailer_path() {
+  local s=$1 out='"' ch code i
+  needs_quote "$s" || { printf '%s' "$s"; return 0; }
+  for ((i = 0; i < ${#s}; i++)); do
+    ch=${s:i:1}
+    case "$ch" in
+      '"') out+='\"' ;;
+      "$bs") out+=$bs$bs ;;
+      $'\a') out+='\a' ;; $'\b') out+='\b' ;; $'\t') out+='\t' ;; $'\n') out+='\n' ;;
+      $'\v') out+='\v' ;; $'\f') out+='\f' ;; $'\r') out+='\r' ;;
+      [[:cntrl:]]) printf -v code '\\%03o' "'$ch"; out+=$code ;;
+      *) out+=$ch ;;
+    esac
+  done
+  printf '%s"' "$out"
+}
+
+# unquote <value>: reads a quoted path at the start of <value> into `uq_path`, and what follows the
+# closing quote into `uq_rest`; fails if it is not a well-formed quoted path.
+unquote() {
+  local s=$1 i=1 n=${#1} ch out='' oct
+  [ "${s:0:1}" = '"' ] || return 1
+  while [ "$i" -lt "$n" ]; do
+    ch=${s:i:1}
+    i=$((i + 1))
+    case "$ch" in
+      '"') uq_path=$out uq_rest=${s:i}; return 0 ;;
+      "$bs")
+        ch=${s:i:1}
+        i=$((i + 1))
+        case "$ch" in
+          '"' | "$bs") out+=$ch ;;
+          a) out+=$'\a' ;; b) out+=$'\b' ;; t) out+=$'\t' ;; n) out+=$'\n' ;;
+          v) out+=$'\v' ;; f) out+=$'\f' ;; r) out+=$'\r' ;;
+          [0-3])
+            oct=$ch${s:i:2}
+            i=$((i + 2))
+            case "$oct" in 000) return 1 ;; [0-3][0-7][0-7]) ;; *) return 1 ;; esac
+            printf -v ch '%b' "${bs}0$oct"
+            out+=$ch ;;
+          *) return 1 ;;
+        esac ;;
+      *) out+=$ch ;;
+    esac
+  done
+  return 1
+}
+
 # excused <path>: whether the message (in $work/trailers, one value per line) excuses drops in <path>:
-# a value that is the path exactly, or the path in backticks, then `:`, then a reason (something other
-# than spaces and punctuation).
+# a value that names exactly that path, in one of the forms at the top, then `:` and a reason
+# (something other than spaces and punctuation).
 excused() {
-  local v rest plain="$1:" quoted="\`$1\`:"
+  local v p rest
   [ -s "$work/trailers" ] || return 1
   while IFS= read -r v || [ -n "$v" ]; do
     case "$v" in
-      "$quoted"*) rest=${v#"$quoted"} ;;
-      "$plain"*) rest=${v#"$plain"} ;;
-      *) continue ;;
+      '"'*)
+        unquote "$v" || continue
+        p=$uq_path rest=$uq_rest ;;
+      '`'*)
+        p=${v#\`}
+        case "$p" in *'`'*) ;; *) continue ;; esac
+        rest=${p#*\`} p=${p%%\`*} ;;
+      *)
+        # The path runs to the first colon, which a space follows: `f.txt:old: why` names nothing.
+        p=${v%%:*} rest=${v#*:}
+        [ "$p" != "$v" ] || continue
+        case "$rest" in [[:space:]]*) rest=:$rest ;; *) continue ;; esac ;;
     esac
+    case "$rest" in :*) ;; *) continue ;; esac
+    [ "$p" = "$1" ] || continue
     case "$rest" in *[![:space:][:punct:]]*) return 0 ;; esac
   done <"$work/trailers"
   return 1
@@ -116,17 +199,34 @@ diff_opts=(--no-ext-diff --no-textconv --no-color --no-relative --inter-hunk-con
   --diff-algorithm=myers --no-indent-heuristic --src-prefix=a/ --dst-prefix=b/ -l7000)
 gdiff() { git diff "${diff_opts[@]}" "$@"; }
 
-# blob_diff <blob> <blob>: the `-U0` diff between two blobs (for binary blobs, no hunks).
-# added_file <blob>: the same for a file the base does not have, all of it added (an insertion before
-# line 1), and no hunks if it is binary, by git's own test: a NUL byte in its first 8000 bytes.
-blob_diff() { gdiff -U0 "$1" "$2"; }
+# blob_diff <blob> <blob> <file>: the `-U0` diff between two blobs (for binary blobs, no hunks).
+# added_file <blob> <file>: the same for a file the base does not have, all of it added (an insertion
+# before line 1), and no hunks if it is binary, by git's own test: a NUL byte in its first 8000 bytes.
+blob_diff() { gdiff -U0 "$1" "$2" >"$3" || die "git diff failed (exit $?)"; }
 added_file() {
   local nuls
-  nuls=$(git cat-file blob "$1" | head -c 8000 | tr -dc '\0' | wc -c)
-  [ "$nuls" -eq 0 ] || return 0
-  printf '@@ -0,0 +1 @@\n'
-  git cat-file blob "$1" | sed 's/^/+/'
+  git cat-file blob "$1" >"$work/added" || die "git cat-file failed for $1"
+  nuls=$(head -c 8000 "$work/added" | tr -dc '\0' | wc -c) || die 'could not read an added file'
+  if [ "$nuls" -ne 0 ]; then : >"$2"; return 0; fi
+  { printf '@@ -0,0 +1 @@\n' && sed 's/^/+/' "$work/added"; } >"$2" || die 'could not read an added file'
 }
+
+# is_file <mode>: whether an entry of that mode is a file (not a link, a submodule or a directory).
+is_file() { case "$1" in 100644 | 100755) return 0 ;; esac; return 1; }
+
+# entry_at <tree> <path>: the entry at <path> in <tree>, into `e_mode` and `e_oid`, both empty if there
+# is none. file_at <tree> <path>: the same, and whether it is a file.
+entry_at() {
+  local rec
+  e_mode='' e_oid=''
+  git ls-tree -z --full-tree "$1" -- "$2" >"$work/entry" || die "git ls-tree failed (exit $?)"
+  while IFS= read -r -d '' rec; do
+    [ "${rec#*"$tab"}" = "$2" ] || continue
+    rec=${rec%%"$tab"*}   # "<mode> <type> <object>"
+    e_mode=${rec%% *} e_oid=${rec##* }
+  done <"$work/entry"
+}
+file_at() { entry_at "$1" "$2" && is_file "$e_mode"; }
 
 # dropped <ours hunks> <ours deleted the file: 0|1> <result content> <theirs diff>: the incoming side's
 # added lines that the result lacks, outside the current side's hunks, as `<line number>\t<line>`.
@@ -160,68 +260,82 @@ dropped() {
 }
 
 # raw <from> <to>: `git diff --raw -z -M` between two commits, into the arrays `r_st` (status letter),
-# `r_old` and `r_new` (paths), `r_oblob`, `r_nblob` and `r_mode` (the new mode). The paths are read
+# `r_old` and `r_new` (paths), `r_oblob`, `r_nblob`, `r_omode` and `r_mode` (the old and new modes). The paths are read
 # NUL-delimited as git writes them and stay in variables from there on, so every byte but NUL
 # survives (tabs, newlines, backslashes); they are never put in a line-based file or an `awk -v`.
 raw() {
-  local meta p1 p2 nmode oblob nblob st i=0
-  r_st=() r_old=() r_new=() r_oblob=() r_nblob=() r_mode=()
+  local meta p1 p2 omode nmode oblob nblob st i=0
+  r_st=() r_old=() r_new=() r_oblob=() r_nblob=() r_omode=() r_mode=()
   # Into a file first, so that a git error stops the check rather than passing it.
-  gdiff --raw -z -M --no-abbrev "$1" "$2" >"$work/raw"
+  gdiff --raw -z -M --no-abbrev "$1" "$2" >"$work/raw" || die "git diff failed (exit $?)"
   while IFS= read -r -d '' meta; do
     IFS= read -r -d '' p1
     p2=$p1
     # meta: ":<old mode> <new mode> <old blob> <new blob> <status>"
-    read -r _ nmode oblob nblob st <<<"${meta#:}"
+    read -r omode nmode oblob nblob st <<<"${meta#:}"
     case "$st" in R* | C*) IFS= read -r -d '' p2 ;; esac
-    r_st[i]=${st:0:1} r_old[i]=$p1 r_new[i]=$p2 r_oblob[i]=$oblob r_nblob[i]=$nblob r_mode[i]=$nmode
+    r_st[i]=${st:0:1} r_old[i]=$p1 r_new[i]=$p2 r_oblob[i]=$oblob r_nblob[i]=$nblob
+    r_omode[i]=$omode r_mode[i]=$nmode
     i=$((i + 1))
   done <"$work/raw"
 }
 
-# blob_at <tree> <path>: the blob at <path> in <tree>, or nothing.
-blob_at() { git rev-parse -q --verify "$1:$2" 2>/dev/null || true; }
-
 # read_trailers <message file>: the values of its `Dropped:` trailers, one per line, into
-# $work/trailers.
+# $work/trailers. git reads them with no configuration at all, outside the repository and without the
+# user's and the system's settings: `trailer.separators` would change what is a trailer, and a
+# `trailer.<name>.key` would rename one. (Comments are gone already, by `clean_message`.)
 read_trailers() {
-  clean_message "$1" | git interpret-trailers --parse |
-    awk -v k="$trailer_key" 'tolower(substr($0, 1, length(k) + 1)) == tolower(k) ":" {
-      v = substr($0, length(k) + 2); sub(/^[ \t]+/, "", v); print v }' >"$work/trailers"
+  clean_message "$1" >"$work/message.clean"
+  (
+    cd "$work" || exit 1
+    unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_CONFIG GIT_CONFIG_PARAMETERS GIT_CONFIG_COUNT
+    HOME=$work XDG_CONFIG_HOME=$work GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+      GIT_CEILING_DIRECTORIES=$(dirname "$work") git -c trailer.separators=: interpret-trailers --parse
+  ) <"$work/message.clean" >"$work/message.trailers" || die "git interpret-trailers failed (exit $?)"
+  awk -v k="$trailer_key" 'tolower(substr($0, 1, length(k) + 1)) == tolower(k) ":" {
+    v = substr($0, length(k) + 2); sub(/^[ \t]+/, "", v); print v }' "$work/message.trailers" >"$work/trailers" ||
+    die 'could not read the trailers'
 }
 
 # check <ours> <theirs> <result tree>: reports what the result drops of what <theirs> added, and fails
-# if any of it is not excused.
+# if any of it is not excused. (Only the wording of a refusal, the commits named and their subjects,
+# is left to commands whose failure is not checked.)
 check() {
-  local ours=$1 theirs=$2 tree=$3 base i j status old new oblob nblob
-  local ostatus onew oblob2 path ours_all report=$work/report refused=0
-  local o_st o_old o_new o_nblob t_st t_old t_new t_oblob t_nblob t_mode m_st m_old m_new moves_read=0
-  base=$(git merge-base "$ours" "$theirs") || return 0   # unrelated histories: nothing to compare
+  local ours=$1 theirs=$2 tree=$3 base st=0 short i j status old new oblob nblob
+  local ostatus onew oblob2 omode2 path shown ours_all report=$work/report refused=0
+  local o_st o_old o_new o_nblob o_mode t_st t_old t_new t_oblob t_nblob t_omode t_mode m_st m_old m_new
+  local moves_read=0
+  base=$(git merge-base "$ours" "$theirs") || st=$?
+  case "$st" in 0) ;; 1) return 0 ;; *) die "git merge-base failed (exit $st)" ;; esac   # 1: unrelated
+  short=$(git rev-parse --short "$theirs") || die "git rev-parse failed for $theirs"
   raw "$base" "$ours"
   o_st=(${r_st[@]+"${r_st[@]}"}) o_old=(${r_old[@]+"${r_old[@]}"})
-  o_new=(${r_new[@]+"${r_new[@]}"}) o_nblob=(${r_nblob[@]+"${r_nblob[@]}"})
+  o_new=(${r_new[@]+"${r_new[@]}"}) o_nblob=(${r_nblob[@]+"${r_nblob[@]}"}) o_mode=(${r_mode[@]+"${r_mode[@]}"})
   raw "$base" "$theirs"
   t_st=(${r_st[@]+"${r_st[@]}"}) t_old=(${r_old[@]+"${r_old[@]}"}) t_new=(${r_new[@]+"${r_new[@]}"})
   t_oblob=(${r_oblob[@]+"${r_oblob[@]}"}) t_nblob=(${r_nblob[@]+"${r_nblob[@]}"})
-  t_mode=(${r_mode[@]+"${r_mode[@]}"})
+  t_omode=(${r_omode[@]+"${r_omode[@]}"}) t_mode=(${r_mode[@]+"${r_mode[@]}"})
   : >"$report"
   for ((i = 0; i < ${#t_st[@]}; i++)); do
     status=${t_st[i]} old=${t_old[i]} new=${t_new[i]} oblob=${t_oblob[i]} nblob=${t_nblob[i]}
     case "$status" in A | M | R | T) ;; *) continue ;; esac
-    case "${t_mode[i]}" in 100644 | 100755) ;; *) continue ;; esac
+    # Text only: not a link or a submodule, before or after (binary files have no hunks, below).
+    is_file "${t_mode[i]}" || continue
+    [ "$status" = A ] || is_file "${t_omode[i]}" || continue
     # Only where the result is not the incoming side's file can something be missing.
-    [ "$(blob_at "$tree" "$new")" != "$nblob" ] || continue
+    entry_at "$tree" "$new"
+    [ "$e_oid" != "$nblob" ] || continue
 
     # The current side's change to the same base file (for an added file, its own addition of the
     # same path), and where the file is in the result.
-    ostatus='' onew='' oblob2=''
+    ostatus='' onew='' oblob2='' omode2=''
     for ((j = 0; j < ${#o_st[@]}; j++)); do
       if [ "$status" = A ]; then
         [ "${o_st[j]}" = A ] && [ "${o_new[j]}" = "$new" ] || continue
       else
         [ "${o_st[j]}" != A ] && [ "${o_old[j]}" = "$old" ] || continue
       fi
-      ostatus=${o_st[j]} onew=${o_new[j]} oblob2=${o_nblob[j]}
+      ostatus=${o_st[j]} onew=${o_new[j]} oblob2=${o_nblob[j]} omode2=${o_mode[j]}
       break
     done
     ours_all=0
@@ -231,17 +345,21 @@ check() {
       A) printf '@@ -0,0 +1 @@\n' >"$work/ours.diff" ;;
       D) ours_all=1 ;;
       M | T | R)
-        blob_diff "$oblob" "$oblob2" >"$work/ours.diff" || true
+        # The current side made it a link or a submodule: not text any more.
+        is_file "$omode2" || continue
+        blob_diff "$oblob" "$oblob2" "$work/ours.diff"
         # A file only the current side renamed is in the result under its new name.
         if [ "$ostatus" = R ] && [ "$status" != R ]; then path=$onew; fi ;;
     esac
-    # Not there: the resolution kept another name. Both sides renamed the file (kept under the
-    # current side's name), the current side renamed it and the resolution kept the old name, or the
-    # resolution moved it itself (found by rename detection from the incoming commit to the result).
-    if [ -z "$(blob_at "$tree" "$path")" ]; then
-      if [ "$ostatus" = R ] && [ -n "$(blob_at "$tree" "$onew")" ]; then
+    # Not there as a file: the resolution kept another name. Both sides renamed the file (kept under
+    # the current side's name), the current side renamed it and the resolution kept the old name, or
+    # the resolution moved it itself (found by rename detection from the incoming commit to the
+    # result), into a directory of the same name too. A submodule there is not text: not checked.
+    if ! file_at "$tree" "$path"; then
+      [ "$e_mode" != 160000 ] || continue
+      if [ "$ostatus" = R ] && file_at "$tree" "$onew"; then
         path=$onew
-      elif [ -n "$(blob_at "$tree" "$new")" ]; then
+      elif file_at "$tree" "$new"; then
         path=$new
       else
         if [ "$moves_read" -eq 0 ]; then
@@ -255,23 +373,35 @@ check() {
             break
           fi
         done
+        file_at "$tree" "$path" || [ "$e_mode" != 160000 ] || continue
       fi
     fi
+    # Here `e_mode` and `e_oid` are the entry at `path`.
+    if is_file "$e_mode"; then
+      git cat-file blob "$e_oid" >"$work/result" || die "git cat-file failed for $e_oid"
+    else
+      : >"$work/result"
+    fi
 
-    if [ "$status" = A ]; then added_file "$nblob" >"$work/theirs.diff"; else blob_diff "$oblob" "$nblob" >"$work/theirs.diff" || true; fi
-    git cat-file blob "$tree:$path" >"$work/result" 2>/dev/null || : >"$work/result"
-    dropped "$work/ours.diff" "$ours_all" "$work/result" "$work/theirs.diff" >"$work/dropped"
+    if [ "$status" = A ]; then
+      added_file "$nblob" "$work/theirs.diff"
+    else
+      blob_diff "$oblob" "$nblob" "$work/theirs.diff"
+    fi
+    dropped "$work/ours.diff" "$ours_all" "$work/result" "$work/theirs.diff" >"$work/dropped" ||
+      die 'could not compare the lines'
     [ -s "$work/dropped" ] || continue
 
+    shown=$(trailer_path "$path")
     if excused "$path" || { [ "$path" != "$new" ] && excused "$new"; }; then
       printf 'merge-check: %s: %s line(s) of %s left out, as its Dropped: trailer says.\n' \
-        "$path" "$(wc -l <"$work/dropped" | tr -d ' ')" "$(git rev-parse --short "$theirs")" >&2
+        "$shown" "$(wc -l <"$work/dropped" | tr -d ' ')" "$short" >&2
       continue
     fi
     refused=1
     {
-      printf '\n%s' "$path"
-      git cat-file -e "$tree:$path" 2>/dev/null || printf ' (not in the result)'
+      printf '\n%s' "$shown"
+      is_file "$e_mode" || printf ' (not in the result)'
       printf '\n'
       # The incoming commit that added each line, by blame on the incoming side.
       local args=() n prev=
@@ -290,6 +420,7 @@ check() {
         [ "${#line}" -le 160 ] || line="${line:0:160}..."
         printf '    %s: %s\n' "$n" "$line"
       done
+      printf '  To leave them out: %s: %s: <why>\n' "$trailer_key" "$shown"
     } >>"$report"
   done
 
@@ -306,10 +437,11 @@ check() {
 # check_merge <message file or ""> <use trailers: 0|1>: the merge being committed in this checkout.
 check_merge() {
   local msg=$1 tree theirs failed=0 merge_head
-  merge_head=$(git rev-parse --git-path MERGE_HEAD)
+  merge_head=$(git rev-parse --git-path MERGE_HEAD) || die 'git rev-parse failed'
+  [ -f "$merge_head" ] || die "no $merge_head"
   : >"$work/trailers"
   [ -z "$msg" ] || read_trailers "$msg"
-  tree=$(git write-tree)
+  tree=$(git write-tree) || die "git write-tree failed (exit $?)"
   while read -r theirs; do
     [ -n "$theirs" ] || continue
     check HEAD "$theirs" "$tree" || failed=1
@@ -317,8 +449,8 @@ check_merge() {
   if [ "$failed" -eq 1 ]; then
     if [ "$2" -eq 1 ]; then
       printf '\nPut them back, or, if leaving them out is meant, say why in the merge commit'"'"'s message with a\n' >&2
-      printf 'trailer for each file, in the last paragraph with any other trailers, and commit again:\n' >&2
-      printf '  %s: <path>: <why>\n\n' "$trailer_key" >&2
+      printf 'trailer for each file, as shown above, in the last paragraph with any other trailers, and\n' >&2
+      printf 'commit again. A path with a colon, a newline or a quote goes in quotes, as shown.\n\n' >&2
     else
       printf '\nPut them back and commit again. To leave them out on purpose, with a %s: trailer in the\n' "$trailer_key" >&2
       printf 'message saying why, install the commit-msg hook first, which reads it: .githooks/install\n\n' >&2
@@ -352,19 +484,21 @@ case "${1:-}" in
     scratch
     failed=0
     for merge in "$@"; do
-      commit=$(git rev-parse --verify "$merge^{commit}")
-      git log -1 --format=%B "$commit" >"$work/message"
+      commit=$(git rev-parse --verify "$merge^{commit}") || die "not a commit: $merge"
+      short=$(git rev-parse --short "$commit") || die "git rev-parse failed for $commit"
+      git log -1 --format=%B "$commit" >"$work/message" || die "git log failed for $commit"
       read_trailers "$work/message"
-      tree=$(git rev-parse "$commit^{tree}")
+      tree=$(git rev-parse "$commit^{tree}") || die "git rev-parse failed for $commit"
+      parents=$(git rev-parse "$commit^@") || die "git rev-parse failed for $commit"
       bad=0
-      for theirs in $(git rev-parse "$commit^@" | tail -n +2); do
+      for theirs in $(printf '%s\n' "$parents" | tail -n +2); do
         check "$commit^1" "$theirs" "$tree" || bad=1
       done
       if [ "$bad" -eq 1 ]; then
-        printf 'merge-check: %s refused\n\n' "$(git rev-parse --short "$commit")" >&2
+        printf 'merge-check: %s refused\n\n' "$short" >&2
         failed=1
       else
-        printf 'merge-check: %s ok\n' "$(git rev-parse --short "$commit")" >&2
+        printf 'merge-check: %s ok\n' "$short" >&2
       fi
     done
     finish "$failed" ;;

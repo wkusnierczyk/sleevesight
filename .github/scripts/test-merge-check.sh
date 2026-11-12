@@ -104,6 +104,14 @@ printf '#!/bin/sh\necho "git: broken" >&2\nexit 128\n' >"$top/nogit/git"
 chmod +x "$top/nogit/git"
 echo msg >"$top/msg"
 expect 'not a merge, git fails' 0 '' '' env PATH="$top/nogit:$PATH" .githooks/merge-check commit-msg "$top/msg"
+# (A `git` that fails one subcommand, `$MC_FAIL`, and runs the others.)
+mkdir "$top/failgit"
+# shellcheck disable=SC2016 # the script's own variables
+printf '#!/bin/sh\nsub=$1\n[ "$1" != -c ] || sub=$3\nif [ "$sub" = "$MC_FAIL" ]; then echo "git $sub: injected failure" >&2; exit 128; fi\nexec "%s" "$@"\n' \
+  "$(command -v git)" >"$top/failgit/git"
+chmod +x "$top/failgit/git"
+expect 'not a merge, git diff fails' 0 '' '' \
+  env PATH="$top/failgit:$PATH" MC_FAIL=diff .githooks/merge-check commit-msg "$top/msg"
 
 # The conflict resolved to one side: refused, naming the lines and the commit that added them, but
 # not line two, which both sides changed.
@@ -122,8 +130,21 @@ expect 'trailer in the body, not the last paragraph' 1 'eleven, theirs' '' \
   git commit -qm Merge -m 'Dropped: f.txt: in the body' -m 'More text after it.'
 expect 'a merge, no scratch space: refused, saying so' 1 'merge was not checked' '' \
   env PATH="$top/nomktemp:$PATH" git commit -qm Merge -m 'Dropped: f.txt: the old wording stays'
+# A git command of the check that fails, during a merge that would pass: refused, saying so.
+printf 'Merge\n\nDropped: f.txt: the old wording stays\n' >"$top/excuse"
+for sub in merge-base diff ls-tree cat-file write-tree interpret-trailers; do
+  expect "a merge, git $sub fails: refused, saying so" 3 'merge was not checked' '' \
+    env PATH="$top/failgit:$PATH" MC_FAIL=$sub .githooks/merge-check commit-msg "$top/excuse"
+done
+expect 'trailer, run by hand' 0 '' '' .githooks/merge-check commit-msg "$top/excuse"
 expect 'trailer' 0 '' '' git commit -qm Merge -m 'Dropped: f.txt: the old wording stays'
 expect 'replay of the excused merge' 0 '' '' .githooks/merge-check replay HEAD
+
+# Trailer settings change nothing: the trailer is read with `:`, and under its own name.
+conflicted
+git -C "$repo" config trailer.separators =
+git -C "$repo" config trailer.dropped.key Nope
+expect 'trailer.separators and trailer.dropped.key' 0 '' '' git commit -qm Merge -m 'Dropped: f.txt: the old wording stays'
 
 conflicted
 # shellcheck disable=SC2016 # the backticks are the message's, not a command
@@ -187,7 +208,27 @@ on theirs 'theirs 2' write "new${nl}line.txt" 'added, newline'
 git -C "$repo" checkout -q work
 expect 'a newline in a path' 1 'added, newline' '' git merge -q --no-edit -s ours theirs
 expect 'a tab in a path' 1 'added, tab' '' git commit --no-edit
-git -C "$repo" merge --abort 2>/dev/null || true
+expect 'a newline in a path, the trailer shown' 1 'Dropped: "new\nline.txt": <why>' '' git commit --no-edit
+expect 'a newline in a path, plain trailer' 1 'added, newline' '' \
+  git commit -qm Merge -m "$(printf 'Dropped: new line.txt: no\nDropped: "tab\\tname.txt": no')"
+expect 'a newline and a tab in paths, quoted trailers' 0 '' '' \
+  git commit -qm Merge -m "$(printf 'Dropped: "new\\nline.txt": no\nDropped: "tab\\tname.txt": no')"
+
+# A colon or a quote in a path: the plain form cannot name a path with a colon, and does not name
+# `f.txt` with `f.txt:backup: why` either; the quoted form names exactly one path.
+fresh
+on theirs 'theirs' sh -c "$(declare -f append write); append 'eleven, theirs'; write f.txt:backup 'backup, theirs'; write 'q\"uote.txt' 'quote, theirs'"
+git -C "$repo" checkout -q work
+expect 'a colon in a path, the trailer shown' 1 'Dropped: "f.txt:backup": <why>' '' git merge -q --no-edit -s ours theirs
+expect 'a quote in a path, the trailer shown' 1 'Dropped: "q\"uote.txt": <why>' '' git commit --no-edit
+expect 'a colon in a path, plain trailer names neither' 1 'eleven, theirs' '' \
+  git commit -qm Merge -m "$(printf 'Dropped: f.txt:backup: no\nDropped: "q\\"uote.txt": no')"
+expect 'a colon in a path, plain trailer, the other file' 1 'backup, theirs' '' \
+  git commit -qm Merge -m "$(printf 'Dropped: f.txt:backup: no\nDropped: "q\\"uote.txt": no')"
+expect 'a colon in a path, quoted trailer names only it' 1 'eleven, theirs' 'backup, theirs' \
+  git commit -qm Merge -m "$(printf 'Dropped: "f.txt:backup": no\nDropped: "q\\"uote.txt": no')"
+expect 'a colon and a quote in paths, quoted trailers' 0 '' '' \
+  git commit -qm Merge -m "$(printf 'Dropped: "f.txt:backup": no\nDropped: "q\\"uote.txt": no\nDropped: f.txt: no')"
 
 fresh
 on work 'base 2' write 'back\nslash.txt' one two three
@@ -239,6 +280,43 @@ renamed_both h.txt 1
 expect 'renamed by both sides, kept under the incoming name' 0 '' '' git commit --no-edit
 renamed_both k.txt 1
 expect 'renamed by both sides, kept under a third name' 0 '' '' git commit --no-edit
+
+# A file the resolution moved into a directory of its own name (`f.txt` to `f.txt/resolved.txt`): found
+# by rename detection. into_dir <keep the incoming last line: 0|1>.
+into_dir() {
+  fresh
+  on work 'ours' write g.txt other
+  on theirs 'theirs' append 'eleven, theirs'
+  git -C "$repo" checkout -q work
+  (cd "$repo" && git merge -q --no-ff --no-commit theirs >/dev/null 2>&1)
+  (cd "$repo" && git rm -q --cached f.txt && mv f.txt x && mkdir f.txt && mv x f.txt/resolved.txt)
+  if [ "$1" -eq 0 ]; then
+    (cd "$repo" && sed '$d' f.txt/resolved.txt >x && mv x f.txt/resolved.txt)
+  fi
+  git -C "$repo" add f.txt/resolved.txt
+}
+into_dir 1
+expect 'moved into a directory of its name' 0 '' '' git commit --no-edit
+into_dir 0
+expect 'moved into a directory of its name, dropped' 1 'eleven, theirs' '' git commit --no-edit
+
+# A file made a submodule (a gitlink) on one side, or a submodule made a file: not text, not checked.
+# gitlink <path> <commit>: makes <path> a submodule at <commit>, in the index only.
+gitlink() { git rm -q --cached "$1" && rm -f "$1" && git update-index --add --cacheinfo "160000,$2,$1"; }
+fresh
+sha=$(git -C "$repo" rev-parse HEAD)
+on theirs 'theirs' append 'eleven, theirs'
+git -C "$repo" checkout -q work
+(cd "$repo" && gitlink f.txt "$sha" && git commit -qm 'ours: a submodule')
+bad=$(cd "$repo" && git commit-tree -p work -p theirs -m Merge 'work^{tree}')
+expect 'a file made a submodule by the current side' 0 '' '' .githooks/merge-check replay "$bad"
+fresh
+(cd "$repo" && write s.txt one && git add s.txt && gitlink s.txt "$(git rev-parse HEAD)" && git commit -qm 'base: a submodule')
+git -C "$repo" branch -f theirs work
+(cd "$repo" && git checkout -q theirs && git rm -q --cached s.txt && write s.txt 'text, theirs' && git add s.txt &&
+  git commit -qm 'theirs: a file')
+bad=$(cd "$repo" && git commit-tree -p work -p theirs -m Merge 'work^{tree}')
+expect 'a submodule made a file by the incoming side' 0 '' '' .githooks/merge-check replay "$bad"
 
 # Without the `commit-msg` hook (installed before the merge check), `pre-commit` checks instead and
 # `pre-merge-commit` says that a merge with no conflicts goes unchecked.
