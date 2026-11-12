@@ -1,0 +1,5 @@
+Fixed in 0.6.5:
+- Dates: the track's first release is found; a year-only or placeholder January 1 date reads as the year.
+- Sources: a source with only unverified lines shows them, in grey; tap ? to explain the chips.
+- Web lines no longer start with a streaming page's Sign up or Log in.
+- Settings: Read aloud has a heading of its own.
