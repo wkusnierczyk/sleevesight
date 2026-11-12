@@ -96,7 +96,7 @@ class KeyDialogEnableTest {
     private fun waitForNode(matcher: SemanticsMatcher) =
         idleUntil("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
 
-    /** Waits for the settings the save applies, written in the background, to satisfy [condition]. */
+    /** Waits for the settings the save applies, written by the screen's saves, to satisfy [condition]. */
     private fun settled(condition: () -> Boolean) =
         try {
             idleUntil("the settings written") { condition() }

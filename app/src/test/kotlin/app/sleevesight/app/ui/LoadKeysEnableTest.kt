@@ -155,7 +155,7 @@ class LoadKeysEnableTest {
 
     private fun waitForText(text: String) = waitForNode(hasText(text))
 
-    /** Waits for the settings the choices apply, written in the background, to satisfy [condition]. */
+    /** Waits for the settings the choices apply, written by the screen's saves, to satisfy [condition]. */
     private fun settled(condition: () -> Boolean) = idleUntil("the settings written") { condition() }
 
     private fun shown(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()

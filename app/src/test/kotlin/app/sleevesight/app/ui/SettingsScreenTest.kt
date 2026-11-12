@@ -133,12 +133,18 @@ class SettingsScreenTest {
 
     /**
      * The stored settings. The screen reads them by a collection of its own, which can lag the
-     * store, and `waitForIdle` does not wait for DataStore's threads: after a wait on [current], a
-     * step that reads the screen waits for the screen too ([waitForNode], [waitForText]).
+     * store, and for a test's own store over a file `waitForIdle` does not wait for DataStore's
+     * threads: after a wait on [current], a step that reads the screen waits for the screen too
+     * ([waitForNode], [waitForText]).
      */
     private fun current(store: SettingsStore = settings): Settings = store.now()
 
-    /** Waits for [condition]; a timeout names [what]. */
+    /**
+     * Waits for [condition]; a timeout names [what]. `compose.waitUntil` runs Robolectric's main
+     * looper only when the condition reads the screen (`fetchSemanticsNodes` idles it): a wait on a
+     * plain value over a store that returns to the main thread between steps (a save on [saves] over
+     * a file) times out, as nothing runs those returns.
+     */
     private fun waitFor(
         what: String,
         condition: () -> Boolean,
@@ -377,9 +383,11 @@ class SettingsScreenTest {
 
     @Test
     fun aKeyIsSavedThoughTheScreenGoesFirst() {
-        // In memory, read and written on the main thread, as the fixture's keys (#1183): over a file,
-        // with the save on the main thread, the save's steps between DataStore's threads and the main
-        // one did not run while `waitFor` waited, and the write never started.
+        // In memory, read and written on the main thread, as the fixture's keys (#1183). Over a file,
+        // the save on the main thread returns to it three times from DataStore's and the key store's
+        // threads (`SecretStore.set`) before its write, and `waitFor` on a plain value (the writes
+        // counted) does not run the main looper, as only a wait that reads the screen does: the
+        // write never started.
         val flaky = FlakyDataStore(MemoryStore())
         val gatedSecrets = SecretStore(flaky, testCipher(), dispatcher = Dispatchers.Unconfined)
         val gate = CompletableDeferred<Unit>()

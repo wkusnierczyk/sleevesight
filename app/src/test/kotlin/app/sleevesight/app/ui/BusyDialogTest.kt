@@ -25,6 +25,7 @@ import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.idleUntil
 import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
@@ -128,7 +129,9 @@ class BusyDialogTest {
 
     /**
      * Releases the gate, waits for the dialog to go ([dialog] gone) and for every save started on
-     * [saves], and returns the writes asked for since [before]: a second save would be counted by then.
+     * [saves] to end, and returns the writes asked for since [before]: a second save would be counted
+     * by then. The saves run on the main thread, so the wait steps its looper ([idleUntil]) rather than
+     * joining them in `runBlocking`, which would block the thread they need, with no time limit.
      */
     private fun release(
         dialog: SemanticsMatcher,
@@ -136,10 +139,8 @@ class BusyDialogTest {
     ): Int {
         gate.complete(Unit)
         waitFor("the dialog gone") { gone(dialog) }
-        runBlocking {
-            saves.coroutineContext.job.children
-                .forEach { it.join() }
-        }
+        val pending = saves.coroutineContext.job
+        idleUntil("every save ended") { pending.children.none { it.isActive } }
         return flaky.writes.get() - before
     }
 
