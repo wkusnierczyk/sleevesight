@@ -6,7 +6,9 @@ import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.OriginalRecording
+import app.sleevesight.core.sources.PlaceholderDay
 import app.sleevesight.core.sources.ReleaseDate
+import app.sleevesight.core.sources.ReleaseDate.Companion.byPrecision
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.ResolvedWork
@@ -229,13 +231,8 @@ class RecordingResolver(
         pool: List<Candidate>,
     ): Resolution {
         val recording = chosen.recording
-        // Each release, by its own title, in its release group (else alone), with the group's type;
-        // undated ones too.
-        val releases =
-            pool.flatMap { it.recording.releases }.map { release ->
-                val group = release.releaseGroup
-                ReleaseDate(release.title, release.date, group?.mbid ?: release.mbid, group?.primaryType)
-            }
+        // The pool's releases: the album's sentences and the first release's date weigh the same ones.
+        val releases = releaseDates(pool.flatMap { it.recording.releases })
         val base =
             Resolution(
                 outcome = Outcome.SongArticle,
@@ -247,7 +244,7 @@ class RecordingResolver(
                         ResolvedArtist(artist, artistMbid(artist, chosen, emptyList()))
                     },
                 jointArtists = chosen.jointArtists,
-                firstRelease = firstRelease(recording),
+                firstRelease = firstRelease(recording, releases),
                 recordingFirstReleased = recording.firstReleaseDate,
                 releaseDates = ReleaseDate.collapse(releases, names::key),
             )
@@ -301,7 +298,10 @@ class RecordingResolver(
             // not kept and a later run asks again.
             val original = covered.original
             val releases = original?.let { musicBrainz.recordingReleases(it.recordingMbid) }
-            val release = (releases as? Lookup.Found)?.value?.let { firstRelease(it, fallback = false) }
+            val release =
+                (releases as? Lookup.Found)?.value?.let {
+                    firstRelease(it, releaseDates(it.releases), fallback = false)
+                }
             covered.copy(
                 original = original?.copy(release = release),
                 provisional = covered.provisional || releases is Lookup.Failed,
@@ -668,11 +668,17 @@ class RecordingResolver(
         }
 
         // The release of [recording] dated its first-release date, else, with [fallback], its earliest
-        // dated one. Ours falls back; a cover's original does not (#724): a lookup lists at most 25
-        // releases, so for an original with more, the earliest listed may be a later compilation, and
-        // its release is left out rather than that one named.
+        // dated one ([byPrecision]: a day before the year alone it is in). Ours falls back; a cover's
+        // original does not (#724): a lookup lists at most 25 releases, so for an original with more,
+        // the earliest listed may be a later compilation, and its release is left out rather than
+        // that one named. Its date said as precisely as the dates of the other releases of the same
+        // release group in [evidence] allow ([PlaceholderDay.said], #1203): a January 1 with a later
+        // day of the year among them, its year alone; the release stays the one dated. [evidence] is
+        // what [ReleaseDate.collapse] weighs for the album's sentences, so both say the same date:
+        // for ours, the releases of every recording in the pool; for a cover's original, its own.
         private fun firstRelease(
             recording: MbRecording,
+            evidence: List<ReleaseDate>,
             fallback: Boolean = true,
         ): FirstRelease? {
             val dated = recording.releases.mapNotNull { release -> release.date?.let { it to release } }
@@ -680,10 +686,14 @@ class RecordingResolver(
                 dated.filter { it.first == recording.firstReleaseDate }.minByOrNull { it.second.mbid }
                     ?: dated
                         .takeIf { fallback }
-                        ?.minWithOrNull(compareBy<Pair<String, MbRelease>> { it.first }.thenBy { it.second.mbid })
+                        ?.minWithOrNull(
+                            compareBy<Pair<String, MbRelease>> { byPrecision(it.first) }.thenBy { it.second.mbid },
+                        )
             return first?.let { (date, release) ->
+                // As [releaseDates] keys it: its release group, else the release alone.
+                val group = release.releaseGroup?.mbid ?: release.mbid
                 FirstRelease(
-                    date = date,
+                    date = PlaceholderDay.said(date, evidence.filter { it.group == group }.map { it.date }),
                     title = release.releaseGroup?.title ?: release.title,
                     releaseGroupMbid = release.releaseGroup?.mbid,
                     releaseMbid = release.mbid,
@@ -739,6 +749,14 @@ class RecordingResolver(
                 .map { same -> same.first().copy(detail = same.flatMap { it.detail }.distinct()) }
     }
 }
+
+// Each release, by its own title, in its release group (else alone), with the group's type; undated
+// ones too.
+private fun releaseDates(releases: List<MbRelease>): List<ReleaseDate> =
+    releases.map {
+        val group = it.releaseGroup
+        ReleaseDate(it.title, it.date, group?.mbid ?: it.mbid, group?.primaryType)
+    }
 
 // Whether [work] is a composed work rather than a song (#1178), from what the answers hold already.
 // The lead: its composer is the one the title leads with ([NormalizedTrack.composer], `Mozart: …`, a
@@ -985,22 +1003,6 @@ private class Earlier(
     val recordings: List<MbRecording>,
     val complete: Boolean,
 )
-
-// [date] (`2015`, `2015-08`, `2015-08-07`) as the resolver's preference orders it: as given, but a
-// year or month alone after every day it holds (`2015` after `2015-12-31`, `2015-08` after
-// `2015-08-31`) and before the next (#1203). As a string compared alone, `2015` sorted before
-// `2015-08-07`, so a recording MusicBrainz dates by the year alone, often a compilation's, beat the
-// original dated to the day. A key, not a comparison at the precision both have, so the order stays
-// total.
-private fun byPrecision(date: String): String =
-    when (date.count { it == '-' }) {
-        0 -> "$date-$LATER-$LATER"
-        1 -> "$date-$LATER"
-        else -> date
-    }
-
-// After any month or day MusicBrainz writes (two digits).
-private const val LATER = "99"
 
 // At most this many searches by date after a full first page (#906).
 private const val DATE_SEARCHES = 3

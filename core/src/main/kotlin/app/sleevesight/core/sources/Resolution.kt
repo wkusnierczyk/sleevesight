@@ -149,30 +149,43 @@ data class FirstRelease(
  * earliest date of that title in the group ([collapse]): a reissue under the same title in the same
  * group has the group's year. With the release group's primary [type] (`Album`, `Single`, `EP`), when
  * MusicBrainz gives it (null for a release kept before it was, #724), so the home screen tells a
- * title-track single from its album of the same year.
+ * title-track single from its album of the same year. [placeholderDay]: whether [collapse] said its
+ * [date], a January 1, as its year alone ([PlaceholderDay.said], #1203), the one sign by which a
+ * group's January 1 elsewhere is said as that year too ([PlaceholderDay.asKept]); a year MusicBrainz
+ * gives alone does not have it.
  */
 data class ReleaseDate(
     val title: String,
     val date: String?,
     val group: String,
     val type: String? = null,
+    val placeholderDay: Boolean = false,
 ) {
     companion object {
         /**
          * [releases] one per title, as [key] reads it, and release group: the earliest of them (an
-         * undated one only when none is dated), written as it writes the title; ordered by key, then
-         * date, undated last, and none whose key is empty.
+         * undated one only when none is dated), written as it writes the title, its date said as
+         * precisely as the dates of every release of its group in [releases] allow
+         * ([PlaceholderDay.said], #1203: a January 1 with a later day of the year in the group, its
+         * year alone, marked [placeholderDay]); ordered by key, then date, undated last, and none
+         * whose key is empty. Earliest as the resolver orders dates ([byPrecision]): of `2000` and
+         * `2000-01-01` under one title, the day, as MusicBrainz dates the group's first release.
          */
         fun collapse(
             releases: List<ReleaseDate>,
             key: (String) -> String,
-        ): List<ReleaseDate> =
-            releases
+        ): List<ReleaseDate> {
+            val groupDates = releases.groupBy({ it.group }, { it.date })
+            return releases
                 .filter { key(it.title).isNotEmpty() }
                 .groupBy { key(it.title) to it.group }
                 .values
-                .map { same -> same.minWith(EARLIEST.thenBy { it.title }) }
-                .sortedWith(compareBy<ReleaseDate> { key(it.title) }.then(EARLIEST).thenBy { it.group })
+                .map { same ->
+                    val earliest = same.minWith(EARLIEST.thenBy { it.title })
+                    val date = earliest.date?.let { PlaceholderDay.said(it, groupDates[earliest.group].orEmpty()) }
+                    earliest.copy(date = date, placeholderDay = date != earliest.date)
+                }.sortedWith(compareBy<ReleaseDate> { key(it.title) }.then(EARLIEST).thenBy { it.group })
+        }
 
         /**
          * The year after [album], the player's name for it, from [dates] and [playerYear], the year
@@ -245,9 +258,27 @@ data class ReleaseDate(
          */
         fun yearIn(date: String): String? = DateWhen.of(date)?.year
 
-        // The earliest date first, an undated release after every dated one.
+        /**
+         * [date] (`2015`, `2015-08`, `2015-08-07`) as a key for the earliest: as given, but a year or
+         * month alone after every day it holds (`2015` after `2015-12-31`, `2015-08` after
+         * `2015-08-31`) and before the next (#1203). As a string compared alone, `2015` sorted before
+         * `2015-08-07`, so a release or recording MusicBrainz dates by the year alone, often a
+         * compilation's, beat the original dated to the day. A key, not a comparison at the precision
+         * both have, so the order stays total.
+         */
+        fun byPrecision(date: String): String =
+            when (date.count { it == '-' }) {
+                0 -> "$date-$LATER-$LATER"
+                1 -> "$date-$LATER"
+                else -> date
+            }
+
+        // After any month or day MusicBrainz writes (two digits).
+        private const val LATER = "99"
+
+        // The earliest date first ([byPrecision]), an undated release after every dated one.
         private val EARLIEST: Comparator<ReleaseDate> =
-            compareBy<ReleaseDate> { it.date == null }.thenBy { it.date.orEmpty() }
+            compareBy<ReleaseDate> { it.date == null }.thenBy { it.date?.let(::byPrecision).orEmpty() }
     }
 }
 

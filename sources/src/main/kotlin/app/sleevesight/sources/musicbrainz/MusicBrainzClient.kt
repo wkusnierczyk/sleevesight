@@ -136,6 +136,7 @@ class MusicBrainzClient(
                 credit = credits(json).joinToString("") { it.name + it.joinPhrase },
                 wikidataIds = wikidataIds(json.array("relations")),
                 releaseIds = json.array("releases").mapNotNull { it.string("id")?.ifEmpty { null } },
+                releaseDates = json.array("releases").mapNotNull { it.string("date")?.ifEmpty { null } },
             )
         }
     }
@@ -483,9 +484,10 @@ interface ReleaseGroups {
 /**
  * A release group as an album's insight reads it (#522): its [title], its primary type (`Album`,
  * `EP`, `Single`) and secondary types (`Live`, `Compilation`), the date its first release came out,
- * its artist credit as written ([credit]), the Wikidata items it links ([wikidataIds]), and the ids
- * of its releases ([releaseIds], #885), at most [LINKED_LIMIT], the most a lookup lists. Core data,
- * CC0.
+ * its artist credit as written ([credit]), the Wikidata items it links ([wikidataIds]), the ids
+ * of its releases ([releaseIds], #885), at most [LINKED_LIMIT], the most a lookup lists, and the dates
+ * of those of them MusicBrainz dates ([releaseDates], #1203), by which its first release's date is
+ * said ([app.sleevesight.core.sources.PlaceholderDay]). Core data, CC0.
  */
 data class MbAlbum(
     val mbid: String,
@@ -496,6 +498,7 @@ data class MbAlbum(
     val credit: String,
     val wikidataIds: List<String>,
     val releaseIds: List<String> = emptyList(),
+    val releaseDates: List<String> = emptyList(),
 ) {
     companion object {
         /** The most linked entities a MusicBrainz lookup lists: a group's releases past it are left out. */

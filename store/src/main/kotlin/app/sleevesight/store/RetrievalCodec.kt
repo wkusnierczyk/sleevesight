@@ -57,6 +57,9 @@ internal object RetrievalCodec {
      * [Rejection.withoutMusicBrainz]) is an optional field too, encoded only when true: an entry kept
      * before it decodes without it, no miss, and its rejections read as before. A result made while
      * MusicBrainz could not be reached, the only one whose row it changes, is never kept anyway.
+     * Whether a release date is a January 1 said as its year (#1203, [ReleaseDate.placeholderDay]) is
+     * an optional field too, encoded only when true, made a miss the same way (MusicBrainz's
+     * extraction version 15).
      */
     const val FORMAT: Int = 7
 
@@ -106,7 +109,7 @@ internal object RetrievalCodec {
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags, it.votes) },
                 firstReleased = result.firstReleased,
-                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date, it.group, it.type) },
+                releaseDates = result.releaseDates.map(::ReleaseDateJson),
                 firstRelease = result.firstRelease?.let(::releaseJson),
                 original =
                     result.original?.let {
@@ -171,7 +174,8 @@ internal object RetrievalCodec {
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
                 recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags, it.votes) },
                 firstReleased = stored.firstReleased,
-                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group, it.type) },
+                releaseDates =
+                    stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group, it.type, it.placeholderDay) },
                 firstRelease = stored.firstRelease?.let(::release),
                 original =
                     stored.original?.let {
@@ -327,7 +331,12 @@ internal object RetrievalCodec {
         val group: String,
         // The release group's primary type (#724); an entry kept before it decodes without.
         val type: String? = null,
-    )
+        // Whether its date is a January 1 said as its year (#1203), encoded only when true; an entry
+        // kept before it decodes without, and is a miss by MusicBrainz's extraction version (15).
+        val placeholderDay: Boolean = false,
+    ) {
+        constructor(date: ReleaseDate) : this(date.title, date.date, date.group, date.type, date.placeholderDay)
+    }
 
     @Serializable
     private data class GenreJson(

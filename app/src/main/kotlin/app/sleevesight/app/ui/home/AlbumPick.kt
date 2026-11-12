@@ -48,8 +48,10 @@ internal sealed interface AlbumPick {
          * any has; of those, the one with the earliest named release, an undated one after every dated
          * one. The others go with it, the album-type ones first, then by their earliest named release,
          * so the lookup takes the first of them the playing recording is on when the one picked does not
-         * hold it. [Ambiguous] when two share that earliest date, or all are undated, with the groups that
-         * share it; null when it names none.
+         * hold it. Of a year kept for a placeholder day ([ReleaseDate.placeholderDay], #1203) and the
+         * same year given alone, the placeholder's group: it stands for a full day, which comes first.
+         * [Ambiguous] when two share that earliest date otherwise, or all are undated, with the groups
+         * that share it; null when it names none.
          */
         fun of(
             album: String,
@@ -83,7 +85,11 @@ internal sealed interface AlbumPick {
             fun earliest(group: String): String = named.getValue(group).mapNotNull { it.date }.minOrNull() ?: UNDATED
             val first = pool.keys.minOf(::earliest)
             val tied = pool.keys.filter { earliest(it) == first }
-            val group = tied.singleOrNull()
+            // Of a year kept for a placeholder day (#1203) and a year MusicBrainz gives alone, the
+            // first: the placeholder stands for a full day, which comes before the year alone it is in.
+            val group =
+                tied.singleOrNull()
+                    ?: tied.singleOrNull { g -> named.getValue(g).any { it.date == first && it.placeholderDay } }
             // The album-type groups first, as the pick prefers them, then by date: the lookup takes the
             // first of them the playing recording is on.
             val others = named.keys.filter { it != group }.sortedWith(compareBy({ it !in albums }, ::earliest))
