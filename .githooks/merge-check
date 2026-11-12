@@ -12,7 +12,8 @@
 #     so git made it a conflict, and keeping one side there is the resolution, not a loss); both
 #     sides' changes are found with the diff algorithm `git merge` uses: `diff.algorithm` if set,
 #     histogram if not (see `diff_algorithm`);
-#   - the current side deleted the file; or
+#   - the current side deleted the file (such a file is skipped, whatever the incoming side did to
+#     it); or
 #   - the merge commit's message has a trailer `Dropped: <path>: <why>` for the file, which carries
 #     the choice into the pull request's commits and their reviews. The path is exact, in one of three
 #     forms: plain (`Dropped: f.txt: why`, no colon in the path, a space after the colon), in
@@ -262,12 +263,11 @@ entry_at() {
 }
 file_at() { entry_at "$@" && is_file "${!3}"; }
 
-# dropped <ours hunks> <ours deleted the file: 0|1> <result content> <theirs diff>: the incoming side's
-# added lines that the result lacks, outside the current side's hunks, as `<line number>\t<line>`.
+# dropped <ours hunks> <result content> <theirs diff>: the incoming side's added lines that the result
+# lacks, outside the current side's hunks, as `<line number>\t<line>`.
 dropped() {
-  MC_OURS=$1 MC_OURS_ALL=$2 MC_RESULT=$3 MC_THEIRS=$4 awk '
-    BEGIN { ours = ENVIRON["MC_OURS"]; ours_all = ENVIRON["MC_OURS_ALL"] + 0
-            result = ENVIRON["MC_RESULT"]; theirs = ENVIRON["MC_THEIRS"] }
+  MC_OURS=$1 MC_RESULT=$2 MC_THEIRS=$3 awk '
+    BEGIN { ours = ENVIRON["MC_OURS"]; result = ENVIRON["MC_RESULT"]; theirs = ENVIRON["MC_THEIRS"] }
     function trim(s) { sub(/^[ \t\r\f\v]+/, "", s); sub(/[ \t\r\f\v]+$/, "", s); return s }
     # The base lines a hunk replaces, as an interval where base line k is 2k and the gap after it
     # 2k+1, widened to the gaps on either side: hunks that touch or meet overlap.
@@ -281,7 +281,7 @@ dropped() {
     FILENAME == result { have[trim($0)] = 1; next }
     FILENAME == theirs {
       if (/^@@ /) {
-        span($0); inhunk = 1; line = start; exempt = (ours_all == 1)
+        span($0); inhunk = 1; line = start; exempt = 0
         for (i = 1; i <= k && !exempt; i++) if (olo[i] <= hi && lo <= ohi[i]) exempt = 1
         next
       }
@@ -290,7 +290,7 @@ dropped() {
       if (t != "" && !exempt && !(t in have)) print line "\t" s
       line++
     }
-  ' "$1" "$3" "$4"
+  ' "$1" "$2" "$3"
 }
 
 # raw <from> <to> <prefix>: `git diff --raw -z -M` between two commits (or trees), into the arrays
@@ -380,7 +380,8 @@ locate() {
 # `$work/drop.<prefix>.<index>`. Files with nothing left out are not listed.
 analyse() {
   local an_ours=$1 an_theirs=$2 an_tree=$3 an_base=$4 an_p=$5 an_i an_j an_n=0 an_status an_old an_new
-  local an_oblob an_nblob an_ostatus an_onew an_oblob2 an_omode2 an_path an_ours_all an_mode an_oid
+  local an_oblob an_nblob an_ostatus an_onew an_oblob2 an_omode2 an_path an_mode an_oid
+  local an_rec an_differs=//
   # shellcheck disable=SC2034 # filled by `raw`, declared here to stay local
   local o_st=() o_old=() o_new=() o_oblob=() o_nblob=() o_omode=() o_mode=()
   local t_st=() t_old=() t_new=() t_oblob=() t_nblob=() t_omode=() t_mode=()
@@ -388,6 +389,11 @@ analyse() {
   eval "${an_p}_new=() ${an_p}_path=() ${an_p}_mode=()"
   raw "$an_base" "$an_ours" o
   raw "$an_base" "$an_theirs" t
+  # The paths where the result is not the incoming commit, listed once: a file elsewhere is in the
+  # result as the incoming side made it. They are kept in one string, each between `//` (no path has
+  # `//` in it, nor `/` at either end), so that looking one up starts no process.
+  gdiff --name-only -z --no-renames "$an_theirs" "$an_tree" >"$work/differs" || die "git diff failed (exit $?)"
+  while IFS= read -r -d '' an_rec; do an_differs+=$an_rec//; done <"$work/differs"
   for ((an_i = 0; an_i < ${#t_st[@]}; an_i++)); do
     an_status=${t_st[an_i]} an_old=${t_old[an_i]} an_new=${t_new[an_i]}
     an_oblob=${t_oblob[an_i]} an_nblob=${t_nblob[an_i]}
@@ -397,6 +403,7 @@ analyse() {
     is_file "${t_mode[an_i]}" || continue
     [ "$an_status" = A ] || is_file "${t_omode[an_i]}" || continue
     # Only where the result is not the incoming side's file can something be missing.
+    case "$an_differs" in *"//$an_new//"*) ;; *) continue ;; esac
     entry_at "$an_tree" "$an_new" an_mode an_oid
     [ "$an_oid" != "$an_nblob" ] || continue
 
@@ -412,14 +419,13 @@ analyse() {
       an_ostatus=${o_st[an_j]} an_onew=${o_new[an_j]} an_oblob2=${o_nblob[an_j]} an_omode2=${o_mode[an_j]}
       break
     done
-    an_ours_all=0
     an_path=$an_new
     : >"$work/ours.diff"
     case "$an_ostatus" in
       A) printf '@@ -0,0 +1 @@\n' >"$work/ours.diff" ;;
-      D) an_ours_all=1 ;;
-      # The current side made the file a link or a submodule: not text any more.
-      T) continue ;;
+      # The current side deleted the file (the rule at the top), or made it a link or a submodule (not
+      # text any more): nothing to check.
+      D | T) continue ;;
       M | R)
         # (A guard: git reports a change of type as `T`, never as `M` or `R`.)
         is_file "$an_omode2" || continue
@@ -440,7 +446,7 @@ analyse() {
     else
       blob_diff "$an_oblob" "$an_nblob" "$work/theirs.diff"
     fi
-    dropped "$work/ours.diff" "$an_ours_all" "$work/result" "$work/theirs.diff" >"$work/drop.$an_p.$an_n" ||
+    dropped "$work/ours.diff" "$work/result" "$work/theirs.diff" >"$work/drop.$an_p.$an_n" ||
       die 'could not compare the lines'
     [ -s "$work/drop.$an_p.$an_n" ] || continue
     eval "${an_p}_new[an_n]=\$an_new ${an_p}_path[an_n]=\$an_path ${an_p}_mode[an_n]=\$an_mode"

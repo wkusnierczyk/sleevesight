@@ -309,6 +309,21 @@ on theirs 'theirs' sh -c "printf 'PNG\\0\\0header\\nline two\\0\\nline three\\n'
 git -C "$repo" checkout -q work
 expect 'a new binary file' 0 '' '' git merge -q --no-edit -s ours theirs
 
+# Files the current side deleted (a directory of twenty) and the incoming side edited: the deletion
+# is the resolution, so they are not checked; a line left out of another file still is.
+fresh
+(cd "$repo" && mkdir old && for i in $(seq 1 20); do write "old/$i.txt" one two three; done &&
+  git add old && git commit -qm 'base: old/' && git branch -f theirs work)
+on work 'ours' git rm -rq old
+# shellcheck disable=SC2016 # expanded by `sh`
+on theirs 'theirs' sh -c 'for f in old/*.txt; do echo "four, theirs" >>"$f"; done; echo "eleven, theirs" >>f.txt'
+git -C "$repo" checkout -q work
+(cd "$repo" && git merge -q --no-edit theirs >/dev/null 2>&1) || true
+(cd "$repo" && git rm -rq old && sed '$d' f.txt >x && mv x f.txt && git add f.txt)
+expect 'deleted by the current side, another file dropped' 1 'eleven, theirs' 'old/' git commit --no-edit
+git -C "$repo" checkout -q theirs -- f.txt
+expect 'deleted by the current side, edited by the incoming side' 0 '' '' git commit --no-edit
+
 # A file the current side renamed: compared under its new name.
 fresh
 on work 'ours' sh -c "git mv f.txt g.txt && awk 'NR == 2 { print \"two, ours\"; next } { print }' g.txt >g.new && mv g.new g.txt"
