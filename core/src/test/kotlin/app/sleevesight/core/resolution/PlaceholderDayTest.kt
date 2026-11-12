@@ -41,11 +41,43 @@ class PlaceholderDayTest {
 
     @Test
     fun `a group's January 1 is said as its releases are kept`() {
-        // *A/B*'s group, its first release kept as 2016; *New Year*'s, kept to the day.
-        assertEquals("2016", PlaceholderDay.asKept("2016-01-01", listOf("2016", "2026-06-10")))
-        assertEquals("2000-01-01", PlaceholderDay.asKept("2000-01-01", listOf("2000-01-01", "2020-05-04")))
-        assertEquals("2000-01-01", PlaceholderDay.asKept("2000-01-01", listOf("2001", null)))
-        assertEquals("1974-01", PlaceholderDay.asKept("1974-01", listOf("1974")))
+        // *A/B*'s group, its first release kept as 2016 for a placeholder day; *New Year*'s, kept to the day.
+        val ab = ReleaseDate("A/B", "2016", "g-ab", "Album", placeholderDay = true)
+        val deluxe = ReleaseDate("A/B (Deluxe Edition)", "2026-06-10", "g-ab", "Album")
+        assertEquals("2016", PlaceholderDay.asKept("2016-01-01", listOf(ab, deluxe)))
+        val newYear = ReleaseDate("New Year", "2000-01-01", "g-ny", "Album")
+        assertEquals("2000-01-01", PlaceholderDay.asKept("2000-01-01", listOf(newYear)))
+        assertEquals("2000-01-01", PlaceholderDay.asKept("2000-01-01", listOf(newYear.copy(date = "2001"))))
+        assertEquals(
+            "1974-01",
+            PlaceholderDay.asKept("1974-01", listOf(newYear.copy(date = "1974", placeholderDay = true))),
+        )
+    }
+
+    @Test
+    fun `a year MusicBrainz gives alone is no sign that a group's January 1 is a placeholder`() {
+        // The group's releases: `2000-01-01`, `2000`, `2020-05-04`. Nothing in 2000 is out on a later
+        // day, so the January 1 keeps its day, as the album's own sentence keeps it.
+        val kept =
+            collapse(
+                ReleaseDate("New Year", "2000-01-01", "g-ny", "Album"),
+                ReleaseDate("New Year (Promo)", "2000", "g-ny", "Album"),
+                ReleaseDate("New Year (Deluxe Edition)", "2020-05-04", "g-ny", "Album"),
+            )
+        assertEquals(listOf(false, false, false), kept.map { it.placeholderDay })
+        assertEquals("2000-01-01", PlaceholderDay.asKept("2000-01-01", kept))
+    }
+
+    @Test
+    fun `under one title, a day is earlier than the year alone it is in`() {
+        // As MusicBrainz dates the group's first release: `2000-01-01`, not `2000`.
+        val kept =
+            collapse(
+                ReleaseDate("New Year", "2000", "g-ny", "Album"),
+                ReleaseDate("New Year", "2000-01-01", "g-ny", "Album"),
+                ReleaseDate("New Year", "2000-03", "g-ny", "Album"),
+            )
+        assertEquals(listOf(ReleaseDate("New Year", "2000-01-01", "g-ny", "Album")), kept)
     }
 
     @Test
@@ -60,7 +92,7 @@ class PlaceholderDayTest {
         // The year of the Icelandic release, never the June day of the later ones.
         assertEquals(
             listOf(
-                ReleaseDate("A/B", "2016", "g-ab", "Album"),
+                ReleaseDate("A/B", "2016", "g-ab", "Album", placeholderDay = true),
                 ReleaseDate("A/B (Deluxe Edition)", "2026-06-10", "g-ab", "Album"),
             ),
             kept,
@@ -126,5 +158,68 @@ class PlaceholderDayTest {
             val first = resolve(searched, track("Auld Lang Syne", "Artist")).firstRelease
             assertEquals("2000-01-01", first?.date)
             assertEquals("r-ny", first?.releaseMbid)
+        }
+
+    // What each place says of one release group's first release, for a track on every release of the
+    // group ([releases], the first dated [first], as MusicBrainz dates the group and the recording):
+    // the album's own sentence (its title's release as kept), an edition's sentence (the group's date
+    // as kept), the track's first release, and the album insight's line (the group's date beside the
+    // dates its lookup lists).
+    private suspend fun everywhere(
+        first: String,
+        vararg releases: MbRelease,
+    ): List<String?> {
+        val song = recording("song", "Song", "Artist", 200, first).copy(releases = releases.toList())
+        val resolution = resolve(FakeMusicBrainz(Lookup.Found(listOf(song))), track("Song", "Artist"))
+        val original = releases.first { it.date == first }.title
+        val kept = resolution.releaseDates.filter { it.group == "g" }
+        return listOf(
+            kept.single { it.title == original }.date,
+            PlaceholderDay.asKept(first, kept),
+            resolution.firstRelease?.date,
+            PlaceholderDay.said(first, releases.map { it.date }),
+        )
+    }
+
+    private fun release(
+        id: String,
+        title: String,
+        date: String,
+    ) = MbRelease(id, title, date, MbReleaseGroup("g", "Original", "Album"))
+
+    @Test
+    fun `every place says a group's first release the same`() =
+        runTest {
+            // *A/B*: a placeholder day.
+            assertEquals(
+                List(4) { "2016" },
+                everywhere(
+                    "2016-01-01",
+                    release("r-is", "A/B", "2016-01-01"),
+                    release("r-us", "A/B", "2016-06-10"),
+                    release("r-dx", "A/B (Deluxe Edition)", "2026-06-10"),
+                ),
+            )
+            // Truly out on January 1, reissued later.
+            assertEquals(
+                List(4) { "2000-01-01" },
+                everywhere(
+                    "2000-01-01",
+                    release("r-ny", "New Year", "2000-01-01"),
+                    release("r-re", "New Year", "2001-05-04"),
+                ),
+            )
+            // A year alone beside it, under another title and under its own: no sign of a placeholder.
+            for (promo in listOf("New Year (Promo)", "New Year")) {
+                assertEquals(
+                    List(4) { "2000-01-01" },
+                    everywhere(
+                        "2000-01-01",
+                        release("r-ny", "New Year", "2000-01-01"),
+                        release("r-promo", promo, "2000"),
+                        release("r-dx", "New Year (Deluxe Edition)", "2020-05-04"),
+                    ),
+                )
+            }
         }
 }

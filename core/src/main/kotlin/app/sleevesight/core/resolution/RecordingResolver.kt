@@ -8,6 +8,7 @@ import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.PlaceholderDay
 import app.sleevesight.core.sources.ReleaseDate
+import app.sleevesight.core.sources.ReleaseDate.Companion.byPrecision
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.ResolvedWork
@@ -669,9 +670,10 @@ class RecordingResolver(
         }
 
         // The release of [recording] dated its first-release date, else, with [fallback], its earliest
-        // dated one. Ours falls back; a cover's original does not (#724): a lookup lists at most 25
-        // releases, so for an original with more, the earliest listed may be a later compilation, and
-        // its release is left out rather than that one named. Its date said as precisely as the dates
+        // dated one ([byPrecision]: a day before the year alone it is in). Ours falls back; a cover's
+        // original does not (#724): a lookup lists at most 25 releases, so for an original with more,
+        // the earliest listed may be a later compilation, and its release is left out rather than
+        // that one named. Its date said as precisely as the dates
         // of the recording's other releases allow ([PlaceholderDay.said], #1203): a January 1 with a
         // later day of the year among them, its year alone; the release stays the one dated.
         private fun firstRelease(
@@ -683,7 +685,9 @@ class RecordingResolver(
                 dated.filter { it.first == recording.firstReleaseDate }.minByOrNull { it.second.mbid }
                     ?: dated
                         .takeIf { fallback }
-                        ?.minWithOrNull(compareBy<Pair<String, MbRelease>> { it.first }.thenBy { it.second.mbid })
+                        ?.minWithOrNull(
+                            compareBy<Pair<String, MbRelease>> { byPrecision(it.first) }.thenBy { it.second.mbid },
+                        )
             return first?.let { (date, release) ->
                 FirstRelease(
                     date = PlaceholderDay.said(date, dated.map { it.first }),
@@ -988,22 +992,6 @@ private class Earlier(
     val recordings: List<MbRecording>,
     val complete: Boolean,
 )
-
-// [date] (`2015`, `2015-08`, `2015-08-07`) as the resolver's preference orders it: as given, but a
-// year or month alone after every day it holds (`2015` after `2015-12-31`, `2015-08` after
-// `2015-08-31`) and before the next (#1203). As a string compared alone, `2015` sorted before
-// `2015-08-07`, so a recording MusicBrainz dates by the year alone, often a compilation's, beat the
-// original dated to the day. A key, not a comparison at the precision both have, so the order stays
-// total.
-private fun byPrecision(date: String): String =
-    when (date.count { it == '-' }) {
-        0 -> "$date-$LATER-$LATER"
-        1 -> "$date-$LATER"
-        else -> date
-    }
-
-// After any month or day MusicBrainz writes (two digits).
-private const val LATER = "99"
 
 // At most this many searches by date after a full first page (#906).
 private const val DATE_SEARCHES = 3

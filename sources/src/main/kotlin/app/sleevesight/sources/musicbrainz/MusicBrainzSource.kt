@@ -67,6 +67,9 @@ class MusicBrainzSource(
      * under a compilation's recording, with no first release, is asked again. 14: a January 1 beside a
      * later day of the year in the release group, or among the recording's releases, is said as its
      * year alone (`PlaceholderDay`, #1203), so a release kept dated to the placeholder day is asked
+     * again. 15: such a year is marked as one (`ReleaseDate.placeholderDay`), which a year
+     * MusicBrainz gives alone is not, and a title's earliest release is a day before the year alone
+     * it is in (`ReleaseDate.byPrecision`), so a result kept at 14, its years unmarked, is asked
      * again. Without
      * [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
@@ -105,4 +108,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 14
+private const val EXTRACTION_VERSION = 15

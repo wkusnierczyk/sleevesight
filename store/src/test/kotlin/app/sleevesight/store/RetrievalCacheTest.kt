@@ -382,6 +382,22 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `a year said for a placeholder January 1 keeps its mark, written only when set`() {
+        // #1203: *A/B* kept as 2016 for its Icelandic `2016-01-01`, beside a year MusicBrainz gives alone.
+        val result =
+            sample(Outcome.SongArticle).copy(
+                releaseDates =
+                    listOf(
+                        ReleaseDate("A/B", "2016", "rg-ab", "Album", placeholderDay = true),
+                        ReleaseDate("Hits", "2016", "rg-hits", "Compilation"),
+                    ),
+            )
+        val encoded = RetrievalCodec.encode(result)
+        assertEquals(result.releaseDates, assertNotNull(RetrievalCodec.decode(encoded)).releaseDates)
+        assertEquals(1, Regex("\"placeholderDay\"").findAll(encoded).count())
+    }
+
+    @Test
     fun `the first release and the original, with its release or without, round-trip`() {
         val result = sample(Outcome.SongArticle)
         assertEquals(result, RetrievalCodec.decode(RetrievalCodec.encode(result)))

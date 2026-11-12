@@ -34,18 +34,20 @@ object PlaceholderDay {
 
     /**
      * [date], a release group's first-release date as MusicBrainz's lookup of the group gives it, as
-     * precisely as [kept], the dates the track's releases of that group are kept with
-     * ([ReleaseDate.collapse], which says them by [said]), say it: a January 1 as its year alone when
-     * one of [kept] is that year alone, so an edition's sentence says its original's date as the
+     * precisely as [kept], the track's releases of that group as [ReleaseDate.collapse] keeps them,
+     * say it: a January 1 as its year alone when one of [kept] is that year said for a placeholder
+     * day ([ReleaseDate.placeholderDay]), so an edition's sentence says its original's date as the
      * original's own sentence does (*A/B*'s group `2016-01-01`, its release kept as `2016`); any other
-     * date as given.
+     * date as given. A year MusicBrainz gives alone is no such sign: beside `2000` and `2020-05-04`,
+     * nothing later in 2000, a group's `2000-01-01` keeps its day, as [said] keeps it.
      */
     fun asKept(
         date: String,
-        kept: Iterable<String?>,
+        kept: Iterable<ReleaseDate>,
     ): String {
         val year = DateWhen.of(date)?.year
-        return if (januaryFirst(date) && year in kept) year.orEmpty() else date
+        val lowered = januaryFirst(date) && kept.any { it.placeholderDay && it.date == year }
+        return if (lowered) year.orEmpty() else date
     }
 
     /** Whether [date], as MusicBrainz gives it, is a January 1 written to the day (`2016-01-01`). */

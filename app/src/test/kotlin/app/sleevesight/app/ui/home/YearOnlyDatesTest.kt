@@ -22,7 +22,7 @@ class YearOnlyDatesTest {
     // are of 10 June 2016 (`PlaceholderDay`), the 2026 deluxe edition under its own title, and the single.
     private val ab =
         listOf(
-            ReleaseDate("A/B", "2016", "g-ab", "Album"),
+            ReleaseDate("A/B", "2016", "g-ab", "Album", placeholderDay = true),
             ReleaseDate("A/B (Deluxe Edition)", "2026-06-10", "g-ab", "Album"),
             ReleaseDate("Way down We Go", "2015-08-07", "g-single", "Single"),
         )
@@ -70,6 +70,38 @@ class YearOnlyDatesTest {
             DateSentence.Edition("2000-01-01", "New Year", EditionPart.Same("2020-05-04")),
             homeDates(state, deluxe, firsts).first(),
         )
+    }
+
+    @Test
+    fun `a group's January 1 keeps its day beside a release of the group dated by its year alone`() {
+        // The group's releases dated `2000-01-01`, `2000` and `2020-05-04`: nothing in 2000 out on a
+        // later day, so no placeholder, and the edition's original is said to the day.
+        val dates =
+            listOf(
+                ReleaseDate("New Year", "2000-01-01", "g-ny", "Album"),
+                ReleaseDate("New Year (Deluxe Edition)", "2020-05-04", "g-ny", "Album"),
+                ReleaseDate("New Year (Promo)", "2000", "g-ny", "Album"),
+            )
+        val deluxe = wayDown.copy(album = "New Year (Deluxe Edition)", year = 2020)
+        val state = track(deluxe).copy(resolution = Resolution(releaseDates = dates))
+        val firsts = mapOf("g-ny" to MbGroupFirst("g-ny", "New Year", "2000-01-01"))
+        assertEquals(
+            DateSentence.Edition("2000-01-01", "New Year", EditionPart.Same("2020-05-04")),
+            homeDates(state, deluxe, firsts).first(),
+        )
+    }
+
+    @Test
+    fun `an album's year said for a placeholder day is never refined to a later day of the year`() {
+        // *A/B* kept as 2016 for its Icelandic January 1, and a release of the name in another group
+        // dated 10 June 2016: the album's sentence says the year, as the edition's sentence would.
+        val dates =
+            listOf(
+                ReleaseDate("A/B", "2016", "g-ab", "Album", placeholderDay = true),
+                ReleaseDate("A/B", "2016-06-10", "g-other", "Album"),
+            )
+        val state = track(wayDown).copy(resolution = Resolution(releaseDates = dates))
+        assertEquals(DateSentence.Album("2016"), homeDates(state, wayDown).first())
     }
 
     @Test

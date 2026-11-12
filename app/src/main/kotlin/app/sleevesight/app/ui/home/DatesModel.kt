@@ -216,7 +216,7 @@ internal fun homeDates(
     val releases = AlbumDates.releasesOf(track)
     val firsts =
         firsts.mapValues { (group, first) ->
-            val kept = releases.filter { it.group == group }.map { it.date }
+            val kept = releases.filter { it.group == group }
             first.copy(firstReleaseDate = first.firstReleaseDate?.let { PlaceholderDay.asKept(it, kept) })
         }
     val kept = keptMusicBrainz(track)
@@ -504,7 +504,7 @@ private class AlbumDates(
                         ?: settledBy(firstReleaseOf(track), named)
                 }
             val album = if (year == null) emptyList() else albumsOf(named.filter { it.releaseYear == year }, named)
-            val date = earliest(album.mapNotNull { it.date })
+            val date = earliest(album)
             val groups = album.map { it.group }.toSet()
             val title = album.firstOrNull { it.date == date }?.title
             return AlbumDates(name, year, date, groups, kindNamed(album, date), title)
@@ -568,12 +568,17 @@ private class AlbumDates(
             }
         }
 
-        // The earliest of [dates], as precise as the dates that refine it allow: of `2014` and
-        // `2014-07-29`, the day.
-        private fun earliest(dates: List<String>): String? =
-            generateSequence(dates.minOrNull()) { at ->
-                dates.filter { it.length > at.length && it.startsWith(at) }.minOrNull()
+        // The earliest date of [album], as precise as the dates that refine it allow: of `2014` and
+        // `2014-07-29`, the day. Not a year said for a placeholder January 1
+        // ([ReleaseDate.placeholderDay], #1203): *A/B*'s `2016` stays the year, never another
+        // release's `2016-06-10`.
+        private fun earliest(album: List<ReleaseDate>): String? {
+            val dates = album.mapNotNull { it.date }
+            val placeholders = album.filter { it.placeholderDay }.mapNotNull { it.date }.toSet()
+            return generateSequence(dates.minOrNull()) { at ->
+                dates.filter { at !in placeholders && it.length > at.length && it.startsWith(at) }.minOrNull()
             }.lastOrNull()
+        }
     }
 }
 
