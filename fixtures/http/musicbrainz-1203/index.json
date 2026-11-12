@@ -1,0 +1,13 @@
+[
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Way down We Go\" AND artist:\"KALEO\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-way-down-we-go-and-artist-kaleo.json"
+ }
+]

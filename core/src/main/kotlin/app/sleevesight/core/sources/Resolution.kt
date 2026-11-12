@@ -27,6 +27,10 @@ import app.sleevesight.core.text.DateWhen
  *   itself has no id in [artists], since no one MusicBrainz artist is theirs. Empty otherwise.
  * @property firstRelease the earliest release of the recording; the player's release stays
  *   separate (`P` evidence).
+ * @property recordingFirstReleased MusicBrainz's first-release date of the accepted recording, as it
+ *   gives it, kept for when none of the releases the search lists with the recording is dated
+ *   ([firstRelease] null, #1203: a release the search gives undated), so its date is still known
+ *   ([firstReleaseDate]). Null when no recording was accepted, or MusicBrainz gives it no date.
  * @property releaseDates the releases of the track's recordings, one per title and release group
  *   with its earliest date ([ReleaseDate.collapse], #556): of every recording the resolution would
  *   accept, whose title and length fit and whose credits are the accepted artists (not a
@@ -80,6 +84,7 @@ data class Resolution(
     val artists: List<ResolvedArtist> = emptyList(),
     val jointArtists: List<ResolvedArtist> = emptyList(),
     val firstRelease: FirstRelease? = null,
+    val recordingFirstReleased: String? = null,
     val releaseDates: List<ReleaseDate> = emptyList(),
     val work: ResolvedWork? = null,
     val original: OriginalRecording? = null,
@@ -95,9 +100,10 @@ data class Resolution(
 ) {
     /**
      * The earliest first-release date of the recording, as MusicBrainz gives it (`1974`,
-     * `1974-03`, `1974-03-25`).
+     * `1974-03`, `1974-03-25`): [firstRelease]'s, else, with no release of it known,
+     * [recordingFirstReleased] (#1203).
      */
-    val firstReleaseDate: String? get() = firstRelease?.date
+    val firstReleaseDate: String? get() = firstRelease?.date ?: recordingFirstReleased
 
     /** Whether a recording was accepted. */
     val resolved: Boolean get() = recordingMbid != null

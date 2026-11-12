@@ -248,6 +248,7 @@ class RecordingResolver(
                     },
                 jointArtists = chosen.jointArtists,
                 firstRelease = firstRelease(recording),
+                recordingFirstReleased = recording.firstReleaseDate,
                 releaseDates = ReleaseDate.collapse(releases, names::key),
             )
         // Without the recording's detail, nothing is known of its work, and so of its lyrics: none when
@@ -611,9 +612,11 @@ class RecordingResolver(
 
         // Of the accepted candidates: the earliest released (the original recording rather than a
         // later remaster of it), then the closest title, the closest length, the most credited
-        // artists, and the id, so the choice never depends on the search's order.
+        // artists, and the id, so the choice never depends on the search's order. A date known only
+        // to the year (or month) is not earlier than a day in it ([byPrecision], #1203): *Way down We
+        // Go*'s `2015` on a compilation is no earlier than the single's `2015-08-07`.
         private val PREFERENCE: Comparator<Candidate> =
-            compareBy<Candidate> { it.recording.firstReleaseDate ?: UNDATED }
+            compareBy<Candidate> { byPrecision(it.recording.firstReleaseDate ?: UNDATED) }
                 .thenByDescending { it.titleSimilarity }
                 .thenBy { it.durationGap ?: Duration.INFINITE }
                 .thenByDescending { it.creditedArtists }
@@ -979,6 +982,22 @@ private class Earlier(
     val recordings: List<MbRecording>,
     val complete: Boolean,
 )
+
+// [date] (`2015`, `2015-08`, `2015-08-07`) as the resolver's preference orders it: as given, but a
+// year or month alone after every day it holds (`2015` after `2015-12-31`, `2015-08` after
+// `2015-08-31`) and before the next (#1203). As a string compared alone, `2015` sorted before
+// `2015-08-07`, so a recording MusicBrainz dates by the year alone, often a compilation's, beat the
+// original dated to the day. A key, not a comparison at the precision both have, so the order stays
+// total.
+private fun byPrecision(date: String): String =
+    when (date.count { it == '-' }) {
+        0 -> "$date-$LATER-$LATER"
+        1 -> "$date-$LATER"
+        else -> date
+    }
+
+// After any month or day MusicBrainz writes (two digits).
+private const val LATER = "99"
 
 // At most this many searches by date after a full first page (#906).
 private const val DATE_SEARCHES = 3
