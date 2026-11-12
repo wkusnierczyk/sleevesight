@@ -217,6 +217,28 @@ git -C "$repo" add g.txt
 expect 'renamed by the current side' 1 'g.txt' 'two, theirs' git commit --no-edit
 expect 'renamed by the current side, trailer' 0 '' '' git commit -qm Merge -m 'Dropped: g.txt: kept as it was'
 
+# A file both sides renamed, to different names: compared with the file the resolution keeps,
+# whichever name it has. renamed_both <name kept> <keep the incoming last line: 0|1>.
+renamed_both() {
+  fresh
+  on work 'ours' git mv f.txt g.txt
+  on theirs 'theirs' sh -c "git mv f.txt h.txt && echo 'eleven, theirs' >>h.txt"
+  git -C "$repo" checkout -q work
+  (cd "$repo" && git merge -q --no-edit theirs >/dev/null 2>&1) && return 1
+  (cd "$repo" && git rm -q --cached f.txt g.txt h.txt && rm g.txt && mv h.txt "$1" && git add "$1")
+  if [ "$2" -eq 0 ]; then
+    (cd "$repo" && sed '$d' "$1" >x && mv x "$1" && git add "$1")
+  fi
+}
+renamed_both g.txt 1
+expect 'renamed by both sides, kept under the current name' 0 '' '' git commit --no-edit
+renamed_both g.txt 0
+expect 'renamed by both sides, kept under the current name, dropped' 1 'eleven, theirs' '' git commit --no-edit
+renamed_both h.txt 1
+expect 'renamed by both sides, kept under the incoming name' 0 '' '' git commit --no-edit
+renamed_both k.txt 1
+expect 'renamed by both sides, kept under a third name' 0 '' '' git commit --no-edit
+
 # Without the `commit-msg` hook (installed before the merge check), `pre-commit` checks instead and
 # `pre-merge-commit` says that a merge with no conflicts goes unchecked.
 conflicted

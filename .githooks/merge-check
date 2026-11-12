@@ -15,7 +15,9 @@
 #     which may be in backticks, then a colon and a reason), which carries the choice into the pull
 #     request's commits and their reviews.
 # The incoming side's renames are followed, and the current side's too, so a renamed file is
-# compared with what it became. Binary files, symbolic links and submodules are not checked.
+# compared with what it became in the result: under either side's new name (both renamed it), or,
+# by rename detection from the incoming commit to the result, under a name the resolution gave it.
+# Binary files, symbolic links and submodules are not checked.
 #
 # When: the decision is taken in `commit-msg`, the only hook that sees both the merge and its message.
 # git runs it for a merge concluded with `git commit` (after conflicts) and for one `git merge`
@@ -193,7 +195,7 @@ read_trailers() {
 check() {
   local ours=$1 theirs=$2 tree=$3 base i j status old new oblob nblob
   local ostatus onew oblob2 path ours_all report=$work/report refused=0
-  local o_st o_old o_new o_nblob t_st t_old t_new t_oblob t_nblob t_mode
+  local o_st o_old o_new o_nblob t_st t_old t_new t_oblob t_nblob t_mode m_st m_old m_new moves_read=0
   base=$(git merge-base "$ours" "$theirs") || return 0   # unrelated histories: nothing to compare
   raw "$base" "$ours"
   o_st=(${r_st[@]+"${r_st[@]}"}) o_old=(${r_old[@]+"${r_old[@]}"})
@@ -233,6 +235,28 @@ check() {
         # A file only the current side renamed is in the result under its new name.
         if [ "$ostatus" = R ] && [ "$status" != R ]; then path=$onew; fi ;;
     esac
+    # Not there: the resolution kept another name. Both sides renamed the file (kept under the
+    # current side's name), the current side renamed it and the resolution kept the old name, or the
+    # resolution moved it itself (found by rename detection from the incoming commit to the result).
+    if [ -z "$(blob_at "$tree" "$path")" ]; then
+      if [ "$ostatus" = R ] && [ -n "$(blob_at "$tree" "$onew")" ]; then
+        path=$onew
+      elif [ -n "$(blob_at "$tree" "$new")" ]; then
+        path=$new
+      else
+        if [ "$moves_read" -eq 0 ]; then
+          raw "$theirs" "$tree"
+          m_st=(${r_st[@]+"${r_st[@]}"}) m_old=(${r_old[@]+"${r_old[@]}"}) m_new=(${r_new[@]+"${r_new[@]}"})
+          moves_read=1
+        fi
+        for ((j = 0; j < ${#m_st[@]}; j++)); do
+          if [ "${m_st[j]}" = R ] && [ "${m_old[j]}" = "$new" ]; then
+            path=${m_new[j]}
+            break
+          fi
+        done
+      fi
+    fi
 
     if [ "$status" = A ]; then added_file "$nblob" >"$work/theirs.diff"; else blob_diff "$oblob" "$nblob" >"$work/theirs.diff" || true; fi
     git cat-file blob "$tree:$path" >"$work/result" 2>/dev/null || : >"$work/result"
