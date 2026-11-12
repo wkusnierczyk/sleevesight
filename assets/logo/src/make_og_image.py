@@ -3,8 +3,8 @@
 1200 x 630 px, the size most link previews crop to (Open Graph's 1.91:1), built from the logo's
 sources as `make_feature_graphic.py` builds the feature graphic, and with its code: the words are
 the tile's outlines (`tile.json`), the record is the brand sheet's drawing (`<symbol id="lp">` in
-`design/brand.html`), the colours are the sheet's colourways, and the tagline "Insights on what's
-playing" is outlined from Roboto Flex, so the SVG renders without a font.
+`design/brand.html`), the colours are the sheet's colourways, and the tagline "Your companion to
+what's playing" is outlined from Roboto Flex, so the SVG renders without a font.
 
 Each design is the 8b mark (the words, the record beside "sight", as tall as it) with the tagline
 under it, centred, and kept inside the middle 630 x 630 square, so a service that crops the image

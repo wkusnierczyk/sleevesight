@@ -3,8 +3,8 @@
 All 1024 x 500, built from the logo's sources: the words are the tile's outlines (`tile.json`,
 written by `make_tile.py`); the record is the brand sheet's drawing (`<symbol id="lp">` in
 `design/brand.html`); the colours, other than white, are the sheet's light and dark colourways
-(`.lt` and `.dk`, and its `--muted` for a tagline in grey); the tagline "Insights on what's
-playing" is outlined here from Roboto Flex. So every SVG renders without a font.
+(`.lt` and `.dk`, and its `--muted` for a tagline in grey); the tagline "Your companion to
+what's playing" is outlined here from Roboto Flex. So every SVG renders without a font.
 
   d2              The one on Google Play: on the label's red (`.lt`'s `--red`), "Sleeve" white over
                   "sight" in the logo's ink (a red "sight" would vanish on red), right-aligned, the
@@ -61,7 +61,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 
 W, H = 1024, 500
 WHITE = '#ffffff'
-TAG_TEXT = 'Insights on what’s playing'
+TAG_TEXT = 'Your companion to what’s playing'
 TAG_AXES = {'wght': 400, 'wdth': 88, 'opsz': 36}
 TAG_TRACK = -.01              # em, after each letter
 RECORD_ELEMENTS = 7           # the elements of <symbol id="lp">, the core included

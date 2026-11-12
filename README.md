@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<p align="center"><b>Insights on what's playing</b></p>
+<p align="center"><b>Your companion to what's playing</b></p>
 
 <!-- chips: images from GitHub and shields.io, left out of the site's copy, which cuts from here to the closing marker (`readme-page.html`); keep both markers -->
 <p align="center">
