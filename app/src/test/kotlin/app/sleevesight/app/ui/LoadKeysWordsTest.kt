@@ -26,13 +26,13 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.API_KEYS_URL
@@ -57,7 +57,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
@@ -75,14 +74,10 @@ class LoadKeysWordsTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val settings = memorySettings()
+    private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val list = KeyWords.load(JvmResourceReader)
 
     private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
@@ -104,7 +99,6 @@ class LoadKeysWordsTest {
     @After
     fun close() {
         saves.cancel()
-        stores.close()
     }
 
     private fun text(id: Int) = app.getString(id)

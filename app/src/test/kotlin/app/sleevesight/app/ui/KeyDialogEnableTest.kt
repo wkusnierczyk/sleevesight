@@ -18,13 +18,13 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -48,7 +48,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -61,18 +60,14 @@ class KeyDialogEnableTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val stores by lazy { TestStores(tmp.root) }
 
     // Over stores whose writes a test can fail or hold back.
-    private val settingsData by lazy { FlakyDataStore(stores.open("settings")) }
-    private val secretsData by lazy { FlakyDataStore(stores.open("secrets")) }
-    private val settings by lazy { SettingsStore(settingsData) }
-    private val secrets by lazy { SecretStore(secretsData, testCipher()) }
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val settingsData = FlakyDataStore(MemoryStore())
+    private val secretsData = FlakyDataStore(MemoryStore())
+    private val settings = memorySettings(settingsData)
+    private val secrets = SecretStore(secretsData, testCipher(), dispatcher = Dispatchers.Unconfined)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @Before
     fun nothingKeyedOn() {
@@ -90,7 +85,6 @@ class KeyDialogEnableTest {
     @After
     fun close() {
         saves.cancel()
-        stores.close()
     }
 
     private fun text(id: Int) = app.getString(id)
@@ -102,7 +96,7 @@ class KeyDialogEnableTest {
     private fun waitForNode(matcher: SemanticsMatcher) =
         idleUntil("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
 
-    /** Waits for the settings the save applies, written in the background, to satisfy [condition]. */
+    /** Waits for the settings the save applies, written by the screen's saves, to satisfy [condition]. */
     private fun settled(condition: () -> Boolean) =
         try {
             idleUntil("the settings written") { condition() }

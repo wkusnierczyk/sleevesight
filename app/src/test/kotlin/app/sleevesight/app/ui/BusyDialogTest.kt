@@ -21,13 +21,14 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.idleUntil
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
@@ -45,7 +46,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.shadows.ShadowDialog
@@ -62,27 +62,22 @@ class BusyDialogTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val flaky by lazy { FlakyDataStore(stores.open("gated-secrets")) }
-    private val secrets by lazy { SecretStore(flaky, testCipher()) }
+    private val settings = memorySettings()
+    private val flaky = FlakyDataStore(MemoryStore())
+    private val secrets = SecretStore(flaky, testCipher(), dispatcher = Dispatchers.Unconfined)
 
     /** Lets the writes through; until then, each waits. */
     private val gate = CompletableDeferred<Unit>()
 
     /** Where the screen saves, as the process's scope in the app: it outlives the screen. */
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
         // Also when a test fails, so no write stays blocked for the rest of the run.
         gate.complete(Unit)
         saves.cancel()
-        stores.close()
     }
 
     private fun text(id: Int) = app.getString(id)
@@ -134,7 +129,9 @@ class BusyDialogTest {
 
     /**
      * Releases the gate, waits for the dialog to go ([dialog] gone) and for every save started on
-     * [saves], and returns the writes asked for since [before]: a second save would be counted by then.
+     * [saves] to end, and returns the writes asked for since [before]: a second save would be counted
+     * by then. The saves run on the main thread, so the wait steps its looper ([idleUntil]) rather than
+     * joining them in `runBlocking`, which would block the thread they need, with no time limit.
      */
     private fun release(
         dialog: SemanticsMatcher,
@@ -142,10 +139,8 @@ class BusyDialogTest {
     ): Int {
         gate.complete(Unit)
         waitFor("the dialog gone") { gone(dialog) }
-        runBlocking {
-            saves.coroutineContext.job.children
-                .forEach { it.join() }
-        }
+        val pending = saves.coroutineContext.job
+        idleUntil("every save ended") { pending.children.none { it.isActive } }
         return flaky.writes.get() - before
     }
 

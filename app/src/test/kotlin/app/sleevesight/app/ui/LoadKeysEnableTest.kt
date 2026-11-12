@@ -23,13 +23,13 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
-import app.sleevesight.app.TestStores
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -55,7 +55,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -69,18 +68,14 @@ class LoadKeysEnableTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    @get:Rule
-    val tmp = TemporaryFolder()
-
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val stores by lazy { TestStores(tmp.root) }
 
     // Over stores whose writes a test can fail or hold back.
-    private val settingsData by lazy { FlakyDataStore(stores.open("settings")) }
-    private val secretsData by lazy { FlakyDataStore(stores.open("secrets")) }
-    private val settings by lazy { SettingsStore(settingsData) }
-    private val secrets by lazy { SecretStore(secretsData, testCipher()) }
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val settingsData = FlakyDataStore(MemoryStore())
+    private val secretsData = FlakyDataStore(MemoryStore())
+    private val settings = memorySettings(settingsData)
+    private val secrets = SecretStore(secretsData, testCipher(), dispatcher = Dispatchers.Unconfined)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
     private val openAiKey = "sk-proj-" + "a1B2c3D4e5".repeat(5)
@@ -106,7 +101,6 @@ class LoadKeysEnableTest {
     @After
     fun close() {
         saves.cancel()
-        stores.close()
     }
 
     private fun text(id: Int) = app.getString(id)
@@ -161,7 +155,7 @@ class LoadKeysEnableTest {
 
     private fun waitForText(text: String) = waitForNode(hasText(text))
 
-    /** Waits for the settings the choices apply, written in the background, to satisfy [condition]. */
+    /** Waits for the settings the choices apply, written by the screen's saves, to satisfy [condition]. */
     private fun settled(condition: () -> Boolean) = idleUntil("the settings written") { condition() }
 
     private fun shown(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()

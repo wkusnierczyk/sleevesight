@@ -17,14 +17,15 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.MUSICBRAINZ_WAIT_SLIDER_TAG
 import app.sleevesight.app.ui.settings.MUSICBRAINZ_WAIT_VALUE_TAG
@@ -61,14 +62,23 @@ class MusicBrainzWaitSettingTest {
     val compose = createEmptyComposeRule()
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val settings = SettingsStore(MemoryStore())
+
+    // In memory, over a store whose writes a test can hold back ([held]).
+    private val settingsData = FlakyDataStore(MemoryStore())
+    private val settings = memorySettings(settingsData)
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
 
-    // One at a time, in order: two saves in quick succession land as made.
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
+    // On the main thread, with the screen, so a wait for a save has no other thread to wait on
+    // (#1183). A save then answers at once, unless its write is [held].
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Holds the settings' writes, once set as the store's gate, until completed. */
+    private val held = CompletableDeferred<Unit>()
 
     @After
     fun close() {
+        // Also when a test fails, so no write stays held for the rest of the run.
+        held.complete(Unit)
         saves.cancel()
     }
 
@@ -166,10 +176,14 @@ class MusicBrainzWaitSettingTest {
         }
 
     // A drag to 30 s and back to 15 s in one gesture, faster than the store answers: the move back is
-    // written too, and the setting ends where the drag did.
+    // written too, and the setting ends where the drag did. The writes are held through the gesture,
+    // so the store still says 15 s when the drag comes back: compared with the stop stored rather
+    // than the one shown, the move back would ask for no write and the setting would end at 30 s.
     @Test
     fun aQuickDragAwayAndBackEndsWhereItEnded() =
         showSources {
+            val before = settingsData.writes.get()
+            settingsData.writeGate = held
             slider().performTouchInput {
                 val inset = 12.dp.toPx()
                 val stop = { i: Int -> Offset(inset + (width - 2 * inset) * i / 3, centerY) }
@@ -178,7 +192,12 @@ class MusicBrainzWaitSettingTest {
                 moveTo(stop(1))
                 up()
             }
-            compose.waitUntil(WAIT_MS) { spoken() == "15 seconds" }
+            compose.waitForIdle()
+            assertEquals("the move away and the move back both asked for", before + 2, settingsData.writes.get())
+            assertEquals("neither write answered yet", 15.seconds, settings.now().musicBrainzWait)
+            assertEquals("15 seconds", spoken())
+
+            held.complete(Unit)
             compose.waitForIdle()
             assertEquals(15.seconds, settings.now().musicBrainzWait)
             assertEquals("15 seconds", spoken())

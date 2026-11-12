@@ -23,16 +23,17 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.KeyDialogs
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
@@ -76,9 +77,9 @@ class PurgeKeysTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val stores by lazy { TestStores(tmp.root) }
-    private val settings by lazy { SettingsStore(stores.open("settings")) }
-    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val settings = memorySettings()
+    private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
@@ -105,9 +106,10 @@ class PurgeKeysTest {
     }
 
     /**
-     * Waits for [condition], failing, naming [what], after five seconds. What the screens show is
-     * read and saved on DataStore's and the key store's threads: each step runs the main looper and
-     * advances its clock ([idleUntil]), so the result posted back to it arrives.
+     * Waits for [condition], failing, naming [what], after `WAIT_MS`. The fixture's settings and keys
+     * are read and saved on the main thread (#1183), but a test's own stores over files are read and
+     * saved on DataStore's and the key store's threads: each step runs the main looper and advances
+     * its clock ([idleUntil]), so the result posted back to it arrives.
      */
     private fun waitFor(
         what: String,

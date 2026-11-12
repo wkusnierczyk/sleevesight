@@ -15,8 +15,8 @@ import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.WAIT_MS
+import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.MUSICBRAINZ_WAIT_SLIDER_TAG
 import app.sleevesight.app.ui.settings.MUSICBRAINZ_WAIT_STOPS_TAG
@@ -48,9 +48,9 @@ class MusicBrainzWaitLargeFontTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    private val settings = SettingsStore(MemoryStore())
+    private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {

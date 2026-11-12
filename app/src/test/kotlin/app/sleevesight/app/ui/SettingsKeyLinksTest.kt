@@ -85,7 +85,7 @@ class SettingsKeyLinksTest {
     // does not wait for: on a busy machine the rows were not back yet when the test looked for them.
     private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var inputModes: InputModeManager? = null
 
     @After

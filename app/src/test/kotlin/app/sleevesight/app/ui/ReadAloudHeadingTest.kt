@@ -62,7 +62,7 @@ class ReadAloudHeadingTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val settings = memorySettings()
     private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
-    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After
     fun close() {
