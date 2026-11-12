@@ -18,7 +18,7 @@ Contributions are under the project’s licence, [GPL-3.0](LICENSE); there is no
 
 ## Building and testing
 
-How to build the app and run its tests and checks, and how to use the pipeline tool in `cli/`: [README → Building](README.md#building).
+How to build the app and run its tests and checks, and how to use the pipeline tool in `cli/`: [README → Building](https://github.com/wkusnierczyk/sleevesight#building).
 
 ## How the project works
 
