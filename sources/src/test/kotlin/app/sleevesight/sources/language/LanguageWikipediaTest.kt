@@ -104,10 +104,10 @@ class LanguageWikipediaTest {
         )
 
     @Test
-    fun `the extraction version is 2, raised for the resolution #1129 changed`() {
-        // The pages are checked against the resolution, which #1129 changed: results kept under 1,
-        // against an earlier miss, are asked again.
-        assertEquals(2, adapter.extractionVersion)
+    fun `the extraction version is 3, raised for the resolutions #1129 and #1203 changed`() {
+        // The pages are checked against the resolution, which #1129 and #1203 changed: results kept
+        // under an earlier version, against an earlier choice, are asked again.
+        assertEquals(3, adapter.extractionVersion)
     }
 
     @Test

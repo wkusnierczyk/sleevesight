@@ -1,0 +1,4725 @@
+{
+ "created": "2026-11-12T07:46:45.851Z",
+ "count": 11,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "8b82e8e6-b27b-4253-b5ee-991686ff77e5",
+   "score": 100,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go",
+   "length": 215388,
+   "disambiguation": "live, 2015-08-31: KBCO Studio C, Denver, CO, USA",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2015-11-15",
+   "releases": [
+    {
+     "id": "c0003534-2c7c-489a-abf1-191806d463a5",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "KBCO Studio C, Volume 27",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "e91cf4a2-e9ea-4b2a-b3af-4af8e743a80f",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "KBCO Studio C, Volume 27",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation",
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2015-11-15",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2015-11-15",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 19,
+     "media": [
+      {
+       "id": "ecc2f7d1-d296-3d03-a9c3-1b308ddc112b",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "86f2b036-16fb-42ac-ad00-0908d6afde79",
+         "number": "19",
+         "title": "Way Down We Go",
+         "length": 215388
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 18
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "9bdba438-4ab7-4967-859e-03d714f6ff67",
+   "score": 100,
+   "artist-credit-id": "0719032a-e77e-3c70-a703-b5fd1688716c",
+   "title": "Way down We Go",
+   "length": 219560,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "KALEO",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2015-08-07",
+   "releases": [
+    {
+     "id": "689bdd3a-bb0e-4f0e-a13c-94d1b28675f9",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "0719032a-e77e-3c70-a703-b5fd1688716c",
+     "count": 1,
+     "title": "Way down We Go",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "KALEO",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5ad302da-ed70-44c8-8849-fefe7494dff6",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Way Down We Go",
+      "primary-type": "Single"
+     },
+     "date": "2015-08-07",
+     "country": "CN",
+     "release-events": [
+      {
+       "date": "2015-08-07",
+       "area": {
+        "id": "7c81bb69-a99b-3487-b6d4-0f76d7a29ca0",
+        "name": "China",
+        "sort-name": "China",
+        "iso-3166-1-codes": [
+         "CN"
+        ]
+       }
+      }
+     ],
+     "track-count": 1,
+     "media": [
+      {
+       "id": "df09dca5-d6e1-4b22-96d3-81bad7b9f6fa",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "b6c5083f-f683-48fa-a03f-f74e72ad5830",
+         "number": "1",
+         "title": "Way down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 1,
+       "track-offset": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "a5879fdc-cd2f-4b7a-829c-b8d2cf264b66",
+   "score": 100,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go",
+   "length": 213706,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2017",
+   "releases": [
+    {
+     "id": "d87f91df-e794-4baa-98f6-dcde60767c26",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Chilled Rock",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "926057ef-610e-4c74-90d3-8e97c9e1b36e",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Chilled Rock",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2024-09-21",
+     "country": "BS",
+     "release-events": [
+      {
+       "date": "2024-09-21",
+       "area": {
+        "id": "f8b33963-7364-33be-8c6c-5ab2e1075ae1",
+        "name": "Bahamas",
+        "sort-name": "Bahamas",
+        "iso-3166-1-codes": [
+         "BS"
+        ]
+       }
+      }
+     ],
+     "track-count": 35,
+     "media": [
+      {
+       "id": "e96d6b7b-3df9-4811-b256-be1b315c8ae2",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "04b858a9-b0f2-4aa0-ba0e-d117318f84a5",
+         "number": "17",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 35,
+       "track-offset": 16
+      }
+     ]
+    },
+    {
+     "id": "4edb3e25-d045-4b74-8d55-66596fb2be45",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Best of Blues & Roots 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "4c1f4d04-b683-424b-b1ab-735ffc13e8f9",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Best of Blues & Roots 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 35,
+     "media": [
+      {
+       "id": "e5f308eb-da41-40fd-8dd0-f6a9b1e9c087",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "94bfa7a9-2bb9-46be-8bbc-e2294b2a3d58",
+         "number": "2",
+         "title": "Way Down We Go"
+        }
+       ],
+       "track-count": 17,
+       "track-offset": 1
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "USAT21502122"
+   ]
+  },
+  {
+   "id": "efdbd424-8a44-4f9f-88f8-902928fe9440",
+   "score": 99,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go",
+   "length": 219466,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2015-08-07",
+   "releases": [
+    {
+     "id": "9c74bb98-9001-4817-87f1-4eb920332e2f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Always in my Head...and my Heart",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "b44b8e8c-5e13-4c51-9535-a633bc620029",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Always in my Head...and my Heart",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 41,
+     "media": [
+      {
+       "id": "0edeec8a-9127-4f2d-9311-3c3665bb8e43",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "aec9b279-1a9e-4492-9707-e0993d74e49a",
+         "number": "6",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 41,
+       "track-offset": 5
+      }
+     ]
+    },
+    {
+     "id": "6313b666-6042-486b-b2aa-614e7542ff68",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Life Is Music 2016.2",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "406d765d-c5ca-43e9-b268-a33878927ff5",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Life Is Music 2016.2",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016-12-02",
+     "country": "BE",
+     "release-events": [
+      {
+       "date": "2016-12-02",
+       "area": {
+        "id": "5b8a5ee5-0bb3-34cf-9a75-c27c44e341fc",
+        "name": "Belgium",
+        "sort-name": "Belgium",
+        "iso-3166-1-codes": [
+         "BE"
+        ]
+       }
+      }
+     ],
+     "track-count": 39,
+     "media": [
+      {
+       "id": "7eaf64bb-590b-3018-baeb-4f51e672262c",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "cc9efa92-d4a5-46b6-9334-81a4422436f5",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 218000
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "8f74c4f2-a4ab-40b6-bc75-119665913bfb",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Ö3 Greatest Hits 76",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "948b206c-5daa-4498-8be4-c3969fc21443",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Ö3 Greatest Hits 76",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-03-03",
+     "country": "AT",
+     "release-events": [
+      {
+       "date": "2017-03-03",
+       "area": {
+        "id": "caac77d1-a5c8-3e6e-8e27-90b44dcc1446",
+        "name": "Austria",
+        "sort-name": "Austria",
+        "iso-3166-1-codes": [
+         "AT"
+        ]
+       }
+      }
+     ],
+     "track-count": 22,
+     "media": [
+      {
+       "id": "53aaab4d-9cbb-38b7-8a44-e0edc4d556b8",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "6e277378-c997-484b-945c-b03ceca180d8",
+         "number": "17",
+         "title": "Way Down We Go",
+         "length": 219614
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 16
+      }
+     ]
+    },
+    {
+     "id": "70cee28b-56cf-4a10-a9f4-a2de639a282f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B (Deluxe Edition)",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2026-06-10",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2026-06-10",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "98f4adfa-17ea-4637-94be-141d695bd165",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "bb7976f8-c1d4-4a3d-ae8f-43ccf0e93786",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 214000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "96a93900-1a5c-43ae-b164-9703e8b311d2",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "100 From the 10’s: Rock",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "df98b332-009f-44dd-9426-751dc82571b6",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "100 From the 10’s: Rock",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 100,
+     "media": [
+      {
+       "id": "96bc58af-4a77-4217-8a10-800583a43d0e",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "f3866349-8fb6-42a6-9945-4a2bf70c51f6",
+         "number": "74",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 100,
+       "track-offset": 73
+      }
+     ]
+    },
+    {
+     "id": "350cfef3-270f-4ee0-9cc6-31d7423b2fed",
+     "status-id": "518ffc83-5cde-34df-8627-81bff5093d92",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Promo Only: Modern Rock Radio, March 2016",
+     "status": "Promotion",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "08300342-d5e7-480c-a719-141a0b4fafad",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Promo Only: Modern Rock Radio, March 2016",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2016",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 22,
+     "media": [
+      {
+       "id": "ad2ebd8f-3917-3604-985c-bb214cb2c0b3",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "03fdf544-a78a-4f87-bbeb-54f1f809affb",
+         "number": "18",
+         "title": "Way Down We Go",
+         "length": 219715
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 17
+      }
+     ]
+    },
+    {
+     "id": "428a1f89-9831-4c58-b518-84b8cf82770e",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Bravo: The Hits 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "d1fc4662-e5a6-48d7-9fa5-43c8ffab0fca",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Bravo: The Hits 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-11-10",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-11-10",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "5b49ff94-4750-36d4-8c16-d63855781c29",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "471daa04-c5c8-4586-8307-2f3d0f737c9d",
+         "number": "42",
+         "title": "Way Down We Go",
+         "length": 219693
+        }
+       ],
+       "track-count": 45,
+       "track-offset": 41
+      }
+     ]
+    },
+    {
+     "id": "8c9645df-2a6e-4312-b3f0-a61b826e5a10",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Bravo: The Hits 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "d1fc4662-e5a6-48d7-9fa5-43c8ffab0fca",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Bravo: The Hits 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-11-10",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-11-10",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "5a3a1d29-10a0-304e-97cd-2bef3264700e",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "5ff1f4d5-cfa7-4dd6-a7ea-e7557527d127",
+         "number": "19",
+         "title": "Way Down We Go",
+         "length": 219693
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 18
+      }
+     ]
+    },
+    {
+     "id": "1e817616-90fb-472b-bcab-90c035fb1494",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "NRJ Hit List 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5e8bb1be-4d9c-4f5d-ab0d-ec45a0dea13c",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "NRJ Hit List 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-05-19",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-05-19",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 60,
+     "media": [
+      {
+       "id": "7175fe01-e289-3eca-80ba-4677fa822979",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "408b3c60-108f-4cc9-838c-e486d51031c4",
+         "number": "7",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 6
+      }
+     ]
+    },
+    {
+     "id": "a62d6e0c-d687-41cb-9628-dd7f962c9d12",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "NRJ Summer Hits Only 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "46a12abd-a89b-4f34-82b5-b2896e84f2a8",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "NRJ Summer Hits Only 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-06-23",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2017-06-23",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 66,
+     "media": [
+      {
+       "id": "70dfbc24-2931-36c9-88c5-7ad07b72a447",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "e103dd85-b1e9-4542-aebc-617fea3b8c82",
+         "number": "18",
+         "title": "Way Down We Go",
+         "length": 213693
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 17
+      }
+     ]
+    },
+    {
+     "id": "4041a6d1-f801-4320-967d-8592d9e0640c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Pure FM: Lazy Factory Room 3",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "d35f3975-a0f3-4249-bedd-f7b6b94a9312",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Pure FM: Lazy Factory Room 3",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-03-24",
+     "country": "BE",
+     "release-events": [
+      {
+       "date": "2017-03-24",
+       "area": {
+        "id": "5b8a5ee5-0bb3-34cf-9a75-c27c44e341fc",
+        "name": "Belgium",
+        "sort-name": "Belgium",
+        "iso-3166-1-codes": [
+         "BE"
+        ]
+       }
+      }
+     ],
+     "track-count": 39,
+     "media": [
+      {
+       "id": "b3aaf327-ad03-3103-8106-851453d8b7fd",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "6c682969-38d6-4242-bcc3-53b47329b118",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 213506
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "b902fd77-c53a-4e41-a4c7-18365f47d695",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "100 Greatest Rock Songs Ever",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "0fba751b-3d0b-4085-b745-b5e59793ad32",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "100 Greatest Rock Songs Ever",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2023-06-09",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2023-06-09",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 100,
+     "media": [
+      {
+       "id": "826dfb2d-e2e5-31da-b39f-25025db48c19",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "a26c7584-c64c-49fa-a334-ee9ba8034062",
+         "number": "69",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 100,
+       "track-offset": 68
+      }
+     ]
+    },
+    {
+     "id": "a7331e0e-dc89-4a7d-b941-dc4a9e043097",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Die ultimative Chart Show: Die erfolgreichsten Rockballaden",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a4721d44-7795-4fbc-af61-93544a1b1945",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Die ultimative Chart Show: Die erfolgreichsten Rockballaden",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-12-15",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-12-15",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 39,
+     "media": [
+      {
+       "id": "9bec07af-93c6-3b8e-85ed-8faf2ff73958",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "e594c917-c62b-41e7-9390-fe084c0c0d4b",
+         "number": "3",
+         "title": "Way Down We Go",
+         "length": 217546
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "273596f9-af4e-49de-a531-013972e43408",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Viral Rock Hits",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "80c6dca8-6509-4b4b-ad1b-d8a0d0c16ce4",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Viral Rock Hits",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2023-03-24",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2023-03-24",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 40,
+     "media": [
+      {
+       "id": "1180a04f-010f-452f-90ba-97e97340d1e3",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "cf35e8ad-892d-4b87-b29e-ec06f8fc7d2b",
+         "number": "28",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 40,
+       "track-offset": 27
+      }
+     ]
+    },
+    {
+     "id": "8bef8511-e6ac-4807-8041-39da2efd813f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Virgin Radio: Winter Pop 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "00f1c96f-e9e3-48a2-96b6-c439812d9699",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Virgin Radio: Winter Pop 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016-12-30",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2016-12-30",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 60,
+     "media": [
+      {
+       "id": "2f35345f-5cc7-3eed-a4de-8a8722dd397d",
+       "position": 3,
+       "format": "CD",
+       "track": [
+        {
+         "id": "c1cec592-75e0-4c54-83a1-881d6aa7ae13",
+         "number": "13",
+         "title": "Way Down We Go",
+         "length": 221453
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "1f18f039-ef44-439d-b65c-03d2d11ab601",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Gulli Dance Kids Eté 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "3ecd2877-8858-47b8-8e2a-c9174f05206f",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Gulli Dance Kids Eté 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-06-16",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-06-16",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 58,
+     "media": [
+      {
+       "id": "44820a87-90d6-3e85-b18d-e1f0bd72eb6f",
+       "position": 3,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "536dd783-5b74-42bb-95dd-c82458dae912",
+         "number": "10",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 9
+      }
+     ]
+    },
+    {
+     "id": "39ced496-eb73-4601-8dc0-ff9f64c26098",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Virgin Radio 2018",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "e86b0a81-4bd4-43f9-be92-ae9e9ec6298a",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Virgin Radio 2018",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-11-10",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-11-10",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 60,
+     "media": [
+      {
+       "id": "cf6c0be1-7e36-3954-990d-6c39d3f2c5df",
+       "position": 3,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "eaccf6da-5ae9-47dd-bf34-fdb905d9f9c4",
+         "number": "17",
+         "title": "Way Down We Go",
+         "length": 221413
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 16
+      }
+     ]
+    },
+    {
+     "id": "469dce57-b8f9-442c-a177-342741566788",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Gulli Kids 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "fda33689-7f02-48d9-a9eb-f6d01b301727",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Gulli Kids 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-09-29",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-09-29",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 54,
+     "media": [
+      {
+       "id": "c14e05c5-96af-3093-b09e-45dbc3847cc8",
+       "position": 3,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "009559b1-e449-4598-a73f-95e54294f831",
+         "number": "14",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 13
+      }
+     ]
+    },
+    {
+     "id": "9cbde0f1-3c08-4674-94bc-b25360d56408",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "NRJ Hit Music Only 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "68907c23-157b-45dd-8eff-a17172d4ac8a",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "NRJ Hit Music Only 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-04-14",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-04-14",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 60,
+     "media": [
+      {
+       "id": "6a4fdfba-d588-3755-959a-bf4425181e6d",
+       "position": 3,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "87edcb2f-affc-4ce3-bd3b-7b53e9dbba4c",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "788e1ebc-ccef-45c2-bee0-b708a6031116",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "NRJ Hit Music Only 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "68907c23-157b-45dd-8eff-a17172d4ac8a",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "NRJ Hit Music Only 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-04-14",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-04-14",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 60,
+     "media": [
+      {
+       "id": "d45de572-269b-3ea4-805a-ce7ad610a561",
+       "position": 3,
+       "format": "CD",
+       "track": [
+        {
+         "id": "ef509ddb-57f5-466a-90ee-7923b29e8b12",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "1d7d7112-451b-4287-af28-071271fbfd94",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "#Hits 2016: Die Hits des Jahres 2016",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "421dc2b7-c5d9-44f9-826d-2292428bb12a",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "#Hits 2016: Die Hits des Jahres 2016",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 44,
+     "media": [
+      {
+       "id": "2bea8afe-9fc8-3f25-a5ac-2051c064e759",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "a692268c-de30-4813-a2ad-2ac6fab2e7c4",
+         "number": "9",
+         "title": "Way Down We Go",
+         "length": 219640
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "5d84a8eb-1f29-44f9-800c-82bad38882cb",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "40 Tubes Spring 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "8fd95753-acf8-4649-9e4b-e3ef69ff3c9b",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "40 Tubes Spring 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-03-17",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-03-17",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 40,
+     "media": [
+      {
+       "id": "3d8ae238-bd97-3d9a-95bb-c6d931ec2c51",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "d34dec10-6422-47a0-81e1-294b037e0e13",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 213693
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "4cc343b5-329b-4300-b114-cfec329af10b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Thunder - Rock Hits",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "f90cc379-f580-4e4e-9d66-92e1ac4cd803",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Thunder - Rock Hits",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2024-03-08",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2024-03-08",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 61,
+     "media": [
+      {
+       "id": "c67024e0-ad05-3be1-a8e4-b35a933ecc52",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "64609f6b-1891-4d40-8563-71b43dae0e72",
+         "number": "9",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 61,
+       "track-offset": 8
+      }
+     ]
+    },
+    {
+     "id": "2191d96f-9dc6-41c0-8547-4d19c8e25360",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Bravo Hits 96",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "3d1dd73b-2b82-45fd-934f-a0d735a4b982",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Bravo Hits 96",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017",
+     "country": "CH",
+     "release-events": [
+      {
+       "date": "2017",
+       "area": {
+        "id": "1333ff06-8e3d-3c8e-9f3a-13a2a38b41df",
+        "name": "Switzerland",
+        "sort-name": "Switzerland",
+        "iso-3166-1-codes": [
+         "CH"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "0342469c-7019-384b-9329-c5fd7895f4e3",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "cd4fd955-3514-4293-a002-3af9cd982a4f",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219866
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "5e721297-ffae-4cce-9db4-bbd8efaf68b9",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "RTL Hits: Sommer 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "ef875d9f-1783-45a0-8957-f712e326c2a5",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "RTL Hits: Sommer 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-05-19",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-05-19",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 42,
+     "media": [
+      {
+       "id": "27a6e988-d9d2-310c-8334-967ab6141b97",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "2c99a9c4-a4ce-41d8-9253-53ee74a8a413",
+         "number": "7",
+         "title": "Way Down We Go",
+         "length": 220866
+        }
+       ],
+       "track-count": 21,
+       "track-offset": 6
+      }
+     ]
+    },
+    {
+     "id": "c1fac2c8-1589-4f99-908c-fbcee9fbf145",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "brilliant hits billion bangers",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "3bfd667d-8621-4096-bd0e-633a572c9225",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "brilliant hits billion bangers",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 90,
+     "media": [
+      {
+       "id": "8a254d07-6ec2-3cde-856f-36b78e6e8113",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "622d8ee8-a92c-4dcc-8e07-c8f59f7f8cbd",
+         "number": "20",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 90,
+       "track-offset": 19
+      }
+     ]
+    },
+    {
+     "id": "f8a74a8b-06c5-404d-a41f-9f261e00577e",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "00s Rock Hits",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "038f9da7-f03c-43e5-82f3-8dbb484a6d8c",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "00s Rock Hits",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2022-07-08",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2022-07-08",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 26,
+     "media": [
+      {
+       "id": "9e3b5e46-8c85-36b8-8264-f8ecf57d013c",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "94ab9023-aaea-4504-ab7a-d3d31b56bd28",
+         "number": "24",
+         "title": "Way Down We Go",
+         "length": 214000
+        }
+       ],
+       "track-count": 26,
+       "track-offset": 23
+      }
+     ]
+    },
+    {
+     "id": "05cdc5fb-bc0d-4725-b54c-08635e4e1783",
+     "status-id": "6a3772de-4605-4132-993d-aa315cd19b4b",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Sob Rock Hits",
+     "status": "Withdrawn",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "ef956c9f-ae42-4019-991f-73578ca1ca0c",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Sob Rock Hits",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 50,
+     "media": [
+      {
+       "id": "c8a22ef1-d921-39de-b62b-be5ddc957532",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "9d377eb3-a32f-49fc-86b8-8427c780c2d4",
+         "number": "11",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 50,
+       "track-offset": 10
+      }
+     ]
+    },
+    {
+     "id": "b51e7422-93ad-4b24-9575-6c7474e07a85",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Kuschelrock 31",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "aa2f187d-1d58-4d85-8df7-f3cd6398c6a0",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Kuschelrock 31",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-09-15",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-09-15",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 40,
+     "media": [
+      {
+       "id": "7e414b95-9d5b-3bd5-90f6-67c144af53c8",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "a7220e79-ea90-4918-bc9b-f4a225ad6f33",
+         "number": "7",
+         "title": "Way Down We Go",
+         "length": 219813
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 6
+      }
+     ]
+    },
+    {
+     "id": "ff3be433-9337-4139-9809-8d2142ad94f8",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Les artistes RTL 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "580308cf-76ab-414f-8baf-a8b31d28a795",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Les artistes RTL 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-07-07",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-07-07",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 32,
+     "media": [
+      {
+       "id": "248b37b4-0296-3ac3-aef3-a921b2ea707d",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "7229a081-76b0-4642-b8be-a0a2f6ce4a5e",
+         "number": "4",
+         "title": "Way Down We Go",
+         "length": 221426
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "f51f4169-b585-4a5a-a0e3-5cf0c57d80e6",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 5,
+     "title": "RFM Les grandes voix",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a81e848f-73d0-482e-afe2-67ef82f65ba2",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "RFM Les grandes Voix",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2018-03-30",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2018-03-30",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 100,
+     "media": [
+      {
+       "id": "9db0e470-1ebf-3cfb-ac6c-bf7f27ab7151",
+       "position": 5,
+       "format": "CD",
+       "track": [
+        {
+         "id": "1c11f481-161e-4de3-8633-4687f430f72e",
+         "number": "3",
+         "title": "Way Down We Go",
+         "length": 220000
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "b4a54114-6349-48ef-a1c4-4c14d411a385",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Bravo Hits 96",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "3d1dd73b-2b82-45fd-934f-a0d735a4b982",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Bravo Hits 96",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-02-17",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-02-17",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "8de1c0bd-07e0-334c-bd4b-b0806768a550",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "465ab18b-3149-4585-b44c-7702d168654c",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219866
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "35d663f0-1d4d-49d7-9401-ec73c0513a63",
+     "status-id": "518ffc83-5cde-34df-8627-81bff5093d92",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Promo Only: Mainstream Radio, November 2016",
+     "status": "Promotion",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1e73e7ee-987c-4c02-81a1-11182b99a52b",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Promo Only: Mainstream Radio, November 2016",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2016",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 19,
+     "media": [
+      {
+       "id": "490ef492-6812-3e9f-bead-b7db4af48798",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "f9ad7ca5-e80e-4da1-a8e9-d5bd930c941e",
+         "number": "12",
+         "title": "Way Down We Go",
+         "length": 210000
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 11
+      }
+     ]
+    },
+    {
+     "id": "a23bc53c-9ba4-4b0a-8ac3-8bdf59c63f89",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 5,
+     "title": "RFM Les grandes voix",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a81e848f-73d0-482e-afe2-67ef82f65ba2",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "RFM Les grandes Voix",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2018-03-30",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2018-03-30",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 100,
+     "media": [
+      {
+       "id": "3ab787c7-9b81-3c77-9676-a6e6307361a3",
+       "position": 5,
+       "format": "CD",
+       "track": [
+        {
+         "id": "697bfa65-7865-4d6a-ad5d-72da518d844f",
+         "number": "3",
+         "title": "Way Down We Go",
+         "length": 219466
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "baac3ca0-baf9-4475-a7ef-48d3583dd97d",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Hit Music: Best of 2016",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "4e554fe9-6057-450b-a9e1-ddf677d0e0e4",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Hit Music: Best of 2016",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016-11-18",
+     "country": "BE",
+     "release-events": [
+      {
+       "date": "2016-11-18",
+       "area": {
+        "id": "5b8a5ee5-0bb3-34cf-9a75-c27c44e341fc",
+        "name": "Belgium",
+        "sort-name": "Belgium",
+        "iso-3166-1-codes": [
+         "BE"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "e38b4198-c462-31d0-869f-e27740a2473d",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "030fdd9f-55ce-4eab-943e-ffa27e4a7595",
+         "number": "3",
+         "title": "Way Down We Go",
+         "length": 216306
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "4159a4eb-959a-44dd-a28a-a519e085a670",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "RFM Les grandes Voix",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a81e848f-73d0-482e-afe2-67ef82f65ba2",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "RFM Les grandes Voix",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2018-03-30",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2018-03-30",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 83,
+     "media": [
+      {
+       "id": "1207833a-cafd-3dcb-a695-8a07adb58cf1",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "dd9e1e45-8990-4bff-819a-61929ce4e398",
+         "number": "68",
+         "title": "Way Down We Go",
+         "length": 219467
+        }
+       ],
+       "track-count": 83,
+       "track-offset": 67
+      }
+     ]
+    },
+    {
+     "id": "561f0ca0-1843-4f36-ac71-b2d37b5e3a66",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Café Puls Hits ’17",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "2087c67a-82f6-4fe7-8536-e2bfcca71013",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Café Puls Hits ’17",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-11-24",
+     "country": "AT",
+     "release-events": [
+      {
+       "date": "2017-11-24",
+       "area": {
+        "id": "caac77d1-a5c8-3e6e-8e27-90b44dcc1446",
+        "name": "Austria",
+        "sort-name": "Austria",
+        "iso-3166-1-codes": [
+         "AT"
+        ]
+       }
+      }
+     ],
+     "track-count": 42,
+     "media": [
+      {
+       "id": "61da5c4d-9f75-38ea-9988-ba0b9b25cf15",
+       "position": 2,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "b7ea1298-a63b-4529-9ea1-7e8c8695725c",
+         "number": "13",
+         "title": "Way Down We Go",
+         "length": 211187
+        }
+       ],
+       "track-count": 21,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "f97e712d-c3b1-4038-95f9-c039b0dfea61",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 5,
+     "title": "RFM Les grandes Voix",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a81e848f-73d0-482e-afe2-67ef82f65ba2",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "RFM Les grandes Voix",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2020-02-07",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2020-02-07",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 100,
+     "media": [
+      {
+       "id": "294dfcc4-7a78-3247-bca7-b35352ea3c7f",
+       "position": 5,
+       "format": "CD",
+       "track": [
+        {
+         "id": "93f7173a-e576-483f-b0d8-e04a7725e36d",
+         "number": "3",
+         "title": "Way Down We Go",
+         "length": 219466
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "b75cd239-a7db-4471-9fbf-53f57da1e4af",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2017-06-17",
+     "country": "RU",
+     "release-events": [
+      {
+       "date": "2017-06-17",
+       "area": {
+        "id": "1f1fc3a4-9500-39b8-9f10-f0a465557eef",
+        "name": "Russia",
+        "sort-name": "Russia",
+        "iso-3166-1-codes": [
+         "RU"
+        ]
+       }
+      }
+     ],
+     "track-count": 12,
+     "media": [
+      {
+       "id": "32e177ef-f96c-3a26-9a78-50ae3a50b58c",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "8191e12d-490d-4594-ad1b-49415f96260a",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 220000
+        }
+       ],
+       "track-count": 12,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "4bbd74a2-34cb-4470-bd17-dc06a592e04d",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 4,
+     "title": "RTL 2 : Le Son pop-rock (Le Coffret best-of)",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "4fc1b479-5bfd-46cd-9b6a-4a7b47e2b6c5",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "RTL 2 : Le Son pop-rock (Le Coffret best-of)",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2018-07-20",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2018-07-20",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 85,
+     "media": [
+      {
+       "id": "d4ec456d-5328-3278-b308-65ae7ad373b3",
+       "position": 3,
+       "format": "CD",
+       "track": [
+        {
+         "id": "09752e33-b430-4f0a-b4cb-0e2fbb0f2954",
+         "number": "4",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 21,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "842fe4d3-434b-48db-aa60-77a40775fb7d",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "0719032a-e77e-3c70-a703-b5fd1688716c",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "KALEO",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "track-count": 10,
+     "media": [
+      {
+       "id": "4012bf30-80e4-3640-ad47-f4a13d938103",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "0e39955b-a22d-4e3a-8ecc-5a263ba29e25",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "e5a81004-6bfd-4de1-b290-c6a974891075",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "MegaHits 2017: Die Erste",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5beb9022-c04b-48e8-97c2-d91fa0403aaf",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Megahits 2017: Die Erste",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016-12-16",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2016-12-16",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 47,
+     "media": [
+      {
+       "id": "e07cd536-07a0-3402-98ee-988b63f5175e",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "8789e8e0-6a1e-432f-afd1-f5381dd52144",
+         "number": "43",
+         "title": "Way Down We Go",
+         "length": 219440
+        }
+       ],
+       "track-count": 47,
+       "track-offset": 42
+      }
+     ]
+    },
+    {
+     "id": "68db28b9-76b2-4512-b475-f78ddeb7a70b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Les Hits RTL 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "e64b1474-fa52-462f-af33-8c0f88e3e265",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Les Hits RTL 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 43,
+     "media": [
+      {
+       "id": "6afe3c3d-94f0-3c2d-8ec9-b21a6da2558d",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "191138f9-8a8f-42d7-9a60-041e20dc9a45",
+         "number": "6",
+         "title": "Way Down We Go",
+         "length": 221440
+        }
+       ],
+       "track-count": 14,
+       "track-offset": 5
+      }
+     ]
+    },
+    {
+     "id": "1a7080b4-3722-497a-a24d-ed62a9a14eb4",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Virgin Radio Summer Pop 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "999e812e-11f1-472b-b35e-35a628c2adbb",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Virgin Radio Summer Pop 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-06-09",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2017-06-09",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 66,
+     "media": [
+      {
+       "id": "93778c58-3442-3ef3-a71b-0562338a8cbc",
+       "position": 3,
+       "format": "CD",
+       "track": [
+        {
+         "id": "02dc1e90-1668-488a-ba0a-1760521dfcef",
+         "number": "4",
+         "title": "Way Down We Go",
+         "length": 221560
+        }
+       ],
+       "track-count": 23,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "7511b832-99f5-4146-88d1-b3084db3d9ce",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "0719032a-e77e-3c70-a703-b5fd1688716c",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "KALEO",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2016-01-01",
+     "country": "IS",
+     "release-events": [
+      {
+       "date": "2016-01-01",
+       "area": {
+        "id": "48802a32-075a-3805-a183-277c66047693",
+        "name": "Iceland",
+        "sort-name": "Iceland",
+        "iso-3166-1-codes": [
+         "IS"
+        ]
+       }
+      }
+     ],
+     "track-count": 10,
+     "media": [
+      {
+       "id": "26d31af3-20c7-3742-ac15-c01aa92aa5da",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "7c0062b6-7b83-4dbb-9d37-ac3b1f7de872",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "94b7a9f9-7bcd-4594-9213-b64c20df2cf0",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2016-06-10",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2016-06-10",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 10,
+     "media": [
+      {
+       "id": "1d9ee8d0-f2a5-3180-ba6c-b53517239c08",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "bd95502f-ea77-4aa0-adce-e7234b6b7555",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "86f45a99-063b-4fbb-a23c-c7e2ca1f8126",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Megahits 2017: Die Zweite",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "64c522d4-084f-4fe0-9fee-ff78f7e20455",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Megahits 2017: Die Zweite",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-04-07",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-04-07",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 46,
+     "media": [
+      {
+       "id": "b079d892-f997-3d29-b26c-d30cd7a8ed05",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "404ca06f-e6cd-42dc-bbf1-bd3d48ec842f",
+         "number": "7",
+         "title": "Way Down We Go",
+         "length": 219614
+        }
+       ],
+       "track-count": 23,
+       "track-offset": 6
+      }
+     ]
+    },
+    {
+     "id": "c063a6c0-0afe-4ace-b337-e76aad84b6bc",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2016-06-10",
+     "country": "AU",
+     "release-events": [
+      {
+       "date": "2016-06-10",
+       "area": {
+        "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+        "name": "Australia",
+        "sort-name": "Australia",
+        "iso-3166-1-codes": [
+         "AU"
+        ]
+       }
+      }
+     ],
+     "track-count": 10,
+     "media": [
+      {
+       "id": "e2707ac1-291d-389d-be8a-e646ee1bc4f0",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "5577ea61-0c4b-476a-9b27-f973f64874fc",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "1e03f022-74cc-4af5-b431-c179f8b19386",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "RTL 2 : Le Son Pop Rock 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "2f98551e-cd80-4ee3-9c63-f2ea04c85f2d",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "RTL 2 : Le Son Pop Rock 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016-11-04",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2016-11-04",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 51,
+     "media": [
+      {
+       "id": "cbc820de-1407-3ee5-8a71-6de6c752fb09",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "ed757c04-0e93-4922-8d9c-fa8b7d283963",
+         "number": "7",
+         "title": "Way Down We Go",
+         "length": 213706
+        }
+       ],
+       "track-count": 17,
+       "track-offset": 6
+      }
+     ]
+    },
+    {
+     "id": "562f8726-e750-4569-aac2-024dec5f3eb0",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "Way Down We Go",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5ad302da-ed70-44c8-8849-fefe7494dff6",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Way Down We Go",
+      "primary-type": "Single"
+     },
+     "date": "2017-03-10",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-03-10",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 2,
+     "media": [
+      {
+       "id": "8dee1b2b-6aa8-3ebc-935a-67f880028ca7",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "2d6e56f3-4368-4988-8499-35a913f9965b",
+         "number": "1",
+         "title": "Way Down We Go (album version)",
+         "length": 219000
+        }
+       ],
+       "track-count": 2,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "ca9fe684-223b-48ca-ac8b-f75a15d0229b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Life Is Music 2016.2",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "406d765d-c5ca-43e9-b268-a33878927ff5",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Life Is Music 2016.2",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016-12-02",
+     "country": "BE",
+     "release-events": [
+      {
+       "date": "2016-12-02",
+       "area": {
+        "id": "5b8a5ee5-0bb3-34cf-9a75-c27c44e341fc",
+        "name": "Belgium",
+        "sort-name": "Belgium",
+        "iso-3166-1-codes": [
+         "BE"
+        ]
+       }
+      }
+     ],
+     "track-count": 39,
+     "media": [
+      {
+       "id": "b1238561-6e3a-3433-9db2-1e7392746d07",
+       "position": 2,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "9daa27eb-feaa-40ec-b962-6c8278c8678d",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 213707
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "2b108709-ae32-402f-a4b5-2f0a19be9c4f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Matuschkes Lieblinge, Vol. 5",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "f38895b1-020f-42c2-b316-8abf98aad6f9",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Matuschkes Lieblinge, Vol. 5",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-11-24",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-11-24",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "44857093-a3f4-37bb-9f88-92223d8a1f68",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "9a96860c-b8f7-4fac-9ac0-cda1e3f61a01",
+         "number": "4",
+         "title": "Way Down We Go",
+         "length": 219000
+        }
+       ],
+       "track-count": 23,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "fc7e1ac6-6c76-44ed-8b05-c802cd73d47b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Virgin Radio été 2017",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "76af0eef-93f1-469f-83d4-e3e04ceddc35",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Virgin Radio été 2017",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2017-07-21",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2017-07-21",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 55,
+     "media": [
+      {
+       "id": "4ac08eaf-313c-3043-ae8f-810513c659d7",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "066057f1-6c8f-4d66-9e95-ee9ed7472355",
+         "number": "7",
+         "title": "Way Down We Go",
+         "length": 220800
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 6
+      }
+     ]
+    },
+    {
+     "id": "7749f40d-af89-4782-80a1-ea1bb35356f0",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Megahits 2017: Die Erste",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5beb9022-c04b-48e8-97c2-d91fa0403aaf",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Megahits 2017: Die Erste",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2016-12-16",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2016-12-16",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "2ba26f2c-3a1a-3524-9632-45b95457985e",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "06435fe1-3eb0-4afd-8a6f-ad2f6bf5bed0",
+         "number": "20",
+         "title": "Way Down We Go",
+         "length": 219000
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 19
+      }
+     ]
+    },
+    {
+     "id": "a9c54037-11a3-4654-9e37-ce716a8afa61",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2016-06-10",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2016-06-10",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 10,
+     "media": [
+      {
+       "id": "43eecc57-b9ac-3436-bae6-74e9e5a42912",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "4fd9c7e2-becb-47db-ae15-803b6051a8a9",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "c5a00c83-4f91-438b-91ab-d7f4d73621a5",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2016-06-10",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2016-06-10",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 10,
+     "media": [
+      {
+       "id": "45e7e0ca-65ca-3be9-b2d8-fb3c484c9f51",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "a1c96cc0-ae20-4d47-9a48-df88c07f470f",
+         "number": "2",
+         "title": "Way Down We Go",
+         "length": 219560
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "2127e378-bd85-4cd3-8507-4ee4102263a6",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "Way Down We Go",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5ad302da-ed70-44c8-8849-fefe7494dff6",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Way Down We Go",
+      "primary-type": "Single"
+     },
+     "date": "2015-08-07",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2015-08-07",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 1,
+     "media": [
+      {
+       "id": "2b979cde-2fef-374d-b148-d776c708e3d2",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "09587147-a925-41f9-aad1-548da0a083ae",
+         "number": "1",
+         "title": "Way Down We Go",
+         "length": 219000
+        }
+       ],
+       "track-count": 1,
+       "track-offset": 0
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "USAT21502123",
+    "USAT21502122"
+   ]
+  },
+  {
+   "id": "8a13703a-aa83-4f96-929f-32a6ebffe093",
+   "score": 99,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go",
+   "length": 218200,
+   "disambiguation": "live broadcast: 93.3 KGSR, Austin, TX, USA",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2016-11-25",
+   "releases": [
+    {
+     "id": "9570d693-a277-4a37-8627-73f0955a1e84",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Broadcasts Vol. 24",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "552fe79c-b3bb-42c3-9347-999a9c57d9db",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Broadcasts Vol. 24",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation",
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2016-11-25",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2016-11-25",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 33,
+     "media": [
+      {
+       "id": "cb2e2640-28e6-3147-b330-86cf845dd144",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "a2cef43c-ae92-44c2-9f0c-418410e02c71",
+         "number": "15",
+         "title": "Way Down We Go",
+         "length": 218200
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 14
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "a91ea070-11ca-47d6-8e6b-1c86e6cc10ee",
+   "score": 99,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go",
+   "length": 200000,
+   "disambiguation": "live",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2017-12-01",
+   "releases": [
+    {
+     "id": "8bba2893-76c2-47f6-a2b1-6c5f994d0cc1",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "ONXRT: Live From the Archives, Volume 19",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "0586f988-5f93-4773-aba9-17730ff1b33f",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "ONXRT: Live From the Archives, Volume 19",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation",
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2017-12-01",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2017-12-01",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 10,
+     "media": [
+      {
+       "id": "a93ec8ff-0d03-3dc6-9bfa-4dd9ef805a60",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "164856b6-f580-4bab-994a-04020bffe8a4",
+         "number": "5",
+         "title": "Way Down We Go",
+         "length": 200000
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "8e811304-772f-489d-97c0-976f240571e2",
+   "score": 99,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go",
+   "length": 213000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2026-03-28",
+   "releases": [
+    {
+     "id": "fe025773-6824-4162-8aff-c415838d4e68",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Bedroom Music 2026",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "cbcdf059-ad1d-4ed1-9b8b-5092f0b38a08",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Bedroom Music 2026",
+      "primary-type": "Album"
+     },
+     "date": "2026-03-28",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2026-03-28",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 30,
+     "media": [
+      {
+       "id": "67da9192-f50e-402b-8946-8c3cb0ffead4",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "337830f5-7e10-48ec-a73d-eb0293df4b03",
+         "number": "7",
+         "title": "Way Down We Go",
+         "length": 213000
+        }
+       ],
+       "track-count": 30,
+       "track-offset": 6
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "USAT21502122"
+   ]
+  },
+  {
+   "id": "af53e3e1-0bc3-44ea-a057-fe7c911815e4",
+   "score": 99,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go",
+   "length": 219000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2015",
+   "releases": [
+    {
+     "id": "57b80ac2-01de-47b7-bc5b-00c37342bb00",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "FIFA 16 Soundtrack",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "8de3e263-f9b6-45c2-9b7b-c42a67be8afc",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "FIFA 2003 Soundtrack",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 42,
+     "media": [
+      {
+       "id": "6a4ffe63-e09e-3182-bc46-c90ea159c77a",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "c6d4f1d4-5f74-4457-bad8-8957ae2b10c4",
+         "number": "21",
+         "title": "Way Down We Go",
+         "length": 219000
+        }
+       ],
+       "track-count": 42,
+       "track-offset": 20
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7e0a9431-7622-42bb-bf2a-b484f863ba88",
+   "score": 94,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go (Stripped)",
+   "length": 208000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2017-03-10",
+   "releases": [
+    {
+     "id": "20cc87ba-f0a0-4456-916f-6c514593a4bc",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Acoustic Pop Hits",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a291a347-e0a2-485f-b28f-303ba7aed082",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Acoustic Pop Hits",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2023-03-24",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2023-03-24",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 25,
+     "media": [
+      {
+       "id": "11df7396-fa04-493f-86d2-1a8dc25c5361",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "3a1497f1-76ad-4a66-8835-1677a896a2dc",
+         "number": "3",
+         "title": "Way Down We Go (Stripped)",
+         "length": 208213
+        }
+       ],
+       "track-count": 25,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "562f8726-e750-4569-aac2-024dec5f3eb0",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "Way Down We Go",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5ad302da-ed70-44c8-8849-fefe7494dff6",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Way Down We Go",
+      "primary-type": "Single"
+     },
+     "date": "2017-03-10",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "2017-03-10",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 2,
+     "media": [
+      {
+       "id": "8dee1b2b-6aa8-3ebc-935a-67f880028ca7",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "7cff8556-eceb-4327-a6a6-b251728e7579",
+         "number": "2",
+         "title": "Way Down We Go (Stripped)",
+         "length": 208000
+        }
+       ],
+       "track-count": 2,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "b75cd239-a7db-4471-9fbf-53f57da1e4af",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2017-06-17",
+     "country": "RU",
+     "release-events": [
+      {
+       "date": "2017-06-17",
+       "area": {
+        "id": "1f1fc3a4-9500-39b8-9f10-f0a465557eef",
+        "name": "Russia",
+        "sort-name": "Russia",
+        "iso-3166-1-codes": [
+         "RU"
+        ]
+       }
+      }
+     ],
+     "track-count": 12,
+     "media": [
+      {
+       "id": "32e177ef-f96c-3a26-9a78-50ae3a50b58c",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "2d95b75c-1c73-4c02-acc1-9fde07580db7",
+         "number": "12",
+         "title": "Way Down We Go (Stripped)",
+         "length": 208000
+        }
+       ],
+       "track-count": 12,
+       "track-offset": 11
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "USAT21601260"
+   ]
+  },
+  {
+   "id": "d4d774db-48c8-4b12-908e-89346d373d09",
+   "score": 94,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go (Stripped)",
+   "length": 209000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2026-06-10",
+   "releases": [
+    {
+     "id": "70cee28b-56cf-4a10-a9f4-a2de639a282f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B (Deluxe Edition)",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2026-06-10",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2026-06-10",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "98f4adfa-17ea-4637-94be-141d695bd165",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "e9f07a1f-f7fd-46f7-a00a-4c3f4033594f",
+         "number": "12",
+         "title": "Way Down We Go (Stripped)",
+         "length": 209000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 11
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4258c28e-62e2-41dd-a25c-68758fd10452",
+   "score": 86,
+   "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+   "title": "Way Down We Go (Live in Þríhnúkagígur)",
+   "length": 218000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Kaleo",
+     "artist": {
+      "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+      "name": "Kaleo",
+      "sort-name": "Kaleo",
+      "disambiguation": "Icelandic rock band",
+      "aliases": [
+       {
+        "sort-name": "KALEO",
+        "name": "KALEO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2026-06-10",
+   "releases": [
+    {
+     "id": "70cee28b-56cf-4a10-a9f4-a2de639a282f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "9acab2d0-d03b-30a9-b8fa-7f9e237c26cd",
+     "count": 1,
+     "title": "A/B (Deluxe Edition)",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Kaleo",
+       "artist": {
+        "id": "260072fb-48e5-4653-9d17-b22e39e84d9c",
+        "name": "Kaleo",
+        "sort-name": "Kaleo",
+        "disambiguation": "Icelandic rock band"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6e65ab09-d837-43d4-a541-b93f5f8b2672",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "A/B (Deluxe Edition)",
+      "primary-type": "Album"
+     },
+     "date": "2026-06-10",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2026-06-10",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "98f4adfa-17ea-4637-94be-141d695bd165",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "9481217c-af1d-415e-a8da-1ce458236423",
+         "number": "16",
+         "title": "Way Down We Go (Live in Þríhnúkagígur)",
+         "length": 218000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 15
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
