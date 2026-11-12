@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.6.4
+docs_version: 0.6.5
 nav:
-  - id: results-for-064
+  - id: results-for-065
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.6.4
+## Results for 0.6.5
 
-Checked on 11 November 2026, on the code of release 0.6.4.
+Checked on 12 November 2026, on the code of release 0.6.5.
 
-- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app: the last one, in the Kotlin version Gradle itself uses, is fixed with Gradle 9.9 ([#1108](https://github.com/wkusnierczyk/sleevesight/issues/1108)).
+- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code. Text from players and web pages now loses invisible characters, and a player's title, artists and album are capped in length. Two low-risk problems the review found in the new code are fixed before the release: for a classical track, web results about another recording of the same work could be taken as facts about this one; and after certain failed replies, the AI service could be asked again, which may cost one call's price again.
+- **Security review:** no way found to reach your keys or your data in the new code, and no new problem. The release changes how dates, sources and settings are shown; the note that some text-to-speech engines send the text they read to their server is kept, now under the *Read aloud* heading in Settings.
 
 ## What is checked
 
