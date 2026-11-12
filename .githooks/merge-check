@@ -11,8 +11,9 @@
 #   - the current side changed the same lines of the base, or lines next to them (the two edits meet,
 #     so git made it a conflict, and keeping one side there is the resolution, not a loss);
 #   - the current side deleted the file; or
-#   - the merge commit's message has a trailer `Dropped: <path>: <why>` for the file (the path may be
-#     in backticks), which carries the choice into the pull request's commits and their reviews.
+#   - the merge commit's message has a trailer `Dropped: <path>: <why>` for the file (the exact path,
+#     which may be in backticks, then a colon and a reason), which carries the choice into the pull
+#     request's commits and their reviews.
 # The incoming side's renames are followed, and the current side's too, so a renamed file is
 # compared with what it became. Binary files, symbolic links and submodules are not checked.
 #
@@ -86,21 +87,21 @@ clean_message() {
   ' "$1"
 }
 
-# excused <path>: whether the message (in $work/trailers, one value per line) excuses drops in <path>.
+# excused <path>: whether the message (in $work/trailers, one value per line) excuses drops in <path>:
+# a value that is the path exactly, or the path in backticks, then `:`, then a reason (something other
+# than spaces and punctuation).
 excused() {
+  local v rest plain="$1:" quoted="\`$1\`:"
   [ -s "$work/trailers" ] || return 1
-  awk -v p="$1" '
-    {
-      v = $0
-      if (index(v, "`" p "`") == 1) rest = substr(v, length(p) + 3)
-      else if (index(v, p) == 1) rest = substr(v, length(p) + 1)
-      else next
-      if (rest !~ /^[:[:space:]]/) next
-      gsub(/[:[:space:][:punct:]]/, "", rest)
-      if (rest != "") { found = 1; exit }
-    }
-    END { exit found ? 0 : 1 }
-  ' "$work/trailers"
+  while IFS= read -r v || [ -n "$v" ]; do
+    case "$v" in
+      "$quoted"*) rest=${v#"$quoted"} ;;
+      "$plain"*) rest=${v#"$plain"} ;;
+      *) continue ;;
+    esac
+    case "$rest" in *[![:space:][:punct:]]*) return 0 ;; esac
+  done <"$work/trailers"
+  return 1
 }
 
 # Every `git diff` here, with each option a user's configuration could change pinned to git's default

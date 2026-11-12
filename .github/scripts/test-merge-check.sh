@@ -107,6 +107,11 @@ expect 'dropped, names the commit' 1 ' theirs' '' git commit --no-edit
 expect 'dropped, line nine too' 1 'nine, theirs' '' git commit --no-edit
 expect 'trailer for another file' 1 'eleven, theirs' '' git commit -qm Merge -m 'Dropped: g.txt: not this one'
 expect 'trailer with no reason' 1 'eleven, theirs' '' git commit -qm Merge -m 'Dropped: f.txt'
+expect 'trailer with only punctuation for a reason' 1 'eleven, theirs' '' git commit -qm Merge -m 'Dropped: f.txt: -.'
+expect 'trailer for a longer path' 1 'eleven, theirs' '' git commit -qm Merge -m 'Dropped: f.txt backup: obsolete'
+expect 'trailer without the colon' 1 'eleven, theirs' '' git commit -qm Merge -m 'Dropped: f.txt obsolete'
+# shellcheck disable=SC2016 # the backticks are the message's, not a command
+expect 'trailer in backticks without the colon' 1 'eleven, theirs' '' git commit -qm Merge -m 'Dropped: `f.txt` obsolete'
 expect 'trailer in the body, not the last paragraph' 1 'eleven, theirs' '' \
   git commit -qm Merge -m 'Dropped: f.txt: in the body' -m 'More text after it.'
 expect 'a merge, no scratch space: refused, saying so' 1 'merge was not checked' '' \
