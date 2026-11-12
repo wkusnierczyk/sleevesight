@@ -160,19 +160,26 @@ data class ReleaseDate(
     companion object {
         /**
          * [releases] one per title, as [key] reads it, and release group: the earliest of them (an
-         * undated one only when none is dated), written as it writes the title; ordered by key, then
-         * date, undated last, and none whose key is empty.
+         * undated one only when none is dated), written as it writes the title, its date said as
+         * precisely as the dates of every release of its group in [releases] allow
+         * ([PlaceholderDay.said], #1203: a January 1 with a later day of the year in the group, its
+         * year alone); ordered by key, then date, undated last, and none whose key is empty.
          */
         fun collapse(
             releases: List<ReleaseDate>,
             key: (String) -> String,
-        ): List<ReleaseDate> =
-            releases
+        ): List<ReleaseDate> {
+            val groupDates = releases.groupBy({ it.group }, { it.date })
+            return releases
                 .filter { key(it.title).isNotEmpty() }
                 .groupBy { key(it.title) to it.group }
                 .values
-                .map { same -> same.minWith(EARLIEST.thenBy { it.title }) }
-                .sortedWith(compareBy<ReleaseDate> { key(it.title) }.then(EARLIEST).thenBy { it.group })
+                .map { same ->
+                    val earliest = same.minWith(EARLIEST.thenBy { it.title })
+                    val date = earliest.date?.let { PlaceholderDay.said(it, groupDates[earliest.group].orEmpty()) }
+                    earliest.copy(date = date)
+                }.sortedWith(compareBy<ReleaseDate> { key(it.title) }.then(EARLIEST).thenBy { it.group })
+        }
 
         /**
          * The year after [album], the player's name for it, from [dates] and [playerYear], the year

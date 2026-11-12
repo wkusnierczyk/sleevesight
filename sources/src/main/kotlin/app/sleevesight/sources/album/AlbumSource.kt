@@ -15,6 +15,7 @@ import app.sleevesight.core.sources.AlbumLookup
 import app.sleevesight.core.sources.AlbumQuery
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.PlaceholderDay
 import app.sleevesight.sources.KeptDrafts
 import app.sleevesight.sources.OneSearchAtATime
 import app.sleevesight.sources.lastfm.LastFmAlbum
@@ -304,7 +305,8 @@ class AlbumSource(
     }
 
     // MusicBrainz's line on the release group: "“Sundown” is an album by Gordon Lightfoot, first
-    // released in January 1974."
+    // released in January 1974.", its first release's date said as precisely as its releases' dates
+    // allow ([PlaceholderDay.said], #1203: *A/B*'s `2016-01-01`, beside `2016-06-10`, as 2016).
     private fun musicBrainzLine(
         album: MbAlbum,
         at: Instant,
@@ -315,7 +317,11 @@ class AlbumSource(
                 .takeIf { it.isNotBlank() }
                 ?.let { " by $it" }
                 .orEmpty()
-        val released = album.firstReleaseDate?.let { ", first released ${EvidenceText.date(it)}" }.orEmpty()
+        val released =
+            album.firstReleaseDate
+                ?.let { PlaceholderDay.said(it, album.releaseDates) }
+                ?.let { ", first released ${EvidenceText.date(it)}" }
+                .orEmpty()
         val text = "“${album.title}” is ${article(type)} $type$by$released."
         return EvidenceDraft(SourceId.MUSICBRAINZ, Scope.RELEASE, text, "$MUSICBRAINZ_GROUP${album.mbid}", at)
     }
@@ -495,11 +501,13 @@ class AlbumSource(
          * 3 (#850): Wikipedia's lines without the brackets a dropped pronunciation left empty.
          * 4 (#1070): the album's name also tried without an unbracketed edition ("… 20th
          *   anniversary"), whose article or Last.fm page an entry of 3 may have missed.
+         * 5 (#1203): MusicBrainz's line says a January 1 first release as its year alone when a
+         *   release of the group is out on a later day that year ([PlaceholderDay]).
          */
         val PART: ArtistPart =
             ArtistPart(
                 "album.evidence",
-                extraction = 4,
+                extraction = 5,
                 encoding = 1,
                 sources = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WIKIDATA, SourceId.LASTFM),
             )

@@ -11,6 +11,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.FirstRelease
+import app.sleevesight.core.sources.PlaceholderDay
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.ReleaseType
@@ -211,6 +212,13 @@ internal fun homeDates(
     header: NowPlaying,
     firsts: Map<String, MbGroupFirst> = emptyMap(),
 ): List<DateSentence> {
+    // Each group's first-release date said as the track's releases of it are kept (#1203).
+    val releases = AlbumDates.releasesOf(track)
+    val firsts =
+        firsts.mapValues { (group, first) ->
+            val kept = releases.filter { it.group == group }.map { it.date }
+            first.copy(firstReleaseDate = first.firstReleaseDate?.let { PlaceholderDay.asKept(it, kept) })
+        }
     val kept = keptMusicBrainz(track)
     val resolution = track?.resolution
     val album = AlbumDates.of(track, header)

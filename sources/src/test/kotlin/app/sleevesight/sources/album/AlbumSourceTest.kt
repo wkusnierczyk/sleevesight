@@ -144,6 +144,40 @@ class AlbumSourceTest {
         }
 
     @Test
+    fun `MusicBrainz's January 1, beside a later day of the year among the group's releases, is said as the year`() =
+        runTest {
+            // *A/B* (#1203): its group's first release, a digital one in Iceland, is dated `2016-01-01`,
+            // its other releases that year `2016-06-10`. *New Year* is out on 1 January and next in 2001.
+            fun album(
+                mbid: String,
+                title: String,
+                vararg dates: String,
+            ) = MbAlbum(
+                mbid = mbid,
+                title = title,
+                primaryType = "Album",
+                secondaryTypes = emptyList(),
+                firstReleaseDate = dates.first(),
+                credit = "KALEO",
+                wikidataIds = emptyList(),
+                releaseDates = dates.asList(),
+            )
+            val groups =
+                Groups(
+                    mapOf(
+                        "rg-ab" to album("rg-ab", "A/B", "2016-01-01", "2016-06-10", "2016-06-10"),
+                        "rg-ny" to album("rg-ny", "New Year", "2000-01-01", "2001-05-04"),
+                    ),
+                )
+            val source = AlbumSource(groups, Wikidata(emptyMap()), WikipediaClient(Wikipedia()), names)
+            val ab = source.lookup(AlbumQuery("A/B", "KALEO", "rg-ab"))
+            assertEquals("“A/B” is an album by KALEO, first released in 2016.", ab.drafts.first().text)
+            val newYear = source.lookup(AlbumQuery("New Year", "KALEO", "rg-ny"))
+            val dated = "“New Year” is an album by KALEO, first released on 1 January 2000."
+            assertEquals(dated, newYear.drafts.first().text)
+        }
+
+    @Test
     fun `an album MusicBrainz does not name is found by its name, as an album by the artist`() =
         runTest {
             val other = WdEntity("Q9", "Sundown", "Sundown (film)", mapOf(Wd.INSTANCE_OF to listOf("Q11424")))

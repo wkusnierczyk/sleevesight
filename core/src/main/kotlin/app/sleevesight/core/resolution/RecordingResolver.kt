@@ -6,6 +6,7 @@ import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.OriginalRecording
+import app.sleevesight.core.sources.PlaceholderDay
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -670,7 +671,9 @@ class RecordingResolver(
         // The release of [recording] dated its first-release date, else, with [fallback], its earliest
         // dated one. Ours falls back; a cover's original does not (#724): a lookup lists at most 25
         // releases, so for an original with more, the earliest listed may be a later compilation, and
-        // its release is left out rather than that one named.
+        // its release is left out rather than that one named. Its date said as precisely as the dates
+        // of the recording's other releases allow ([PlaceholderDay.said], #1203): a January 1 with a
+        // later day of the year among them, its year alone; the release stays the one dated.
         private fun firstRelease(
             recording: MbRecording,
             fallback: Boolean = true,
@@ -683,7 +686,7 @@ class RecordingResolver(
                         ?.minWithOrNull(compareBy<Pair<String, MbRelease>> { it.first }.thenBy { it.second.mbid })
             return first?.let { (date, release) ->
                 FirstRelease(
-                    date = date,
+                    date = PlaceholderDay.said(date, dated.map { it.first }),
                     title = release.releaseGroup?.title ?: release.title,
                     releaseGroupMbid = release.releaseGroup?.mbid,
                     releaseMbid = release.mbid,
