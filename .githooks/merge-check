@@ -114,10 +114,14 @@ diff_opts=(--no-ext-diff --no-textconv --no-color --no-relative --inter-hunk-con
   --diff-algorithm=myers --no-indent-heuristic --src-prefix=a/ --dst-prefix=b/ -l7000)
 gdiff() { git diff "${diff_opts[@]}" "$@"; }
 
-# blob_diff <blob> <blob>: the `-U0` diff between two blobs. added_file <blob>: the same for a file the
-# base does not have, all of it added (an insertion before line 1).
+# blob_diff <blob> <blob>: the `-U0` diff between two blobs (for binary blobs, no hunks).
+# added_file <blob>: the same for a file the base does not have, all of it added (an insertion before
+# line 1), and no hunks if it is binary, by git's own test: a NUL byte in its first 8000 bytes.
 blob_diff() { gdiff -U0 "$1" "$2"; }
 added_file() {
+  local nuls
+  nuls=$(git cat-file blob "$1" | head -c 8000 | tr -dc '\0' | wc -c)
+  [ "$nuls" -eq 0 ] || return 0
   printf '@@ -0,0 +1 @@\n'
   git cat-file blob "$1" | sed 's/^/+/'
 }

@@ -200,6 +200,12 @@ git -C "$repo" checkout -q --ours 'back\nslash.txt'
 git -C "$repo" add 'back\nslash.txt'
 expect 'a backslash in a path' 0 '' '' git commit --no-edit
 
+# A binary file the incoming side added, left out: binary files are not checked.
+fresh
+on theirs 'theirs' sh -c "printf 'PNG\\0\\0header\\nline two\\0\\nline three\\n' >image.png"
+git -C "$repo" checkout -q work
+expect 'a new binary file' 0 '' '' git merge -q --no-edit -s ours theirs
+
 # A file the current side renamed: compared under its new name.
 fresh
 on work 'ours' sh -c "git mv f.txt g.txt && awk 'NR == 2 { print \"two, ours\"; next } { print }' g.txt >g.new && mv g.new g.txt"
