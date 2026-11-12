@@ -225,7 +225,8 @@ renamed_both() {
   on theirs 'theirs' sh -c "git mv f.txt h.txt && echo 'eleven, theirs' >>h.txt"
   git -C "$repo" checkout -q work
   (cd "$repo" && git merge -q --no-edit theirs >/dev/null 2>&1) && return 1
-  (cd "$repo" && git rm -q --cached f.txt g.txt h.txt && rm g.txt && mv h.txt "$1" && git add "$1")
+  # (No `mv` onto the same name: GNU `mv` refuses it.)
+  (cd "$repo" && git rm -q --cached f.txt g.txt h.txt && rm g.txt && { [ "$1" = h.txt ] || mv h.txt "$1"; } && git add "$1")
   if [ "$2" -eq 0 ]; then
     (cd "$repo" && sed '$d' "$1" >x && mv x "$1" && git add "$1")
   fi
