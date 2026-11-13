@@ -96,6 +96,48 @@ class ArtFetcherTest {
         }
 
     @Test
+    fun `an address on the phone's own network is not requested`() =
+        runTest {
+            val client = StubClient { response() }
+            listOf(
+                "https://192.168.1.5/cover.jpg",
+                "https://10.0.0.2:8443/a.jpg",
+                "https://user@127.0.0.1/a",
+                "https://3232235781/a.jpg",
+                "https://0x7f000001/a.jpg",
+                "https://0x7f.0.0.1/a.jpg",
+                "https://0X7F.0.0.1/a.jpg",
+                "https://0177.0.0.1/a.jpg",
+                "https://[::1]/a.jpg",
+                "https://[fe80::1%25wlan0]:443/a",
+                "https://localhost/a.jpg",
+                "https://LOCALHOST./a",
+                "https://printer.local/a.jpg",
+                "https://NAS.Local:5001/a?b",
+            ).forEach {
+                assertEquals(ArtResult.Failed("local address"), ArtFetcher(client).fetch(it), it)
+            }
+            assertTrue(client.requests.isEmpty())
+        }
+
+    @Test
+    fun `covers on named public hosts are still requested`() =
+        runTest {
+            val client = StubClient { response() }
+            val covers =
+                listOf(
+                    "https://i.scdn.co/image/ab67616d0000b273",
+                    "https://lh3.googleusercontent.com/abc=w544-h544",
+                    "https://is1-ssl.mzstatic.com/image/thumb/600x600bb.jpg",
+                    "https://192-168-1-5.abc123.plex.direct:32400/photo?url=1",
+                    "https://localhost.example.com/a.jpg",
+                    "https://cdn.example/local/cover.jpg",
+                )
+            covers.forEach { assertIs<ArtResult.Image>(ArtFetcher(client).fetch(it), it) }
+            assertEquals(covers, client.requests.map { it.url })
+        }
+
+    @Test
     fun `a status other than 2xx, a non-image or an empty body is no art`() =
         runTest {
             suspend fun fetch(answer: NetResult<NetResponse>) = ArtFetcher(StubClient { answer }).fetch(URL)
