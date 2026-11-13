@@ -73,9 +73,9 @@ data class MetaNote(
         // with none opening before it, `[omit]*`), the note is left as written. Never from inside an
         // emphasis or a quotation opened before it.
         private fun withoutBracketNote(text: String): Pair<String, String>? {
-            val match = TRAILING_BRACKET.find(text) ?: return null
-            val (opening, inside, closing) = match.destructured
-            val at = match.range.first
+            val bracket = trailingBracket(text) ?: return null
+            val (opening, inside, closing) = bracket
+            val at = bracket.at
             val kept =
                 when {
                     !isNote(inside) || enclosed(text, at) -> null
@@ -88,6 +88,27 @@ data class MetaNote(
                 (before + it).trimJs() to "$opening[$inside]$opening"
             }
         }
+
+        // The bracketed note at [text]'s end, with any emphasis marks just before and after it; null for
+        // none. Read back from the end rather than by a pattern, which took time growing with the square
+        // of a long run of `*` or `_` (#1247).
+        private fun trailingBracket(text: String): TrailingBracket? {
+            val end = text.trimEnd('*', '_').length
+            val open = if (text.getOrNull(end - 1) == ']') text.lastIndexOf('[', end - 2) else -1
+            val inside = if (open < 0) null else text.substring(open + 1, end - 1)
+            return inside?.takeUnless { held -> held.any { it == ']' || it == '\n' } }?.let {
+                val at = text.substring(0, open).trimEnd('*', '_').length
+                TrailingBracket(text.substring(at, open), it, text.substring(end), at)
+            }
+        }
+
+        // A bracketed note's marks before it, what it holds, its marks after it, and where it starts.
+        private data class TrailingBracket(
+            val opening: String,
+            val inside: String,
+            val closing: String,
+            val at: Int,
+        )
 
         // [text] without its last sentence when that is a note, and the sentence; null when it is not.
         private fun withoutLastSentence(text: String): Pair<String, String>? {
@@ -222,9 +243,6 @@ data class MetaNote(
 
         /** A run of one emphasis mark. */
         private val EMPHASIS_RUN = Regex("\\*+|_+")
-
-        /** A bracketed note at the text's end, with any emphasis marks just before and after it. */
-        private val TRAILING_BRACKET = Regex("([*_]*)\\[([^\\[\\]\\n]*)\\]([*_]*)$")
 
         /** Square brackets and what they hold, on one line. */
         private val BRACKET = Regex("\\[([^\\[\\]\\n]*)\\]")
