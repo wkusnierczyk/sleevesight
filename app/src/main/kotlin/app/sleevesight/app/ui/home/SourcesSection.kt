@@ -209,7 +209,7 @@ internal fun SourcesBody(
         FoldStatus(fold, count, total, filtered)
         if (count == 0) return@Column
         if (shown.cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
-        Entries(entries.take(count), tagWidth, focus, shownLines.album, shown.unsupported)
+        Entries(entries.take(count), tagWidth, focus, shownLines, shown.unsupported)
         FoldControls(fold, count, total)
     }
 }
@@ -273,7 +273,7 @@ private fun Entries(
     entries: List<Entry>,
     tagWidth: Dp,
     focus: LineFocus,
-    album: Set<String>,
+    shown: SourcesLines,
     unsupported: Set<String>,
 ) {
     val rejected = entries.indexOfFirst { it is Entry.Rejected }.takeIf { it >= 0 } ?: entries.size
@@ -287,8 +287,8 @@ private fun Entries(
                     is Entry.Line -> {
                         val line = entry.line
                         val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
-                        val row = LineLook(flashed, line.id in album, line.id in unsupported)
-                        EvidenceRow(line, tagWidth, row, focus.requesters[line.id])
+                        val look = LineLook(flashed, line.id in unsupported)
+                        EvidenceRow(line, tagWidth, look, focus.requesters[line.id], shown.what(line))
                     }
 
                     is Entry.Unverified -> {
@@ -315,12 +315,13 @@ private fun Entries(
 }
 
 /**
- * One evidence line: its id, its text, and its scope with a link to where it was found; flashed
- * when a citation points at it. A line found in the track's language (#902, `EvidenceLine.language`)
- * shows its text as found, set in that language's locale (a span over the whole text, so a screen
- * reader is given the language too, not only the drawing), and says the language after the host:
- * *release · hi.wikipedia.org · in Hindi*. Its tag is a dim outline when the insight's sentences
- * that cite it are not backed by it (#1036), as their chips are.
+ * One evidence line: its id, its text, and [what] it is (its scope, "album", or what it was read for:
+ * [SourcesLines.what]) with a link to where it was found; flashed when a citation points at it. A
+ * line found in the track's language (#902, `EvidenceLine.language`) shows its text as found, set
+ * in that language's locale (a span over the whole text, so a screen reader is given the language
+ * too, not only the drawing), and says the language after the host: *release · hi.wikipedia.org · in
+ * Hindi*. Its tag is a dim outline when the insight's sentences that cite it are not backed by it
+ * (#1036), as their chips are.
  */
 @Composable
 private fun EvidenceRow(
@@ -328,9 +329,9 @@ private fun EvidenceRow(
     tagWidth: Dp,
     look: LineLook,
     requester: BringIntoViewRequester?,
+    what: String,
 ) {
     val flashed = look.flashed
-    val album = look.album
     val colors = MaterialTheme.colorScheme
     val background by animateColorAsState(if (flashed) colors.tertiaryContainer else Color.Transparent, label = "flash")
     Row(
@@ -348,7 +349,7 @@ private fun EvidenceRow(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(inLanguage(line.text, line.language), style = MaterialTheme.typography.bodySmall)
             val language = line.language?.let { stringResource(R.string.home_source_line_in, languageName(it)) }
-            Where(if (album) stringResource(R.string.home_scope_album) else scopeText(line.scope), line.url, language)
+            Where(what, line.url, language)
         }
     }
 }
@@ -370,13 +371,11 @@ private fun tagColumnWidth(tags: List<String>): Dp {
 }
 
 /**
- * How an evidence row shows: [flashed] when a citation points at it, its scope said as the album's
- * ([album], #522), and its tag a dim outline when it does not back the sentences citing it
- * ([unsupported], #1036).
+ * How an evidence row shows: [flashed] when a citation points at it, and its tag a dim outline when
+ * it does not back the sentences citing it ([unsupported], #1036).
  */
 private class LineLook(
     val flashed: Boolean,
-    val album: Boolean,
     val unsupported: Boolean,
 )
 

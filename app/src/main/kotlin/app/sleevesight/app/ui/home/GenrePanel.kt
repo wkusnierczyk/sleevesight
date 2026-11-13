@@ -61,7 +61,7 @@ internal fun GenreBody(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // What the genre is, and *Why is this …?* (#523), above the tags.
         GenreAbout(track, genre, notes, search, afterRetry)
-        TagsGrid(track, genre, notes.onCite)
+        TagsGrid(track, genre, notes.onCite, notes.lines)
     }
 }
 
@@ -73,7 +73,9 @@ internal fun GenreBody(
  * no *Read aloud*; and where a link under a disabled *Why is this …?* opens the settings
  * ([openSettingsAt], #762); and the lines *Sources* lists ([lines]: the track's evidence, with the
  * album's and the artist's web lines, `SourcesLines`), whose artists' descriptions name genres
- * (#1000, `describedGenres`), cited by the ids *Sources* shows; null for none.
+ * (#1000, `describedGenres`), cited by the ids *Sources* shows; null for none; and [asked], those
+ * lines before the pages listed for showing alone joined them (#1205, `SourcesLines.asked`), which a
+ * genre's reason is asked and keyed on.
  */
 @Suppress("LongParameterList") // Where the notes come from, where their links go, and what they read.
 internal class PanelNotes(
@@ -83,6 +85,7 @@ internal class PanelNotes(
     val readAloud: ReadAloud? = null,
     val openSettingsAt: (SettingsTarget) -> Unit = {},
     val lines: EvidenceSet? = null,
+    val asked: EvidenceSet? = lines,
 )
 
 // What a genre's panel on Home reads (#523): a citation unfolds *Sources* to its line ([cite]); the
@@ -91,8 +94,16 @@ internal fun panelNotes(
     actions: NowPlayingActions,
     cite: (String) -> Unit,
     modelAllowed: Boolean,
-    lines: EvidenceSet?,
-) = PanelNotes(actions.genreNotes, cite, modelAllowed, actions.readAloud, actions.openSettingsAt, lines)
+    lines: SourcesLines,
+) = PanelNotes(
+    actions.genreNotes,
+    cite,
+    modelAllowed,
+    actions.readAloud,
+    actions.openSettingsAt,
+    lines.evidence,
+    lines.asked,
+)
 
 /** The test tags of the genre's panel on the genres' page and its heading, as [Panel] makes them. */
 const val GENRE_PANEL_TAG: String = "genre-panel"

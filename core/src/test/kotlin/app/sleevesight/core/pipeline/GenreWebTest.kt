@@ -37,6 +37,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.ZERO
+import kotlin.time.Instant
 
 /**
  * *Why is this …?* with *AI web search* (#801, the parts #762 left for it): path B's genres call from
@@ -139,6 +140,25 @@ class GenreWebTest {
                 assertIs<GenreListState.Listed>(again.ask(key, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> })
             assertEquals(listOf(page.url), listed.sources)
             assertEquals(listed, again.kept(key)?.state)
+        }
+
+    @Test
+    fun `path B's web genres keep the passages of the pages they rest on, for Sources (#1205)`() =
+        runTest {
+            val provider = FakeProvider { FakeProvider.done("""{"genres": ["folk"], "sources": ["${page.url}"]}""") }
+            val lists = GenreLists(AiAccess(provider, Secret("k")), cache, JvmHasher, vocabulary, web = web)
+            val key = checkNotNull(lists.key(track, settings))
+            val listed =
+                assertIs<GenreListState.Listed>(lists.ask(key, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> })
+            // The page it rests on with its passage; not MusicBrainz's, which it was never given.
+            assertEquals(listOf(page), listed.pages)
+            assertEquals(listOf(page), lists.kept(key)?.state?.pages)
+            // A list kept before its passages were: each page with its address for its passage.
+            val before = MemoryCache()
+            val reply = """{"genres": ["folk"], "sources": ["${page.url}"]}"""
+            before.keep(key, KeptListText(reply, listOf(page.url)).text(), Instant.parse("2026-11-01T00:00:00Z"))
+            val old = GenreLists(AiAccess(provider, Secret("k")), before, JvmHasher, vocabulary, web = web)
+            assertEquals(listOf(WebPage(page.url, null, page.url)), old.kept(key)?.state?.pages)
         }
 
     @Test
