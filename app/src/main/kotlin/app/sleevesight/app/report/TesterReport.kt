@@ -368,7 +368,7 @@ private fun StringBuilder.appendWritten(insight: InsightState.Written) {
     val counts = insight.grounded.counts
     appendLine(
         "Citation check: ok ${counts.ok}, model ${counts.model}, hedge ${counts.hedge}, " +
-            "uncited ${counts.uncited}, unknown ${counts.unknown}",
+            "uncited ${counts.uncited}, unknown ${counts.unknown}, unsupported ${counts.unsupported}",
     )
     for (sentence in insight.grounded.paragraphs.flatten()) {
         val cites = if (sentence.cites.isEmpty()) "" else " ${sentence.cites.joinToString(" ") { "[$it]" }}"

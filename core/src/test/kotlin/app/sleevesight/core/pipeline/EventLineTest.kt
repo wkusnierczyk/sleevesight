@@ -247,11 +247,11 @@ class EventLineTest {
     fun `a grounding line says when the model's correction of its own reply was taken out (#597)`() {
         val counts = GroundingCounts(ok = 1, model = 0, hedge = 0, uncited = 0, unknown = 0)
         assertEquals(
-            "grounded   a|song: ok 1, model 0, hedge 0, uncited 0, unknown 0, self-correction taken out",
+            "grounded   a|song: ok 1, model 0, hedge 0, uncited 0, unknown 0, unsupported 0, self-correction taken out",
             EventLine.of(PipelineEvent.Grounded("a|song", counts, selfCorrected = true)),
         )
         assertEquals(
-            "grounded   a|song: ok 1, model 0, hedge 0, uncited 0, unknown 0",
+            "grounded   a|song: ok 1, model 0, hedge 0, uncited 0, unknown 0, unsupported 0",
             EventLine.of(PipelineEvent.Grounded("a|song", counts)),
         )
     }

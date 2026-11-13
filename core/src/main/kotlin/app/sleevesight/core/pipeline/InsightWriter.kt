@@ -52,6 +52,9 @@ internal class InsightWriter(
     private val settings = input.settings
     private val nowPlaying = input.nowPlaying
     private val track = input.track
+
+    // What the insight is about, whose names a sentence may give without its line (#1036).
+    private val subject = subjectOf(CardEntity.Track(track, nowPlaying.duration), nowPlaying)
     private val key = track.lookupKey
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
@@ -443,7 +446,7 @@ internal class InsightWriter(
         allowModel: Boolean,
         cached: Boolean,
     ): InsightReply? =
-        readReply(text, evidence, allowModel) { found, salvaged ->
+        readReply(text, evidence, allowModel, subject) { found, salvaged ->
             emit(PipelineEvent.SelfRevised(key, found.sign, cached = cached, salvaged = salvaged))
         }
 
@@ -500,8 +503,9 @@ private suspend fun CacheGuard.keptByOther(
     allowModel: Boolean,
 ): InsightState.Written? {
     val others = attempt("read other insights") { keptByOthers(wanted) }.orEmpty()
+    val subject = subjectOf(wanted.entity)
     return others.firstNotNullOfOrNull { other ->
-        (readReply(other.card.text, evidence, allowModel) as? InsightReply.Written)?.let { reply ->
+        (readReply(other.card.text, evidence, allowModel, subject) as? InsightReply.Written)?.let { reply ->
             InsightState.Written(
                 reply.grounded,
                 cached = true,
