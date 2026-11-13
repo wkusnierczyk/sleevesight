@@ -1,5 +1,6 @@
 package app.sleevesight.sources.lastfm
 
+import app.sleevesight.core.text.WebLinks
 import app.sleevesight.net.NetError
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -102,6 +103,8 @@ internal object LastFmJson {
 
     private val json = Json
 
+    // Each address read here (the artist's, the album's, a similar artist's, the bio's page) is kept only as
+    // a web address ([WebLinks], #1040): any other scheme is dropped.
     fun artistInfo(body: String): LastFmAnswer<LastFmArtist> {
         val root = json.parseToJsonElement(body).jsonObject
         root.error()?.let { return LastFmAnswer.Error(it) }
@@ -111,12 +114,12 @@ internal object LastFmJson {
             LastFmArtist(
                 name = artist.string("name") ?: error("no artist name"),
                 mbid = artist.string("mbid")?.takeIf { it.isNotBlank() },
-                url = artist.string("url")?.takeIf { it.isNotBlank() },
+                url = WebLinks.of(artist.string("url")),
                 listeners = artist.obj("stats")?.string("listeners")?.toLongOrNull(),
                 tags = artist.obj("tags").items("tag").mapNotNull { it.string("name") },
                 similar =
                     artist.obj("similar").items("artist").mapNotNull { similar ->
-                        similar.string("name")?.let { LastFmSimilar(it, similar.string("url")) }
+                        similar.string("name")?.let { LastFmSimilar(it, WebLinks.of(similar.string("url"))) }
                     },
                 bio = LastFmBio.sentences(summary),
                 sharedPage = LastFmBio.sharedPage(summary),
@@ -125,7 +128,7 @@ internal object LastFmJson {
                         .obj("bio")
                         ?.obj("links")
                         .items("link")
-                        .firstNotNullOfOrNull { it.string("href") },
+                        .firstNotNullOfOrNull { WebLinks.of(it.string("href")) },
             ),
         )
     }
@@ -139,7 +142,7 @@ internal object LastFmJson {
                 name = album.string("name") ?: error("no album name"),
                 artist = album.string("artist") ?: error("no album artist"),
                 mbid = album.string("mbid")?.takeIf { it.isNotBlank() },
-                url = album.string("url")?.takeIf { it.isNotBlank() },
+                url = WebLinks.of(album.string("url")),
                 summary = album.obj("wiki")?.string("summary"),
             ),
         )
