@@ -10,7 +10,7 @@ nav:
   - id: safety
     label: Safety
 provenance: [ai-wrote, human-reviewed]
-docs_version: 0.6.3
+docs_version: 0.6.5
 ---
 <!DOCTYPE html>
 <html lang="en-US">
@@ -53,7 +53,7 @@ docs_version: 0.6.3
 <div class="stack">
   <section class="step" id="st1" aria-labelledby="st1-h">
     <h2 id="st1-h"><span class="num" id="n1">1</span>Type the words</h2>
-    <p>On the phone, open <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b>. It will show you five words. Type the words in the boxes below, in the same order, one a box. The first three letters of each are enough.</p>
+    <p>On the phone, open <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b>, and tap <b>Start</b>. It will show you five words. Type the words in the boxes below, in the same order, one a box. The first three letters of each are enough.</p>
     <div class="words" role="group" aria-label="The phone’s words">
       <div class="wbox" id="wb0"><input type="text" class="masked" id="w0" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" aria-label="Word 1"><small id="wm0">Word 1</small></div>
       <div class="wbox" id="wb1"><input type="text" class="masked" id="w1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" aria-label="Word 2"><small id="wm1">Word 2</small></div>
@@ -109,7 +109,7 @@ LASTFM_API_KEY=0123…</pre>
 
 <details class="side" id="side">
   <summary>A code without the words, for a single key</summary>
-  <p>A key’s own <b>Scan QR code</b>, in its key dialog, reads a code made without the words. Such a code is the keys themselves: anyone who sees it, or a photo of it, has them. <b>Load keys</b> reads only a sealed code.</p>
+  <p>A key’s own <b>Scan QR code</b>, in its key dialog, reads a code made without the words that holds that key alone. Such a code is the keys themselves: anyone who sees it, or a photo of it, has them. <b>Load keys</b> reads it too, and warns that it was not sealed with words.</p>
   <label class="check"><input type="checkbox" id="nosealbox"> Make the code without the words</label>
 </details>
 
