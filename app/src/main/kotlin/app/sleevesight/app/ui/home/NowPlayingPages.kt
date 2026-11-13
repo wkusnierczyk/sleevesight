@@ -27,6 +27,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.NewTrackFold
 
@@ -308,5 +309,6 @@ internal class Showing(
         details = details,
         lines = lines,
         retry = retry,
+        unsupported = (track?.insight as? InsightState.Written)?.grounded?.let(::unsupportedLines).orEmpty(),
     )
 }

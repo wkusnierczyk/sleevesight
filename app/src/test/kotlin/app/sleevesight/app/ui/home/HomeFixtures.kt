@@ -89,17 +89,28 @@ internal object HomeFixtures {
     /**
      * [reply], checked against [evidence] as written, the model's own knowledge allowed or not; with
      * [held], against only those of its lines, as a prompt that left the others out (#239); [from]
-     * another set than [evidence].
+     * another set than [evidence]. Checked for support by its lines' words (#1036) only with
+     * [support], [sundown]'s names allowed: the replies the tests write are not written from these
+     * lines' words.
      */
+    @Suppress("LongParameterList") // The reply, and how it was written and checked.
     fun written(
         reply: String,
         cached: Boolean = false,
         allowModel: Boolean = false,
         held: Set<String>? = null,
         from: EvidenceSet = evidence,
+        support: Boolean = false,
     ): InsightState.Written {
         val against = held?.let { ids -> from.without(JvmHasher) { it.id !in ids } } ?: from
-        val grounded = (GroundingCheck.check(reply, against, allowModel) as InsightReply.Written).grounded
+        val subject = listOf(sundown.title, sundown.artists, sundown.album.orEmpty())
+        val checked =
+            if (support) {
+                GroundingCheck.check(reply, against, allowModel, subject = subject)
+            } else {
+                GroundingCheck.check(reply, against.ids.toSet(), allowModel)
+            }
+        val grounded = (checked as InsightReply.Written).grounded
         return InsightState.Written(grounded, cached, held = held)
     }
 }

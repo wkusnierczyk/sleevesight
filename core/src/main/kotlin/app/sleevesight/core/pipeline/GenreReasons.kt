@@ -492,7 +492,16 @@ class GenreReasons(
         searched: EvidenceSet? = null,
     ): InsightState {
         val evidence = searched ?: track.evidence ?: return InsightState.NoEvidence
-        return when (val reply = GroundingCheck.check(text, evidence, key.modelKnowledge)) {
+        return when (
+            val reply =
+                GroundingCheck.check(
+                    text,
+                    evidence,
+                    key.modelKnowledge,
+                    subject =
+                        subjectOf(track) + forms(key, track),
+                )
+        ) {
             InsightReply.NoEvidence -> {
                 InsightState.NoEvidence
             }

@@ -1238,7 +1238,7 @@ class ItemInsights(
         evidence: ItemEvidence,
     ): KeptItem? {
         val card = attempt { cache.keptCard(key) } ?: return null
-        val reply = readReply(card.text, evidence.evidence, key.modelKnowledge)
+        val reply = readReply(card.text, evidence.evidence, key.modelKnowledge, subjectOf(key.entity))
         return reply?.let {
             KeptItem(stateOf(it, key, cached = true, usage = null, complete = true, card.rewritten), card.writtenAt)
         }
@@ -1257,7 +1257,13 @@ class ItemInsights(
     ): KeptItem? {
         val others = attempt { cache.keptByOthers(key) }.orEmpty()
         return others.firstNotNullOfOrNull { other ->
-            val reply = readReply(other.card.text, evidence.evidence, key.modelKnowledge) as? InsightReply.Written
+            val reply =
+                readReply(
+                    other.card.text,
+                    evidence.evidence,
+                    key.modelKnowledge,
+                    subjectOf(key.entity),
+                ) as? InsightReply.Written
             reply?.let {
                 val state = stateOf(it, other.key, cached = true, usage = null, complete = true, other.card.rewritten)
                 KeptItem(state, other.card.writtenAt)
@@ -1461,7 +1467,7 @@ class ItemInsights(
                     if (blank == null &&
                         end.stopReason != StopReason.REFUSAL
                     ) {
-                        readReply(text, evidence, key.modelKnowledge)
+                        readReply(text, evidence, key.modelKnowledge, subjectOf(key.entity))
                     } else {
                         null
                     }
