@@ -10,9 +10,15 @@ class WebLinksTest {
     fun `http and https addresses are kept as they are`() {
         assertEquals("https://www.last.fm/music/Cher", WebLinks.of("https://www.last.fm/music/Cher"))
         assertEquals("http://example.com", WebLinks.of("http://example.com"))
-        assertEquals("HTTPS://Example.com/A?b=1#c", WebLinks.of("HTTPS://Example.com/A?b=1#c"))
         assertEquals("https://example.com:8443/x", WebLinks.of("https://example.com:8443/x"))
         assertEquals("https://example.com/", WebLinks.of("  https://example.com/\n"))
+    }
+
+    @Test
+    fun `the scheme is given in lower case, the rest as it is`() {
+        // Android matches an intent's scheme case-sensitively: a browser takes `https`, not `HTTPS`.
+        assertEquals("https://Example.com/A?b=1#c", WebLinks.of("HTTPS://Example.com/A?b=1#c"))
+        assertEquals("http://Example.com/HTTPS://x", WebLinks.of("HtTp://Example.com/HTTPS://x"))
     }
 
     @Test

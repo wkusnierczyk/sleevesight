@@ -59,6 +59,15 @@ class WebLinkOpenersTest {
     }
 
     @Test
+    fun `a scheme in capitals is opened in lower case`() {
+        // Android matches an intent's scheme case-sensitively: a browser's filter takes `https`, not
+        // `HTTPS`, so the address is handed on with its scheme lowered (Codex review, #1040).
+        assertTrue(openWebLink(browser, "HTTPS://www.Last.fm/music/Cher"))
+        assertTrue(openWebLink(browser, "Http://example.com/A"))
+        assertEquals(listOf("https://www.Last.fm/music/Cher", "http://example.com/A"), opened)
+    }
+
+    @Test
     fun `with no app that opens web pages, nothing happens`() {
         val none =
             object : UriHandler {
