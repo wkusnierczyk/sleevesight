@@ -12,8 +12,10 @@ object WebLinks {
      * [url] when it is a web address: `http://` or `https://` (the scheme in any case), then a host,
      * and no white space or control character anywhere; else null. Spaces around it are trimmed.
      */
-    fun of(url: String?): String? {
-        val address = url?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    fun of(url: String?): String? = url?.trim()?.takeIf(::isWebAddress)
+
+    // Whether [address], trimmed, is `http` or `https`, with a host, and nothing that does not show.
+    private fun isWebAddress(address: String): Boolean {
         val scheme = address.substringBefore("://", "")
         val host =
             address
@@ -24,11 +26,8 @@ object WebLinks {
                 .substringAfterLast('@')
                 .substringBefore(':')
         val plain = address.none { it.isWhitespace() || it.isISOControl() }
-        return address.takeIf { scheme.lowercase() in SCHEMES && host.isNotEmpty() && plain }
+        return scheme.lowercase() in SCHEMES && host.isNotEmpty() && plain
     }
-
-    /** Whether [url] is a web address the app opens ([of]). */
-    fun isWeb(url: String?): Boolean = of(url) != null
 
     private val SCHEMES = setOf("http", "https")
 }
