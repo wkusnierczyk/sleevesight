@@ -112,10 +112,11 @@ internal object Support {
         next: Token?,
         numbers: Set<String>,
     ): Boolean {
-        val year = digits.toIntOrNull()?.takeIf { it in YEARS } ?: return true
-        val decade = next?.text == "s" && year % DECADE == 0
+        val year = digits.toIntOrNull()?.takeIf { it in YEARS }
+        val decade = year != null && next?.text == "s" && year % DECADE == 0
         val years = numbers.mapNotNull { it.toIntOrNull() }.filter { it in YEARS }
-        return digits in numbers ||
+        return year == null ||
+            digits in numbers ||
             digits.takeLast(2) in numbers ||
             (decade && years.any { it / DECADE == year / DECADE })
     }
