@@ -284,6 +284,24 @@ class GenreTagSourcesPagesScreenTest {
         val again = withPages(sources, listOf(page) + pages, LinePurpose.GENRES)
         assertEquals(sources.evidence, again.evidence)
         assertEquals("S2", webLineOf("https://example.org/2", again.evidence))
+        // A page the list found and the same page a reason's search found, with a trailing slash: one line.
+        val twice =
+            withPages(
+                SourcesLines(sources.evidence),
+                listOf(pages[0], WebPage(pages[0].url + "/", null, "Again.")),
+                LinePurpose.GENRES,
+            )
+        assertEquals(sources.evidence, twice.evidence)
+        val one = WebPage("https://example.net/song", null, "The song.")
+        val folded =
+            withPages(sources, listOf(one, WebPage(one.url + "/", null, "The song, again.")), LinePurpose.GENRES)
+        assertEquals(
+            listOf("S12"),
+            folded.evidence!!
+                .lines
+                .drop(11)
+                .map { it.id },
+        )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {

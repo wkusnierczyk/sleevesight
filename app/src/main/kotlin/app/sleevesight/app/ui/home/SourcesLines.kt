@@ -81,10 +81,13 @@ internal fun withPages(
             .orEmpty()
             .filter { it.source == SourceId.WEB }
             .mapNotNull { it.url }
+    // Each address once, as `sameAddress` reads them (#1205): a page the list and a reason's search
+    // both found, one with a trailing slash, is one line.
     val fresh =
-        pages
-            .filter { page -> web.none { sameAddress(it, page.url) } }
-            .distinctBy { it.url }
+        pages.fold(listOf<WebPage>()) { kept, page ->
+            val known = (web + kept.map { it.url }).any { sameAddress(it, page.url) }
+            if (known) kept else kept + page
+        }
     if (evidence == null || fresh.isEmpty()) return lines
     val drafts = fresh.map { EvidenceDraft(SourceId.WEB, Scope.WEB, it.text, it.url, UNDATED) }
     val shown = evidence.with(drafts, JvmHasher)
