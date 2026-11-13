@@ -16,7 +16,8 @@ object WebLinks {
      *
      * An address written in a form browsers read differently from how it looks is refused too (#1245):
      * one with a backslash anywhere, or with user info (an `@` before its host), so the host that
-     * [host] names is the one the browser opens.
+     * [host] names is the one the browser opens. A backslash only in the path, query or fragment is
+     * refused on purpose as well: Android's `Uri` has handled `\` differently across versions.
      */
     fun of(url: String?): String? =
         url?.trim()?.takeIf(::isWebAddress)?.let { address ->
