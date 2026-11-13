@@ -69,8 +69,9 @@ import app.sleevesight.core.pipeline.TrackState
  * one reading, its name then its tags, [genre]'s marked as selected ("Track, Pop, Rock, selected":
  * the chips are not buttons), and no selected state of its own, so it says which tag is marked
  * ([tagsReading]); a row of sources reads its name and sources, each source's link still a link of
- * its own, which a screen reader reaches and opens; one with the pages' citations reads them after
- * its sources, "Track: Claude Haiku 5.5, AI. From: Source S7, Source S8", each offered as an action.
+ * its own, which a screen reader reaches and opens; one with the pages' citations is one item in
+ * their place, read "Track: Claude Haiku 5.5, AI. From: Source S7, Source S8", each citation and
+ * each of its links offered as an action ([citedRow]).
  */
 @Composable
 internal fun TagsGrid(
@@ -107,14 +108,11 @@ internal fun TagsGrid(
             val parts = sourceParts(row, onCite)
             if (parts.isEmpty()) return@forEachIndexed
             val cited = pages.takeIf { row.labels.any { it.aiAdded } }.orEmpty()
-            // Each citation as a screen reader reads it, "Source S7".
-            val cites = cited.map { line -> line to stringResource(R.string.home_cite, line) }
             val words = parts.joinToString("") { it.text }.replace(MARK_SPACE, " ")
-            val reading = fromReading(names[index], words, cites.map { it.second })
             val tagged =
-                Modifier.testTag(GENRE_SOURCES_ROW_PREFIX + index).let { tag ->
-                    if (reading == null) tag else tag.semantics { citedRow(reading, cites, onCite) }
-                }
+                Modifier
+                    .testTag(GENRE_SOURCES_ROW_PREFIX + index)
+                    .then(citedRow(names[index], words, parts, cited, onCite))
             GridRow(names[index], column, nameStyle, tagged) {
                 Column {
                     row.artist?.takeIf { several && row.level == GenreLevel.ARTIST && !row.described }?.let { artist ->

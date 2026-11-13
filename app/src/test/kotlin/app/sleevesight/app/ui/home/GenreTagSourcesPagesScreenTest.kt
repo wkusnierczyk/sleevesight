@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -15,9 +18,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.AiGenreList
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -76,12 +78,23 @@ class GenreTagSourcesPagesScreenTest {
         artist = KALEO.takeIf { level == GenreLevel.ARTIST },
     )
 
-    // KALEO's tags, from MusicBrainz: Blues Rock and Rock.
+    // The track's tag from Last.fm, Blues, linked; KALEO's, from MusicBrainz: Blues Rock and Rock.
     private val playing: TrackState =
         track().copy(
             genres =
                 TrackGenres(
                     listOf(
+                        GenreRow(
+                            GenreLevel.TRACK,
+                            null,
+                            listOf(
+                                TrackLabel(
+                                    label("blues", "Blues", GenreLevel.TRACK),
+                                    listOf(LabelCredit(LabelSource.LASTFM, LASTFM_PAGE)),
+                                    votes = TrackGenres.MIN_VOTES,
+                                ),
+                            ),
+                        ),
                         GenreRow(
                             GenreLevel.ARTIST,
                             KALEO,
@@ -125,6 +138,7 @@ class GenreTagSourcesPagesScreenTest {
     private val popRock = label("pop rock", "Pop Rock", GenreLevel.TRACK)
 
     private val cited = mutableListOf<String>()
+    private val opened = mutableListOf<String>()
 
     private class Notes(
         private val list: AiGenreList,
@@ -151,13 +165,23 @@ class GenreTagSourcesPagesScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        GenresContent(
-                            playing,
-                            Settings(),
-                            notes =
-                                PanelNotes(Notes(list), onCite = { line -> cited += line }, lines = sources.evidence),
-                        )
+                    val uris =
+                        object : UriHandler {
+                            override fun openUri(uri: String) {
+                                opened += uri
+                            }
+                        }
+                    CompositionLocalProvider(LocalUriHandler provides uris) {
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
+                            GenresContent(
+                                playing,
+                                Settings(),
+                                notes =
+                                    PanelNotes(Notes(list), onCite = { line ->
+                                        cited += line
+                                    }, lines = sources.evidence),
+                            )
+                        }
                     }
                 }
             }
@@ -170,47 +194,44 @@ class GenreTagSourcesPagesScreenTest {
     private fun froms() =
         compose.onAllNodesWithTag(GENRE_SOURCES_FROM_TAG, useUnmergedTree = true).fetchSemanticsNodes().size
 
-    private fun textOf(tag: String) =
-        compose
-            .onNodeWithTag(tag, useUnmergedTree = true)
-            .fetchSemanticsNode()
-            .config[SemanticsProperties.Text]
-            .joinToString { it.text }
-
     @Test
     fun theRowTheAisGenresFromTheWebJoinedCitesTheirPagesInSources() =
         show(AiGenreList(listOf(folkRock, popRock), MODEL, pages.map { it.url }, pages)) {
-            // The track's row (0) names the model, then the pages' citations, S7 to S11, spaces between.
-            compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").performScrollTo()
-            compose.onNodeWithText("$MODEL, AI", useUnmergedTree = true).assertExists()
-            assertEquals("From: S7 S8 S9 S10 S11", textOf(GENRE_SOURCES_FROM_TAG))
-            assertEquals(1, froms())
+            // The track's row (0): its sources, then the pages' citations, S7 to S11, spaces between.
+            val row = GENRE_SOURCES_ROW_PREFIX + "0"
+            compose.onNodeWithTag(row).performScrollTo()
             compose
-                .onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0")
+                .onNodeWithTag(row)
                 .assertContentDescriptionEquals(
-                    "Track: $MODEL, AI. From: Source S7, Source S8, Source S9, Source S10, Source S11",
+                    "Track: Last.fm · $MODEL, AI. From: Source S7, Source S8, Source S9, Source S10, Source S11",
                 )
-            // Each citation a link to its line in *Sources*, and an action too.
-            compose.onNodeWithTag(GENRE_SOURCES_FROM_TAG, useUnmergedTree = true).performFirstLinkClick {
-                (it.item as? LinkAnnotation.Clickable)?.tag == GENRE_CITE_PREFIX + "S9"
-            }
-            compose.waitForIdle()
-            assertEquals(listOf("S9"), cited)
-            val actions =
+            // One item in place of its parts, which it clears from the accessibility tree, so nothing
+            // under it is read again; the unmerged tree still holds them, as drawn.
+            val node = compose.onNodeWithTag(row, useUnmergedTree = true).fetchSemanticsNode().config
+            assertTrue(node.isClearingSemantics)
+            assertNull(node.getOrNull(SemanticsProperties.Text))
+            assertEquals(
+                listOf("From: S7 S8 S9 S10 S11"),
                 compose
-                    .onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0")
+                    .onNodeWithTag(GENRE_SOURCES_FROM_TAG, useUnmergedTree = true)
                     .fetchSemanticsNode()
-                    .config[SemanticsActions.CustomActions]
-            assertEquals((7..11).map { "Source S$it" }, actions.map { it.label })
+                    .config[SemanticsProperties.Text]
+                    .map { it.text },
+            )
+            // Each citation an action that opens its line in *Sources*; each link one that opens its page.
+            val actions = node[SemanticsActions.CustomActions]
+            assertEquals((7..11).map { "Source S$it" } + "Open Last.fm in your browser", actions.map { it.label })
+            actions[2].action()
             actions.last().action()
-            assertEquals(listOf("S9", "S11"), cited)
+            assertEquals(listOf("S9"), cited)
+            assertEquals(listOf(LASTFM_PAGE), opened)
         }
 
     @Test
     fun aRowWhoseAiGenresRestOnNoPageNamesTheModelAlone() =
         show(AiGenreList(listOf(folkRock, popRock), MODEL)) {
             compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").performScrollTo()
-            compose.onNodeWithText("$MODEL, AI", useUnmergedTree = true).assertExists()
+            compose.onNodeWithText("Last.fm · $MODEL,", substring = true, useUnmergedTree = true).assertExists()
             assertEquals(0, froms())
             val row = compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "0").fetchSemanticsNode().config
             assertNull(row.getOrNull(SemanticsActions.CustomActions))
@@ -245,5 +266,6 @@ class GenreTagSourcesPagesScreenTest {
     private companion object {
         const val KALEO = "KALEO"
         const val MODEL = "Claude Haiku 5.5"
+        const val LASTFM_PAGE = "https://www.last.fm/music/KALEO/_/Way+down+We+Go"
     }
 }

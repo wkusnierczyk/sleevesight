@@ -430,6 +430,9 @@
     <!-- How a screen reader reads that row: %1$s the row's name ("Track"), %2$s its sources
          ("Claude Haiku 5.5, AI"), %3$s the citations, each as home_cite reads it, comma-separated. -->
     <string name="home_genre_tag_sources_reading">%1$s: %2$s. From: %3$s</string>
+    <!-- The action a screen reader offers on that row for each source's link, %1$s its name
+         ("MusicBrainz"): the row is read as one item, so its links are offered as its actions. -->
+    <string name="home_genre_tag_sources_open">Open %1$s in your browser</string>
     <!-- Under the sources, once, when MusicBrainz gave any tag (D12), then on its own line
          home_genre_tags_licence, linking the licence. -->
     <string name="home_genre_tags_credit">MusicBrainz tags by contributors</string>
