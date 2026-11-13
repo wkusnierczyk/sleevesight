@@ -55,14 +55,14 @@ internal fun saverIndexRows(settings: Settings): List<IndexedRow> {
         )
     val count = settings.pauseAutoWriteAfter ?: return listOf(saver)
     val options = saverCounts(count)
-    val stopAfter =
+    val saverCount =
         choiceRow(
             stringResource(R.string.settings_pause_auto_write_after),
             null,
             pauseLabel(count),
             options.map { it.second } + pauseSummaries(options.map { it.first }, settings.lookUpInBackground).values,
         )
-    return listOf(saver, stopAfter)
+    return listOf(saver, saverCount)
 }
 
 /** What each of [counts] does while chosen ([pauseSummary]), by count. */
@@ -95,4 +95,4 @@ internal fun saverCounts(count: Int): List<Pair<Int, String>> =
     (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
 
 /** A choice of *Saver*'s count, as its button names it: the number alone (#1212). */
-private fun pauseLabel(count: Int): String = "%d".format(count)
+private fun pauseLabel(count: Int): String = count.toString()
