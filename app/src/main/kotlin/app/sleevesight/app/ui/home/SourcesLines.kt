@@ -7,16 +7,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.VocalsAnswer
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.pipeline.linesBeyond
+import app.sleevesight.core.pipeline.showsInstrumental
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.sameAddress
@@ -163,15 +166,17 @@ internal fun withAlbum(
  * [genres] rests on (#1205), once it lists any genre, and those the genres' reasons found on the web
  * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each address once;
  * last, the page the check of the track's vocals cites (#1053, [GenreNotes.vocals]), named *vocals
- * check*, only when its answer was taken (`instrumental` or `vocals`: an `unknown` cites none), and
- * not again when another line has its address. A reason's citations, and the check's, show these ids
- * by address ([shownLine], [webLineOf]), so they never point at another page.
+ * check*, while the genres *Genres* composes ([composedGenres], *Find the lyrics*' answer from
+ * [search] with them) still weigh its answer ([checkedPage]), and not again when another line has its
+ * address. A reason's citations, and the check's, show these ids by address ([shownLine],
+ * [webLineOf]), so they never point at another page.
  */
 @Composable
 internal fun sourcesLines(
     notes: ItemNotes,
     track: TrackState?,
     genres: GenreNotes = GenreNotes.None,
+    search: AiSearchFeed = AiSearchFeed.None,
 ): SourcesLines {
     // Followed afresh for another track, or another album of it (the same song on a compilation).
     val album by remember(notes, track?.normalized, track?.nowPlaying?.album, track?.resolution, track?.sources) {
@@ -194,12 +199,30 @@ internal fun sourcesLines(
         track?.let(genres::searchedPages) ?: flowOf(emptyList())
     }.collectAsState(emptyList())
     val pages = listed + searched
-    val checked = listOfNotNull((vocalsOf(track, genres)?.state as? VocalsState.Checked)?.page)
     val evidence = track?.evidence
     val taken = track?.albumIds.orEmpty()
-    return remember(evidence, album, artist, song, taken, pages, checked) {
-        val genreLines = withPages(withAlbum(evidence, album, artist, song, taken), pages, LinePurpose.GENRES)
-        withPages(genreLines, checked, LinePurpose.VOCALS_CHECK)
+    val genreLines =
+        remember(evidence, album, artist, song, taken, pages) {
+            withPages(withAlbum(evidence, album, artist, song, taken), pages, LinePurpose.GENRES)
+        }
+    // The genres as *Genres* composes them, the artists' descriptions read from these lines.
+    val composed = composedGenres(track, PanelNotes(genres, lines = genreLines.evidence), PanelSearch(search, track))
+    val checked = listOfNotNull(checkedPage(composed))
+    return remember(genreLines, checked) { withPages(genreLines, checked, LinePurpose.VOCALS_CHECK) }
+}
+
+/**
+ * The page the check of the track's vocals rests on (#1053), while [composed], the genres *Genres*
+ * shows, still weigh its answer: `instrumental` while Instrumental shows (lyrics found since, by
+ * MusicBrainz, LRCLIB or *Find the lyrics*, drop it, and the answer with it); `vocals` once taken,
+ * as it drops Instrumental itself. None for `unknown`, or no check.
+ */
+internal fun checkedPage(composed: ComposedGenres): WebPage? {
+    val checked = composed.vocals?.state as? VocalsState.Checked ?: return null
+    return when (checked.answer) {
+        VocalsAnswer.VOCALS -> checked.page
+        VocalsAnswer.INSTRUMENTAL -> checked.page?.takeIf { composed.track?.genres?.showsInstrumental() == true }
+        VocalsAnswer.UNKNOWN -> null
     }
 }
 

@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -25,7 +26,9 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.VocalsAnswer
+import app.sleevesight.core.genres.withoutInstrumental
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
@@ -35,6 +38,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,10 +78,13 @@ class GenreVocalsSourcesScreenTest {
                 flowOf(AiGenreList(listOf(funk), MODEL, listOf(listed.url), listOf(listed)))
         }
 
-    // *Sources*' lines for [shown], with the genres' panel open on Instrumental when [open].
+    // *Sources*' lines for [shown] on [track], with the genres' panel open on Instrumental when [open],
+    // given the lines [panelLines] picks of them.
     private fun show(
         shown: VocalsShown?,
         open: Boolean = false,
+        track: TrackState = playing,
+        panelLines: (SourcesLines) -> EvidenceSet? = { it.evidence },
         block: (SourcesLines) -> Unit,
     ) {
         var sources: SourcesLines? = null
@@ -85,7 +92,7 @@ class GenreVocalsSourcesScreenTest {
             scenario.onActivity {
                 it.setContent {
                     val notes = notes(shown)
-                    val lines = sourcesLines(ItemNotes.None, playing, notes)
+                    val lines = sourcesLines(ItemNotes.None, track, notes)
                     sources = lines
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         // What *Sources* names each added line by.
@@ -94,8 +101,8 @@ class GenreVocalsSourcesScreenTest {
                         }
                         if (open) {
                             val panel =
-                                PanelNotes(notes, { id -> cited += id }, lines = lines.evidence, asked = lines.asked)
-                            GenresContent(playing, Settings(), notes = panel)
+                                PanelNotes(notes, { id -> cited += id }, lines = panelLines(lines), asked = lines.asked)
+                            GenresContent(track, Settings(), notes = panel)
                         }
                     }
                 }
@@ -144,15 +151,51 @@ class GenreVocalsSourcesScreenTest {
 
     @Test
     fun theNotesCitationShowsOpensAndIsReadAsTheChecksLine() =
-        show(VocalsFixtures.answered(VocalsAnswer.INSTRUMENTAL), open = true) {
+        show(VocalsFixtures.answered(VocalsAnswer.INSTRUMENTAL), open = true) { sources ->
             val note =
                 compose
                     .onNodeWithContentDescription("Web search found this track described as instrumental. (Source S8)")
                     .performScrollTo()
             note.performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == GENRE_CITE_PREFIX + "S8" }
             compose.waitForIdle()
-            assertEquals(listOf("S8"), cited)
+            // The id cited is *Sources*' line of the check's page, named *vocals check*.
+            val id = cited.single()
+            assertEquals(VocalsFixtures.page.url, checkNotNull(sources.evidence)[id]?.url)
+            assertEquals(LinePurpose.VOCALS_CHECK, sources.purposes[id])
         }
+
+    @Test
+    fun withNoLineOfThePageTheNoteCitesNothing() =
+        // The panel given lines without the check's page: no number made up for it.
+        show(VocalsFixtures.answered(VocalsAnswer.INSTRUMENTAL), open = true, panelLines = { it.asked }) {
+            val texts =
+                compose
+                    .onNodeWithContentDescription("Web search found this track described as instrumental.")
+                    .performScrollTo()
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+            assertTrue(texts.none { it.getLinkAnnotations(0, it.length).isNotEmpty() })
+            assertTrue(cited.isEmpty())
+        }
+
+    @Test
+    fun aKeptInstrumentalAnswerListsNoPageOnceLyricsDropInstrumental() =
+        // Lyrics found since (MusicBrainz's): Instrumental dropped, the kept answer no longer weighed.
+        show(VocalsFixtures.answered(VocalsAnswer.INSTRUMENTAL), track = sung) { sources ->
+            assertEquals(listOf("S7"), added(sources).map { it.id })
+            assertNull(sources.purposes["S8"])
+        }
+
+    @Test
+    fun aVocalsAnswerListsItsPageThoughInstrumentalIsGone() =
+        show(VocalsFixtures.answered(VocalsAnswer.VOCALS), track = sung) { sources ->
+            assertEquals(mapOf("S7" to LinePurpose.GENRES, "S8" to LinePurpose.VOCALS_CHECK), sources.purposes)
+            assertEquals(VocalsFixtures.page.url, checkNotNull(sources.evidence)["S8"]?.url)
+        }
+
+    // [playing] with lyrics found by MusicBrainz, which drop Instrumental.
+    private val sung: TrackState
+        get() = playing.copy(genres = playing.genres.withoutInstrumental(Singing(lyrics = true)))
 
     private companion object {
         const val MODEL = "Claude Haiku 5.5"
