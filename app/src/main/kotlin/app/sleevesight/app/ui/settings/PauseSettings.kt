@@ -1,22 +1,26 @@
 package app.sleevesight.app.ui.settings
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.ChoiceButtonGroup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 
 /**
  * *Saver* (#203, #444): a switch, on while automatic writing pauses after a number of track
- * changes while Sleevesight is not on screen (`pauseAutoWriteAfter`), and under it, while on, that
- * number, *n*: a line saying what it counts, in place of a name, over a button group of the counts
- * by their numbers alone ([saverCounts], #947, #1212), so no label wraps at any font size; a value
- * stored that is not among the choices is offered too. A screen reader reads each button after the
- * line ([ChoiceButtonGroup]'s `name`). Switched on, it pauses after the default number
- * ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]). Fixed while nothing is written automatically (*Show
- * insights* off, or *Reactive* under *Demand*). What the number chosen does shows under the
- * buttons in full, not folded (#874), and is read with each.
+ * changes while Sleevesight is not on screen (`pauseAutoWriteAfter`), its description saying that
+ * number, *n*, and under it, while on, a button group of the counts by their numbers alone
+ * ([saverCounts], #1212, #1234), so no label wraps at any font size, with no name or line of its
+ * own; a value stored that is not among the choices is offered too. A screen reader reads each
+ * button after the setting's name ("Saver: 5", [ChoiceButtonGroup]'s `name`). Switched on, it
+ * pauses after the default number ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]), which the
+ * description names while it is off. Fixed while nothing is written automatically (*Show
+ * insights* off, or *Reactive* under *Demand*).
  */
 @Composable
 internal fun SaverRows(
@@ -25,69 +29,40 @@ internal fun SaverRows(
 ) {
     val writes = settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER
     val count = settings.pauseAutoWriteAfter
+    val title = stringResource(R.string.settings_pause_auto_write)
     SwitchRow(
-        title = stringResource(R.string.settings_pause_auto_write),
-        summary = stringResource(R.string.settings_pause_auto_write_summary),
+        title = title,
+        summary = saverSummary(count),
         checked = count != null,
         // Nothing is written automatically: *Saver* does not apply.
         applies = writes,
     ) { on -> update { it.copy(pauseAutoWriteAfter = if (on) Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER else null) } }
-    if (count == null) return
-    val options = saverCounts(count)
-    ChoiceButtonsRow(
-        title = stringResource(R.string.settings_pause_auto_write_after),
-        summary = null,
-        choices = options,
-        selected = count,
-        details = pauseSummaries(options.map { it.first }, settings.lookUpInBackground),
+    if (count == null || !shownInSearch(title)) return
+    ChoiceButtonGroup(
+        saverCounts(count),
+        count,
+        { n -> update { it.copy(pauseAutoWriteAfter = n) } },
+        Modifier.padding(bottom = 8.dp),
+        name = title,
         // Nothing is written automatically: the count does not apply.
-        applies = writes,
-    ) { n -> update { it.copy(pauseAutoWriteAfter = n) } }
+        enabled = writes,
+    )
 }
 
-/** *Saver* and, while it is on, its count, as the settings' search finds them (#649). */
+/** *Saver* and its counts, as the settings' search finds them (#649). */
 @Composable
 internal fun saverIndexRows(settings: Settings): List<IndexedRow> {
-    val saver =
-        indexRow(
-            stringResource(R.string.settings_pause_auto_write),
-            stringResource(R.string.settings_pause_auto_write_summary),
-        )
-    val count = settings.pauseAutoWriteAfter ?: return listOf(saver)
-    val options = saverCounts(count)
-    val saverCount =
-        choiceRow(
-            stringResource(R.string.settings_pause_auto_write_after),
-            null,
-            pauseLabel(count),
-            options.map { it.second } + pauseSummaries(options.map { it.first }, settings.lookUpInBackground).values,
-        )
-    return listOf(saver, saverCount)
+    val count = settings.pauseAutoWriteAfter
+    val counts = count?.let { saverCounts(it).map { (_, label) -> label } }.orEmpty()
+    val title = stringResource(R.string.settings_pause_auto_write)
+    return listOf(IndexedRow(title, listOf(title, saverSummary(count)) + counts))
 }
 
-/** What each of [counts] does while chosen ([pauseSummary]), by count. */
+/** *Saver*'s description, naming [count], or the default count while it is off (null). */
 @Composable
-private fun pauseSummaries(
-    counts: List<Int>,
-    background: Boolean,
-): Map<Int, String> = counts.associateWith { pauseSummary(it, background) }
-
-/**
- * What the count chosen, [count], does. With *Look up in the background* off ([background] false),
- * nothing is written away, so the count decides whether writing goes on once the app is back.
- */
-@Composable
-private fun pauseSummary(
-    count: Int,
-    background: Boolean,
-): String {
-    val plural =
-        if (background) {
-            R.plurals.settings_pause_auto_write_summary_count
-        } else {
-            R.plurals.settings_pause_auto_write_summary_count_foreground
-        }
-    return pluralStringResource(plural, count, count)
+private fun saverSummary(count: Int?): String {
+    val n = count ?: Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER
+    return pluralStringResource(R.plurals.settings_pause_auto_write_summary, n, n)
 }
 
 /** *Saver*'s counts to choose from, [count] the one set among them. */

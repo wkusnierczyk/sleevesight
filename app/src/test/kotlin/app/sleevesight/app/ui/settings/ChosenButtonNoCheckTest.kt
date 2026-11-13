@@ -91,7 +91,7 @@ class ChosenButtonNoCheckTest {
         )
     private val saverCount =
         Group(
-            R.string.settings_pause_auto_write_after,
+            R.string.settings_pause_auto_write,
             SettingsSection.INSIGHTS,
             Settings.PAUSE_AUTO_WRITE_CHOICES.map { n -> { s: Settings -> s.copy(pauseAutoWriteAfter = n) } },
         )

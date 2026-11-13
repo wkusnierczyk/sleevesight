@@ -510,23 +510,21 @@ class SettingsScreenTest {
             compose.openSection(SettingsSection.INSIGHTS)
             // The cost of automatic writing is said where it is set.
             compose.onNodeWithText(text(R.string.settings_write_automatically_summary)).performScrollTo()
-            // On by default, after 5, with nothing written away while *Look up in the background* is off.
+            // On by default, after 5, which its description says (#1234).
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsOn()
-            compose.onNodeWithText(pauseSummary(5, background = false)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(saverSummary(5)).performScrollTo().assertIsDisplayed()
             // Its count, a button group of the numbers (#947, #1212).
             compose.onNode(hasText("10") and isSelectable()).performScrollTo().performClick()
             waitFor("a pause after 10 track changes stored") { current().pauseAutoWriteAfter == 10 }
-            compose.onNodeWithText(pauseSummary(10, background = false)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(saverSummary(10)).performScrollTo().assertIsDisplayed()
 
-            // With it on, the count bounds what is written away.
-            compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
-            waitFor("look-up in the background stored on") { current().lookUpInBackground }
-            compose.onNodeWithText(pauseSummary(10, background = true)).performScrollTo().assertIsDisplayed()
-
-            // Off, nothing pauses, and no count is offered.
+            // Off, nothing pauses, and no count is offered; the description names the default.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
             waitFor("the saver off") { current().pauseAutoWriteAfter == null }
-            waitFor("its count gone") { absent(R.string.settings_pause_auto_write_after) }
+            waitFor("its count gone") {
+                compose.onAllNodes(hasText("10") and isSelectable()).fetchSemanticsNodes().isEmpty()
+            }
+            compose.onNodeWithText(saverSummary(5)).performScrollTo().assertIsDisplayed()
             // On again, at the default.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
             waitFor("the saver on at 5") { current().pauseAutoWriteAfter == Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER }
@@ -534,35 +532,18 @@ class SettingsScreenTest {
 
     @Test
     fun aPauseAfterOneTrackChangeIsSummedUpInTheSingular() {
-        runBlocking { settings.update { it.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true) } }
+        runBlocking { settings.update { it.copy(pauseAutoWriteAfter = 1) } }
         show {
             compose.openSection(SettingsSection.INSIGHTS)
-            // "Up to": under *On skip*, a natural end is counted but not written.
-            val written = pauseSummary(1, background = true)
-            assertTrue(written, written.contains("for up to 1 track change."))
-            compose.onNodeWithText(written).performScrollTo().assertIsDisplayed()
-
-            compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
-            waitFor("look-up in the background stored off") { !current().lookUpInBackground }
-            val away = pauseSummary(1, background = false)
-            assertTrue(away, away.contains("within 1 track change,"))
-            compose.onNodeWithText(away).performScrollTo().assertIsDisplayed()
+            val one = saverSummary(1)
+            assertTrue(one, one.contains("after 1 track change while"))
+            compose.onNodeWithText(one).performScrollTo().assertIsDisplayed()
         }
     }
 
-    // What *Saver*'s count [count] does, with *Look up in the background* as [background].
-    private fun pauseSummary(
-        count: Int,
-        background: Boolean,
-    ): String {
-        val plural =
-            if (background) {
-                R.plurals.settings_pause_auto_write_summary_count
-            } else {
-                R.plurals.settings_pause_auto_write_summary_count_foreground
-            }
-        return app.resources.getQuantityString(plural, count, count)
-    }
+    // *Saver*'s description, naming [count] (#1234).
+    private fun saverSummary(count: Int): String =
+        app.resources.getQuantityString(R.plurals.settings_pause_auto_write_summary, count, count)
 
     @Test
     fun aStoredValueOutsideTheOptionsIsShownAsItIs() {
