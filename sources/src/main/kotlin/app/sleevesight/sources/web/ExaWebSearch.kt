@@ -13,6 +13,7 @@ import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.text.HtmlReferences
 import app.sleevesight.core.text.SourceText
+import app.sleevesight.core.text.WebLinks
 import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetBody
 import app.sleevesight.net.NetClient
@@ -380,7 +381,8 @@ class ExaWebSearch(
         /**
          * A 2xx body read as a search response, each result's title and highlights with their HTML
          * character references decoded, once, here where they come in ([HtmlReferences], #1165: a
-         * page's `&#039;s` shows as `'s`); null for any other status, which has no results.
+         * page's `&#039;s` shows as `'s`), and a result whose address is not a web address dropped
+         * ([WebLinks], #1040); null for any other status, which has no results.
          */
         internal fun parse(response: NetResponse): ExaSearchResponse? =
             if (response.isSuccess) JSON.decodeFromString<ExaSearchResponse>(response.body).decoded() else null
@@ -573,15 +575,21 @@ internal data class ExaHighlights(
 internal data class ExaSearchResponse(
     val results: List<ExaResult> = emptyList(),
 ) {
-    /** Each result's title and highlights with their HTML character references decoded ([HtmlReferences]). */
+    /**
+     * Each result's title and highlights with their HTML character references decoded
+     * ([HtmlReferences]); a result whose address is not a web address ([WebLinks], #1040) dropped.
+     */
     fun decoded(): ExaSearchResponse =
         copy(
             results =
-                results.map { result ->
-                    result.copy(
-                        title = result.title?.let(HtmlReferences::decode),
-                        highlights = result.highlights.map(HtmlReferences::decode),
-                    )
+                results.mapNotNull { result ->
+                    WebLinks.of(result.url)?.let { url ->
+                        result.copy(
+                            url = url,
+                            title = result.title?.let(HtmlReferences::decode),
+                            highlights = result.highlights.map(HtmlReferences::decode),
+                        )
+                    }
                 },
         )
 }
