@@ -26,6 +26,7 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearchOutcome
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +55,13 @@ class AppGenreVocalsTest {
     // What the check answers.
     private var said = "vocals"
 
+    // The page found and cited, which says the answer in words (#1053): the fixture's instrumental
+    // page, or one that says it is sung.
+    private val sung =
+        WebPage("https://bandcamp.example/nasnusa-sung", "Nasnusa", "Nasnusa, sung by Yurika Hanashima.")
+
+    private fun cited(): WebPage = if (said == "instrumental") VocalsFixtures.page else sung
+
     // While set, a search waits for it: the app may leave meanwhile.
     private var searching: CompletableDeferred<Unit>? = null
 
@@ -62,7 +70,7 @@ class AppGenreVocalsTest {
         CountingProvider().apply {
             reply = { n ->
                 if (n == 1) {
-                    """{"answer": "$said", "source": "${VocalsFixtures.page.url}"}"""
+                    """{"answer": "$said", "source": "${cited().url}"}"""
                 } else {
                     "It is tagged so [MB1]."
                 }
@@ -80,7 +88,7 @@ class AppGenreVocalsTest {
                 webSearch = { query, _ ->
                     queries += query
                     searching?.await()
-                    WebSearchOutcome.Found(listOf(VocalsFixtures.page))
+                    WebSearchOutcome.Found(listOf(cited()))
                 },
             ),
         )
