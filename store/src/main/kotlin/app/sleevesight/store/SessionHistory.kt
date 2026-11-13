@@ -18,7 +18,7 @@ import kotlin.time.Instant
  * caches: [driver] is the Android driver in `:app`, with [HistoryDatabase.Schema] created on it,
  * or migrated to from an older version. Both stay on the phone, are never evicted by the caches'
  * size limit, and are cleared together ([clear]); what is older than the user's *Keep history for*
- * is deleted ([deleteOlderThan]).
+ * is deleted ([deleteOlderThan]). Both wipe what they delete from the database's files ([Wiping]).
  *
  * - The session history: each track the session layer saw play, in order, grouped in listening
  *   sessions: the default track list, "Played this session".
@@ -235,13 +235,19 @@ class SessionHistory(
     fun deleteOlderThan(
         lifetime: Duration,
         now: Instant,
-    ) {
-        queries.deleteBefore((now - lifetime).toEpochMilliseconds())
-    }
+    ) = wiping { queries.deleteBefore((now - lifetime).toEpochMilliseconds()) }
 
     /** Deletes the session history and the record of track changes together, in one transaction. */
-    fun clear() {
-        queries.clear()
+    fun clear() = wiping { queries.clear() }
+
+    // [delete] in one transaction, wiped from the files ([Wiping]): what it deletes is overwritten,
+    // and the write-ahead log checkpointed once it commits.
+    private fun wiping(delete: () -> Unit) {
+        queries.transaction {
+            Wiping.secureDelete(driver)
+            delete()
+        }
+        Wiping.checkpoint(driver)
     }
 }
 

@@ -457,9 +457,17 @@ class AppGraph internal constructor(
     /**
      * The session history and the record of track changes (D15), in a database of their own under
      * the app's `databases/`, which the backup and transfer rules exclude. Cleared together by
-     * `SessionHistory.clear`.
+     * `SessionHistory.clear`, which wipes what it deletes from the files ([SecureDeleteCallback]).
      */
-    val history = SessionHistory(AndroidSqliteDriver(HistoryDatabase.Schema, appContext, HISTORY_DATABASE))
+    val history =
+        SessionHistory(
+            AndroidSqliteDriver(
+                HistoryDatabase.Schema,
+                appContext,
+                HISTORY_DATABASE,
+                callback = SecureDeleteCallback(HistoryDatabase.Schema),
+            ),
+        )
 
     /** Lists each player the session layer sees under *Players*, switched off. */
     private val seenPlayersRecorder = SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen)
