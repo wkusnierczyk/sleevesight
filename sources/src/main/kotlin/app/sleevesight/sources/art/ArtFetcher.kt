@@ -17,6 +17,12 @@ import kotlin.time.Duration.Companion.seconds
  * (`usesCleartextTraffic="false"`), on Android 8 as well, whose default allows it; these checks make
  * the refusal a plain, final failure rather than a failed connection, reported as offline and retried.
  *
+ * Nor is an address on the phone's own network fetched (#1042): an IP literal, `localhost`, or a
+ * `.local` (mDNS) host. A player could otherwise have the app send requests to devices beside it;
+ * players' covers come from named public hosts, and an `https` certificate for such an address
+ * would rarely pass anyway. A public name that resolves, or redirects, to a local address is not
+ * caught here: that needs a check of the resolved address in `:net`.
+ *
  * The URI is a stranger's choice, so the answer is bounded ([MAX_BYTES]) and kept only when the
  * server says it is an image, or says nothing of its type; the caller decodes it. For the same
  * reason the request is marked `sensitiveUrl`: the path or query may carry a token or name the
@@ -25,13 +31,16 @@ import kotlin.time.Duration.Companion.seconds
 class ArtFetcher(
     private val net: NetClient,
 ) {
-    suspend fun fetch(uri: String): ArtResult {
-        if (!isHttps(uri)) return ArtResult.Failed("not https")
-        return when (val result = net.send(request(uri))) {
-            is NetResult.Failure -> ArtResult.Failed(result.error::class.simpleName ?: "error")
-            is NetResult.Success -> read(result.value)
+    suspend fun fetch(uri: String): ArtResult =
+        when {
+            !isHttps(uri) -> ArtResult.Failed("not https")
+            isLocal(host(uri)) -> ArtResult.Failed("local address")
+            else ->
+                when (val result = net.send(request(uri))) {
+                    is NetResult.Failure -> ArtResult.Failed(result.error::class.simpleName ?: "error")
+                    is NetResult.Success -> read(result.value)
+                }
         }
-    }
 
     private fun read(response: NetResponse): ArtResult {
         val type = response.header("Content-Type")?.trim()?.lowercase()
@@ -54,6 +63,42 @@ class ArtFetcher(
         val TIMEOUT = 15.seconds
 
         private fun isHttps(uri: String): Boolean = uri.startsWith("https://", ignoreCase = true)
+
+        /** The host of an `https://` [uri], lower case, without user info, port or a final dot. */
+        internal fun host(uri: String): String {
+            val authority = uri.substring(HTTPS.length).takeWhile { it !in "/?#\\" }.substringAfterLast('@')
+            val host =
+                if (authority.startsWith("[")) {
+                    authority.substringBefore(']') + "]"
+                } else {
+                    authority.substringBefore(':')
+                }
+            return host.lowercase().trimEnd('.')
+        }
+
+        private fun isLocal(host: String): Boolean =
+            host.startsWith("[") ||
+                isNumeric(host) ||
+                host == "localhost" ||
+                host.endsWith(".localhost") ||
+                host == "local" ||
+                host.endsWith(".local")
+
+        private const val HTTPS = "https://"
+
+        /**
+         * An IPv4 address in any form an address parser takes: each dot-separated label decimal,
+         * octal (`0177`) or `0x` hex, dotted (`192.168.1.5`, `0x7f.0.0.1`) or not (`3232235781`,
+         * `0x7f000001`). No public name is one, as no top-level domain is all digits or `0x` hex.
+         */
+        private fun isNumeric(host: String): Boolean = host.isNotEmpty() && host.split('.').all(::isNumber)
+
+        private fun isNumber(label: String): Boolean =
+            if (label.startsWith("0x")) {
+                label.length > 2 && label.drop(2).all { it in '0'..'9' || it in 'a'..'f' }
+            } else {
+                label.isNotEmpty() && label.all { it in '0'..'9' }
+            }
     }
 }
 

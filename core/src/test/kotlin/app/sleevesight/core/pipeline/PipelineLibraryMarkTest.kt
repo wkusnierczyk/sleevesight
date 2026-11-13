@@ -4,6 +4,7 @@ import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.genres.WeakEvidence
 import app.sleevesight.core.genres.wantsVocalsCheck
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.lyrics.LibraryQuery
@@ -113,8 +114,9 @@ class PipelineLibraryMarkTest {
             )
             assertFalse(label?.aiAdded == true)
             val chip = state.genres.chips().single { it.label.genre.identity == TrackGenres.INSTRUMENTAL }
-            assertFalse(chip.weak)
-            assertNull(state.genres.weakEvidence(TrackGenres.INSTRUMENTAL))
+            // Weak as LRCLIB's mark alone (#1055); the paid check settled all the same.
+            assertTrue(chip.weak)
+            assertEquals(WeakEvidence.LibraryMark, state.genres.weakEvidence(TrackGenres.INSTRUMENTAL))
             assertFalse(state.genres.wantsVocalsCheck())
         }
 

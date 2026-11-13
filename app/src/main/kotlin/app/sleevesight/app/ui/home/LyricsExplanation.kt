@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -30,13 +29,13 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.openWebLink
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.synthesis.CheckedSentence
 import app.sleevesight.core.synthesis.CitedPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SentenceStatus
-import app.sleevesight.core.text.SourceText
 
 // *Explain the song*'s answer in the *Lyrics* panel (#908): its sentences, cited as an insight's are,
 // then the pages they cite.
@@ -46,7 +45,7 @@ import app.sleevesight.core.text.SourceText
  * an insight's ([CheckedProse]'s look), each citation a chip that opens its page in the browser, a
  * sentence no page backs (uncited, or citing a page it was not given) dimmed, in the muted colour and
  * in italics, and read as not cited; then "Pages cited" in the quiet note style, and each page its
- * sentences cite, its id, then its title (or its site) as a link that opens in the browser. A screen
+ * sentences cite, its id, then its site as a link that opens in the browser. A screen
  * reader hears each citation as "Source S1", and has each page as an action of the text too, as an
  * insight's paragraph offers its lines.
  */
@@ -66,7 +65,7 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
             " ",
         ) { (sentence, parts) -> spokenSentence(sentence, parts, byId, uncited, resources) }
     Text(
-        explanationText(runs, byId, chips, flagged) { id -> byId[id]?.let { open(uris, it.url) } },
+        explanationText(runs, byId, chips, flagged) { id -> byId[id]?.let { openWebLink(uris, it.url) } },
         style = MaterialTheme.typography.bodyLarge,
         modifier =
             Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
@@ -74,7 +73,7 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
                 customActions =
                     answer.pages.take(MAX_PAGE_ACTIONS).map { page ->
                         CustomAccessibilityAction(resources.getString(R.string.home_cite, page.id)) {
-                            open(uris, page.url)
+                            openWebLink(uris, page.url)
                             true
                         }
                     }
@@ -145,9 +144,9 @@ private fun spokenSentence(
     return if (doubtful(sentence)) "$words ($uncited)" else words
 }
 
-// A page the explanation cites: its id, then its title as a person sees it ([SourceText.titleOf]), or
-// else its site, as a link with the mark of
-// a page that opens outside the app.
+// A page the explanation cites: its id, then its site ([siteOf]: its host, as *Sources* names a page,
+// #1040; not the title the page gives itself), as a link with the mark of a page that opens outside
+// the app.
 @Composable
 private fun CitedPageLink(page: CitedPage) {
     Row(
@@ -167,7 +166,7 @@ private fun CitedPageLink(page: CitedPage) {
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             LinkLabel(
-                TextPart.Link(SourceText.titleOf(page.title) ?: siteOf(page.url), page.url),
+                TextPart.Link(siteOf(page.url), page.url),
                 onClickLabel = stringResource(R.string.link_open),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f, fill = false),
@@ -179,18 +178,6 @@ private fun CitedPageLink(page: CitedPage) {
                 modifier = Modifier.size(16.dp),
             )
         }
-    }
-}
-
-// Opens [url] in the browser; with no app that opens web pages, nothing (its address is listed).
-private fun open(
-    uris: UriHandler,
-    url: String,
-) {
-    try {
-        uris.openUri(url)
-    } catch (_: IllegalArgumentException) {
-        // No app opens web pages.
     }
 }
 

@@ -8,6 +8,7 @@ import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.VocalsAnswer
 import app.sleevesight.core.genres.WeakEvidence
 import app.sleevesight.core.genres.combineGenres
 import app.sleevesight.core.genres.describedGenres
@@ -66,27 +67,60 @@ class LibraryGenresTest {
     }
 
     @Test
-    fun `LRCLIB's instrumental mark lifts each weak sign`() {
+    fun `LRCLIB's instrumental mark lifts each weak sign, leaving it weak as the mark's alone`() {
         val marked = LibraryLyrics.INSTRUMENTAL
         val language = Singing(languages = listOf("jpn"))
         assertEquals(
             WeakEvidence.Language("jpn", "Japanese"),
             weakOf(genres(artist(ARTIST, "instrumental"), singing = language)),
         )
-        assertNull(weakOf(genres(artist(ARTIST, "instrumental"), singing = language.copy(library = marked))))
+        assertEquals(
+            WeakEvidence.LibraryMark,
+            weakOf(genres(artist(ARTIST, "instrumental"), singing = language.copy(library = marked))),
+        )
         val vocalist = Singing(vocalists = listOf(FEATURED))
         assertEquals(
             WeakEvidence.Vocalist(FEATURED),
             weakOf(genres(artist(ARTIST, "instrumental"), singing = vocalist)),
         )
-        assertNull(weakOf(genres(artist(ARTIST, "instrumental"), singing = vocalist.copy(library = marked))))
+        assertEquals(
+            WeakEvidence.LibraryMark,
+            weakOf(genres(artist(ARTIST, "instrumental"), singing = vocalist.copy(library = marked))),
+        )
         val featured = genres(artist(ARTIST, "instrumental", "funk"), artists = listOf(ARTIST, FEATURED))
         assertEquals(WeakEvidence.Featured(FEATURED), weakOf(featured))
         val lifted = featured.withLibrary(marked)
-        assertNull(weakOf(lifted))
-        assertEquals(mapOf("funk" to false, "instrumental" to false), lifted.shown())
+        assertEquals(WeakEvidence.LibraryMark, weakOf(lifted))
+        assertEquals(mapOf("funk" to false, "instrumental" to true), lifted.shown())
         // The AI's Instrumental too.
-        assertNull(genres(emptyList(), singing = vocalist.copy(library = marked)).aiSignOfVocals("instrumental"))
+        assertEquals(
+            WeakEvidence.LibraryMark,
+            genres(emptyList(), singing = vocalist.copy(library = marked)).aiWeakEvidence("instrumental"),
+        )
+    }
+
+    @Test
+    fun `an Instrumental LRCLIB's mark does not lift, or MusicBrainz or the check backs, is not weak for it`() {
+        val marked = LibraryLyrics.INSTRUMENTAL
+        // A tag nothing leaves weak: the mark lifts nothing, so it stands as before.
+        val firm = genres(artist(ARTIST, "instrumental", "jazz"), singing = Singing(library = marked))
+        assertEquals(mapOf("instrumental" to false, "jazz" to false), firm.shown())
+        assertNull(weakOf(firm))
+        // MusicBrainz's mark, or the check of the track's vocals, beside LRCLIB's: not LRCLIB's alone.
+        val vocalist = Singing(vocalists = listOf(FEATURED), library = marked)
+        val backed =
+            listOf(
+                vocalist.copy(instrumental = true),
+                vocalist.copy(checked = VocalsAnswer.INSTRUMENTAL),
+            )
+        for (singing in backed) {
+            val tagged = genres(artist(ARTIST, "instrumental"), singing = singing)
+            assertEquals(false, tagged.shown()[TrackGenres.INSTRUMENTAL], "$singing")
+            assertNull(weakOf(tagged), "$singing")
+            assertNull(genres(emptyList(), singing = singing).aiWeakEvidence("instrumental"), "$singing")
+        }
+        // Another genre is never weak for LRCLIB's mark.
+        assertNull(genres(emptyList(), singing = vocalist).aiWeakEvidence("jazz"))
     }
 
     @Test
@@ -133,31 +167,60 @@ class LibraryGenresTest {
     @Test
     fun `an Instrumental only the artist's description names takes LRCLIB's answer as any other`() {
         // *Eros*'s shape (#1000): the artist's tags, and a web line calling the act instrumental.
-        val line =
-            EvidenceLine(
-                "S8",
-                SourceId.WEB,
-                Scope.ARTIST,
-                "Islandman is described as an instrumental electro-acoustic band from Turkey.",
-                "https://example.org/S8",
-                Instant.parse("2026-11-06T00:00:00Z"),
-            )
-        val described = describedGenres(vocabulary, listOf(line), listOf(ARTIST))
+        val described = describedGenres(vocabulary, listOf(erosLine()), listOf(ARTIST))
         val eros = genres(artist(ARTIST, "ambient", "house")).withDescribed(described)
         assertIs<WeakEvidence.ArtistHint>(weakOf(eros))
-        // Lyrics found by LRCLIB drop it; its instrumental mark lifts the hint; no match leaves it.
+        // Lyrics found by LRCLIB drop it; its instrumental mark lifts the hint, weak as the mark's alone
+        // (#1055); no match leaves it.
         val sung = eros.withLibrary(LibraryLyrics.LYRICS)
         assertTrue(sung.chips().none { it.label.genre.identity == TrackGenres.INSTRUMENTAL })
         assertEquals(listOf("ambient", "house"), sung.chips().map { it.label.genre.identity })
         val marked = eros.withLibrary(LibraryLyrics.INSTRUMENTAL)
-        assertEquals(false, marked.shown()[TrackGenres.INSTRUMENTAL])
-        assertNull(weakOf(marked))
+        assertEquals(true, marked.shown()[TrackGenres.INSTRUMENTAL])
+        assertEquals(WeakEvidence.LibraryMark, weakOf(marked))
         assertIs<WeakEvidence.ArtistHint>(weakOf(eros.withLibrary(LibraryLyrics.NONE)))
         // Not a row of the tags, but called for all the same (#998): the panel, which reads the
         // descriptions, asks LRCLIB for it; once answered, or with lyrics found, no longer.
         assertTrue(eros.wantsLibrary())
         assertFalse(eros.withLibrary(LibraryLyrics.NONE).wantsLibrary())
     }
+
+    @Test
+    fun `Search with AI's Instrumental is weak beside an artist's description's that only LRCLIB's mark lifts`() {
+        // The artist's description alone names it, no tags: *Search with AI* is offered, and may answer it.
+        val described = describedGenres(vocabulary, listOf(erosLine()), listOf(ARTIST))
+        val untagged = genres(emptyList()).withDescribed(described)
+        assertFalse(untagged.hasTags)
+        assertNull(untagged.aiWeakEvidence(TrackGenres.INSTRUMENTAL))
+        val marked = untagged.withLibrary(LibraryLyrics.INSTRUMENTAL)
+        assertEquals(WeakEvidence.LibraryMark, weakOf(marked))
+        assertEquals(WeakEvidence.LibraryMark, marked.aiWeakEvidence(TrackGenres.INSTRUMENTAL))
+        // The check of the track's vocals finding it instrumental too: firm.
+        val both = Singing(library = LibraryLyrics.INSTRUMENTAL, checked = VocalsAnswer.INSTRUMENTAL)
+        val checked = genres(emptyList(), singing = both)
+        assertNull(checked.withDescribed(described).aiWeakEvidence(TrackGenres.INSTRUMENTAL))
+    }
+
+    @Test
+    fun `a track's Instrumental with few votes keeps its few-votes line where LRCLIB's mark lifts its sign`() {
+        val sung = Singing(vocalists = listOf(FEATURED))
+        val tagged = genres(track("instrumental"), singing = sung)
+        assertEquals(WeakEvidence.Vocalist(FEATURED), weakOf(tagged))
+        val marked = genres(track("instrumental"), singing = sung.copy(library = LibraryLyrics.INSTRUMENTAL))
+        assertEquals(true, marked.shown()[TrackGenres.INSTRUMENTAL])
+        assertIs<WeakEvidence.FewVotes>(weakOf(marked))
+    }
+
+    // *Eros*'s web line (#1000), calling the act instrumental.
+    private fun erosLine() =
+        EvidenceLine(
+            "S8",
+            SourceId.WEB,
+            Scope.ARTIST,
+            "Islandman is described as an instrumental electro-acoustic band from Turkey.",
+            "https://example.org/S8",
+            Instant.parse("2026-11-06T00:00:00Z"),
+        )
 
     // Why Instrumental is weak, if it is.
     private fun weakOf(genres: TrackGenres): WeakEvidence? = genres.weakEvidence(TrackGenres.INSTRUMENTAL)

@@ -28,6 +28,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import app.sleevesight.app.ui.openWebLink
+import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.core.settings.LinkStyle
 
 // Links without the palette's accent colour (#442): the system's dynamic accent (on
@@ -61,6 +63,8 @@ internal fun LinkedText(
 ) {
     val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
     val styles = linkStyles(ink)
+    // A link opens only through [openWebLink] (#1040), never by Compose's own handling of the address.
+    val uris = LocalUriHandler.current
     val links = mutableListOf<IntRange>()
     val text =
         buildAnnotatedString {
@@ -69,7 +73,10 @@ internal fun LinkedText(
                 when (part) {
                     is TextPart.Words -> append(part.text)
                     is TextPart.Styled -> withStyle(part.style) { append(part.text) }
-                    is TextPart.Link -> withLink(LinkAnnotation.Url(part.url, styles)) { append(part.text) }
+                    is TextPart.Link ->
+                        withLink(LinkAnnotation.Url(part.url, styles) { openWebLink(uris, part.url) }) {
+                            append(part.text)
+                        }
                     is TextPart.Action -> withLink(annotation(part, styles, part.onClick)) { append(part.text) }
                 }
                 if (part is TextPart.Linked) links += start until length
@@ -127,24 +134,13 @@ internal fun LinkLook(
     MarkedText(AnnotatedString(text), listOf(text.indices), style, ink, color, Modifier)
 }
 
-/** What following [link] does: open its page in the browser, or run its action. */
+/** What following [link] does: open its page in the browser ([openWebLink], #1040), or run its action. */
 @Composable
-private fun rememberFollow(link: TextPart.Linked): () -> Unit {
-    val uriHandler = LocalUriHandler.current
-    return when (link) {
-        is TextPart.Link ->
-            remember(uriHandler, link.url) {
-                {
-                    try {
-                        uriHandler.openUri(link.url)
-                    } catch (_: IllegalArgumentException) {
-                        // No app opens web pages: the address is on the screen.
-                    }
-                }
-            }
+private fun rememberFollow(link: TextPart.Linked): () -> Unit =
+    when (link) {
+        is TextPart.Link -> rememberOpenUrl(link.url)
         is TextPart.Action -> link.onClick
     }
-}
 
 /** [link]'s annotation, in [styles], running [follow] when it is followed. */
 private fun annotation(

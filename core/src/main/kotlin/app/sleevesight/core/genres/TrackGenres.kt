@@ -98,6 +98,13 @@ sealed interface WeakEvidence {
     data class ArtistHint(
         val where: DescribedIn,
     ) : WeakEvidence
+
+    /**
+     * Instrumental that only LRCLIB's instrumental mark (#997) adds (#1024, [TrackLabel.markedBy]) or
+     * lifts from a sign of vocals or the artist's hint (#1055, [Singing.libraryAlone]): LRCLIB's records
+     * are submitted by its users, so its mark alone does not make the genre firm.
+     */
+    data object LibraryMark : WeakEvidence
 }
 
 /**
@@ -136,6 +143,16 @@ data class Singing(
      * check of its vocals found it described as instrumental (#998, [checked]).
      */
     val lifted: Boolean get() = marked || checked == VocalsAnswer.INSTRUMENTAL
+
+    /**
+     * Whether only LRCLIB's mark lifts what would leave Instrumental weak (#1055): marked instrumental
+     * by LRCLIB ([library]), neither by MusicBrainz ([instrumental]) nor found so by the check of its
+     * vocals ([checked]). LRCLIB's records are submitted by its users, so the Instrumental the mark adds
+     * or lifts shows weak ([WeakEvidence.LibraryMark]); it still settles the paid check, and still wins
+     * over lyrics ([dropsInstrumental]).
+     */
+    val libraryAlone: Boolean
+        get() = library == LibraryLyrics.INSTRUMENTAL && !instrumental && checked != VocalsAnswer.INSTRUMENTAL
 
     /**
      * Whether the work's composers alone hint that the track is instrumental (#998): [composersOnly],
@@ -242,7 +259,9 @@ data class TrackGenres(
      * any row, when the track shows a sign of being sung ([signOfVocals], #996); found instrumental by
      * the check of its vocals (#998, [Singing.checked]), it is weak for neither its signs nor its
      * votes, nor is the Instrumental LRCLIB's mark adds ([TrackLabel.markedBy], #1024,
-     * `withLibraryMark`), a source's chip with no votes. The rows keep their cap,
+     * `withLibraryMark`), a source's chip with no votes. Yet LRCLIB's records are submitted by its
+     * users, so an Instrumental that only its mark adds or lifts from a sign of vocals or the artist's
+     * hint is weak ([WeakEvidence.LibraryMark], #1055), on any row, the AI's too. The rows keep their cap,
      * [GenreVocabulary.MAX_LABELS]; the chips have none of their own.
      *
      * The genres the artists' descriptions name ([described], #1000) follow the sources' tags, before
@@ -252,12 +271,7 @@ data class TrackGenres(
      * saying so of the track ([artistHint]).
      */
     fun chips(names: Comparator<String> = CASE_FOLDED): List<PlacedLabel> {
-        val others =
-            rows
-                .filter { it.level != GenreLevel.TRACK }
-                .flatMap { it.labels }
-                .map { it.genre.identity }
-                .toSet()
+        val others = otherLevels()
         val (added, sources) =
             rows
                 .flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
@@ -265,27 +279,21 @@ data class TrackGenres(
                 .partition { it.label.aiAdded }
         val marked =
             sources.map { placed ->
-                val label = placed.label
-                // Instrumental the check of the track's vocals found so (#998) is not weak for its votes, nor
-                // one a source's mark gave (#1024: LRCLIB's), which has none.
-                val checked = label.genre.identity == INSTRUMENTAL && singing.checked == VocalsAnswer.INSTRUMENTAL
-                val confirmed = checked || label.markedBy != null
-                val fewVotes =
-                    placed.row.level == GenreLevel.TRACK &&
-                        label.genre.identity !in others &&
-                        (label.votes ?: 0) < MIN_VOTES &&
-                        !confirmed
-                placed.copy(weak = fewVotes || signOfVocals(placed) != null)
+                val signed = signOfVocals(placed) != null || libraryMark(placed) != null
+                placed.copy(weak = fewVotes(placed, others) || signed)
             }
         // The AI's Instrumental is weighed as a track's (#996): weak with a vocalist or a language.
-        val aiMarked = added.map { it.copy(weak = signOfVocals(it) != null) }
+        val aiMarked = added.map { it.copy(weak = signOfVocals(it) != null || libraryMark(it) != null) }
         val tagged = (sources + added).map { it.label.genre.identity }.toSet()
         val text =
             described
                 .flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
                 .distinctBy { it.label.genre.identity }
                 .filter { it.label.genre.identity !in tagged }
-                .map { it.copy(weak = signOfVocals(it) != null || artistHint(it) != null) }
+                .map { placed ->
+                    val hinted = artistHint(placed) != null || libraryMark(placed) != null
+                    placed.copy(weak = signOfVocals(placed) != null || hinted)
+                }
         val byName = compareBy<PlacedLabel, String>(names) { it.label.genre.label }
         val order = byName.thenBy { it.label.genre.identity }
         return marked.sortedWith(order) + text.sortedWith(order) + aiMarked.sortedWith(order)
@@ -303,12 +311,15 @@ data class TrackGenres(
     /**
      * Why the genre [identity] is weak (#875), when its chip is ([PlacedLabel.weak]): a sign of vocals
      * where Instrumental has one ([signOfVocals], #996), else, for Instrumental only an artist's
-     * description gives, the artist's hint (#1000, [artistHint]), else few votes; null when it is not
-     * weak, or no chip has it.
+     * description gives, the artist's hint (#1000, [artistHint]), else, for Instrumental only LRCLIB's
+     * mark adds or lifts, that mark (#1055, [libraryMark]), unless it is weak for its few votes too,
+     * whose line says more, else few votes; null when it is not weak, or no chip has it.
      */
     fun weakEvidence(identity: String): WeakEvidence? {
         val chip = chips().firstOrNull { it.label.genre.identity == identity && it.weak } ?: return null
-        return signOfVocals(chip) ?: artistHint(chip) ?: WeakEvidence.FewVotes(
+        val few = fewVotes(chip, otherLevels())
+        val mark: WeakEvidence? = if (few) null else libraryMark(chip)
+        return signOfVocals(chip) ?: artistHint(chip) ?: mark ?: WeakEvidence.FewVotes(
             musicBrainz = chip.label.credits.any { it.source == LabelSource.MUSICBRAINZ },
             artists = rows.count { it.level == GenreLevel.ARTIST },
             album = rows.any { it.level == GenreLevel.ALBUM },
@@ -331,18 +342,28 @@ data class TrackGenres(
         signOfVocals(placed.label.genre.identity, placed.row)
 
     /**
-     * The sign that the track is sung that leaves the genre [identity], the AI's for the track (#762,
-     * #773: *Search with AI*'s genres, shown with no row), at most weak (#996): as for a track's tag,
-     * a vocalist, a lyricist (#998) or a language, never a featured artist. Null for any other genre, or with none.
+     * Why the genre [identity], the AI's for the track (#762, #773: *Search with AI*'s genres, shown
+     * with no row), is weak: the sign that the track is sung that leaves it at most weak (#996), as for
+     * a track's tag, a vocalist, a lyricist (#998) or a language, never a featured artist; or, where
+     * only LRCLIB's mark backs Instrumental, that mark (#1055, [WeakEvidence.LibraryMark]): it lifts
+     * such a sign, or a chip's Instrumental is weak for it (the one it added, [TrackLabel.markedBy],
+     * #1024, or one an artist's description names, #1000). Null for any other genre, or with none.
      */
-    fun aiSignOfVocals(identity: String): WeakEvidence.SignOfVocals? = signOfVocals(identity, null)
+    fun aiWeakEvidence(identity: String): WeakEvidence? {
+        val chipped = chips().any { it.label.genre.identity == INSTRUMENTAL && libraryMark(it) != null }
+        val backs = chipped || signOfVocals(identity, null, lifted = false) != null
+        return signOfVocals(identity, null)
+            ?: WeakEvidence.LibraryMark.takeIf { identity == INSTRUMENTAL && singing.libraryAlone && backs }
+    }
 
-    // [signOfVocals] for [identity] on [row]; with none, the track's.
-    private fun signOfVocals(
+    // [signOfVocals] for [identity] on [row]; with none, the track's; [lifted], unless weighed without
+    // what lifts it (#1055's [libraryMark]).
+    internal fun signOfVocals(
         identity: String,
         row: GenreRow?,
+        lifted: Boolean = singing.lifted,
     ): WeakEvidence.SignOfVocals? {
-        val weighed = identity == INSTRUMENTAL && !singing.lifted
+        val weighed = identity == INSTRUMENTAL && !lifted
         val vocalist = singing.vocalists.firstOrNull()
         val lyricist = singing.lyricists.firstOrNull()
         val language = singing.languages.firstOrNull()
@@ -528,14 +549,62 @@ fun GenreVocabulary.instrumental(): GenreLabel? =
     labelsFor(listOf(TrackGenres.INSTRUMENTAL), level = GenreLevel.TRACK).firstOrNull()
 
 /**
+ * Whether [placed], a source's chip, is weak for its few votes (#875, [TrackGenres.chips]): a track's
+ * tag whose genre no other level's row has ([others]), with fewer than [TrackGenres.MIN_VOTES] net
+ * votes. Instrumental the check of the track's vocals found so (#998) is not weak for its votes, nor
+ * one a source's mark gave (#1024: LRCLIB's), which has none; nor a genre the AI's list added or an
+ * artist's description names, which are weighed otherwise.
+ */
+private fun TrackGenres.fewVotes(
+    placed: PlacedLabel,
+    others: Set<String>,
+): Boolean {
+    val label = placed.label
+    val checked =
+        label.genre.identity == TrackGenres.INSTRUMENTAL && singing.checked == VocalsAnswer.INSTRUMENTAL
+    val confirmed = checked || label.markedBy != null || label.aiAdded || label.describedIn != null
+    return placed.row.level == GenreLevel.TRACK &&
+        label.genre.identity !in others &&
+        (label.votes ?: 0) < TrackGenres.MIN_VOTES &&
+        !confirmed
+}
+
+// The genres of the rows of every level but the track's, against which a track's tag is backed.
+private fun TrackGenres.otherLevels(): Set<String> =
+    rows
+        .filter { it.level != GenreLevel.TRACK }
+        .flatMap { it.labels }
+        .map { it.genre.identity }
+        .toSet()
+
+/**
+ * LRCLIB's mark as why [placed], Instrumental, is weak (#1055): the mark alone backs it
+ * ([Singing.libraryAlone]), for the Instrumental it adds ([TrackLabel.markedBy], #1024), or one it
+ * lifts that a sign of vocals or the artist's hint would leave weak without it. Null for any other
+ * chip, with the track marked instrumental by MusicBrainz or found so by the check of its vocals, or
+ * where the mark lifts nothing (a source's Instrumental with no sign against it stands as before).
+ */
+private fun TrackGenres.libraryMark(placed: PlacedLabel): WeakEvidence.LibraryMark? {
+    val instrumental = placed.label.genre.identity == TrackGenres.INSTRUMENTAL
+    val lifts =
+        placed.label.markedBy != null ||
+            signOfVocals(TrackGenres.INSTRUMENTAL, placed.row, lifted = false) != null ||
+            artistHint(placed, lifted = false) != null
+    return WeakEvidence.LibraryMark.takeIf { instrumental && singing.libraryAlone && lifts }
+}
+
+/**
  * The artist's hint that leaves [placed], Instrumental from an artist's description alone (#1000,
  * #998), weak: no source says so of the track. Null for any other chip, or with the track marked
  * instrumental ([Singing.marked]: by MusicBrainz, or by LRCLIB, #997), which says so, or found so by
  * #998's check of the track's vocals ([Singing.lifted]); vocals it found drop the genre instead.
  */
-private fun TrackGenres.artistHint(placed: PlacedLabel): WeakEvidence.ArtistHint? {
+private fun TrackGenres.artistHint(
+    placed: PlacedLabel,
+    lifted: Boolean = singing.lifted,
+): WeakEvidence.ArtistHint? {
     val where = placed.label.describedIn
-    return if (where != null && placed.label.genre.identity == TrackGenres.INSTRUMENTAL && !singing.lifted) {
+    return if (where != null && placed.label.genre.identity == TrackGenres.INSTRUMENTAL && !lifted) {
         WeakEvidence.ArtistHint(where)
     } else {
         null
