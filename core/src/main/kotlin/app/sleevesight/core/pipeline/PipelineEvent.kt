@@ -247,7 +247,8 @@ sealed interface PipelineEvent {
 
     /**
      * The grounding check's counts for the written insight, and whether the model's correction of
-     * its own reply was taken out first ([selfCorrected], `SelfCorrection`, #597).
+     * its own reply was taken out first ([selfCorrected], `SelfCorrection`, #597), or a note on its
+     * own evidence that ended the reply (`MetaNote`, #1207).
      */
     data class Grounded(
         override val key: String,

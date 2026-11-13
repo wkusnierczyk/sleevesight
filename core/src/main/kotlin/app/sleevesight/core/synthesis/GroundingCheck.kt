@@ -58,7 +58,8 @@ data class GroundingCounts(
  *
  * [text] is what is shown and checked: the reply, or, when the model corrected itself in the open
  * ([SelfCorrection], #597), only its fresh version, with the draft and the comment on it in
- * [withdrawn] (null when there was none), for the developer details and the reports.
+ * [withdrawn] (null when there was none), for the developer details and the reports; a note on its
+ * own evidence or work that ended the reply ([MetaNote], #1207) is taken out to [withdrawn] too.
  */
 data class GroundedText(
     val text: String,
@@ -115,7 +116,8 @@ sealed interface InsightReply {
  * [GAP_SENTENCE], is a hedge (#46). The tests
  * check it on stored replies, against their stored results (`core/src/test/resources/grounding/`).
  * Before it splits a reply, a correction the model made of it in the open is taken out, leaving
- * the fresh version ([SelfCorrection], #597): the counts describe what the card shows.
+ * the fresh version ([SelfCorrection], #597), and then a note the model left at its end on its own
+ * evidence or work ([MetaNote], #1207): the counts describe what the card shows.
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -169,7 +171,10 @@ object GroundingCheck {
         val whole = reply.trimJs()
         if (isNoEvidence(whole)) return InsightReply.NoEvidence
         val correction = SelfCorrection.of(whole)
-        val text = correction?.kept ?: whole
+        val corrected = correction?.kept ?: whole
+        val note = MetaNote.of(corrected)
+        val text = note?.kept ?: corrected
+        val withdrawn = listOfNotNull(correction?.withdrawn, note?.withdrawn).joinToString("\n\n").ifEmpty { null }
         val paragraphs =
             text
                 .split(PARAGRAPH_BREAK)
@@ -178,7 +183,7 @@ object GroundingCheck {
                         classify(sentence, ids, allowModel).copy(afterLineBreak = afterLineBreak)
                     }
                 }.filter { it.isNotEmpty() }
-        return InsightReply.Written(GroundedText(text, paragraphs, allowModel, correction?.withdrawn))
+        return InsightReply.Written(GroundedText(text, paragraphs, allowModel, withdrawn))
     }
 
     /**
@@ -277,9 +282,7 @@ object GroundingCheck {
             when {
                 bad -> SentenceStatus.UNKNOWN
                 cites.isNotEmpty() -> if (MODEL_ID in cites) SentenceStatus.MODEL else SentenceStatus.OK
-                sentence.trimJs().let { it == GAP_SENTENCE || it == ONLY_RELEASE_SENTENCE } ||
-                    HEDGE.containsMatchIn(sentence.asciiLowercase()) ->
-                    SentenceStatus.HEDGE
+                isHedge(sentence) -> SentenceStatus.HEDGE
                 else -> SentenceStatus.UNCITED
             }
         return CheckedSentence(sentence, cites, status)
@@ -482,13 +485,22 @@ object GroundingCheck {
         Regex("[*_]*$ROMAN_PATTERN[*_\"”'’)]*(?:[.!?]?$CITES[.!?]$REST|[.!?]$CITES$REST|$CITES)")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
-
-    private val HEDGE =
-        Regex(
-            "little is (known|documented)|not much is (known|documented)|no (further )?(details|information)|" +
-                "isn't much|is not much|nothing (else )?is (known|documented)",
-        )
 }
+
+/**
+ * Whether [sentence], uncited, states a documentation gap, and so is a [SentenceStatus.HEDGE]:
+ * [GroundingCheck.GAP_SENTENCE] or [GroundingCheck.ONLY_RELEASE_SENTENCE] as the whole of it, or
+ * a gap as the simulator's patterns word one.
+ */
+internal fun isHedge(sentence: String): Boolean =
+    sentence.trimJs().let { it == GroundingCheck.GAP_SENTENCE || it == GroundingCheck.ONLY_RELEASE_SENTENCE } ||
+        HEDGE.containsMatchIn(sentence.asciiLowercase())
+
+private val HEDGE =
+    Regex(
+        "little is (known|documented)|not much is (known|documented)|no (further )?(details|information)|" +
+            "isn't much|is not much|nothing (else )?is (known|documented)",
+    )
 
 // The simulator's hedge pattern is matched with `/i` and no `u`, which folds ASCII letters only.
 private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")
