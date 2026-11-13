@@ -93,6 +93,15 @@ class WebLinksTest {
     }
 
     @Test
+    fun `only ASCII capitals are folded, any other letter is kept as written`() {
+        // Unicode casing could name a host the address does not say.
+        assertEquals("\u0130stanbul.example", WebLinks.host("https://\u0130STANBUL.example/x"))
+        assertEquals("stra\u1E9Ee.example", WebLinks.host("https://STRA\u1E9EE.example/x"))
+        assertEquals("\u03A3\u03C2.example", WebLinks.host("https://\u03A3\u03C2.EXAMPLE/x"))
+        assertEquals("example.com", WebLinks.host("https://EXAMPLE.COM/x"))
+    }
+
+    @Test
     fun `an ordinary address's host is its host`() {
         assertEquals("en.wikipedia.org", WebLinks.host("https://en.wikipedia.org/wiki/Sundown"))
         assertEquals("www.wikidata.org", WebLinks.host("https://www.wikidata.org/wiki/Q1?x=1"))

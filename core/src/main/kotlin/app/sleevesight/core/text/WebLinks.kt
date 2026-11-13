@@ -27,9 +27,10 @@ object WebLinks {
      * The host of the web address [url] (`http` or `https`, the scheme in any case), read as browsers
      * read it (the WHATWG URL standard, #1245): after the scheme and any slashes, the authority runs to
      * the first `/`, `\`, `?` or `#`; the host is what follows its last `@`, up to a port; an IPv6
-     * address keeps its brackets. In lower case; null when [url] is not a web address, has no host, has
-     * a white space or control character in it, or a `%` in its host. Every label that names a link's site reads
-     * the host here, so it names the site the link opens.
+     * address keeps its brackets. Its ASCII letters in lower case, any other character as written
+     * (Unicode casing could give a name the address does not say). Null when [url] is not a web
+     * address, has no host, has a white space or control character in it, or a `%` in its host. Every
+     * label that names a link's site reads the host here, so it names the site the link opens.
      */
     fun host(url: String?): String? =
         url
@@ -51,7 +52,7 @@ object WebLinks {
             hostIn(authority) != null
     }
 
-    // The host in [authority] (`user@host:port`): after its last `@`, before its port, in lower case;
+    // The host in [authority] (`user@host:port`): after its last `@`, before its port, ASCII in lower case;
     // an IPv6 address in its brackets. Null when empty, malformed, or with a `%` in it.
     private fun hostIn(authority: String): String? {
         val hostAndPort = authority.substringAfterLast('@')
@@ -63,7 +64,10 @@ object WebLinks {
             } else {
                 hostAndPort.substringBefore(':')
             }
-        return host.lowercase().takeIf { it.isNotEmpty() && '%' !in it }
+        // ASCII letters only: Unicode casing could give a name the address does not say.
+        return host.map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("").takeIf {
+            it.isNotEmpty() && '%' !in it
+        }
     }
 
     private fun String.isPlain(): Boolean = none { it.isWhitespace() || it.isISOControl() }
