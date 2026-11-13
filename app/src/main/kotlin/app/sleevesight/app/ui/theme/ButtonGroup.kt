@@ -63,9 +63,16 @@ internal val GROUP_INNER_CORNER = CornerSize(4.dp)
 /** The room inside a button at each side of its label, as in the chips ([CHIP_PADDING]). */
 internal val GROUP_PADDING = CHIP_PADDING
 
-/** The alpha of a button's content that cannot be used, and of its fill, as Material's. */
+/** The alpha of a button's content that cannot be used, as Material's. */
 private const val DISABLED_CONTENT_ALPHA = 0.38f
-private const val DISABLED_CONTAINER_ALPHA = 0.12f
+
+/**
+ * The chosen button of a group that cannot be used (#1234): its fill, the text's colour, at this
+ * alpha, and its label, its enabled colour, at [DISABLED_CHOSEN_LABEL_ALPHA]: a dimmed version of
+ * its enabled look, so the choice stands out with no check mark.
+ */
+private const val DISABLED_CHOSEN_FILL_ALPHA = 0.38f
+private const val DISABLED_CHOSEN_LABEL_ALPHA = 0.85f
 
 /**
  * One of a few values to choose, as a connected button group (#637): [choices], each a value and
@@ -344,7 +351,8 @@ internal fun groupShape(
 
 /**
  * One button: its label on a fill as the chips' ([chipColours]), the text's colour when chosen, a
- * light fill of it otherwise, with no check mark (#1234); dimmed when it cannot be used. One node
+ * light fill of it otherwise, with no check mark (#1234); dimmed when it cannot be used, the chosen
+ * one keeping a strong fill ([DISABLED_CHOSEN_FILL_ALPHA]) so the choice still reads. One node
  * for a screen reader: a radio button in a choice, a button in a row of actions.
  */
 @Composable
@@ -356,8 +364,15 @@ private fun GroupButtonView(
     val chosen = button.selected == true
     val colours = MaterialTheme.colorScheme
     val (chipFill, chipContent) = chipColours(chosen)
-    val fill = if (button.enabled || !chosen) chipFill else colours.onSurface.copy(alpha = DISABLED_CONTAINER_ALPHA)
-    val content = if (button.enabled) chipContent else colours.onSurface.copy(alpha = DISABLED_CONTENT_ALPHA)
+    val (fill, content) =
+        when {
+            button.enabled -> chipFill to chipContent
+            // The chosen one stays strong where the group cannot be used (#1234); the others keep their light fill.
+            chosen ->
+                colours.onSurface.copy(alpha = DISABLED_CHOSEN_FILL_ALPHA) to
+                    chipContent.copy(alpha = DISABLED_CHOSEN_LABEL_ALPHA)
+            else -> chipFill to colours.onSurface.copy(alpha = DISABLED_CONTENT_ALPHA)
+        }
     val action =
         if (button.selected == null) {
             Modifier.clickable(enabled = button.enabled, role = Role.Button, onClick = button.onClick)
