@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.text.WebLinks
 
 /**
  * Whether a track's own lines only list the song (#958): what sets off the song's web search and,
@@ -67,16 +68,8 @@ object SongListings {
             .split(NOT_LETTERS)
             .count { word -> word.length > 1 && word.all(Char::isLowerCase) && word !in METADATA_WORDS }
 
-    // The host of [url], lower case, without a leading `www.`; null for none.
-    private fun hostOf(url: String): String? =
-        url
-            .substringAfter("://", "")
-            .substringBefore('/')
-            .substringBefore('?')
-            .substringBefore(':')
-            .lowercase()
-            .removePrefix("www.")
-            .takeIf { it.isNotEmpty() }
+    // The host of [url] ([WebLinks.host], as a browser reads it), without a leading `www.`; null for none.
+    private fun hostOf(url: String): String? = WebLinks.host(url)?.removePrefix("www.")?.takeIf { it.isNotEmpty() }
 
     private val STRUCTURED =
         setOf(SourceId.MUSICBRAINZ, SourceId.WIKIDATA, SourceId.DISCOGS, SourceId.PLAYER)

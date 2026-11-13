@@ -27,15 +27,8 @@ internal fun FromSite(url: String) {
     )
 }
 
-/** The site of the page at [url]: its host, without `www.`, or the address itself when it has none. */
-internal fun siteOf(url: String): String =
-    url
-        .substringAfter("://", "")
-        .substringBefore('/')
-        .substringBefore('?')
-        .substringBefore('#')
-        .substringAfterLast('@')
-        .substringBefore(':')
-        .lowercase()
-        .removePrefix("www.")
-        .ifEmpty { url }
+/**
+ * The site of the page at [url]: its host ([WebLinks.host], as a browser reads it, so it names the
+ * site the link opens), without `www.`, or the address itself when it has none.
+ */
+internal fun siteOf(url: String): String = hostOf(url) ?: url
