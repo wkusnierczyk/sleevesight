@@ -58,7 +58,7 @@ data class MetaNote(
             while (next != null) {
                 text = next.first
                 notes.addFirst(next.second)
-                next = noteAtEnd(text)
+                next = if (notes.size < MAX_NOTES) noteAtEnd(text) else null
             }
             return if (notes.isEmpty()) null else MetaNote(kept = text, withdrawn = notes.joinToString(" "))
         }
@@ -73,9 +73,9 @@ data class MetaNote(
         // with none opening before it, `[omit]*`), the note is left as written. Never from inside an
         // emphasis or a quotation opened before it.
         private fun withoutBracketNote(text: String): Pair<String, String>? {
-            val match = TRAILING_BRACKET.find(text) ?: return null
-            val (opening, inside, closing) = match.destructured
-            val at = match.range.first
+            val bracket = trailingBracket(text) ?: return null
+            val (opening, inside, closing) = bracket
+            val at = bracket.at
             val kept =
                 when {
                     !isNote(inside) || enclosed(text, at) -> null
@@ -88,6 +88,28 @@ data class MetaNote(
                 (before + it).trimJs() to "$opening[$inside]$opening"
             }
         }
+
+        // The bracketed note at [text]'s end, with any emphasis marks just before and after it; null for
+        // none. Read back from the very end (unlike a pattern's `$`, which also matches before a last line
+        // break) rather than by a pattern, which took time growing with the square of a long run of `*`
+        // or `_` (#1247).
+        private fun trailingBracket(text: String): TrailingBracket? {
+            val end = text.trimEnd('*', '_').length
+            val open = if (text.getOrNull(end - 1) == ']') text.lastIndexOf('[', end - 2) else -1
+            val inside = if (open < 0) null else text.substring(open + 1, end - 1)
+            return inside?.takeUnless { held -> held.any { it == ']' || it == '\n' } }?.let {
+                val at = text.substring(0, open).trimEnd('*', '_').length
+                TrailingBracket(text.substring(at, open), it, text.substring(end), at)
+            }
+        }
+
+        // A bracketed note's marks before it, what it holds, its marks after it, and where it starts.
+        private data class TrailingBracket(
+            val opening: String,
+            val inside: String,
+            val closing: String,
+            val at: Int,
+        )
 
         // [text] without its last sentence when that is a note, and the sentence; null when it is not.
         private fun withoutLastSentence(text: String): Pair<String, String>? {
@@ -151,10 +173,11 @@ data class MetaNote(
         // emphasised titles or lyrics; null when a quotation in it is left open, or closes with none
         // open. An emphasis is read only when it is the whole sentence, bracketed notes and
         // punctuation aside (`*One site … so I can't quote it.*`); one with words of the sentence
-        // around it is a title or a lyric, whatever its punctuation.
+        // around it is a title or a lyric, whatever its punctuation. Null too past [MAX_SPANS]
+        // emphases, as each is weighed against the whole sentence (#1247): no note's sentence has so many.
         private fun readOf(sentence: String): String? {
             val read = Quotations.of(sentence).takeIf { !it.open && !it.stray }?.outside
-            return read?.let {
+            return read?.takeIf { EMPHASIS_SPAN.findAll(it).take(MAX_SPANS + 1).count() <= MAX_SPANS }?.let {
                 EMPHASIS_SPAN.replace(it) { span ->
                     val around = it.removeRange(span.range).replace(BRACKET, " ")
                     if (CONTENT.containsMatchIn(around)) "…" else span.value
@@ -220,11 +243,16 @@ data class MetaNote(
         private val MATERIAL =
             Regex("\\b(?:evidence|sources?|source lines?|citations?|cite[sd]?|citing|quote[sd]?|quoting)\\b")
 
+        /**
+         * The most notes taken out of one reply, and the most emphases a note's sentence is read with:
+         * each costs a pass over the whole text, so a reply of marks alone would take time growing
+         * with the square of its length (#1247). Beyond them, the text stays.
+         */
+        private const val MAX_NOTES = 8
+        private const val MAX_SPANS = 64
+
         /** A run of one emphasis mark. */
         private val EMPHASIS_RUN = Regex("\\*+|_+")
-
-        /** A bracketed note at the text's end, with any emphasis marks just before and after it. */
-        private val TRAILING_BRACKET = Regex("([*_]*)\\[([^\\[\\]\\n]*)\\]([*_]*)$")
 
         /** Square brackets and what they hold, on one line. */
         private val BRACKET = Regex("\\[([^\\[\\]\\n]*)\\]")
