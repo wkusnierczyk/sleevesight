@@ -142,7 +142,7 @@ Limits as used here: the port is a third party's, under MIT; Google's original i
 
 ## Data sources
 
-The app's credits screen lists each source but LRCLIB with what the app takes from it and its licence or terms. Every evidence line in the app links the page it came from.
+The app's credits screen lists each source with what the app takes from it and its licence or terms, where it states them. Every evidence line in the app links the page it came from.
 
 | Source | What the app takes from it | Licence or terms |
 |---|---|---|
@@ -151,7 +151,7 @@ The app's credits screen lists each source but LRCLIB with what the app takes fr
 | Wikipedia | Sentences from articles, also from Wikipedia in the track's language; in a genre's panel, the first two sentences of the genre's article | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by the Wikipedia contributors |
 | Wikidata | Facts on songs, albums and artists; the way from a genre to its Wikipedia article | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | Last.fm | Artist bios and album summaries; listeners, tags, genre labels and similar artists | Bios and summaries under CC BY-SA, by Last.fm users; the rest under Last.fm's API terms. Needs the user's own key |
-| LRCLIB | Whether a track has lyrics, or is marked instrumental, as a sign for the genre *Instrumental*; never the lyrics themselves | Free and open, with no key; asks clients to name themselves and to honour its rate limit. Not on the credits screen |
+| LRCLIB | Whether a track has lyrics, or is marked instrumental, as a sign for the genre *Instrumental*; never the lyrics themselves | Free and open, with no key; asks clients to name themselves and to honour its rate limit |
 | Exa | Web search results | Exa's terms of service. Needs the user's own key |
 
 Two of these are open questions rather than settled ones. MusicBrainz's tags are non-commercial and share-alike: showing them as labels on the user's own screen fits the licence while the app stays free, without advertising or paid features, but MetaBrainz's own reading is still to be asked for before the Play release relies on it, and the tags stay out of every prompt. Exa's terms forbid displaying or passing on what its service returns without its written leave; what that means for an app that shows a result to the user who searched with their own key is not settled. The reasoning, with the sources quoted, is in [`design/architecture.md`](https://github.com/wkusnierczyk/sleevesight/blob/main/design/architecture.md#licensing) under *Licensing*. Discogs is planned as a source for a later phase, and is not in the app.
