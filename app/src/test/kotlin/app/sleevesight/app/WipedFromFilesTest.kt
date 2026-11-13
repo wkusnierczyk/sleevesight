@@ -21,6 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.nio.file.Files
+import java.sql.DriverManager
 import java.util.Properties
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -49,12 +50,18 @@ class WipedFromFilesTest {
         dir.deleteRecursively()
     }
 
+    // [waitWhenBusy] false: a busy database answers at once, so a test never waits on the clock.
     private fun open(
         name: String,
         wal: Boolean,
+        waitWhenBusy: Boolean = true,
     ): Pair<File, SqlDriver> {
         val file = File(dir, name)
-        val properties = Properties().apply { if (wal) put("journal_mode", "WAL") }
+        val properties =
+            Properties().apply {
+                if (wal) put("journal_mode", "WAL")
+                if (!waitWhenBusy) put("busy_timeout", "0")
+            }
         val driver = JdbcSqliteDriver("jdbc:sqlite:${file.path}", properties)
         drivers += driver
         return file to driver
@@ -79,8 +86,11 @@ class WipedFromFilesTest {
             needle.indices.all { haystack[start + it] == needle[it] }
         }
 
-    private fun history(wal: Boolean): Pair<File, SessionHistory> {
-        val (file, driver) = open("history.db", wal)
+    private fun history(
+        wal: Boolean,
+        waitWhenBusy: Boolean = true,
+    ): Pair<File, SessionHistory> {
+        val (file, driver) = open("history.db", wal, waitWhenBusy)
         HistoryDatabase.Schema.create(driver)
         return file to SessionHistory(driver)
     }
@@ -110,6 +120,32 @@ class WipedFromFilesTest {
         history.clear()
 
         assertFalse("the title is wiped from the file", inFiles(file, LINEMAN))
+    }
+
+    @Test
+    fun `a reader that keeps the checkpoint busy leaves the log unwiped until the next clear wipes it`() {
+        val (file, history) = history(wal = true, waitWhenBusy = false)
+        history.play(LINEMAN, START)
+        // Another connection reading since before the clear: the log cannot be truncated past it.
+        val reader = DriverManager.getConnection("jdbc:sqlite:${file.path}")
+        reader.autoCommit = false
+        try {
+            reader.createStatement().use { it.executeQuery("SELECT count(*) FROM played").use { rows -> rows.next() } }
+
+            history.clear()
+
+            assertTrue("the checkpoint was busy, and that is said", history.logUnwiped)
+            assertTrue("the title is still in the files while the reader holds them", inFiles(file, LINEMAN))
+            assertTrue("the rows are gone all the same", history.latestSession().isEmpty())
+        } finally {
+            reader.commit()
+            reader.close()
+        }
+
+        history.clear()
+
+        assertFalse("the next clear checkpointed the log", history.logUnwiped)
+        assertFalse("the title is wiped from the files", inFiles(file, LINEMAN))
     }
 
     @Test

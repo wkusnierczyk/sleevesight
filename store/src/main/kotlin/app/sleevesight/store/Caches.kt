@@ -43,6 +43,13 @@ class Caches(
 ) {
     internal val queries: CacheQueries = CacheDatabase(driver).cacheQueries
     private val context = CacheContext(queries, settings, clock, ::enforceLimit)
+    private val unwiped = Wiping.Unwiped()
+
+    /**
+     * Whether the last [clearAll] or [purgeExpired] left deleted entries in the write-ahead log, a
+     * reader having kept its checkpoint busy ([Wiping]); the next one checkpoints it again.
+     */
+    val logUnwiped: Boolean get() = unwiped.pending
 
     val retrieval: RetrievalCache = RetrievalCache(context, normalizer)
     val artists: ArtistCache = ArtistCache(context)
@@ -124,7 +131,7 @@ class Caches(
                 Wiping.secureDelete(driver)
                 delete()
             }
-        Wiping.checkpoint(driver)
+        unwiped.checkpoint(driver)
         return deleted
     }
 

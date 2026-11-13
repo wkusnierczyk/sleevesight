@@ -18,6 +18,14 @@ import app.cash.sqldelight.db.SqlDriver
  *   database, the zeroed ones over the old, and the log is truncated to nothing. Without a
  *   write-ahead log (a rollback journal) it does nothing. Blocking, like every call here: the
  *   callers are off the main thread.
+ *
+ * A reader on another connection that began before the deletion holds the log's older pages, and
+ * the checkpoint cannot truncate past it: SQLite reports it busy, after waiting in the driver's
+ * busy handler, rather than failing. [checkpoint] tries [ATTEMPTS] times, each waiting there, and
+ * then says so; the deletion stands (the rows are gone from the tables), and the callers keep
+ * [Unwiped.pending] set until a later checkpoint succeeds, which runs after every clear and every
+ * retention run (each start among them). The app's Android driver keeps one connection per
+ * database, so no such reader is expected there; the JDBC driver opens one per thread.
  */
 object Wiping {
     /** The statement that turns on secure deletion for the connection that runs it. */
@@ -25,17 +33,44 @@ object Wiping {
 
     private const val CHECKPOINT = "PRAGMA wal_checkpoint(TRUNCATE)"
 
+    /** How many times [checkpoint] tries while the log is busy, each after the busy handler's wait. */
+    private const val ATTEMPTS = 3
+
     /** Runs [SECURE_DELETE] on [driver]: inside a transaction, on that transaction's connection. */
     internal fun secureDelete(driver: SqlDriver) = pragma(driver, SECURE_DELETE)
 
-    /** Checkpoints [driver]'s write-ahead log into the database and truncates it; outside a transaction. */
-    internal fun checkpoint(driver: SqlDriver) = pragma(driver, CHECKPOINT)
+    /**
+     * Checkpoints [driver]'s write-ahead log into the database and truncates it, outside a
+     * transaction. Returns whether it did; false if a reader kept it busy for [ATTEMPTS] tries.
+     */
+    internal fun checkpoint(driver: SqlDriver): Boolean =
+        (1..ATTEMPTS).any {
+            // Its first column, `busy`, is 1 when the checkpoint could not finish.
+            driver
+                .executeQuery(null, CHECKPOINT, { QueryResult.Value(it.next().value && it.getLong(0) == 0L) }, 0)
+                .value
+        }
 
-    // Both return a row; the Android driver runs a statement only as its cursor is read.
+    // Returns a row; the Android driver runs a statement only as its cursor is read.
     private fun pragma(
         driver: SqlDriver,
         sql: String,
     ) {
         driver.executeQuery(null, sql, { cursor -> QueryResult.Value(cursor.next().value) }, 0)
+    }
+
+    /**
+     * Whether a deletion's write-ahead log is still to be checkpointed ([pending]): set when
+     * [checkpoint] stays busy, cleared when a later one succeeds. Shared by a store's threads.
+     */
+    class Unwiped {
+        @Volatile
+        var pending: Boolean = false
+            private set
+
+        /** Checkpoints [driver] after a deletion, and records whether the log is still unwiped. */
+        internal fun checkpoint(driver: SqlDriver) {
+            pending = !Wiping.checkpoint(driver)
+        }
     }
 }

@@ -875,9 +875,15 @@ class AppGraph internal constructor(
     private suspend fun purgeCaches() {
         try {
             withContext(Dispatchers.IO) { caches.purgeExpired() }
+            warnIfUnwiped()
         } catch (e: SQLException) {
             Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
         }
+    }
+
+    // The caches' deletion stands; their log is checkpointed again at the next clear or purge.
+    private fun warnIfUnwiped() {
+        if (caches.logUnwiped) Log.w(TAG, "The caches' log is still to be wiped: a reader kept it busy")
     }
 
     /**
@@ -906,7 +912,7 @@ class AppGraph internal constructor(
             // Again just before the caches' clear, so it waits for the writes under way then too.
             clearEpoch.advance()
             val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
-            if (!cleared) Log.w(TAG, "The caches could not be cleared")
+            if (!cleared) Log.w(TAG, "The caches could not be cleared") else warnIfUnwiped()
             wiring.forgetRemembered()
             genreNotes.forget()
             itemNotes.forget()

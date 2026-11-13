@@ -55,6 +55,13 @@ class SessionHistory(
     private val driver: SqlDriver,
 ) {
     private val queries: HistoryQueries = HistoryDatabase(driver).historyQueries
+    private val unwiped = Wiping.Unwiped()
+
+    /**
+     * Whether the last [clear] or [deleteOlderThan] left deleted rows in the write-ahead log, a
+     * reader having kept its checkpoint busy ([Wiping]); the next one checkpoints it again.
+     */
+    val logUnwiped: Boolean get() = unwiped.pending
 
     /**
      * [track] began to play at [at] (rule 1), a listening session ending after a break longer than
@@ -247,7 +254,7 @@ class SessionHistory(
             Wiping.secureDelete(driver)
             delete()
         }
-        Wiping.checkpoint(driver)
+        unwiped.checkpoint(driver)
     }
 }
 
