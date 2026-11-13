@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -140,6 +141,8 @@ internal fun SourcesSection(
  * the track's evidence, with the album's own lines once its insight gathered them (#522,
  * [SourcesLines]), which the chips show and hide as the track's. [retry] of the sources that could
  * not be reached is *Retry* beside the note that says so (#1121), null while it is not offered.
+ * [unsupported] are the ids of the lines the key insight cites only from sentences they do not back
+ * (#1036, [unsupportedLines]), whose tags show as their chips there do: a dim outline.
  */
 @Suppress("LongParameterList") // What the section shows, each its own.
 internal class SourcesShown(
@@ -150,6 +153,7 @@ internal class SourcesShown(
     val details: Boolean = false,
     val lines: SourcesLines = SourcesLines(track?.evidence),
     val retry: (Collection<SourceId>) -> (() -> Unit)? = { null },
+    val unsupported: Set<String> = emptySet(),
 )
 
 /**
@@ -205,7 +209,7 @@ internal fun SourcesBody(
         FoldStatus(fold, count, total, filtered)
         if (count == 0) return@Column
         if (shown.cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
-        Entries(entries.take(count), tagWidth, focus, shownLines.album)
+        Entries(entries.take(count), tagWidth, focus, shownLines, shown.unsupported)
         FoldControls(fold, count, total)
     }
 }
@@ -269,7 +273,8 @@ private fun Entries(
     entries: List<Entry>,
     tagWidth: Dp,
     focus: LineFocus,
-    album: Set<String>,
+    shown: SourcesLines,
+    unsupported: Set<String>,
 ) {
     val rejected = entries.indexOfFirst { it is Entry.Rejected }.takeIf { it >= 0 } ?: entries.size
     // The rows at [indices], each under its kind's heading when the one before is of another kind.
@@ -282,7 +287,8 @@ private fun Entries(
                     is Entry.Line -> {
                         val line = entry.line
                         val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
-                        EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id], line.id in album)
+                        val look = LineLook(flashed, line.id in unsupported)
+                        EvidenceRow(line, tagWidth, look, focus.requesters[line.id], shown.what(line))
                     }
 
                     is Entry.Unverified -> {
@@ -309,20 +315,23 @@ private fun Entries(
 }
 
 /**
- * One evidence line: its id, its text, and its scope with a link to where it was found; flashed
- * when a citation points at it. A line found in the track's language (#902, `EvidenceLine.language`)
- * shows its text as found, set in that language's locale (a span over the whole text, so a screen
- * reader is given the language too, not only the drawing), and says the language after the host:
- * *release · hi.wikipedia.org · in Hindi*.
+ * One evidence line: its id, its text, and [what] it is (its scope, "album", or what it was read for:
+ * [SourcesLines.what]) with a link to where it was found; flashed when a citation points at it. A
+ * line found in the track's language (#902, `EvidenceLine.language`) shows its text as found, set
+ * in that language's locale (a span over the whole text, so a screen reader is given the language
+ * too, not only the drawing), and says the language after the host: *release · hi.wikipedia.org · in
+ * Hindi*. Its tag is a dim outline when the insight's sentences that cite it are not backed by it
+ * (#1036), as their chips are.
  */
 @Composable
 private fun EvidenceRow(
     line: EvidenceLine,
     tagWidth: Dp,
-    flashed: Boolean,
+    look: LineLook,
     requester: BringIntoViewRequester?,
-    album: Boolean,
+    what: String,
 ) {
+    val flashed = look.flashed
     val colors = MaterialTheme.colorScheme
     val background by animateColorAsState(if (flashed) colors.tertiaryContainer else Color.Transparent, label = "flash")
     Row(
@@ -336,11 +345,11 @@ private fun EvidenceRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Tag(line.id, tagWidth)
+        Tag(line.id, tagWidth, look.unsupported)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(inLanguage(line.text, line.language), style = MaterialTheme.typography.bodySmall)
             val language = line.language?.let { stringResource(R.string.home_source_line_in, languageName(it)) }
-            Where(if (album) stringResource(R.string.home_scope_album) else scopeText(line.scope), line.url, language)
+            Where(what, line.url, language)
         }
     }
 }
@@ -361,25 +370,45 @@ private fun tagColumnWidth(tags: List<String>): Dp {
     }
 }
 
-/** A line's tag, right-aligned in the tags' column, [width] wide. */
+/**
+ * How an evidence row shows: [flashed] when a citation points at it, and its tag a dim outline when
+ * it does not back the sentences citing it ([unsupported], #1036).
+ */
+private class LineLook(
+    val flashed: Boolean,
+    val unsupported: Boolean,
+)
+
+/**
+ * A line's tag, right-aligned in the tags' column, [width] wide: filled, or, when the line does not
+ * back the insight's sentences citing it ([unsupported], #1036), with no fill, a thin outline and its
+ * text in the dimmed text's colour, as their chips show.
+ */
 @Composable
 private fun Tag(
     text: String,
     width: Dp,
+    unsupported: Boolean = false,
 ) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(4.dp)
+    val look =
+        if (unsupported) {
+            Modifier.border(1.dp, colors.onSurfaceVariant, shape).testTag(UNSUPPORTED_TAG_PREFIX + text)
+        } else {
+            Modifier.background(colors.secondaryContainer, shape)
+        }
     Box(modifier = Modifier.width(width), contentAlignment = Alignment.TopEnd) {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = if (unsupported) colors.onSurfaceVariant else colors.onSecondaryContainer,
             // Never wrapped, should the column still come out short: the box is fixed, so the last
             // glyph would lose a pixel to the clip at worst.
             softWrap = false,
             maxLines = 1,
             modifier =
-                Modifier
-                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))
-                    .padding(horizontal = TAG_PADDING, vertical = 1.dp),
+                look.padding(horizontal = TAG_PADDING, vertical = 1.dp),
         )
     }
 }
@@ -441,6 +470,9 @@ private val TAG_PADDING = 4.dp
 
 /** The test tag of an evidence line, before its id. */
 const val LINE_PREFIX: String = "line:"
+
+/** The test tag of a line's tag drawn as a dim outline (#1036), before the line's id. */
+const val UNSUPPORTED_TAG_PREFIX: String = "unsupported:"
 
 /** The test tags of *Sources*' panel on Home, its heading and its *Close* (#623), as [Panel] makes them. */
 const val SOURCES_PANEL_TAG: String = "sources-panel"

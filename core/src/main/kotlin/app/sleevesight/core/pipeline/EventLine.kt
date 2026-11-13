@@ -94,7 +94,7 @@ object EventLine {
 
     private fun grounded(e: PipelineEvent.Grounded): String =
         "grounded   ${e.key}: ok ${e.counts.ok}, model ${e.counts.model}, hedge ${e.counts.hedge}, " +
-            "uncited ${e.counts.uncited}, unknown ${e.counts.unknown}" +
+            "uncited ${e.counts.uncited}, unknown ${e.counts.unknown}, unsupported ${e.counts.unsupported}" +
             if (e.selfCorrected) ", self-correction taken out" else ""
 
     private fun selfRevised(e: PipelineEvent.SelfRevised): String =
