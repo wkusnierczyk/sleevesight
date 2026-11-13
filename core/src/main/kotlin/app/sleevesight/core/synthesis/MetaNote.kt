@@ -1,5 +1,6 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.text.JS_WHITESPACE_CLASS
 import app.sleevesight.core.text.isJsWhitespace
 import app.sleevesight.core.text.trimJs
 
@@ -31,16 +32,18 @@ data class MetaNote(
          *   section's cue ([SECTION]: `[Drop]`, `[Chorus 2]`), and hold a working note's words
          *   ([NOTE_WORDS]: omit, not usable, uncited, unsupported, no evidence; drop, skip or
          *   exclude only with what they act on, `drop it`). Emphasis around the note alone
-         *   (`**[omit]**`) goes with it; closing marks after it with none before it close the
-         *   prose's emphasis and are kept.
-         * - **A last sentence**, split as the grounding check splits a reply, that cites nothing and,
-         *   read without what it quotes (`"..."`, `“...”`, single quotations as [Quotations] reads
-         *   them) and without emphasised titles or lyrics inside it (an emphasis with words of the
-         *   sentence around it; one that is the whole sentence is read), is both in the first
-         *   person ([FIRST_PERSON]: I, I'm, I'll, I can't, my) and names the model's own material
-         *   ([MATERIAL]: evidence, sources, citation, cite, quote), as the phone's "…, so I can't
-         *   quote it." does. An insight is written in the third person; the first person in it is
-         *   a lyric's, which is quoted or set in emphasis, or the model's own.
+         *   (`**[omit]**`) goes with it; with any other marks around it (`[omit]*`), it stays.
+         * - **A last sentence**, split as the grounding check splits a reply, that cites nothing, is
+         *   no stated gap ([isHedge], or [STATED_GAP]: "Little else is documented in my sources."),
+         *   and, read without what it quotes (`"..."`, `“...”`, single quotations as [Quotations]
+         *   reads them) and without emphasised titles or lyrics inside it (an emphasis with words of
+         *   the sentence around it; one that is the whole sentence is read), is both in the first
+         *   person ([FIRST_PERSON]: I'm, I'll, I can't, I have, my; the pronoun with its usual
+         *   company, so a Roman numeral or a title, `Part I`, `My Way`, is none) and names the
+         *   model's own material ([MATERIAL]: evidence, sources, citation, cite, quote), as the
+         *   phone's "…, so I can't quote it." does. An insight is written in the third person;
+         *   the first person in it is a lyric's, which is quoted or set in emphasis, or the
+         *   model's own.
          *
          * The cost: a note in the middle of the reply, or one not in the first person ("The
          * sources don't say who produced it."), stays, flagged as uncited; a lyric in the first
@@ -66,9 +69,9 @@ data class MetaNote(
             (withoutBracketNote(text) ?: withoutLastSentence(text))?.takeIf { CONTENT.containsMatchIn(it.first) }
 
         // [text] without a bracketed note at its end, and the note; null for none. Emphasis that wraps
-        // the note alone (`**[omit]**`) goes with it; closing marks after it with none opening before
-        // it close the prose's emphasis and are kept; other marks are left as written, and so is the
-        // note. Never from inside an emphasis or a quotation opened before it.
+        // the note alone (`**[omit]**`) goes with it; with any other marks around it (closing marks
+        // with none opening before it, `[omit]*`), the note is left as written. Never from inside an
+        // emphasis or a quotation opened before it.
         private fun withoutBracketNote(text: String): Pair<String, String>? {
             val match = TRAILING_BRACKET.find(text) ?: return null
             val (opening, inside, closing) = match.destructured
@@ -76,7 +79,7 @@ data class MetaNote(
             val kept =
                 when {
                     !isNote(inside) || enclosed(text, at) -> null
-                    opening.isEmpty() -> closing
+                    opening.isEmpty() -> closing.takeIf { it.isEmpty() }
                     closing.startsWith(opening) -> closing.removePrefix(opening)
                     else -> null
                 }
@@ -92,7 +95,11 @@ data class MetaNote(
             val last = sentenceSpans(text.substring(start)).lastOrNull() ?: return null
             val at = start + last.first
             val sentence = text.substring(at, start + last.last + 1)
-            val apart = !enclosed(text, at) && !CITATION.containsMatchIn(sentence)
+            val apart =
+                !enclosed(text, at) &&
+                    !CITATION.containsMatchIn(sentence) &&
+                    !isHedge(sentence) &&
+                    !STATED_GAP.containsMatchIn(sentence)
             val read = if (apart) readOf(sentence) else null
             val says = read != null && FIRST_PERSON.containsMatchIn(read) && MATERIAL.containsMatchIn(read)
             return if (says) text.substring(0, at).trimJs() to sentence.trimJs() else null
@@ -181,8 +188,30 @@ data class MetaNote(
                 RegexOption.IGNORE_CASE,
             )
 
-        /** The first person, the model speaking of itself: I, I'm, I'll, I can't, my. */
-        private val FIRST_PERSON = Regex("\\b(?:I|[Mm]y)\\b")
+        /**
+         * The first person, the model speaking of itself: `I` with a contraction (`I'm`, `I'll`,
+         * `I've`, `I'd`) or before a verb it opens a clause with (`I can't`, `I could`, `I will`,
+         * `I have`, `I did`, `I am`), or `my` in lower case; not `I` alone, a Roman numeral as often
+         * as a pronoun (`Part I`, `Led Zeppelin I`), nor `My` or `I` opening a title (`My Way`,
+         * `I Wanna Be Your Dog`).
+         */
+        private val FIRST_PERSON =
+            Regex(
+                "\\bI['’](?:m|ll|ve|d)\\b|" +
+                    "\\bI (?:can(?:no|['’])t|could(?:n['’]t)?|will|won['’]t|have|had|did(?:n['’]t)?|" +
+                    "do(?:n['’]t)?|am|was)\\b|\\bmy\\b",
+            )
+
+        /**
+         * A stated gap in the first person, which stays as the grounding check's hedges do: "Little
+         * else is documented in my sources.", "I found no further details in the evidence."
+         */
+        private val STATED_GAP =
+            Regex(
+                "\\b(?:little|nothing|not much)(?: else| more| further)? is (?:known|documented)\\b|" +
+                    "\\bno (?:further |other |more )?(?:details|information)\\b",
+                RegexOption.IGNORE_CASE,
+            )
 
         /**
          * The model's own material, lower case where a title would capitalise it (Monk's
@@ -206,7 +235,7 @@ data class MetaNote(
         /** A letter or a digit: text, not marks alone. */
         private val CONTENT = Regex("[\\p{L}\\p{N}]")
 
-        private val PARAGRAPH_BREAK = Regex("\\n[ \\t]*\\n")
+        private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
         private val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
         private val CITATION_INSIDE = Regex("[A-Z]{1,2}[0-9]*")
     }

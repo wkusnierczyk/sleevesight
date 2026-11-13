@@ -165,6 +165,39 @@ class MetaNoteTest {
     }
 
     @Test
+    fun `a Roman numeral or a title's I or My is no first person`() {
+        for (ending in listOf(
+            " Sinatra later cited My Way as the song he grew to dislike.",
+            " The coda quotes the opening theme of Part I.",
+            " Cobain cited I Wanna Be Your Dog among his favourites.",
+            " Led Zeppelin I quotes several blues standards.",
+        )) {
+            val reply = CLEAN + ending
+            assertNull(MetaNote.of(reply), ending)
+            assertEquals(reply, written(reply).text, ending)
+        }
+    }
+
+    @Test
+    fun `a stated gap in the first person stays`() {
+        for (ending in listOf(
+            " Little else is documented in my sources.",
+            " I found no further details on the session in the evidence.",
+        )) {
+            val reply = CLEAN + ending
+            assertNull(MetaNote.of(reply), ending)
+            assertEquals(reply, written(reply).text, ending)
+        }
+    }
+
+    @Test
+    fun `a note with stray closing marks after it is left as written`() {
+        val reply = "$CLEAN [omit]*"
+        assertNull(MetaNote.of(reply))
+        assertEquals(reply, written(reply).text)
+    }
+
+    @Test
     fun `a reply that is no insight's keeps its talk of the evidence`() {
         // A genre's reason may say what the evidence does not support: that is its answer.
         val reason = "$CLEAN The evidence does not support the Alternative label."
