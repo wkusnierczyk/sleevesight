@@ -277,9 +277,9 @@ class TrackGenresInstrumentalTest {
         assertEquals(false, featured.shown()["instrumental"])
         // *Search with AI*'s genres, shown with no row.
         val empty = TrackGenres(singing = Singing(languages = listOf("jpn")))
-        assertEquals(WeakEvidence.Language("jpn", "Japanese"), empty.aiSignOfVocals("instrumental"))
-        assertNull(empty.aiSignOfVocals("blues"))
-        assertNull(TrackGenres().aiSignOfVocals("instrumental"))
+        assertEquals(WeakEvidence.Language("jpn", "Japanese"), empty.aiWeakEvidence("instrumental"))
+        assertNull(empty.aiWeakEvidence("blues"))
+        assertNull(TrackGenres().aiWeakEvidence("instrumental"))
     }
 
     @Test
