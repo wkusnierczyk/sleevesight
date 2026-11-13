@@ -110,6 +110,38 @@ class MetaNoteTest {
     }
 
     @Test
+    fun `a lyric in emphasis inside a sentence is not read, whatever its punctuation`() {
+        val reply = "$CLEAN The refrain repeats *the evidence doesn't show you lied...* over two chords."
+        assertEquals(reply, written(reply).text)
+        assertNull(MetaNote.of(reply))
+    }
+
+    @Test
+    fun `evidence in another sense is the insight's own`() {
+        val reply = "$CLEAN The lyrics treat a ring found in the evidence locker as proof of betrayal."
+        assertEquals(reply, written(reply).text)
+        assertNull(MetaNote.of(reply))
+    }
+
+    @Test
+    fun `a section's cue in brackets is no working note`() {
+        for (ending in listOf(" [Drop]", " Its last section is marked [Drop].", " [Skip]", " [Chorus 2]")) {
+            val reply = CLEAN + ending
+            assertNull(MetaNote.of(reply), ending)
+            assertEquals(reply, written(reply).text, ending)
+        }
+    }
+
+    @Test
+    fun `emphasis around the note alone goes with it, and marks alone are no reply`() {
+        val grounded = written("$CLEAN **[Not usable; omit]**")
+        assertEquals(CLEAN, grounded.text)
+        assertEquals(0, grounded.counts.uncited)
+        assertEquals("**[Not usable; omit]**", grounded.withdrawn)
+        assertNull(MetaNote.of("**[Not usable; omit]**"))
+    }
+
+    @Test
     fun `a reply that is no insight's keeps its talk of the evidence`() {
         // A genre's reason may say what the evidence does not support: that is its answer.
         val reason = "$CLEAN The evidence does not support the Alternative label."
