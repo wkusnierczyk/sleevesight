@@ -36,6 +36,13 @@ internal fun readReply(
 }
 
 /**
+ * The names [track]'s cards are written about (#1036): its title, artists, featured artists and
+ * album, as the player reports them and as normalized ([subjectOf] of its `CardEntity.Track`).
+ */
+internal fun subjectOf(track: TrackState): List<String> =
+    subjectOf(CardEntity.Track(track.normalized, track.nowPlaying.duration), track.nowPlaying)
+
+/**
  * The names a card about [entity] is written about (#1036): the words a sentence may name without a
  * line it cites holding them, since a line often says *it* or *the song* (`Support`). The track's
  * title, artists and album as the player reports them ([nowPlaying], when given) and as normalized;

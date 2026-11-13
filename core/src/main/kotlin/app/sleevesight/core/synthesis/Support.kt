@@ -9,21 +9,23 @@ import app.sleevesight.core.evidence.EvidenceLine
  * false *unsupported* dims a true sentence, so it compares only two things, each loosely, and in
  * doubt finds the sentence backed; a wrong sentence that slips through is the accepted cost.
  *
- * - **Years**: a four-digit number from 1000 to 2099 (digit groups joined first, on both sides:
- *   `1,974` is `1974`). It is backed by the same number in a cited line, by a number under 100 there
- *   equal to its last two digits (`'01` backs `2001`), or by a decade that holds it (`1970s`, `70s`,
- *   `the Seventies`). A decade in the sentence (`1970s`) is backed by any year of it there. No other
- *   number is compared: a count, a chart place, a day or an age may be written another way or worked
- *   out. Months and dates are not compared either; a year inside a date counts as that year.
+ * - **Years**: a four-digit number from 1000 to 2099, in the sentence as written (its `2,000
+ *   fans` is no year) and in a cited line with digit groups joined (`1,974` is `1974`). It is
+ *   backed by the same number in a cited line, by a number under 100 there equal to its last two
+ *   digits (`'01` backs `2001`), or by a decade that holds it (`1970s`, `70s`, `the Seventies`). A
+ *   decade in the sentence (`1970s`) is backed by any year of it there. No other number is
+ *   compared: a count, a chart place, a day or an age may be written another way or worked out.
+ *   Months and dates are not compared either; a year inside a date counts as that year.
  * - **Multi-word names**: two or more capitalised words in a row, with only spaces, an apostrophe or
  *   a hyphen between them (`Steve George`, `Billboard Hot`, `Larry O'Gaff`), that do not start the
- *   sentence (`Released March …`: its first capital may be the sentence's). Each word must be in a
- *   cited line, in any case, a letter with a diacritic matching any letter, or as a word sharing all
- *   but its last three letters, five at least (`Newfoundland`, `Newfoundlanders`). Words that are no
- *   one's name are not compared within one ([NOT_NAMES]): small words (`The`, `Of`), months, numbers
- *   in words, the sources' names, Roman numerals, and places and their peoples (`United States`,
- *   `New Zealand`), which lines and sentences give in too many ways. A single capitalised word is
- *   never compared (`Swiss`, `March`).
+ *   sentence (`Released March …`: its first capital may be the sentence's). One of its words must be
+ *   in a cited line, in any case, a letter with a diacritic matching any letter, or as a word sharing
+ *   all but its last three letters, five at least (`Newfoundland`, `Newfoundlanders`): a name the
+ *   model completed from its own knowledge (`Grammy Award`, `John Lennon` beside
+ *   `Lennon-McCartney`) passes, one no line names does not. Words that are no one's name are not
+ *   compared within one ([NOT_NAMES]): small words (`The`, `Of`), months, numbers in words, the
+ *   sources' names, Roman numerals, and places and their peoples (`United States`, `New Zealand`).
+ *   A single capitalised word is never compared (`Swiss`, `March`).
  * - The words of what the card is about ([backs]' `subject`: the track's title, artists and album,
  *   the artist's or album's name, the player's release line) count as in every cited line.
  *
@@ -43,10 +45,10 @@ internal object Support {
         subject: Collection<String>,
     ): Boolean {
         if (lines.isEmpty() || lines.any { it.language != null }) return true
-        val said = tokens(CITATION.replace(sentence, " "))
-        val cited = lines.flatMap { tokens(it.text) } + subject.flatMap(::tokens)
+        val said = tokens(CITATION.replace(sentence, " "), joinGroups = false)
+        val cited = lines.flatMap { tokens(it.text) } + subject.flatMap { tokens(it) }
         val words = cited.filter { !it.number }.mapTo(mutableSetOf()) { fold(it.text) }
-        return yearsBacked(said, cited) && names(said).all { name -> name.all { nameWordBacked(it, words) } }
+        return yearsBacked(said, cited) && names(said).all { name -> nameBacked(name, words) }
     }
 
     // A run of letters or of digits in a text, [number] for digits (without leading zeros, digit
@@ -57,7 +59,12 @@ internal object Support {
         val gap: String,
     )
 
-    private fun tokens(text: String): List<Token> {
+    // The runs of [text]; with [joinGroups], digit groups joined into one number (`1,974`), as a
+    // line writes a count: a sentence's `2,000` is no year.
+    private fun tokens(
+        text: String,
+        joinGroups: Boolean = true,
+    ): List<Token> {
         val tokens = mutableListOf<Token>()
         var i = 0
         var gapStart = 0
@@ -65,7 +72,7 @@ internal object Support {
             val start = i
             when {
                 text[i].isDigit() -> {
-                    while (i < text.length && (text[i].isDigit() || groupSeparator(text, i))) i++
+                    while (i < text.length && inNumber(text, i, joinGroups)) i++
                     val number =
                         text
                             .substring(start, i)
@@ -89,6 +96,14 @@ internal object Support {
         }
         return tokens
     }
+
+    // Whether the character at [i] of [text] is part of a number: a digit, or with [joinGroups] a
+    // digit group's separator ([groupSeparator]).
+    private fun inNumber(
+        text: String,
+        i: Int,
+        joinGroups: Boolean,
+    ): Boolean = text[i].isDigit() || (joinGroups && groupSeparator(text, i))
 
     // Whether the character at [i] of [text] joins digit groups: a comma or a no-break, thin or
     // narrow no-break space after a digit and before exactly three digits (`1,974`).
@@ -157,14 +172,16 @@ internal object Support {
         return names
     }
 
-    // Whether [word], of a multi-word name, is in [words] (folded, as [sameName] matches), or is a
-    // word that is no one's name ([NOT_NAMES], Roman numerals).
-    private fun nameWordBacked(
-        word: String,
+    // Whether [name], a multi-word name, is backed by [words] (folded): when any of its words that
+    // could be a name ([NOT_NAMES] and Roman numerals aside) is among them, as [sameName] matches, or
+    // none could be. A name with a word the model added (`Grammy Award` beside `a Grammy`, `John
+    // Lennon` beside `Lennon-McCartney`) passes; one none of whose words a line holds does not.
+    private fun nameBacked(
+        name: List<String>,
         words: Set<String>,
     ): Boolean {
-        val folded = fold(word)
-        return folded in NOT_NAMES || ROMAN.matches(word) || words.any { sameName(folded, it) }
+        val compared = name.filterNot { fold(it) in NOT_NAMES || ROMAN.matches(it) }.map(::fold)
+        return compared.isEmpty() || compared.any { word -> words.any { sameName(word, it) } }
     }
 
     // [word] in lower case, each letter with a diacritic ([LATIN_ACCENTED]) as [ANY_LETTER].

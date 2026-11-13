@@ -499,7 +499,7 @@ class GenreReasons(
                     evidence,
                     key.modelKnowledge,
                     subject =
-                        names(track) + forms(key, track),
+                        subjectOf(track) + forms(key, track),
                 )
         ) {
             InsightReply.NoEvidence -> {

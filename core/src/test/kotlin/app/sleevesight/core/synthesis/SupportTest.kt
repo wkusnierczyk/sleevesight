@@ -48,8 +48,8 @@ class SupportTest {
 
     /**
      * The two stored replies written from real evidence (`grounding/replies.json`, the gate's tracks 1
-     * and 41, whose evidence is [FixtureEvidence]'s) keep every sentence: none flips. Without the
-     * track's names one does: "Gordon Lightfoot", whom the lines it cites call "Lightfoot".
+     * and 41, whose evidence is [FixtureEvidence]'s) keep every sentence: none flips, with the
+     * track's names or without ("Gordon Lightfoot" is backed by the "Lightfoot" of its lines).
      */
     @Test
     fun `the stored replies written from real evidence keep every sentence`() {
@@ -72,7 +72,7 @@ class SupportTest {
         assertEquals(
             mapOf(
                 "claude-haiku-5-5 on prompts/insight-41.txt" to (0 to 0),
-                "claude-haiku-5-5 on prompts/insight-1.txt" to (0 to 1),
+                "claude-haiku-5-5 on prompts/insight-1.txt" to (0 to 0),
             ),
             flipped,
         )
@@ -325,6 +325,36 @@ class SupportTest {
         assertEquals(
             List(3) { SentenceStatus.OK },
             statuses("It reached No. One [W1]. It is from the Seventies [W2]. It came out in 1974 [W3].", lines),
+        )
+    }
+
+    /**
+     * Claude's review, PR #1238: a name the model completed from its knowledge passes when one of its
+     * words is in the line; one none of whose words are does not.
+     */
+    @Test
+    fun `a name with one word in its line is backed`() {
+        val lines =
+            listOf(
+                line("The song is credited to Lennon\u2013McCartney."),
+                line("The album won a Grammy."),
+            )
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.OK, SentenceStatus.UNSUPPORTED),
+            statuses(
+                "It was written by John Lennon and Paul McCartney [W1]. It won the Grammy Award [W2]. " +
+                    "It was written by Carole King [W1].",
+                lines,
+            ),
+        )
+    }
+
+    /** Claude's review, PR #1238: a count in the sentence written with a digit group is no year. */
+    @Test
+    fun `a count with a digit group in the sentence is no year`() {
+        assertEquals(
+            listOf(SentenceStatus.OK),
+            statuses("About 2,000 fans came [W1].", listOf(line("The hall was full."))),
         )
     }
 }
