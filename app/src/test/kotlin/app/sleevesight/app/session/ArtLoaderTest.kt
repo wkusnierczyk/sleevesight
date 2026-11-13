@@ -38,11 +38,14 @@ class ArtLoaderTest {
     private val resolver = ApplicationProvider.getApplicationContext<android.app.Application>().contentResolver
     private val fetched = mutableListOf<String>()
     private var served: ByteArray? = null
-    private val loader =
-        ArtLoader(resolver, { uri ->
+    private val http =
+        HttpArt { uri ->
             fetched += uri
             served
-        }, Dispatchers.Unconfined)
+        }
+
+    // Each test its own reads: a read a test leaves stuck must not hold another test's slots.
+    private val loader = ArtLoader(resolver, http, Dispatchers.Unconfined, ContentReads())
 
     private fun png(
         color: Int,
