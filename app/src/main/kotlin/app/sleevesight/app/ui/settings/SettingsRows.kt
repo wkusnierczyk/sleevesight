@@ -289,7 +289,7 @@ private fun MarkedRow(
  * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
  * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670). The summary
  * folds ([Description], #847); [note], under it, says the setting's state (a model found
- * unavailable), or what the value chosen does (*Saver*'s count, #874), and always shows in full.
+ * unavailable), or what the value chosen does (#874), and always shows in full.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable

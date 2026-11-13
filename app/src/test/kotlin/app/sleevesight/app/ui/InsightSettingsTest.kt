@@ -231,18 +231,17 @@ class InsightSettingsTest {
                     R.string.settings_write_automatically,
                     R.string.settings_crossfade,
                     R.string.settings_pause_auto_write,
-                    R.string.settings_pause_auto_write_after,
                     R.string.settings_artist_facts_once,
                 )
             val tops = order.map(::top)
             assertEquals(tops.sorted(), tops)
+            // Its count's buttons come under *Saver*, before the next row (#1234).
+            val five = compose.onNode(hasText("5") and isSelectable()).performScrollTo().fetchSemanticsNode()
+            assertTrue(top(R.string.settings_pause_auto_write) < five.boundsInRoot.top)
+            assertTrue(five.boundsInRoot.top < top(R.string.settings_artist_facts_once))
             // Neither *Saver* nor its count is indented: both start where *Reactive* does.
             val starts =
-                listOf(
-                    R.string.settings_write_automatically,
-                    R.string.settings_pause_auto_write,
-                    R.string.settings_pause_auto_write_after,
-                ).map {
+                listOf(R.string.settings_write_automatically, R.string.settings_pause_auto_write).map {
                     compose
                         .onNodeWithText(text(it))
                         .performScrollTo()
@@ -250,6 +249,16 @@ class InsightSettingsTest {
                         .boundsInRoot.left
                 }
             assertEquals(1, starts.distinct().size)
+            // And its count's buttons start where *Reactive*'s do.
+            val buttons =
+                listOf(text(R.string.settings_write_never_short), "3").map {
+                    compose
+                        .onNode(hasText(it) and isSelectable())
+                        .performScrollTo()
+                        .fetchSemanticsNode()
+                        .boundsInRoot.left
+                }
+            assertEquals(buttons.first(), buttons.last(), 0.5f)
         }
     }
 

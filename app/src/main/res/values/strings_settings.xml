@@ -120,10 +120,6 @@
     <string name="settings_labels_genres_off">Off while “Show genres” is off</string>
     <string name="settings_labels_lastfm_summary">Tags added freely by listeners, unmoderated; Sleevesight keeps those that name a genre.</string>
 
-    <!-- Insights. -->
-    <!-- In place of a name, over Saver's count's buttons, which show the numbers alone (#1212); a screen reader reads it with each button ("…: 5"). -->
-    <string name="settings_pause_auto_write_after">Track changes with autowrite until saver is activated</string>
-
     <!-- Appearance. -->
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_summary">Light or dark. The system’s follows your phone’s dark theme.</string>

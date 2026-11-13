@@ -8,8 +8,9 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ActivityScenario
@@ -40,11 +41,11 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * *Saver*'s count (#1212): a line saying what it counts, over a button group of the numbers alone,
- * so that the chosen button's label, with its check, never wraps where the others do not: at the
- * default font size, a large one and twice the default on a narrow phone, with each count chosen,
- * every label is on one line and every button as tall as the others. A screen reader reads each
- * button after the line, then its number. Native graphics, for the labels' real widths.
+ * *Saver*'s count (#1212, #1234): a button group of the numbers alone, under *Saver*'s description,
+ * with no name or line of its own, so that the chosen button's label never wraps where the others
+ * do not: at the default font size, a large one and twice the default on a narrow phone, with each
+ * count chosen, every label is on one line and every button as tall as the others. A screen reader
+ * reads each button after the setting's name, "Saver: 5".
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -63,7 +64,7 @@ class SaverCountButtonsTest {
         saves.cancel()
     }
 
-    private val line get() = app.getString(R.string.settings_pause_auto_write_after)
+    private val name get() = app.getString(R.string.settings_pause_auto_write)
 
     private val radio = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
 
@@ -73,8 +74,14 @@ class SaverCountButtonsTest {
             node.config
                 .getOrNull(SemanticsProperties.ContentDescription)
                 .orEmpty()
-                .any { it.startsWith("$line: ") }
+                .any { it.startsWith("$name: ") }
         }
+
+    /** Scrolls to the count's last button, so that all of them are on the screen. */
+    private fun scrollToButtons() {
+        compose.onNode(hasText("10") and isSelectable()).performScrollTo()
+        compose.waitForIdle()
+    }
 
     private fun show(block: () -> Unit) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -94,7 +101,7 @@ class SaverCountButtonsTest {
             for (count in Settings.PAUSE_AUTO_WRITE_CHOICES) {
                 runBlocking { settings.update { it.copy(pauseAutoWriteAfter = count) } }
                 compose.waitUntil(WAIT_MS) { buttons().size == Settings.PAUSE_AUTO_WRITE_CHOICES.size }
-                compose.onNodeWithText(line).performScrollTo()
+                scrollToButtons()
                 compose.waitForIdle()
                 val shown = buttons()
                 for (button in shown) {
@@ -121,23 +128,13 @@ class SaverCountButtonsTest {
     fun noLabelWrapsAtTwiceTheFontSizeOnANarrowPhone() = assertNoLabelWraps()
 
     @Test
-    fun theLineReplacesTheNameAndIsReadWithEachButton() =
+    fun eachButtonIsReadAfterTheName() =
         show {
             compose.waitUntil(WAIT_MS) { buttons().isNotEmpty() }
-            compose.onNodeWithText(line).performScrollTo()
-            assertEquals("Track changes with autowrite until saver is activated", line)
-            val read =
-                buttons().map {
-                    it.config[SemanticsProperties.ContentDescription]
-                        .single()
-                        .substringBefore(".")
-                }
-            assertEquals(
-                Settings.PAUSE_AUTO_WRITE_CHOICES.map {
-                    "Track changes with autowrite until saver is activated: $it"
-                },
-                read,
-            )
+            scrollToButtons()
+            assertEquals("Saver", name)
+            val read = buttons().map { it.config[SemanticsProperties.ContentDescription].single() }
+            assertEquals(Settings.PAUSE_AUTO_WRITE_CHOICES.map { "Saver: $it" }, read)
             val labels = buttons().map { it.children.single { c -> SemanticsProperties.Text in c.config } }
             assertEquals(
                 Settings.PAUSE_AUTO_WRITE_CHOICES.map { "$it" },

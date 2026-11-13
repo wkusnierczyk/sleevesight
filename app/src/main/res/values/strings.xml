@@ -146,7 +146,11 @@
     <string name="settings_write_every_change_means">Automatically on every track change.</string>
     <string name="settings_write_automatically_summary_end">Skip and Change will begin triggering insights from the next track.</string>
     <string name="settings_pause_auto_write">Saver</string>
-    <string name="settings_pause_auto_write_summary">Stops automatic writing after a number of track changes while Sleevesight is not on screen, counted again from each time you open it. Opening Sleevesight resumes it.</string>
+    <!-- Saver's description (#1234), with the count chosen, or the default while Saver is off; its buttons, the counts alone, come under it, each read with the name ("Saver: 5"). -->
+    <plurals name="settings_pause_auto_write_summary">
+        <item quantity="one">Stops automatic writing after %1$d track change while Sleevesight is not on screen. The count is reset each time you reopen Sleevesight.</item>
+        <item quantity="other">Stops automatic writing after %1$d track changes while Sleevesight is not on screen. The count is reset each time you reopen Sleevesight.</item>
+    </plurals>
     <!-- The long names of Reactive's modes (#625), in order of how much is written automatically:
          the insight card's menu beside Write insight (#615) and the descriptions that name a mode;
          Reactive's buttons take the short names (settings_write_*_short, #947). The stored value
@@ -313,16 +317,6 @@
     <string name="diagnostics_reset_failed">What skip detection has learned could not be reset. Try again.</string>
     <string name="diagnostics_reset_explained">Skip detection goes back to its fixed rules until it learns again from the next track changes. The track changes recorded are kept.</string>
 
-    <!-- Saver's count's description for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On track skip (auto)) is counted but not written. Opening Sleevesight resumes automatic writing (#625). -->
-    <plurals name="settings_pause_auto_write_summary_count">
-        <item quantity="one">While Sleevesight is in the background, it writes insights automatically for up to %1$d track change. After more than %1$d, it stops writing insights automatically until you open it again.</item>
-        <item quantity="other">While Sleevesight is in the background, it writes insights automatically for up to %1$d track changes. After more than %1$d, it stops writing insights automatically until you open it again.</item>
-    </plurals>
-    <!-- As settings_pause_auto_write_summary_count, with Look up in the background off: nothing is written in the background, and the count decides whether the track playing when the app is back on screen is written automatically; automatic writing resumes from the next track either way (#625). -->
-    <plurals name="settings_pause_auto_write_summary_count_foreground">
-        <item quantity="one">If Sleevesight is brought to the foreground within %1$d track change, it goes on writing insights automatically. After more than %1$d, the playing track’s insight is written only when you tap Write insight, and automatic writing resumes from the next track.</item>
-        <item quantity="other">If Sleevesight is brought to the foreground within %1$d track changes, it goes on writing insights automatically. After more than %1$d, the playing track’s insight is written only when you tap Write insight, and automatic writing resumes from the next track.</item>
-    </plurals>
     <plurals name="settings_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>

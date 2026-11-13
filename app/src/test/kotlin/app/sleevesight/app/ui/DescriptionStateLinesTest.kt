@@ -62,7 +62,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * What folding leaves in full or marks (#847): a model found unavailable is said under its row in
- * full, never folded, and so are what *Saver*'s count does and *No players yet* (#874); and a
+ * full, never folded, and so is *No players yet* (#874); and a
  * search's marks show in a description's paragraph with a link, the link still working.
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for
@@ -155,31 +155,6 @@ class DescriptionStateLinesTest {
             val layout = layouts.single()
             assertTrue("laid out in full, on more than one line", layout.lineCount > 1 && !layout.hasVisualOverflow)
             // Not a description that folds: no fold of its own.
-            assertTrue(
-                compose.onAllNodes(hasTestTag(DESCRIPTION_TAG) and hasText(said)).fetchSemanticsNodes().isEmpty(),
-            )
-        }
-    }
-
-    @Test
-    fun whatStopAftersCountDoesIsSaidInFullUnderItsRow() {
-        runBlocking { settings.update { it.copy(pauseAutoWriteAfter = 5, lookUpInBackground = true) } }
-        show {
-            compose.openSection(SettingsSection.INSIGHTS)
-            val said = app.resources.getQuantityString(R.plurals.settings_pause_auto_write_summary_count, 5, 5)
-            compose.waitUntil(WAIT_MS) {
-                compose.onAllNodes(hasText(said), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-            }
-            val line = compose.onNode(hasText(said), useUnmergedTree = true).performScrollTo()
-            val layouts = mutableListOf<TextLayoutResult>()
-            line
-                .fetchSemanticsNode()
-                .config[SemanticsActions.GetTextLayoutResult]
-                .action
-                ?.invoke(layouts)
-            val layout = layouts.single()
-            assertTrue("laid out in full, on more than one line", layout.lineCount > 1 && !layout.hasVisualOverflow)
-            // As the line under a button group: no fold of its own.
             assertTrue(
                 compose.onAllNodes(hasTestTag(DESCRIPTION_TAG) and hasText(said)).fetchSemanticsNodes().isEmpty(),
             )
