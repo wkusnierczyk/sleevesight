@@ -18,6 +18,7 @@ import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.DefinitionState
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.GenreReason
+import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.PanelLibrary
 import app.sleevesight.app.pipeline.VocalsShown
 import app.sleevesight.core.genres.GenreLevel
@@ -98,7 +99,10 @@ class GenreVocalsScreenTest {
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        val notes = PanelNotes(notes(shown))
+                        // *Sources*' lines as Home builds them: the check's page listed (#1053).
+                        val genreNotes = notes(shown)
+                        val lines = sourcesLines(ItemNotes.None, playing, genreNotes)
+                        val notes = PanelNotes(genreNotes, lines = lines.evidence, asked = lines.asked)
                         AutoVocalsCheck(playing, settings, notes, PanelSearch())
                         if (panel) GenresContent(playing, settings, notes = notes)
                     }
@@ -356,7 +360,7 @@ internal object VocalsFixtures {
         page: WebPage? = this.page,
     ) = VocalsShown(VocalsState.Checked(answer, "claude-haiku-5-5", page), MODEL, tapped)
 
-    class Notes(
+    open class Notes(
         private val shown: VocalsShown?,
         private val onShown: (TrackState, Boolean) -> Unit = { _, _ -> },
         private val onExplain: (String) -> Unit = {},

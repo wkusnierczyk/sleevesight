@@ -71,7 +71,8 @@ internal fun NowPlayingPageContent(
                     is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions) { handoff.moveTo(back) }
                     HomePage.Genres, is HomePage.GenresAt -> {
                         val retries = Retries(shown.view, playing, actions.askAgain)
-                        val lines = sourcesLines(actions.itemNotes, shown.track, actions.genreNotes)
+                        val lines =
+                            sourcesLines(actions.itemNotes, shown.track, actions.genreNotes, actions.aiSearches)
                         GenresPage(
                             shown.track,
                             state.settings,
@@ -164,7 +165,7 @@ private fun ItemPageOf(
             settings,
             actions,
             cite,
-            sourcesLines(actions.itemNotes, shown.track, actions.genreNotes).evidence,
+            sourcesLines(actions.itemNotes, shown.track, actions.genreNotes, actions.aiSearches).evidence,
         ) { track, written, of ->
             reporting =
                 Reported(track, written, of)
@@ -199,7 +200,7 @@ private fun SourcesPage(
     afterRetry: () -> Unit,
 ) {
     // Its own evidence, with its album's lines once its insight gathered them (#522).
-    val lines = sourcesLines(actions.itemNotes, shown.track, actions.genreNotes)
+    val lines = sourcesLines(actions.itemNotes, shown.track, actions.genreNotes, actions.aiSearches)
     val focus = rememberLineFocus(lines.evidence, shown.track?.normalized)
     val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
     // The track the citation was opened on: it is that track's line, never another's of the same id.

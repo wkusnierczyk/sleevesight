@@ -21,9 +21,7 @@ import app.sleevesight.app.pipeline.VocalsShown
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
-import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
-import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.VocalsAnswer
 import app.sleevesight.core.lyrics.LibraryQuery
@@ -32,12 +30,8 @@ import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.pipeline.wantsLibrary
-import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.core.sources.WebPage
-import app.sleevesight.core.synthesis.sameAddress
-import kotlin.time.Instant
 
 // The check of a track's vocals (#998; `design/design.md`, *Genre labels*): its answer weighed into the
 // genres, what starts it by itself, and its lines under Instrumental's definition.
@@ -107,8 +101,8 @@ internal fun libraryPending(
  * ([genre] in italics, as its chip names it) and its page's citation, or nothing found either way,
  * "Web search found nothing on whether this track has vocals."; each answer with "by {model}, with
  * web search" under it. The page's citation is the line *Sources* shows it under ([lines], the
- * same address), else numbered after them, a link that opens it there ([onCite]). Nothing with no
- * check, or a failed one.
+ * same address: `sourcesLines` lists it, *vocals check · host*, #1053), a link that opens it there
+ * ([onCite]); none while *Sources* has no such line. Nothing with no check, or a failed one.
  */
 @Composable
 internal fun VocalsNote(
@@ -140,7 +134,7 @@ internal fun VocalsNote(
                     VocalsAnswer.UNKNOWN -> listOf(TextPart.Words(stringResource(R.string.genre_vocals_unknown)))
                 }.takeIf { state.answer == VocalsAnswer.INSTRUMENTAL || shown.tapped } ?: return
             Column(Modifier.testTag(GENRE_VOCALS_TAG), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                val line = state.page?.let { lineOf(it, lines) }
+                val line = state.page?.let { webLineOf(it.url, lines) }
                 AnswerLine(words, line, onCite)
                 SearchCredit(stringResource(R.string.genre_why_by_web, shown.model))
             }
@@ -208,37 +202,6 @@ private fun AnswerLine(
             },
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-}
-
-// The id of [page]'s line: the web line [lines] (*Sources*' lines) has at its address, else the one it
-// takes numbered after them.
-private fun lineOf(
-    page: WebPage,
-    lines: EvidenceSet?,
-): String? {
-    val shown = lines ?: return null
-    val same =
-        shown.lines.firstOrNull {
-            it.source == SourceId.WEB &&
-                it.url?.let { url ->
-                    sameAddress(url, page.url)
-                } == true
-        }
-    return same?.id ?: numbered(page, shown)
-}
-
-// The id [page] takes as a web line numbered after [shown]'s.
-private fun numbered(
-    page: WebPage,
-    shown: EvidenceSet,
-): String? {
-    val draft = EvidenceDraft(SourceId.WEB, Scope.WEB, page.text, page.url, Instant.fromEpochMilliseconds(0))
-    val own = shown.ids.toSet()
-    return shown
-        .with(listOf(draft), JvmHasher)
-        .lines
-        .firstOrNull { it.id !in own && it.url == page.url }
-        ?.id
 }
 
 /** The test tags of the check's line while it runs, and of its answer with its credit (#998). */
