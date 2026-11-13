@@ -139,7 +139,8 @@ class SearchWithAiSettingTest {
         const val WEB = "AI web search"
         const val FIRST =
             "When Dates, Genres or Lyrics has nothing from its sources, asks your AI service, searching the web " +
-                "as set under $WEB. Also asks whether a track is instrumental when its sources leave that in doubt."
+                "as set under $WEB. With $WEB on, also asks whether a track is instrumental " +
+                "when its sources leave that in doubt."
         const val SECOND = "Each question is a paid AI service call; with web search, also Exa API calls."
     }
 
