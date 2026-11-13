@@ -1,0 +1,7 @@
+Fixed in 0.6.6:
+- Insights: a sentence its cited source does not back is dimmed; the model's notes on its sources stay out.
+- Genres: Instrumental only LRCLIB marks shows weak, and says why; the vocals check lists its page in Sources.
+- Tag sources: the pages behind the AI's genres are listed.
+- Sources: tap a row to show or hide its lines; Pages cited by site name.
+- Buttons: no check mark; Saver reads simpler.
+- Clear history also wipes deleted data from the files.

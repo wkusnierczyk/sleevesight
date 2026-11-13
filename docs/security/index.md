@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.6.5
+## Results for 0.6.6
 
-Checked on 12 November 2026, on the code of release 0.6.5.
+Checked on 13 November 2026, on the code of release 0.6.6.
 
-- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app.
+- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app. The libraries are the same as in 0.6.5.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code, and no new problem. The release changes how dates, sources and settings are shown; the note that some text-to-speech engines send the text they read to their server is kept, now under the *Read aloud* heading in Settings.
+- **Security review:** no way found to reach your keys or your data in the new code, and nothing new that could run up your costs. The release opens only web (`http` and `https`) links and names a linked page by its site, reads a player's cover art with a time limit and no longer fetches covers from addresses on your own network, overwrites in the app's database files what *Clear history* and *Keep history for* delete, and dims a cited sentence whose names or years its sources don't hold. Three minor hardening points turned up, none of them reaching your keys or data, and are left for a later release.
 
 ## What is checked
 
