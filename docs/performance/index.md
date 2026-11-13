@@ -7,7 +7,7 @@
 # track (a new source, an animation, a poll) changes these figures: take them again then.
 title: How it performs
 permalink: /docs/performance/
-docs_version: 0.3.0
+docs_version: 0.6.6
 nav:
   - id: in-short
     label: In short
@@ -26,7 +26,7 @@ provenance: [ai-wrote, human-reviewed]
 
 What Sleevesight costs your phone while you listen: battery, data, processor time, memory, start-up and storage. Each figure was measured, on one phone, and says how. That phone is a fast, recent one, so the figures are an example, not a promise: on a mid-range or older phone, the processor time and the start-up will be longer, and the battery drain larger. What it costs in money is on [What it costs you]({{ '/docs/costs/' | relative_url }}).
 
-**Measured on** a Samsung Galaxy S25 Ultra (SM-S938B), Android 17, with Sleevesight 0.3.0 as installed from Google Play. The phone ran on its battery, connected over Wi-Fi; the readings were taken over wireless debugging, so the cable's charge did not hide any drain.
+**Measured on** a Samsung Galaxy S25 Ultra (SM-S938B), Android 17, with Sleevesight 0.3.0 as installed from Google Play. The figures have not been taken again since; where a later release changed what they measure, the section says so. The phone ran on its battery, connected over Wi-Fi; the readings were taken over wireless debugging, so the cable's charge did not hide any drain.
 
 **Settings:** the defaults, with Anthropic as the AI service (Claude Haiku 5.5, low reasoning effort), Exa web search off, *Look up in the background* off, unless a row says otherwise. Music came from the phone's usual player.
 
@@ -34,7 +34,7 @@ What Sleevesight costs your phone while you listen: battery, data, processor tim
 
 - **Screen off**, while you listen: almost nothing. Over an hour, Android put 0.1 mAh of battery on Sleevesight, a five-hundredth of a percent of the phone's 5,000 mAh, and it used under 7 seconds of processor time and no data to speak of.
 - **Nothing playing**: nothing at all. Overnight, for seven and a half hours, it made no network call, used 8.5 seconds of processor time, and the system put no battery on it.
-- **On screen**: the screen is most of the cost, about 2 to 3 % of the battery an hour. The spinning logo adds a constant load on the processor while music plays; [*Spin the logo while music plays*]({{ '/docs/tutorials/settings/#appearance' | relative_url }}) off removes it.
+- **On screen**: the screen is most of the cost, about 2 to 3 % of the battery an hour. The spinning logo added a constant load on the processor while music played, which 0.6.0 cut down (see [*Processor and memory*](#processor-and-memory)); [*Spin the logo while music plays*]({{ '/docs/tutorials/settings/#appearance' | relative_url }}) off removes it.
 - **Data**: under 100 KB a track, in and out together under 120 KB, insights and web search included. At about 17 tracks an hour, that is about 2 MB an hour.
 - **Memory**: 80 to 120 MB with the screen off, up to about 170 MB on screen while insights are written.
 - **Start-up**: it opens in about 70 milliseconds.
@@ -74,6 +74,8 @@ What a track needs varies more with the track than with the settings: a track wi
 
 With *Look up in the background* off, Sleevesight starts no lookup while it is off screen; one already under way may finish. The 1.7 KB in that hour were genre definitions fetched ahead off screen, which Sleevesight no longer does since 0.4.0.
 
+Since 0.6.0, some tracks need requests these runs did not make: LRCLIB, asked once for a track whose genres hold Instrumental, and, with *AI web search* on, a web search for a song the other sources only list, and the check whether a track is instrumental, which searches the web too. They have not been measured.
+
 ## Processor and memory
 
 Processor time is the time the app's process ran, on any core (`ps`); memory is the proportional set size (PSS) from `dumpsys meminfo`, the app's own memory plus its share of what it shares with others.
@@ -89,7 +91,7 @@ Processor time is the time the app's process ran, on any core (`ps`); memory is 
 | A track on screen, logo still, insights on | 2.4 s | 166 MB while writing, 79 MB after |
 | A track on screen, logo still, insights and *AI web search* on | 3.8 s | 151 MB while writing, 167 MB after |
 
-The spinning logo is nearly all of the processor time on screen: a known cost, [#963](https://github.com/wkusnierczyk/sleevesight/issues/963), to be brought down. Until then, turn *Spin the logo while music plays* off under [Appearance]({{ '/docs/tutorials/settings/#appearance' | relative_url }}) to save it.
+In 0.3.0, the spinning logo was nearly all of the processor time on screen: the whole logo was drawn again at every frame of the screen. Since 0.6.0, the record turns in 30 steps a second, whatever the screen's rate, and only the record is drawn at each step, so it should cost far less than these rows show; that has not been measured. *Spin the logo while music plays* off, under [Appearance]({{ '/docs/tutorials/settings/#appearance' | relative_url }}), still removes it.
 
 ## Start-up and size
 

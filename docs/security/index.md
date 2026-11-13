@@ -5,7 +5,7 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.6.5
+docs_version: 0.6.6
 nav:
   - id: results-for-065
     label: Results

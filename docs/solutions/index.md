@@ -1,14 +1,14 @@
 ---
 # The page on Sleevesight's less obvious solutions (#413), at `/docs/solutions/`: for each, the
 # problem, what was done, why, and whether it is new here or a known technique reimplemented.
-# Written from the code on `main` (`GroundingCheck`, `IdentityCheck`, the Last.fm adapter,
+# Written from the code on `main` (`GroundingCheck`, `Support`, `IdentityCheck`, the Last.fm adapter,
 # `TrackIdentity`, `SkipDetection`, `PromptEvidence`, `ArtistResultCache`, `KeySetup`, `KeysQr`,
 # `KeyboardSession`, `SessionLedger`, `assets/keyboard/`, `assets/api-keys/`, the checks in
 # `build-logic/`) and from `design/design.md` and `design/architecture.md`. A change to any of
 # them, or a solution added or removed, changes this page.
 title: Solutions
 permalink: /docs/solutions/
-docs_version: 0.1.18
+docs_version: 0.6.6
 nav:
   - id: insights-that-cite-their-sources-checked-in-code
     label: Citations
@@ -35,13 +35,13 @@ Each section links the design section that holds the detail, and the issue where
 
 **The problem.** A language model asked about a song writes fluent text whether or not it knows anything. A wrong year or a misattributed cover reads as well as a true one.
 
-**What was done.** The model is not asked what it knows. The app retrieves evidence first, from MusicBrainz, Wikipedia and Wikidata, Last.fm and, if switched on, web search, and gives each line an id (`W1`, `L3`). The prompt holds only those lines, fenced and labelled as data, and asks for every factual sentence to end with the ids of the lines that support it. The reply shows as it arrives; once it is complete, the grounding check (`GroundingCheck`) splits it into sentences and classifies each: it cites only lines that exist; it cites the model's own knowledge, `[AI]`, which is allowed only with *AI service knowledge* switched on and is shown as unverified; it states a gap in the evidence; it cites nothing; or it cites a line that does not exist. Uncited sentences and citations to missing lines are marked in the insight, not hidden. Each citation becomes a chip the app builds from its own ids, so the model's text never becomes a link.
+**What was done.** The model is not asked what it knows. The app retrieves evidence first, from MusicBrainz, Wikipedia and Wikidata, Last.fm and, if switched on, web search, and gives each line an id (`W1`, `L3`). The prompt holds only those lines, fenced and labelled as data, and asks for every factual sentence to end with the ids of the lines that support it. The reply shows as it arrives; once it is complete, the grounding check (`GroundingCheck`) splits it into sentences and classifies each: it cites only lines that exist; it cites the model's own knowledge, `[AI]`, which is allowed only with *AI service knowledge* switched on and is shown as unverified; it states a gap in the evidence; it cites nothing; or it cites a line that does not exist. A sentence that cites lines that exist is then compared with them, narrowly (`Support`): a year it states must be in a cited line (as the year, its last two digits or its decade), and a name of two or more capitalised words must have at least one of its words there. The track's, the artist's and the album's own names count as backed, and a sentence citing a line in another language is not compared. A sentence that fails is marked as not backed by its source. Uncited sentences, citations to missing lines and sentences their lines do not back are marked in the insight, not hidden. Each citation becomes a chip the app builds from its own ids, so the model's text never becomes a link.
 
-**Its limit.** The check sees whether a sentence cites real lines, not whether those lines say what the sentence says: a plausible false sentence with a valid citation passes. It narrows what the model can invent; it does not prove the text true.
+**Its limit.** The check sees whether a sentence cites real lines, and compares only its years and its longer names with them, not whether those lines say what the sentence says. In doubt it finds a sentence backed, since a false mark dims a true sentence, so a plausible false sentence with a valid citation can pass. It narrows what the model can invent; it does not prove the text true.
 
 **New or known.** Asking a model to cite retrieved sources is a common technique. The check itself is this project's own code, first written for its browser prototype and ported to Kotlin, with the prototype's sentence splitting corrected where the test tracks showed it wrong (abbreviations such as `U.S.` and `feat.`, a citation after a closing quotation mark) or where a reply in Markdown hid an uncited sentence (a list item, or a sentence opening with an italic title). No library was used: what counts as a sentence, a citation and a stated gap is defined by this app's prompts.
 
-Design: [*Synthesis*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/design.md#synthesis) in the design, [*Synthesis and grounding*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/architecture.md#synthesis-and-grounding-core-ai) in the architecture. Issues: [#42](https://github.com/wkusnierczyk/sleevesight/issues/42), [#423](https://github.com/wkusnierczyk/sleevesight/issues/423), [#574](https://github.com/wkusnierczyk/sleevesight/issues/574).
+Design: [*Synthesis*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/design.md#synthesis) in the design, [*Synthesis and grounding*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/architecture.md#synthesis-and-grounding-core-ai) in the architecture. Issues: [#42](https://github.com/wkusnierczyk/sleevesight/issues/42), [#423](https://github.com/wkusnierczyk/sleevesight/issues/423), [#574](https://github.com/wkusnierczyk/sleevesight/issues/574), [#1036](https://github.com/wkusnierczyk/sleevesight/issues/1036).
 
 ## The right song, the right article, the right artist
 
