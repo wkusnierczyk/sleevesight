@@ -307,6 +307,7 @@ class PipelineSelfRevisionTest {
         const val ENDS =
             "It is a song from nothing in particular [MB1].\n\n" +
                 "Wait, I need to correct that, so I'll keep only what the line says [MB1]."
+
         const val ENDS_TOO = "It is a song [MB1]. Hmm, that is all the evidence lines give."
         const val HEADED = "It came out in 1974 [MB1].\n\n**Correction:** It came out in 1975 [MB1]."
         const val CLEAN = "It is a song [MB1]."

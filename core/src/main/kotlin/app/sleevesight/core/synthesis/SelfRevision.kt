@@ -148,10 +148,19 @@ enum class SelfRevision(
         ): GroundedText? =
             found.rest
                 .takeIf { it.isNotEmpty() && SelfCorrection.of(it) == null && find(it) == null }
-                ?.let { GroundingCheck.check(it, ids, grounded.allowModel) as? InsightReply.Written }
+                ?.let { GroundingCheck.check(it, ids, grounded.allowModel, notes = true) as? InsightReply.Written }
                 ?.grounded
                 ?.takeIf { it.paragraphs.isNotEmpty() && it.counts.uncited == 0 && it.counts.unknown == 0 }
-                ?.copy(withdrawn = listOfNotNull(grounded.withdrawn, found.withdrawn).joinToString("\n\n"))
+                ?.let {
+                    it.copy(
+                        withdrawn =
+                            listOfNotNull(
+                                grounded.withdrawn,
+                                found.withdrawn,
+                                it.withdrawn,
+                            ).joinToString("\n\n"),
+                    )
+                }
 
         // The sign [span] of [view] shows, [bare] being it as read (quotations and titles set aside,
         // its opening brackets and spaces too), with where what is kept after it starts; null for
