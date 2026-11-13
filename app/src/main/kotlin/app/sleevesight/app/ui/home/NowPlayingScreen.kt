@@ -328,7 +328,7 @@ internal fun NowPlayingContent(
     val settings = state.settings
     val pages = settings?.layout == Layout.SEPARATE_PAGES
     // Its own evidence, with its album's lines once its insight gathered them (#522).
-    val lines = sourcesLines(actions.itemNotes, track)
+    val lines = sourcesLines(actions.itemNotes, track, actions.genreNotes)
     val focus = rememberLineFocus(lines.evidence, track?.normalized)
     val fold = sourcesFold(foldMemory, playing, onNewTrack = settings?.sourcesOnNewTrack)
     // A citation tapped unfolds the list far enough to show its line, or opens it there on its page.
@@ -347,7 +347,7 @@ internal fun NowPlayingContent(
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 PlayerRow(playing.player, state.playback, actions)
                 ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
-                val notes = panelNotes(actions, cite, shown.modelAllowed, lines.evidence)
+                val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
                 TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
                 InsightCard(

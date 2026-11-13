@@ -70,10 +70,11 @@ internal fun NowPlayingPageContent(
                     is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions) { handoff.moveTo(back) }
                     HomePage.Genres, is HomePage.GenresAt -> {
                         val retries = Retries(shown.view, playing, actions.askAgain)
+                        val lines = sourcesLines(actions.itemNotes, shown.track, actions.genreNotes)
                         GenresPage(
                             shown.track,
                             state.settings,
-                            genreNotes(shown, actions, sourcesLines(actions.itemNotes, shown.track).evidence),
+                            genreNotes(shown, actions, lines),
                             GenresWays(retries::ofAll, actions.openSettingsAt) { handoff.moveTo(back) },
                             // *Search with AI* under no genre (#773), as in the panel on Home.
                             PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
@@ -88,18 +89,20 @@ internal fun NowPlayingPageContent(
 }
 
 // What the genres' page shows above its table (#523): a citation in a reason, or of a genre an
-// artist's description names (#1000, from [lines], *Sources*' own), opens *Sources*' page at its line.
+// artist's description names (#1000, from [lines], *Sources*' own), opens *Sources*' page at its line;
+// a reason is asked on those lines as they were before the pages listed for showing joined (#1205).
 private fun genreNotes(
     shown: Showing,
     actions: NowPlayingActions,
-    lines: EvidenceSet?,
+    lines: SourcesLines,
 ) = PanelNotes(
     actions.genreNotes,
     { id -> actions.openPage(HomePage.Sources(cite = id)) },
     shown.modelAllowed,
     actions.readAloud,
     actions.openSettingsAt,
-    lines,
+    lines.evidence,
+    lines.asked,
 )
 
 /**
@@ -160,7 +163,7 @@ private fun ItemPageOf(
             settings,
             actions,
             cite,
-            sourcesLines(actions.itemNotes, shown.track).evidence,
+            sourcesLines(actions.itemNotes, shown.track, actions.genreNotes).evidence,
         ) { track, written, of ->
             reporting =
                 Reported(track, written, of)
@@ -195,7 +198,7 @@ private fun SourcesPage(
     afterRetry: () -> Unit,
 ) {
     // Its own evidence, with its album's lines once its insight gathered them (#522).
-    val lines = sourcesLines(actions.itemNotes, shown.track)
+    val lines = sourcesLines(actions.itemNotes, shown.track, actions.genreNotes)
     val focus = rememberLineFocus(lines.evidence, shown.track?.normalized)
     val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
     // The track the citation was opened on: it is that track's line, never another's of the same id.
