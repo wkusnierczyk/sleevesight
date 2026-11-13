@@ -351,6 +351,8 @@
     <string name="credits_wikidata_text">Facts on songs, albums and artists, from Wikidata.</string>
     <string name="credits_lastfm">Last.fm</string>
     <string name="credits_lastfm_text">Artist bios and album summaries by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
+    <string name="credits_lrclib">LRCLIB</string>
+    <string name="credits_lrclib_text">Whether a track has lyrics, or is marked instrumental, as a sign for the genre Instrumental, from LRCLIB’s user-submitted records; never the lyrics themselves.</string>
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>

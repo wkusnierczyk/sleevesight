@@ -86,7 +86,11 @@ internal class Licence(
 
 private val CC0 = Licence("CC0", "https://creativecommons.org/publicdomain/zero/1.0/")
 
-/** The sources with an adapter; Discogs joins with its own in Phase 3. */
+/**
+ * The sources, in *Sources*' order: those with an adapter, and LRCLIB (#997), whose client says only
+ * whether a track has lyrics, a sign for its genre Instrumental. LRCLIB is free and open, with no key;
+ * no licence for its data is on record, so none is given. Discogs joins with its own adapter in Phase 3.
+ */
 internal val CREDITS: List<Credit> =
     listOf(
         Credit(R.string.credits_musicbrainz, R.string.credits_musicbrainz_text, CC0),
@@ -102,6 +106,7 @@ internal val CREDITS: List<Credit> =
         ),
         Credit(R.string.credits_wikidata, R.string.credits_wikidata_text, CC0),
         Credit(R.string.credits_lastfm, R.string.credits_lastfm_text, null),
+        Credit(R.string.credits_lrclib, R.string.credits_lrclib_text, null),
         Credit(R.string.credits_exa, R.string.credits_exa_text, null),
     )
 
