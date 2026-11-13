@@ -44,7 +44,7 @@ import org.robolectric.annotation.GraphicsMode
  * so that the chosen button's label, with its check, never wraps where the others do not: at the
  * default font size, a large one and twice the default on a narrow phone, with each count chosen,
  * every label is on one line and every button as tall as the others. A screen reader reads each
- * button after the line, without its colon. Native graphics, for the labels' real widths.
+ * button after the line, then its number. Native graphics, for the labels' real widths.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -73,7 +73,7 @@ class SaverCountButtonsTest {
             node.config
                 .getOrNull(SemanticsProperties.ContentDescription)
                 .orEmpty()
-                .any { it.startsWith("${line.removeSuffix(":")}: ") }
+                .any { it.startsWith("$line: ") }
         }
 
     private fun show(block: () -> Unit) {
@@ -125,7 +125,7 @@ class SaverCountButtonsTest {
         show {
             compose.waitUntil(WAIT_MS) { buttons().isNotEmpty() }
             compose.onNodeWithText(line).performScrollTo()
-            assertEquals("Number of track changes triggering autowrite before saver is activated:", line)
+            assertEquals("Track changes with autowrite until saver is activated", line)
             val read =
                 buttons().map {
                     it.config[SemanticsProperties.ContentDescription]
@@ -134,7 +134,7 @@ class SaverCountButtonsTest {
                 }
             assertEquals(
                 Settings.PAUSE_AUTO_WRITE_CHOICES.map {
-                    "Number of track changes triggering autowrite before saver is activated: $it"
+                    "Track changes with autowrite until saver is activated: $it"
                 },
                 read,
             )
