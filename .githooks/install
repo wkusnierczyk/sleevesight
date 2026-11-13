@@ -3,8 +3,8 @@
 # the clone's own hooks directory (`.git/hooks`, shared by every worktree). Each dispatcher runs the
 # hook of the checkout it runs in, `.githooks/<name>`, so every branch gets its own version of the
 # hooks. A checkout with no such hook (a branch from before them) gets a fallback instead: the guard
-# against commits on `main` and `dev-*` for `pre-commit` and `pre-merge-commit`, and Git LFS's own
-# hook, when Git LFS is installed, for the others.
+# against commits on `main` and `dev-*` for `pre-commit` and `pre-merge-commit`, nothing for
+# `commit-msg`, and Git LFS's own hook, when Git LFS is installed, for the others.
 #
 # Run it once per clone, from any of its checkouts: .githooks/install
 # Running it again rewrites the dispatchers, so it also updates them. A hook already there that is
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 marker='# sleevesight hook dispatcher'
-hooks=(pre-commit pre-merge-commit pre-push post-checkout post-commit post-merge)
+hooks=(pre-commit pre-merge-commit commit-msg pre-push post-checkout post-commit post-merge)
 
 if path=$(git config --get core.hooksPath); then
   printf >&2 'install: core.hooksPath is set (%s), so git would not run hooks from .git/hooks.\n' "$path"
@@ -43,6 +43,10 @@ case "$branch" in
 esac
 exit 0
 EOF
+      ;;
+    commit-msg)
+      # The merge check, `merge-check`, which such a checkout does not have.
+      echo 'exit 0'
       ;;
     *)
       # Git LFS's hook, as loud as the hooks in this directory when Git LFS is missing.

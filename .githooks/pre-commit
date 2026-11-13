@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Before each commit: the branch guard, then ktlint `--format` on the staged Kotlin files.
+# Before each commit: the branch guard, the merge check (`merge-check`; for a merge, and only when the
+# `commit-msg` hook that normally makes it is not installed), then ktlint `--format` on the staged
+# Kotlin files.
 #
 # ktlint runs on the staged content (the index), not the working copy, so what is committed is what
 # was formatted; each file it changed is staged again. A file with no unstaged changes gets the
@@ -17,6 +19,7 @@ set -euo pipefail
 export GIT_LITERAL_PATHSPECS=1
 
 "$(dirname "$0")/guard-branch"
+"$(dirname "$0")/merge-check" pre-commit
 
 # SHA-256 of `ktlint-cli-<version>-all.jar`, by version. A new version: take the `.sha256` beside the
 # jar on Maven Central, after checking the jar's `.asc` signature against ktlint's signing key

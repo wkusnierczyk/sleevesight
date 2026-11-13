@@ -121,6 +121,11 @@ jobs:
       - name: Release track
         run: .github/scripts/test-release-track.sh
 
+      # The merge check (`.githooks/merge-check`, #516) through the hooks as installed, in throwaway
+      # repositories.
+      - name: Merge check
+        run: .github/scripts/test-merge-check.sh
+
       # Notes that the release would not find or Play would refuse fail the pull request that adds
       # them rather than the release (`release.yml`). Every entry in the folder is checked, whatever
       # its name, hidden ones too. After a failed step as well, so that bad notes and a failed check

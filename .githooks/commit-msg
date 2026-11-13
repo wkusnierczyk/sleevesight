@@ -1,0 +1,5 @@
+#!/bin/sh
+# Before git records a commit with its message: the merge check (`merge-check`), for a merge commit.
+# It runs here because only this hook sees both the merge and its message, where a `Dropped:` trailer
+# can say why a line the incoming side added was left out. Other commits pass straight through.
+exec "$(dirname "$0")/merge-check" commit-msg "$1"
