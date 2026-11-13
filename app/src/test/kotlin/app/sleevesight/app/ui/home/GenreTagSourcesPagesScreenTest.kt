@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -160,6 +161,7 @@ class GenreTagSourcesPagesScreenTest {
 
     private fun show(
         list: AiGenreList,
+        lines: SourcesLines = sources,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -179,7 +181,7 @@ class GenreTagSourcesPagesScreenTest {
                                 notes =
                                     PanelNotes(Notes(list), onCite = { line ->
                                         cited += line
-                                    }, lines = sources.evidence),
+                                    }, lines = lines.evidence),
                             )
                         }
                     }
@@ -226,6 +228,40 @@ class GenreTagSourcesPagesScreenTest {
             assertEquals(listOf("S9"), cited)
             assertEquals(listOf(LASTFM_PAGE), opened)
         }
+
+    @Test
+    fun aRowCitingMorePagesThanItsActionsHoldOffersTheRestInSources() {
+        // Thirty pages, S7 to S36: more than a row's actions hold with its link to Last.fm.
+        val many = (1..30).map { WebPage("https://example.com/page-$it", null, "Page $it on the song.") }
+        val lines =
+            withPages(
+                SourcesLines(sources.evidence!!.without(JvmHasher) { it.id.drop(1).toInt() > 6 }),
+                many,
+                LinePurpose.GENRES,
+            )
+        show(AiGenreList(listOf(folkRock, popRock), MODEL, many.map { it.url }, many), lines) {
+            val row = GENRE_SOURCES_ROW_PREFIX + "0"
+            compose.onNodeWithTag(row).performScrollTo()
+            val actions =
+                compose
+                    .onNodeWithTag(
+                        row,
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNode()
+                    .config[SemanticsActions.CustomActions]
+            assertEquals(MAX_ROW_ACTIONS, actions.size)
+            // The citations that fit, the link kept, then the rest in *Sources*, from the first left out.
+            val fit = MAX_ROW_ACTIONS - 2
+            assertEquals(
+                (7 until 7 + fit).map { "Source S$it" } + "Open Last.fm in your browser" + "More pages in Sources",
+                actions.map { it.label },
+            )
+            actions.last().action()
+            assertEquals(listOf("S${7 + fit}"), cited)
+            // Every citation is still read.
+            compose.onNodeWithTag(row).assertContentDescriptionContains("Source S36", substring = true)
+        }
+    }
 
     @Test
     fun aRowWhoseAiGenresRestOnNoPageNamesTheModelAlone() =

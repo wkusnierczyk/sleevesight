@@ -433,6 +433,9 @@
     <!-- The action a screen reader offers on that row for each source's link, %1$s its name
          ("MusicBrainz"): the row is read as one item, so its links are offered as its actions. -->
     <string name="home_genre_tag_sources_open">Open %1$s in your browser</string>
+    <!-- The last action a screen reader offers on that row when it cites more pages than its actions
+         can hold: opens Sources at the first page left out, where every page is listed. -->
+    <string name="home_genre_tag_sources_more">More pages in Sources</string>
     <!-- Under the sources, once, when MusicBrainz gave any tag (D12), then on its own line
          home_genre_tags_licence, linking the licence. -->
     <string name="home_genre_tags_credit">MusicBrainz tags by contributors</string>

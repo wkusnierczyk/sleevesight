@@ -52,8 +52,10 @@ internal fun fromParts(
  * one item to a screen reader, in place of its parts (cleared), so nothing in it is read twice: read
  * as the row [name], its sources' [words], then each citation as it reads ("Track: Claude Haiku
  * 5.5, AI. From: Source S7, Source S8"), each citation an action that opens its line ([onCite]), then
- * each of [parts]' links one that opens its page in the browser ([openWebLink], #1040). No change to
- * a row with none, which reads as its words do.
+ * each of [parts]' links one that opens its page in the browser ([openWebLink], #1040). At most
+ * [MAX_ROW_ACTIONS] actions: past them, the links kept, the citations that fit, and one more, "More
+ * pages in Sources", which opens the first citation left out there, where every line is listed. No
+ * change to a row with none, which reads as its words do.
  */
 @Composable
 internal fun citedRow(
@@ -71,10 +73,18 @@ internal fun citedRow(
             stringResource(R.string.home_genre_tag_sources_open, link.text) to { openWebLink(uris, link.url) }
         }
     val reading = stringResource(R.string.home_genre_tag_sources_reading, name, words, cites.joinToString { it.first })
+    val more = stringResource(R.string.home_genre_tag_sources_more)
+    val actions =
+        if (cites.size + links.size <= MAX_ROW_ACTIONS) {
+            cites + links
+        } else {
+            val room = (MAX_ROW_ACTIONS - links.size - 1).coerceAtLeast(0)
+            cites.take(room) + links.take(MAX_ROW_ACTIONS - 1) + (more to { onCite(cited[room]) })
+        }
     return Modifier.clearAndSetSemantics {
         contentDescription = reading
         customActions =
-            (cites + links).map { (label, does) ->
+            actions.map { (label, does) ->
                 CustomAccessibilityAction(label) {
                     does()
                     true
@@ -82,6 +92,13 @@ internal fun citedRow(
             }
     }
 }
+
+/**
+ * The most actions a row of sources offers a screen reader (#1205): Compose's accessibility bridge
+ * fails on a node with 32 or more, and a menu that long is hard to use, as the insights' citations
+ * (`MAX_LINE_ACTIONS`).
+ */
+internal const val MAX_ROW_ACTIONS: Int = 16
 
 /**
  * The test tag of the line of citations under the sources of the row the AI's genres from the web
