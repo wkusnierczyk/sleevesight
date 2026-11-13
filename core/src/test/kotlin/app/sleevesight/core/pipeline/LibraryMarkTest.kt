@@ -6,6 +6,7 @@ import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.WeakEvidence
 import app.sleevesight.core.genres.combineGenres
 import app.sleevesight.core.genres.instrumental
 import app.sleevesight.core.genres.wantsVocalsCheck
@@ -21,8 +22,9 @@ import kotlin.test.assertTrue
 
 /**
  * LRCLIB's instrumental mark adding Instrumental for a song whose work credits composers alone
- * (#1024): on the track's row, credited to LRCLIB, a source's chip, not weak and not marked AI; the
- * paid check settled. Nothing added for lyrics or no match, with a vocal credit or a language of the
+ * (#1024): on the track's row, credited to LRCLIB, a source's chip, not marked AI, and weak as
+ * the mark's alone (#1055: LRCLIB's records are submitted by its users); the paid check
+ * settled. Nothing added for lyrics or no match, with a vocal credit or a language of the
  * work, MusicBrainz's lyrics links, or an Instrumental on a row already, which the mark only lifts.
  */
 class LibraryMarkTest {
@@ -53,10 +55,10 @@ class LibraryMarkTest {
         assertTrue(label.credits.isEmpty())
         assertNull(label.aiModel)
         assertFalse(label.aiAdded)
-        // A source's chip, before the AI's, not weak for its votes (it has none) or any sign.
+        // A source's chip, before the AI's, weak as LRCLIB's mark alone (#1055), not for its votes (it has none).
         val chip = marked.chips().single { it.label.genre.identity == TrackGenres.INSTRUMENTAL }
-        assertFalse(chip.weak)
-        assertNull(marked.weakEvidence(TrackGenres.INSTRUMENTAL))
+        assertTrue(chip.weak)
+        assertEquals(WeakEvidence.LibraryMark, marked.weakEvidence(TrackGenres.INSTRUMENTAL))
         // The paid check settled, LRCLIB not asked again.
         assertFalse(marked.wantsVocalsCheck())
         assertFalse(marked.wantsLibrary())
@@ -120,7 +122,7 @@ class LibraryMarkTest {
     }
 
     @Test
-    fun `an Instrumental on a row already is not added twice, only lifted`() {
+    fun `an Instrumental on a row already is not added twice, only lifted, and weak as the mark's alone`() {
         val tagged =
             combineGenres(
                 mapOf(LabelSource.LASTFM to artist(ARTIST, "instrumental", "jazz")),
@@ -134,7 +136,9 @@ class LibraryMarkTest {
         assertEquals(GenreLevel.ARTIST, label.genre.level)
         assertNull(label.markedBy)
         assertTrue(marked.rows.none { it.level == GenreLevel.TRACK })
-        assertFalse(marked.chips().single { it.label.genre.identity == TrackGenres.INSTRUMENTAL }.weak)
+        // Lifted from the featured artist, yet weak as LRCLIB's mark alone (#1055).
+        assertTrue(marked.chips().single { it.label.genre.identity == TrackGenres.INSTRUMENTAL }.weak)
+        assertEquals(WeakEvidence.LibraryMark, marked.weakEvidence(TrackGenres.INSTRUMENTAL))
     }
 
     @Test
