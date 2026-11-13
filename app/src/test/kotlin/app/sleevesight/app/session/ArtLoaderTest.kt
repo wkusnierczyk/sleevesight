@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -29,6 +30,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -149,9 +151,12 @@ class ArtLoaderTest {
     fun aProviderThatNeverAnswersIsGivenUpAndTheNextSourceTried() {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
+        val providerReturned = AtomicBoolean(false)
         provide { _, _ ->
             entered.countDown()
-            release.await()
+            // Bounded, so a loader that waits for the provider fails here rather than hanging.
+            release.await(30, TimeUnit.SECONDS)
+            providerReturned.set(true)
             null
         }
         served = png(Color.BLUE)
@@ -167,6 +172,7 @@ class ArtLoaderTest {
                 // The provider has the request and hangs; virtual time then passes the timeout at once.
                 assertTrue("the provider is asked", entered.await(10, TimeUnit.SECONDS))
                 assertEquals(Color.BLUE, art.await()?.getPixel(0, 0))
+                assertFalse("the load waited for the provider", providerReturned.get())
             }
             assertEquals(listOf("https://cdn/1"), fetched)
         } finally {
