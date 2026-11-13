@@ -457,9 +457,17 @@ class AppGraph internal constructor(
     /**
      * The session history and the record of track changes (D15), in a database of their own under
      * the app's `databases/`, which the backup and transfer rules exclude. Cleared together by
-     * `SessionHistory.clear`.
+     * `SessionHistory.clear`, which wipes what it deletes from the files ([SecureDeleteCallback]).
      */
-    val history = SessionHistory(AndroidSqliteDriver(HistoryDatabase.Schema, appContext, HISTORY_DATABASE))
+    val history =
+        SessionHistory(
+            AndroidSqliteDriver(
+                HistoryDatabase.Schema,
+                appContext,
+                HISTORY_DATABASE,
+                callback = SecureDeleteCallback(HistoryDatabase.Schema),
+            ),
+        )
 
     /** Lists each player the session layer sees under *Players*, switched off. */
     private val seenPlayersRecorder = SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen)
@@ -867,9 +875,15 @@ class AppGraph internal constructor(
     private suspend fun purgeCaches() {
         try {
             withContext(Dispatchers.IO) { caches.purgeExpired() }
+            warnIfUnwiped()
         } catch (e: SQLException) {
             Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
         }
+    }
+
+    // The caches' deletion stands; their log is checkpointed again at the next clear or purge.
+    private fun warnIfUnwiped() {
+        if (caches.logUnwiped) Log.w(TAG, "The caches' log is still to be wiped: a reader kept it busy")
     }
 
     /**
@@ -898,7 +912,7 @@ class AppGraph internal constructor(
             // Again just before the caches' clear, so it waits for the writes under way then too.
             clearEpoch.advance()
             val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
-            if (!cleared) Log.w(TAG, "The caches could not be cleared")
+            if (!cleared) Log.w(TAG, "The caches could not be cleared") else warnIfUnwiped()
             wiring.forgetRemembered()
             genreNotes.forget()
             itemNotes.forget()

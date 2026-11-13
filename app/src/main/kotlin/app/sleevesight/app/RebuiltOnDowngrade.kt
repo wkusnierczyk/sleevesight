@@ -3,7 +3,6 @@ package app.sleevesight.app
 import androidx.sqlite.db.SupportSQLiteDatabase
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlSchema
-import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 
 /**
  * How `cache.db` opens: created or migrated by [schema], as the driver's own callback does, and, on
@@ -11,10 +10,11 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
  * only a test phone sees, since Play forbids downgrades), dropped and created afresh rather than
  * failing at every query, as the platform's default does. The caches can be rebuilt, at the cost of
  * the lookups and paid calls again; the history cannot, and its database has no such callback.
+ * Secure deletion is on, as for the history ([SecureDeleteCallback]).
  */
 class RebuiltOnDowngrade(
     schema: SqlSchema<QueryResult.Value<Unit>>,
-) : AndroidSqliteDriver.Callback(schema) {
+) : SecureDeleteCallback(schema) {
     override fun onDowngrade(
         db: SupportSQLiteDatabase,
         oldVersion: Int,

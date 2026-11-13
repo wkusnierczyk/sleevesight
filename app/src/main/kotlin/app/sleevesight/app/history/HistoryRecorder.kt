@@ -181,6 +181,7 @@ class HistoryRecorder(
     suspend fun clear(): Boolean =
         queued("Could not clear the session history") {
             history.clear()
+            warnIfUnwiped()
             playback.forget()
             onCleared()
         }
@@ -201,8 +202,14 @@ class HistoryRecorder(
                 warn("The clock moved: old entries in the session history are kept until it is set right")
             } else {
                 history.deleteOlderThan(kept, now)
+                warnIfUnwiped()
             }
         }
+
+    // The deletion stands; its log is checkpointed again at the next clear or retention run.
+    private fun warnIfUnwiped() {
+        if (history.logUnwiped) warn("The session history's log is still to be wiped: a reader kept it busy")
+    }
 
     private suspend fun queued(
         failure: String,
