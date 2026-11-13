@@ -184,7 +184,7 @@ class SourcesPanelScreenTest {
     }
 
     private fun tap(tag: String) {
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithTag(tag, useUnmergedTree = true).performScrollTo().performClick()
         compose.waitForIdle()
     }
 
@@ -290,7 +290,7 @@ class SourcesPanelScreenTest {
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
                 .assertTouchHeightIsEqualTo(48.dp)
             // Inside: the table of the sources and the lines.
-            compose.onNodeWithTag(CHIP_PREFIX + "MB").assertExists()
+            compose.onNodeWithTag(CHIP_PREFIX + "MB", useUnmergedTree = true).assertExists()
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
 
             tap(SOURCES_PANEL_CLOSE_TAG)
@@ -347,7 +347,7 @@ class SourcesPanelScreenTest {
         }
 
     @Test
-    fun aScreenReaderReadsEachTableChipAsASwitchWithWhetherItsLinesShow() =
+    fun aScreenReaderReadsEachTableRowAsASwitchWithWhetherItsLinesShow() =
         show {
             tap(SOURCES_CHIP_TAG)
             tap(CHIP_PREFIX + "W")
@@ -356,7 +356,7 @@ class SourcesPanelScreenTest {
                 tag: String,
                 shown: Boolean,
             ) = compose
-                .onNodeWithTag(CHIP_PREFIX + tag)
+                .onNodeWithTag(ROW_PREFIX + tag)
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
                 .assert(
                     SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState(shown)),
