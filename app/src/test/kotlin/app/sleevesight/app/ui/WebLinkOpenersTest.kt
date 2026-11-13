@@ -114,10 +114,34 @@ class WebLinkOpenersTest {
         val elsewhere =
             sources.filter { it.name != "WebLinks.kt" }.flatMap { file ->
                 file.readLines().withIndex().mapNotNull { (i, line) ->
-                    "${file.name}:${i + 1}: ${line.trim()}".takeIf { OPENS.containsMatchIn(line) }
+                    "${file.name}:${i + 1}: ${line.trim()}".takeIf { opens(line) }
                 }
             }
         assertEquals(emptyList<String>(), elsewhere)
+    }
+
+    @Test
+    fun `each way of opening an address is found`() {
+        val made =
+            listOf(
+                "uriHandler.openUri(url)",
+                "LocalUriHandler.current.openUri (url)",
+                "startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))",
+                "startActivity(Intent(ACTION_VIEW, uri))",
+                "Intent(\"android.intent.action.VIEW\")",
+                // A web link annotation with no listener: Compose opens its address itself.
+                "withLink(LinkAnnotation.Url(url, styles)) { append(text) }",
+                "LinkAnnotation.Url(url)",
+            )
+        for (line in made) assertTrue(line, opens(line))
+        val fine =
+            listOf(
+                "withLink(LinkAnnotation.Url(part.url, styles) { openWebLink(uris, part.url) }) {",
+                "is TextPart.Link -> LinkAnnotation.Url(link.url, styles) { follow() }",
+                "openWebLink(uris, page.url)",
+                "Intent(Intent.ACTION_SENDTO, Uri.parse(\"mailto:\"))",
+            )
+        for (line in fine) assertFalse(line, opens(line))
     }
 
     private fun tagged(i: Int) = Modifier.testTag("$TAG$i")
@@ -156,6 +180,18 @@ class WebLinkOpenersTest {
             )
 
         /** A call that hands an address to the system: only [openWebLink] may. */
-        val OPENS = Regex("""\.openUri\s*\(|Intent\.ACTION_VIEW\b""")
+        val OPENS = Regex("""\.openUri\s*\(|\bACTION_VIEW\b|android\.intent\.action\.VIEW""")
+
+        /** A web link annotation, and one given a listener (`LinkAnnotation.Url(url, styles) { … }`). */
+        val URL_ANNOTATION = Regex("""\bLinkAnnotation\.Url\s*\(""")
+        val WITH_LISTENER = Regex("""\bLinkAnnotation\.Url\s*\([^()]*\)\s*\{""")
+
+        /**
+         * Whether [line] opens an address other than through [openWebLink]: a call that hands one to the
+         * system ([OPENS]), or a web link annotation with no listener, which Compose opens itself.
+         */
+        fun opens(line: String): Boolean =
+            OPENS.containsMatchIn(line) ||
+                URL_ANNOTATION.findAll(line).count() > WITH_LISTENER.findAll(line).count()
     }
 }

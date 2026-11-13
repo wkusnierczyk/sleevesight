@@ -8,7 +8,8 @@ import androidx.compose.ui.platform.UriHandler
 import app.sleevesight.core.text.WebLinks
 
 // The app's one way to open a link (#1040): every link it shows, a source's or its own, opens here.
-// `WebLinkOpenersTest` holds the rest of the app to that.
+// `WebLinkOpenersTest` holds the rest of the app to that: no other `openUri`, `ACTION_VIEW`, or web link
+// annotation without a listener of its own.
 
 /**
  * Opens [url] in the browser with [uris], when it is a web address ([WebLinks.of]: `http` or
@@ -16,7 +17,7 @@ import app.sleevesight.core.text.WebLinks
  * opens nothing, so a link from a source never opens another app; and where no app opens web pages,
  * nothing happens either: the address is on the screen, to be typed in elsewhere.
  */
-fun openWebLink(
+internal fun openWebLink(
     uris: UriHandler,
     url: String?,
 ): Boolean {
