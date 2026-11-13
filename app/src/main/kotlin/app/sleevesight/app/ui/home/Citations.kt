@@ -4,6 +4,7 @@ import android.content.res.Resources
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,6 +16,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -44,13 +46,24 @@ private class ProseText(
     val label: (String) -> String = { it },
 )
 
+/**
+ * A checked paragraph's sentences that are dimmed: uncited, citing a line that does not exist, or
+ * citing lines that do not back them (#1036).
+ */
+internal val DIMMED_STATUSES: Set<SentenceStatus> =
+    setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.UNSUPPORTED)
+
 /** The paragraphs of text not checked yet, split as the grounding check splits them: on a blank line. */
 internal fun paragraphsOf(text: String): List<String> =
     text.split(BLANK_LINE).map(String::trim).filter(String::isNotEmpty)
 
 /**
- * A checked paragraph of [grounded]: a sentence uncited, or citing a line that does not exist, is
- * dimmed, in the muted colour and in italics (#819). Its citations are read as the check read them,
+ * A checked paragraph of [grounded]: a sentence uncited, citing a line that does not exist, or citing
+ * lines that do not back it ([SentenceStatus.UNSUPPORTED], #1036), is dimmed, in the muted colour and
+ * in italics (#819). An unsupported sentence's line chips are a dim outline with no fill
+ * ([CiteStyles.unsupported]), and still open their lines; a screen reader hears each as "W2: does not
+ * say this", and the sentence as "(not backed by its source)" before its final stop, as an uncited
+ * one's "(not cited)". Its citations are read as the check read them,
  * against the card's own evidence and with the model's own knowledge as it was allowed when the
  * card was written ([GroundedText.allowModel]), not as the settings now allow it: a card kept stays
  * as it was checked.
@@ -87,9 +100,10 @@ internal fun CheckedProse(
         }
     if (shown.isEmpty()) return
     val uncited = resources.getString(R.string.home_cite_none)
+    val unbacked = resources.getString(R.string.home_cite_unbacked)
     val said =
         shown.joinToString(" ") { (sentence, runs, _) ->
-            val words = spoken(runs, policy, resources)
+            val words = spoken(runs, policy, resources, sentence.status == SentenceStatus.UNSUPPORTED)
             // An uncited sentence is said to be so before its final punctuation, where a citation
             // would be: "It is great (not cited)." A closing quote keeps the note out of the
             // quotation: 'They called it "great." (not cited)'. A closing bracket alone keeps it
@@ -97,15 +111,20 @@ internal fun CheckedProse(
             // the closers still keeps it out: '(They called it "great.") (not cited)'.
             val end = FINAL_PUNCTUATION.find(words)
             val at = if (end == null || end.groupValues[1].any { it in QUOTES }) words.length else end.range.first
-            if (sentence.status == SentenceStatus.UNCITED) "${words.take(at)} ($uncited)${words.drop(at)}" else words
+            when (sentence.status) {
+                SentenceStatus.UNCITED -> "${words.take(at)} ($uncited)${words.drop(at)}"
+                SentenceStatus.UNSUPPORTED -> "${words.take(at)} ($unbacked)${words.drop(at)}"
+                else -> words
+            }
         }
     val text =
         buildAnnotatedString {
             shown.forEachIndexed { i, (sentence, runs, newLine) ->
                 // A sentence the reply began on a new line (a list's item, a heading) shows on one (#574).
                 if (i > 0) append(if (newLine) '\n' else ' ')
-                val doubtful = sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
-                appendSentence(runs, policy, styles, onCite, if (doubtful) flagged else null)
+                val doubtful = sentence.status in DIMMED_STATUSES
+                val unsupported = sentence.status == SentenceStatus.UNSUPPORTED
+                appendSentence(runs, policy, styles, onCite, if (doubtful) flagged else null, unsupported)
             }
         }
     Prose(ProseText(text, said, lines(sentences, policy), label), onCite)
@@ -137,18 +156,23 @@ internal fun UncheckedProse(
 
 // A paragraph with citation chips, read by a screen reader with each chip said in words, and each
 // line a chip scrolls to offered as an action too: a description read in place of the text may hide
-// the links in it.
+// the links in it. An unsupported sentence's chips are outlined (#1036), drawn behind the text from
+// the layout the same frame measured, as `MarkedText` draws a link's mark.
 @Composable
 private fun Prose(
     prose: ProseText,
     onCite: (String) -> Unit,
 ) {
     val resources = LocalResources.current
+    val outlined = remember(prose.text) { outlinedChips(prose.text) }
+    val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
+    val ink = MaterialTheme.colorScheme.onSurfaceVariant
     Text(
         prose.text,
         style = MaterialTheme.typography.bodyLarge,
+        onTextLayout = { layout.value = it },
         modifier =
-            Modifier.semantics {
+            Modifier.drawChipOutlines(outlined, layout, ink).semantics {
                 contentDescription = prose.spoken
                 if (prose.lines.isNotEmpty()) {
                     customActions =
@@ -169,6 +193,7 @@ private fun spoken(
     runs: List<ShownRun>,
     policy: CitePolicy,
     resources: Resources,
+    unsupported: Boolean = false,
 ): String =
     runs
         .joinToString("") { segment ->
@@ -177,7 +202,11 @@ private fun spoken(
                 is ShownRun.Cite -> {
                     val said =
                         when (citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)) {
-                            CiteKind.LINE -> resources.getString(R.string.home_cite, policy.label(segment.id))
+                            CiteKind.LINE -> {
+                                val cite = if (unsupported) R.string.home_cite_unsupported else R.string.home_cite
+                                resources.getString(cite, policy.label(segment.id))
+                            }
+
                             CiteKind.MODEL -> resources.getString(R.string.home_cite_model)
                             CiteKind.UNKNOWN -> resources.getString(R.string.home_cite_unknown, segment.id)
                         }
@@ -211,11 +240,16 @@ private class CitePolicy(
     val label: (String) -> String = { it },
 )
 
-/** The citation chips' looks: a line's (a link), the model's knowledge's, a missing line's. */
+/**
+ * The citation chips' looks: a line's (a link), the model's knowledge's, a missing line's, and a
+ * line's that does not back its sentence ([unsupported], #1036: no fill, in the dimmed text's colour,
+ * the paragraph drawing its outline).
+ */
 internal class CiteStyles(
     val line: SpanStyle,
     val model: SpanStyle,
     val unknown: SpanStyle,
+    val unsupported: SpanStyle = line,
 )
 
 /** The citation chips' looks in the theme's colours, as the insight shows them. */
@@ -231,16 +265,20 @@ internal fun citeStyles(): CiteStyles {
         line = chip(colors.secondaryContainer, colors.onSecondaryContainer),
         model = chip(colors.tertiaryContainer, colors.onTertiaryContainer),
         unknown = chip(colors.errorContainer, colors.onErrorContainer),
+        unsupported = chip(Color.Unspecified, colors.onSurfaceVariant),
     )
 }
 
-// A sentence's [runs], its titles in italics (#555), dimmed when [flagged].
+// A sentence's [runs], its titles in italics (#555), dimmed when [flagged], its line chips outlined
+// when its lines do not back it ([unsupported], #1036).
+@Suppress("LongParameterList") // The sentence, how its citations read and show, and how it is marked.
 private fun AnnotatedString.Builder.appendSentence(
     runs: List<ShownRun>,
     policy: CitePolicy,
     styles: CiteStyles,
     onCite: (String) -> Unit,
     flagged: SpanStyle?,
+    unsupported: Boolean = false,
 ) {
     for (segment in runs) {
         when (segment) {
@@ -248,7 +286,7 @@ private fun AnnotatedString.Builder.appendSentence(
             is ShownRun.Cite -> {
                 val kind = citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)
                 val shownAs = if (kind == CiteKind.LINE) policy.label(segment.id) else segment.id
-                appendCite(segment.id, shownAs, kind, styles, onCite)
+                appendCite(segment.id, shownAs, kind, styles, onCite, unsupported)
             }
         }
     }
@@ -274,22 +312,28 @@ internal fun AnnotatedString.Builder.appendText(
 }
 
 /**
- * A citation as a chip, shown as [shownAs]: a line's scrolls to it ([onCite] with [id]); the model's
- * and a missing line's only say what they are. Also *Explain the song*'s (#908), whose chip of a page
- * opens it.
+ * A citation as a chip, shown as [shownAs]: a line's scrolls to it ([onCite] with [id]), with no
+ * fill and an outline the paragraph draws ([OUTLINE_TAG]) when it does not back its sentence
+ * ([unsupported], #1036); the model's and a missing line's only say what they are. Also *Explain the
+ * song*'s (#908), whose chip of a page opens it.
  */
+@Suppress("LongParameterList") // The citation, how it shows, and what a tap does.
 internal fun AnnotatedString.Builder.appendCite(
     id: String,
     shownAs: String,
     kind: CiteKind,
     styles: CiteStyles,
     onCite: (String) -> Unit,
+    unsupported: Boolean = false,
 ) {
     val label = " $shownAs "
     when (kind) {
         CiteKind.LINE -> {
-            val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(styles.line)) { onCite(id) }
+            val style = if (unsupported) styles.unsupported else styles.line
+            val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(style)) { onCite(id) }
+            if (unsupported) pushStringAnnotation(OUTLINE_TAG, id)
             withLink(link) { append(label) }
+            if (unsupported) pop()
         }
 
         CiteKind.MODEL -> withStyle(styles.model) { append(label) }
@@ -299,6 +343,9 @@ internal fun AnnotatedString.Builder.appendCite(
 
 /** The prefix of a citation chip's link tag, before the evidence id. */
 const val CITE_PREFIX: String = "cite:"
+
+/** The tag of the annotation over a chip drawn as an outline (#1036), its evidence id the item. */
+const val OUTLINE_TAG: String = "outline"
 
 private val CITE_SIZE = 0.8.em
 private val BLANK_LINE = Regex("\\n\\s*\\n")

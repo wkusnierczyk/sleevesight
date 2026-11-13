@@ -153,7 +153,7 @@ class TesterReportTest {
             "  https://musicbrainz.org/recording/1",
             "Written with: prompt version 5, Anthropic, claude-haiku-5-5, effort low",
             "It was recorded in 1973 [MB1]. It topped the charts [W1].",
-            "Citation check: ok 2, model 0, hedge 0, uncited 0, unknown 0",
+            "Citation check: ok 2, model 0, hedge 0, uncited 0, unknown 0, unsupported 0",
             "- ok [MB1]: It was recorded in 1973 [MB1].",
         )) {
             assertTrue("$line in:\n$text", text.lines().contains(line))
@@ -211,7 +211,7 @@ class TesterReportTest {
         assertTrue(lines.joinToString("\n"), shown >= 0)
         assertEquals("Taken out, the model's correction of its own reply (not shown, not checked):", lines[shown + 1])
         assertEquals("It was recorded in 1973 [MB1]. It is great.", lines[shown + 2])
-        assertTrue(lines.contains("Citation check: ok 1, model 0, hedge 0, uncited 0, unknown 0"))
+        assertTrue(lines.contains("Citation check: ok 1, model 0, hedge 0, uncited 0, unknown 0, unsupported 0"))
         // Without a correction, no such line.
         assertFalse(TesterReport.nowPlaying(snapshot()).contains("Taken out"))
     }

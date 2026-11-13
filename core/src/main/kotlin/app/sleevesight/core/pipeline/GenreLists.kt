@@ -41,11 +41,15 @@ sealed interface GenreListState {
     /**
      * The list, as checked: [genres], labels of the app's genre list, in the reply's order, at most
      * five; none when the reply named none of them. [model] is the model's id, as the key has it.
+     * From the web (#801), [sources] are the addresses of the pages it rests on, and [pages] those
+     * pages with their passages, in the same order (#1205: *Sources* lists them); a list kept before
+     * its passages were, has each page's address as its passage.
      */
     data class Listed(
         val genres: List<GenreLabel>,
         val model: String,
         val sources: List<String> = emptyList(),
+        val pages: List<WebPage> = emptyList(),
     ) : GenreListState
 
     /** The call failed, for [reason] (a `ReplyFailures` label, or [GenreLists.MALFORMED]); not kept. */
@@ -120,7 +124,8 @@ class GenreLists(
     suspend fun kept(key: CardKey): KeptList? {
         val card = attempt { cache.keptCard(key) } ?: return null
         val web = KeptListText.of(card.text)
-        return read(web?.reply ?: card.text, key, web?.pages)?.let { KeptList(it, card.writtenAt) }
+        val found = web?.found.orEmpty().map(KeptPage::page)
+        return read(web?.reply ?: card.text, key, web?.pages, found)?.let { KeptList(it, card.writtenAt) }
     }
 
     /**
@@ -159,7 +164,7 @@ class GenreLists(
                 asked.searchFailed -> null
                 // From the web, no page found: no call, and no genre.
                 end == null && pages != null -> GenreListState.Listed(emptyList(), key.model)
-                else -> done?.let { read(reply, key, pages) }
+                else -> done?.let { read(reply, key, pages, asked.pages.orEmpty()) }
             }
         val state =
             listed
@@ -168,7 +173,8 @@ class GenreLists(
             val at = now()
             if (listed != null) {
                 val text = reply.ifEmpty { "{}" }
-                attempt { cache.keep(key, if (pages == null) text else KeptListText(text, pages).text(), at) }
+                val kept = if (pages == null) text else KeptListText(text, pages, listed.pages.map(KeptPage::of)).text()
+                attempt { cache.keep(key, kept, at) }
             }
             show(state, at)
             state
@@ -194,11 +200,13 @@ class GenreLists(
 
     // The list in [reply], checked, by [key]'s model; null when it is not the JSON object asked for.
     // From the web ([pages], the addresses found), its genres only with a page among them, as *Ask
-    // AI*'s are (`sameAddress`), and none without (#801).
+    // AI*'s are (`sameAddress`), and none without (#801); each page it rests on with its passage from
+    // [kept] (#1205), or its address for one [kept] lacks.
     private fun read(
         reply: String,
         key: CardKey,
         pages: List<String>? = null,
+        kept: List<WebPage> = emptyList(),
     ): GenreListState.Listed? {
         val answer = AiSearchAnswers.objectIn(reply) ?: return null
         val names = strings(answer["genres"])
@@ -214,7 +222,9 @@ class GenreLists(
                 sources == null ||
                     sources.isNotEmpty()
             }
-        return GenreListState.Listed(genres.orEmpty(), key.model, sources.orEmpty())
+        val read = sources.orEmpty()
+        val passages = read.map { url -> kept.firstOrNull { it.url == url } ?: WebPage(url, null, url) }
+        return GenreListState.Listed(genres.orEmpty(), key.model, read, passages)
     }
 
     // The strings of [element], an array; none when it is not one.
@@ -286,13 +296,15 @@ class GenreLists(
 
 /**
  * What a list from the web keeps in the synthesis cache (#801): its [reply], and the addresses of
- * the [pages] its searches found, which check its sources again as it is read. Marked [MARK]; a
- * text without it is a list from the model's knowledge, as kept before.
+ * the [pages] its searches found, which check its sources again as it is read; and the pages it
+ * rests on with their passages ([found], #1205), which *Sources* lists; none in a list kept before.
+ * Marked [MARK]; a text without it is a list from the model's knowledge, as kept before.
  */
 @Serializable
 internal class KeptListText(
     val reply: String,
     val pages: List<String>,
+    val found: List<KeptPage> = emptyList(),
     @SerialName(MARK) val mark: Int = 1,
 ) {
     fun text(): String = JSON.encodeToString(serializer(), this)

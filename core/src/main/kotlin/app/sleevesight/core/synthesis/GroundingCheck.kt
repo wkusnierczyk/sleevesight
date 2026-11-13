@@ -22,6 +22,12 @@ enum class SentenceStatus {
 
     /** Cites an id that is not in the evidence, or `[AI]` while model knowledge is off. */
     UNKNOWN,
+
+    /**
+     * Cites only evidence that exists, but a name, number or date of it is in none of the lines it
+     * cites ([Support], #1036): kept, shown as not backed.
+     */
+    UNSUPPORTED,
 }
 
 /**
@@ -45,8 +51,9 @@ data class GroundingCounts(
     val hedge: Int,
     val uncited: Int,
     val unknown: Int,
+    val unsupported: Int = 0,
 ) {
-    val total: Int get() = ok + model + hedge + uncited + unknown
+    val total: Int get() = ok + model + hedge + uncited + unknown + unsupported
 }
 
 /**
@@ -75,17 +82,19 @@ data class GroundedText(
             hedge = all[SentenceStatus.HEDGE] ?: 0,
             uncited = all[SentenceStatus.UNCITED] ?: 0,
             unknown = all[SentenceStatus.UNKNOWN] ?: 0,
+            unsupported = all[SentenceStatus.UNSUPPORTED] ?: 0,
         )
     }
 
     /**
      * Whether a sentence cites an evidence line, a source's or a web page's, and not only the model's
-     * own knowledge (`[AI]`), among those that pass the check ([SentenceStatus.OK],
-     * [SentenceStatus.MODEL]): read from the citations, never the words (#695).
+     * own knowledge (`[AI]`), among those that cite only lines that exist ([SentenceStatus.OK],
+     * [SentenceStatus.MODEL], and [SentenceStatus.UNSUPPORTED], which still cites one): read from
+     * the citations, never the words (#695).
      */
     val citesSource: Boolean by lazy {
         paragraphs.flatten().any { sentence ->
-            (sentence.status == SentenceStatus.OK || sentence.status == SentenceStatus.MODEL) &&
+            sentence.status in CITING &&
                 sentence.cites.any { it != GroundingCheck.MODEL_ID }
         }
     }
@@ -95,6 +104,10 @@ data class GroundedText(
      * ([citesSource]), and one cites `[AI]`, as the knowledge allowed.
      */
     val fromModelAlone: Boolean get() = !citesSource && counts.model > 0
+
+    private companion object {
+        val CITING = setOf(SentenceStatus.OK, SentenceStatus.MODEL, SentenceStatus.UNSUPPORTED)
+    }
 }
 
 /** What the model replied, as the check reads it. */
@@ -119,10 +132,14 @@ sealed interface InsightReply {
  * the fresh version ([SelfCorrection], #597), and then, for an insight, a note the model left at
  * its end on its own evidence or work ([MetaNote], #1207): the counts describe what the card shows.
  *
- * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
- * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
- * (no lookbehind, D2): the simulator's sentence split, which uses one, is spelled out as a scan.
+ * Checked against the evidence's lines ([check] with an [EvidenceSet]), a sentence that cites only
+ * lines that exist is also checked for support (#1036, [Support]): a name, number or date of it that
+ * none of its lines holds makes it [SentenceStatus.UNSUPPORTED]. That compares words, not meaning, so
+ * a false sentence that reuses its line's words still passes. Hedge detection is English only, as
+ * the prompts are. Patterns are portable (no lookbehind, D2): the simulator's sentence split, which
+ * uses one, is spelled out as a scan.
  */
+@Suppress("TooManyFunctions") // The check and its sentence split, each rule a step of its own.
 object GroundingCheck {
     /** The model's id for its own knowledge, its source's tag: `AI` ([LEGACY_MODEL_ID] until 0.1.8). */
     val MODEL_ID: String = SourceId.MODEL.tag
@@ -157,14 +174,52 @@ object GroundingCheck {
 
     /**
      * Checks [reply] against [evidence]; `[AI]` is allowed only when [allowModel]; a note on the
-     * model's own evidence at its end is taken out only with [notes] ([MetaNote]).
+     * model's own evidence at its end is taken out only with [notes] ([MetaNote]). A sentence that
+     * cites only lines that exist is checked for support by their words ([supported]), with the
+     * words of what the card is about, [subject] (the track's title, artists and album), allowed
+     * besides.
      */
     fun check(
         reply: String,
         evidence: EvidenceSet,
         allowModel: Boolean,
         notes: Boolean = false,
-    ): InsightReply = check(reply, evidence.ids.toSet(), allowModel, notes)
+        subject: Collection<String> = emptyList(),
+    ): InsightReply =
+        when (val checked = check(reply, evidence.ids.toSet(), allowModel, notes)) {
+            InsightReply.NoEvidence -> checked
+            is InsightReply.Written -> InsightReply.Written(supported(checked.grounded, evidence, subject))
+        }
+
+    /**
+     * [grounded] with each sentence that cites only lines of [evidence] ([SentenceStatus.OK]) and
+     * that they do not back ([Support]) marked [SentenceStatus.UNSUPPORTED] (#1036); the words of
+     * [subject], and of [evidence]'s player release line ([SourceId.PLAYER]), count as backed. Itself when none is.
+     */
+    fun supported(
+        grounded: GroundedText,
+        evidence: EvidenceSet,
+        subject: Collection<String> = emptyList(),
+    ): GroundedText {
+        // The player's release line names the album and its year for every card, cited or not.
+        val known = subject + evidence.lines.filter { it.source == SourceId.PLAYER }.map { it.text }
+        var changed = false
+        val paragraphs =
+            grounded.paragraphs.map { paragraph ->
+                paragraph.map { sentence ->
+                    val lines = sentence.cites.mapNotNull { evidence[it] }
+                    val unsupported =
+                        sentence.status == SentenceStatus.OK && !Support.backs(sentence.text, lines, known)
+                    if (unsupported) {
+                        changed = true
+                        sentence.copy(status = SentenceStatus.UNSUPPORTED)
+                    } else {
+                        sentence
+                    }
+                }
+            }
+        return if (changed) grounded.copy(paragraphs = paragraphs) else grounded
+    }
 
     /**
      * Checks [reply] against the evidence [ids]; `[AI]` is allowed only when [allowModel]. With

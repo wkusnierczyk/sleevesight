@@ -52,6 +52,9 @@ internal class InsightWriter(
     private val settings = input.settings
     private val nowPlaying = input.nowPlaying
     private val track = input.track
+
+    // What the insight is about, whose names a sentence may give without its line (#1036).
+    private val subject = subjectOf(CardEntity.Track(track, nowPlaying.duration), nowPlaying)
     private val key = track.lookupKey
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
@@ -117,7 +120,7 @@ internal class InsightWriter(
         val narrates = !evidence.nothingToNarrate(allowModel, artistsKnown = track.artists.isNotEmpty())
         val wanted = if (provider != null && model != null && narrates) cardKey(provider, model) else null
         if (wanted != null && served(wanted, control)) return
-        val other = wanted?.let { guard.keptByOther(it, evidence, allowModel) }
+        val other = wanted?.let { guard.keptByOther(it, evidence, allowModel, subject) }
         if (other == null) {
             control.decidedWithoutCall()
             show(InsightState.Idle(canWrite = false))
@@ -174,7 +177,7 @@ internal class InsightWriter(
         if (served(wanted, control)) return
         // None under its own key: the one another service, model or effort wrote, if kept (#911),
         // which the control shows in its place unless the run writes anew.
-        val other = guard.keptByOther(wanted, evidence, allowModel)
+        val other = guard.keptByOther(wanted, evidence, allowModel, subject)
         when {
             control.decide(settings, other, evidence) -> {
                 calls(ai, model, wanted, control)
@@ -443,7 +446,7 @@ internal class InsightWriter(
         allowModel: Boolean,
         cached: Boolean,
     ): InsightReply? =
-        readReply(text, evidence, allowModel) { found, salvaged ->
+        readReply(text, evidence, allowModel, subject) { found, salvaged ->
             emit(PipelineEvent.SelfRevised(key, found.sign, cached = cached, salvaged = salvaged))
         }
 
@@ -493,15 +496,17 @@ internal class InsightWriter(
 // cache is ([allowModel] as the run's), written by its own key; null for none. `InsightWriter` reads it
 // only once [wanted] has none of its own, so it never stands in for one. Nothing is logged for it: it
 // is shown when the run offers Write, as the card paid for, not as the run's own; or, with the
-// selected model unavailable (`keptWithoutService`), as the run's own, with nothing offered.
+// selected model unavailable (`keptWithoutService`), as the run's own, with nothing offered. Its
+// sentences are checked for support with the run's [subject], the player's names among them (#1036).
 private suspend fun CacheGuard.keptByOther(
     wanted: CardKey,
     evidence: EvidenceSet,
     allowModel: Boolean,
+    subject: List<String>,
 ): InsightState.Written? {
     val others = attempt("read other insights") { keptByOthers(wanted) }.orEmpty()
     return others.firstNotNullOfOrNull { other ->
-        (readReply(other.card.text, evidence, allowModel) as? InsightReply.Written)?.let { reply ->
+        (readReply(other.card.text, evidence, allowModel, subject) as? InsightReply.Written)?.let { reply ->
             InsightState.Written(
                 reply.grounded,
                 cached = true,

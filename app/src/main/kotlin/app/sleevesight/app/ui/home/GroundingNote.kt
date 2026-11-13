@@ -38,7 +38,8 @@ internal fun GroundingLine(
 
 /**
  * The note under the insight (#437), shown only when there is something to say: the sentences the
- * sources do not back, which are dimmed (uncited, or citing missing evidence; #819), named by
+ * sources do not back, which are dimmed (uncited, citing missing evidence, or citing lines that do
+ * not back them, #1036; #819), named by
  * that mark (#664), in one text for any number of them ("Dimmed text is not backed by the
  * sources.", #854). A sentence from the
  * model's own knowledge is not counted: it is not dimmed, and its own chip says where it is from. A
@@ -60,18 +61,16 @@ private fun Note(
 private fun unbacked(grounded: GroundedText): Int =
     grounded.paragraphs.sumOf { paragraph ->
         paragraph.zip(shown(paragraph.map { it.text }, checked = true)).count { (sentence, runs) ->
-            sentence.status in DIMMED && !runs.isBlank()
+            sentence.status in DIMMED_STATUSES && !runs.isBlank()
         }
     }
 
-// The statuses `CheckedProse` dims, which the note counts.
-private val DIMMED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN)
-
 /**
  * The statuses of a sentence the sources do not back, which reading aloud marks "Unverified:" (#325):
- * the ones dimmed ([DIMMED], which the note counts) and the model's own knowledge.
+ * the ones dimmed ([DIMMED_STATUSES], which the note counts, citing lines that do not back them, #1036,
+ * among them) and the model's own knowledge.
  */
-internal val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
+internal val UNBACKED = DIMMED_STATUSES + SentenceStatus.MODEL
 
 /**
  * Under an insight, a song's, an artist's or an album's insight or a genre's reason that cites lines
@@ -147,12 +146,23 @@ private fun Meta(
             add(pluralStringResource(R.plurals.home_meta_grounded, counts.total, sound, counts.total))
             if (counts.model > 0) add(stringResource(R.string.home_meta_model, counts.model))
             if (counts.uncited > 0) add(stringResource(R.string.home_meta_uncited, counts.uncited))
+            if (counts.unsupported > 0) add(unsupported(grounded))
             if (counts.unknown > 0) {
                 add(pluralStringResource(R.plurals.home_meta_unknown, counts.unknown, counts.unknown))
             }
             if (grounded.withdrawn != null) add(stringResource(R.string.home_meta_self_corrected))
         }
     MetaLine(parts.joinToString(" · "), modifier)
+}
+
+/**
+ * The sentences whose lines do not back them (#1036), with the lines they cite: "1 unsupported (W2)".
+ */
+@Composable
+private fun unsupported(grounded: GroundedText): String {
+    val sentences = grounded.paragraphs.flatten().filter { it.status == SentenceStatus.UNSUPPORTED }
+    val cites = sentences.flatMap { it.cites }.distinct().joinToString(", ")
+    return stringResource(R.string.home_meta_unsupported, sentences.size, cites)
 }
 
 @Composable

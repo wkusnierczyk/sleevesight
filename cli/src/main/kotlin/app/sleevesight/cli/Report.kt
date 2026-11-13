@@ -215,8 +215,10 @@ class Report(
             appendLine()
             return
         }
-        appendLine("| Track | State | Sentences | ok | model | hedge | uncited | unknown | Tokens in / out |")
-        appendLine("|---|---|---|---|---|---|---|---|---|")
+        appendLine(
+            "| Track | State | Sentences | ok | model | hedge | uncited | unknown | unsupported | Tokens in / out |",
+        )
+        appendLine("|---|---|---|---|---|---|---|---|---|---|")
         for ((index, result) in tried) {
             val insight = result.state.insight
             if (insight is InsightState.Written) {
@@ -225,10 +227,12 @@ class Report(
                 val state = if (insight.complete) "written" else "written, cut off"
                 appendLine(
                     "| ${result.label} | $state | ${c.total} | ${c.ok} | ${c.model} | ${c.hedge} | ${c.uncited} | " +
-                        "${c.unknown} | $tokens |",
+                        "${c.unknown} | ${c.unsupported} | $tokens |",
                 )
             } else {
-                appendLine("| ${result.label} | ${insightLabel(insight)} | | | | | | | ${tokens(callsOf(index), "")} |")
+                appendLine(
+                    "| ${result.label} | ${insightLabel(insight)} | | | | | | | | ${tokens(callsOf(index), "")} |",
+                )
             }
         }
         appendLine()
@@ -513,7 +517,7 @@ private class TrackSection(
         val cached = if (insight.cached) " (cached)" else ""
         appendLine(
             "Insight$cached: ok ${c.ok}, model ${c.model}, hedge ${c.hedge}, uncited ${c.uncited}, " +
-                "unknown ${c.unknown}.",
+                "unknown ${c.unknown}, unsupported ${c.unsupported}.",
         )
         if (state.evidence?.lines?.any { it.source == SourceId.WEB } == true) {
             appendLine("Written with web search lines: do not commit or post (Exa's terms, §4.2(a)).")

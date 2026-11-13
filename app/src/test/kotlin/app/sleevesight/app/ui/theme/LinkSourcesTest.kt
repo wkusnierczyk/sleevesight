@@ -110,7 +110,8 @@ class LinkSourcesTest {
                 "import androidx.compose.ui.text.LinkAnnotation",
                 "import androidx.compose.ui.text.TextLinkStyles",
                 "import androidx.compose.ui.text.withLink",
-                "val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(styles.line)) { onCite(id) }",
+                // Filled, or outlined for a sentence its lines do not back (#1036).
+                "val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(style)) { onCite(id) }",
                 "withLink(link) { append(label) }",
             )
 
