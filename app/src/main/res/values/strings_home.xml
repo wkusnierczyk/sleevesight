@@ -424,6 +424,12 @@
     <!-- Where the tags come from (#786): a bold heading, then the same rows, each source's name
          (Last.fm, MusicBrainz) linking that track's or artist's page there. -->
     <string name="home_genre_tag_sources">Tag sources</string>
+    <!-- Under the model's name on the row the AI's genres from the web feed (#1205), before the
+         citations of the pages they rest on, each a link to its line in Sources: "From: S7 S8". -->
+    <string name="home_genre_tag_sources_from">From:</string>
+    <!-- How a screen reader reads that row: %1$s the row's name ("Track"), %2$s its sources
+         ("Claude Haiku 5.5, AI"), %3$s the citations, each as home_cite reads it, comma-separated. -->
+    <string name="home_genre_tag_sources_reading">%1$s: %2$s. From: %3$s</string>
     <!-- Under the sources, once, when MusicBrainz gave any tag (D12), then on its own line
          home_genre_tags_licence, linking the licence. -->
     <string name="home_genre_tags_credit">MusicBrainz tags by contributors</string>
@@ -722,6 +728,9 @@
     <!-- An album's own line in Sources, found for the album's insight (#522): "album · en.wikipedia.org". -->
     <string name="home_scope_album">album</string>
     <string name="home_scope_web">web</string>
+    <!-- A web line in Sources named by what it was read for, in place of its scope (#1205): a page
+         the AI's genre list rests on, "genres · en.wikipedia.org". -->
+    <string name="home_line_purpose_genres">genres</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <string name="home_source_name_discogs">Discogs</string>
     <string name="home_source_name_web">Web search</string>

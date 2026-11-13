@@ -61,7 +61,7 @@ internal fun GenreBody(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // What the genre is, and *Why is this …?* (#523), above the tags.
         GenreAbout(track, genre, notes, search, afterRetry)
-        TagsGrid(track, genre, notes.onCite)
+        TagsGrid(track, genre, notes.onCite, notes.lines)
     }
 }
 

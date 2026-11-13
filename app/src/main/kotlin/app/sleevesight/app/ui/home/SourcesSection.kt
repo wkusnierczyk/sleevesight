@@ -205,7 +205,7 @@ internal fun SourcesBody(
         FoldStatus(fold, count, total, filtered)
         if (count == 0) return@Column
         if (shown.cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
-        Entries(entries.take(count), tagWidth, focus, shownLines.album)
+        Entries(entries.take(count), tagWidth, focus, shownLines)
         FoldControls(fold, count, total)
     }
 }
@@ -269,7 +269,7 @@ private fun Entries(
     entries: List<Entry>,
     tagWidth: Dp,
     focus: LineFocus,
-    album: Set<String>,
+    shown: SourcesLines,
 ) {
     val rejected = entries.indexOfFirst { it is Entry.Rejected }.takeIf { it >= 0 } ?: entries.size
     // The rows at [indices], each under its kind's heading when the one before is of another kind.
@@ -282,7 +282,7 @@ private fun Entries(
                     is Entry.Line -> {
                         val line = entry.line
                         val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
-                        EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id], line.id in album)
+                        EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id], shown.what(line))
                     }
 
                     is Entry.Unverified -> {
@@ -309,11 +309,12 @@ private fun Entries(
 }
 
 /**
- * One evidence line: its id, its text, and its scope with a link to where it was found; flashed
- * when a citation points at it. A line found in the track's language (#902, `EvidenceLine.language`)
- * shows its text as found, set in that language's locale (a span over the whole text, so a screen
- * reader is given the language too, not only the drawing), and says the language after the host:
- * *release · hi.wikipedia.org · in Hindi*.
+ * One evidence line: its id, its text, and [what] it is (its scope, "album", or what it was read for:
+ * [SourcesLines.what]) with a link to where it was found; flashed when a citation points at it. A
+ * line found in the track's language (#902, `EvidenceLine.language`) shows its text as found, set
+ * in that language's locale (a span over the whole text, so a screen reader is given the language
+ * too, not only the drawing), and says the language after the host: *release · hi.wikipedia.org · in
+ * Hindi*.
  */
 @Composable
 private fun EvidenceRow(
@@ -321,7 +322,7 @@ private fun EvidenceRow(
     tagWidth: Dp,
     flashed: Boolean,
     requester: BringIntoViewRequester?,
-    album: Boolean,
+    what: String,
 ) {
     val colors = MaterialTheme.colorScheme
     val background by animateColorAsState(if (flashed) colors.tertiaryContainer else Color.Transparent, label = "flash")
@@ -340,7 +341,7 @@ private fun EvidenceRow(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(inLanguage(line.text, line.language), style = MaterialTheme.typography.bodySmall)
             val language = line.language?.let { stringResource(R.string.home_source_line_in, languageName(it)) }
-            Where(if (album) stringResource(R.string.home_scope_album) else scopeText(line.scope), line.url, language)
+            Where(what, line.url, language)
         }
     }
 }

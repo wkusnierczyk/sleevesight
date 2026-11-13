@@ -31,6 +31,7 @@ import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.GenreListMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -110,11 +111,16 @@ enum class Unavailability {
     NOT_LISTED,
 }
 
-/** The AI's genre list for a track (#762), as the panel shows it: [genres], by [model], its name. */
+/**
+ * The AI's genre list for a track (#762), as the panel shows it: [genres], by [model], its name; from
+ * the web (#801), the addresses of the pages it rests on ([sources]), and those pages with their
+ * passages ([pages], #1205), which *Sources* lists.
+ */
 data class AiGenreList(
     val genres: List<GenreLabel>,
     val model: String,
     val sources: List<String> = emptyList(),
+    val pages: List<WebPage> = emptyList(),
 )
 
 /**
@@ -433,7 +439,7 @@ class AppGenreNotes private constructor(
                             known,
                             lifetime,
                         )
-                    }?.let { AiGenreList(it.genres, modelName(it.model), it.sources) }
+                    }?.let { AiGenreList(it.genres, modelName(it.model), it.sources, it.pages) }
             }.distinctUntilChanged()
 
     override fun libraryLyrics(track: TrackState): Flow<PanelLibrary?> {

@@ -70,10 +70,11 @@ internal fun NowPlayingPageContent(
                     is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions) { handoff.moveTo(back) }
                     HomePage.Genres, is HomePage.GenresAt -> {
                         val retries = Retries(shown.view, playing, actions.askAgain)
+                        val lines = sourcesLines(actions.itemNotes, shown.track, actions.genreNotes)
                         GenresPage(
                             shown.track,
                             state.settings,
-                            genreNotes(shown, actions, sourcesLines(actions.itemNotes, shown.track).evidence),
+                            genreNotes(shown, actions, lines.evidence),
                             GenresWays(retries::ofAll, actions.openSettingsAt) { handoff.moveTo(back) },
                             // *Search with AI* under no genre (#773), as in the panel on Home.
                             PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
@@ -160,7 +161,7 @@ private fun ItemPageOf(
             settings,
             actions,
             cite,
-            sourcesLines(actions.itemNotes, shown.track).evidence,
+            sourcesLines(actions.itemNotes, shown.track, actions.genreNotes).evidence,
         ) { track, written, of ->
             reporting =
                 Reported(track, written, of)
@@ -195,7 +196,7 @@ private fun SourcesPage(
     afterRetry: () -> Unit,
 ) {
     // Its own evidence, with its album's lines once its insight gathered them (#522).
-    val lines = sourcesLines(actions.itemNotes, shown.track)
+    val lines = sourcesLines(actions.itemNotes, shown.track, actions.genreNotes)
     val focus = rememberLineFocus(lines.evidence, shown.track?.normalized)
     val fold = sourcesFold(rememberFoldMemory(), playing, onNewTrack = NewTrackFold.FOLDED, start = Fold.Pages(1))
     // The track the citation was opened on: it is that track's line, never another's of the same id.

@@ -1,15 +1,26 @@
 package app.sleevesight.app.ui.home
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.ItemNotes
+import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.linesBeyond
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.sources.WebPage
+import app.sleevesight.core.synthesis.sameAddress
 import kotlinx.coroutines.flow.flowOf
+import kotlin.time.Instant
 
 // The album's own lines in *Sources* (#522), and the artist's web lines (#912), so a citation of the
 // album's or the artist's insight opens *Sources* at its line, as the key insight's do.
@@ -20,12 +31,77 @@ import kotlinx.coroutines.flow.flowOf
  * lines and numbered on from them (W1, W2 the track's, W3 the album's; D1 the album's first Wikidata
  * line when the track has none). The track's lines keep their ids. The numbering is for showing alone:
  * the album's insight is written from, and keyed by, its own lines numbered on their own. [album]
- * holds the ids of the album's lines as shown, whose scope says "album".
+ * holds the ids of the album's lines as shown, whose scope says "album"; [purposes], those of the web
+ * lines named by what they were read for (#1205, [LinePurpose]: "genres"), in place of their scope.
  */
 internal class SourcesLines(
     val evidence: EvidenceSet?,
     val album: Set<String> = emptySet(),
+    val purposes: Map<String, LinePurpose> = emptyMap(),
 )
+
+/**
+ * What a web line in *Sources* was read for, named in place of its scope (#1205): *genres · host*
+ * for a page the AI's genre list rests on. One word each, [label], so another check's pages can be
+ * named the same way.
+ */
+internal enum class LinePurpose(
+    @param:StringRes val label: Int,
+) {
+    GENRES(R.string.home_line_purpose_genres),
+}
+
+/**
+ * What *Sources* names [line] by, before its host: what it was read for ([SourcesLines.purposes],
+ * #1205), "album" for the album's own line (#522), else its scope ([scopeText]).
+ */
+@Composable
+internal fun SourcesLines.what(line: EvidenceLine): String =
+    purposes[line.id]?.let { stringResource(it.label) }
+        ?: if (line.id in album) stringResource(R.string.home_scope_album) else scopeText(line.scope)
+
+/**
+ * [lines] with [pages] as web lines after them, each named [purpose] (#1205), numbered on from the
+ * web lines they have (`S7` after `S6`); a page whose address a web line has already (`sameAddress`)
+ * is that line, not listed twice, and keeps its own name. [lines] itself with no page to add, or no
+ * evidence to add them to.
+ */
+internal fun withPages(
+    lines: SourcesLines,
+    pages: List<WebPage>,
+    purpose: LinePurpose,
+): SourcesLines {
+    val evidence = lines.evidence
+    val web =
+        evidence
+            ?.lines
+            .orEmpty()
+            .filter { it.source == SourceId.WEB }
+            .mapNotNull { it.url }
+    val fresh =
+        pages
+            .filter { page -> web.none { sameAddress(it, page.url) } }
+            .distinctBy { it.url }
+    if (evidence == null || fresh.isEmpty()) return lines
+    val drafts = fresh.map { EvidenceDraft(SourceId.WEB, Scope.WEB, it.text, it.url, UNDATED) }
+    val shown = evidence.with(drafts, JvmHasher)
+    val own = evidence.ids.toSet()
+    val named = shown.lines.filter { it.id !in own }.associate { it.id to purpose }
+    return SourcesLines(shown, lines.album, lines.purposes + named)
+}
+
+/**
+ * The id of the line [lines] shows the page at [url] under (`sameAddress`), among its web lines; null
+ * for none.
+ */
+internal fun webLineOf(
+    url: String,
+    lines: EvidenceSet?,
+): String? =
+    lines
+        ?.lines
+        ?.firstOrNull { it.source == SourceId.WEB && it.url?.let { at -> sameAddress(at, url) } == true }
+        ?.id
 
 /**
  * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web
@@ -57,12 +133,14 @@ internal fun withAlbum(
 
 /**
  * What *Sources* lists for [track]: its evidence, with its album's lines, its artist's web lines
- * (#912) and its song's (#958), once [notes] gathered them.
+ * (#912) and its song's (#958), once [notes] gathered them; then the pages the AI's genre list from
+ * [genres] rests on (#1205), named *genres*, once it lists any genre.
  */
 @Composable
 internal fun sourcesLines(
     notes: ItemNotes,
     track: TrackState?,
+    genres: GenreNotes = GenreNotes.None,
 ): SourcesLines {
     // Followed afresh for another track, or another album of it (the same song on a compilation).
     val album by remember(notes, track?.normalized, track?.nowPlaying?.album, track?.resolution, track?.sources) {
@@ -74,9 +152,17 @@ internal fun sourcesLines(
     val song by remember(notes, track?.normalized, track?.resolution, track?.sources) {
         track?.let(notes::songEvidence) ?: flowOf(null)
     }.collectAsState(null)
+    val pages =
+        track
+            ?.let { aiGenres(it, genres) }
+            ?.takeIf { it.genres.isNotEmpty() }
+            ?.pages
+            .orEmpty()
     val evidence = track?.evidence
     val taken = track?.albumIds.orEmpty()
-    return remember(evidence, album, artist, song, taken) { withAlbum(evidence, album, artist, song, taken) }
+    return remember(evidence, album, artist, song, taken, pages) {
+        withPages(withAlbum(evidence, album, artist, song, taken), pages, LinePurpose.GENRES)
+    }
 }
 
 /**
@@ -94,3 +180,6 @@ internal fun shownId(
         ?.firstOrNull { it.source == line.source && it.scope == line.scope && it.text == line.text }
         ?.id
 }
+
+// When a page the AI's genre list rests on was retrieved, which *Sources* does not show: not kept.
+private val UNDATED = Instant.fromEpochMilliseconds(0)

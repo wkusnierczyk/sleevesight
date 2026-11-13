@@ -38,6 +38,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelSource
@@ -58,21 +59,25 @@ import app.sleevesight.core.pipeline.TrackState
  * that gave any of its tags, each named and linked to the row's page there ([sourceParts]), an
  * artist's name on its own line above them with several artists; a *Described* row with whose
  * description it is and the citations of its lines, each a link that opens its line in *Sources*
- * ([onCite]); then, in the right column, once, when MusicBrainz gave any tag, its credit and its
- * licence, linked (D12).
+ * ([onCite]); under the sources of the row the AI's genres from the web joined, "From:" and the
+ * citations of the pages they rest on, as [lines] (*Sources*' own) number them ([FromPages], #1205);
+ * then, in the right column, once, when MusicBrainz gave any tag, its credit and its licence, linked
+ * (D12).
  *
  * The first column is as wide as its widest name, measured in the names' style at the current font
  * size, so it holds at large font sizes. Each row is one item to a screen reader. A row of tags has
  * one reading, its name then its tags, [genre]'s marked as selected ("Track, Pop, Rock, selected":
  * the chips are not buttons), and no selected state of its own, so it says which tag is marked
  * ([tagsReading]); a row of sources reads its name and sources, each source's link still a link of
- * its own, which a screen reader reaches and opens.
+ * its own, which a screen reader reaches and opens; one with the pages' citations reads them after
+ * its sources, "Track: Claude Haiku 5.5, AI. From: Source S7, Source S8", each offered as an action.
  */
 @Composable
 internal fun TagsGrid(
     track: TrackState,
     genre: String,
     onCite: (String) -> Unit = {},
+    lines: EvidenceSet? = null,
 ) {
     val rows = track.genres.table
     val order = rememberGenreOrder()
@@ -95,15 +100,28 @@ internal fun TagsGrid(
             GridRow(names[index], column, nameStyle, tagged, CHIP_INSET) { Cells(row, genre) }
         }
         GridHeading(stringResource(R.string.home_genre_tag_sources))
+        // The citations of the pages the AI's genres from the web rest on (#1205), as *Sources* numbers them.
+        val sources = track.genres.aiSources
+        val pages = remember(sources, lines) { sources.mapNotNull { webLineOf(it, lines) }.distinct() }
         rows.forEachIndexed { index, row ->
             val parts = sourceParts(row, onCite)
             if (parts.isEmpty()) return@forEachIndexed
-            GridRow(names[index], column, nameStyle, Modifier.testTag(GENRE_SOURCES_ROW_PREFIX + index)) {
+            val cited = pages.takeIf { row.labels.any { it.aiAdded } }.orEmpty()
+            // Each citation as a screen reader reads it, "Source S7".
+            val cites = cited.map { line -> line to stringResource(R.string.home_cite, line) }
+            val words = parts.joinToString("") { it.text }.replace(MARK_SPACE, " ")
+            val reading = fromReading(names[index], words, cites.map { it.second })
+            val tagged =
+                Modifier.testTag(GENRE_SOURCES_ROW_PREFIX + index).let { tag ->
+                    if (reading == null) tag else tag.semantics { citedRow(reading, cites, onCite) }
+                }
+            GridRow(names[index], column, nameStyle, tagged) {
                 Column {
                     row.artist?.takeIf { several && row.level == GenreLevel.ARTIST && !row.described }?.let { artist ->
                         Text(artist, style = nameStyle, color = MaterialTheme.colorScheme.onSurface)
                     }
                     LinkedText(parts, style = nameStyle, color = muted)
+                    if (cited.isNotEmpty()) FromPages(cited, nameStyle, onCite)
                 }
             }
         }
