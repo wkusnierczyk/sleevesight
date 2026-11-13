@@ -19,11 +19,11 @@ enum class VocalsAnswer(
     UNKNOWN("unknown", emptyList()),
     ;
 
-    // Any of [words], whole: no letter or digit either side (ICU-safe, #1113); none for no words.
+    // Any of [words], whole: no letter or digit either side, the one before matched rather than looked
+    // behind (portable, no lookbehind: D2, as `GroundingCheck`'s; ICU-safe, #1113); none for no words.
     private val pattern: Regex? =
         words.takeIf { it.isNotEmpty() }?.let {
-            val edge = "[\\p{L}\\p{N}]"
-            Regex("(?<!$edge)(?:${it.joinToString("|")})(?!$edge)", RegexOption.IGNORE_CASE)
+            Regex("(?:^|[^\\p{L}\\p{N}])(?:${it.joinToString("|")})(?![\\p{L}\\p{N}])", RegexOption.IGNORE_CASE)
         }
 
     /**
