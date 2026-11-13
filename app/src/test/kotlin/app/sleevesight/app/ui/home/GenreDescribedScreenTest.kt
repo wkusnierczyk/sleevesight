@@ -42,6 +42,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
@@ -149,9 +150,10 @@ class GenreDescribedScreenTest {
         evidence: EvidenceSet = lines,
         own: EvidenceSet = HomeFixtures.evidence,
         search: AiSearchFeed = AiSearchFeed.None,
+        asked: EvidenceSet = evidence,
         block: () -> Unit,
     ) {
-        val shown = PanelNotes(notes, { cited += it }, lines = evidence)
+        val shown = PanelNotes(notes, { cited += it }, lines = evidence, asked = asked)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
@@ -316,6 +318,20 @@ class GenreDescribedScreenTest {
             assertEquals(HomeFixtures.evidence, subscribed["house"])
             assertEquals(HomeFixtures.evidence, explained["house"])
         }
+
+    @Test
+    fun theAisGenrePagesListedInSourcesLeaveTheReasonsKeyAsItWas() {
+        // *Sources* with the AI's genre list's pages after its lines (#1205), listed for showing alone.
+        val page = WebPage("https://en.wikipedia.org/wiki/Eros", null, "Eros is a song.")
+        val listed = withPages(SourcesLines(lines), listOf(page), LinePurpose.GENRES)
+        assertTrue(listed.evidence != lines)
+        show(evidence = listed.evidence!!, asked = listed.asked!!) {
+            tap(GENRE_PREFIX + "described:$ISLANDMAN:instrumental")
+            tap(GENRE_WHY_TAG)
+            assertEquals(lines, subscribed["instrumental"])
+            assertEquals(lines, explained["instrumental"])
+        }
+    }
 
     @Test
     fun aGenreReadFromTheTracksOwnLinesIsAskedOnTheTracksEvidenceWhateverSourcesAdds() {

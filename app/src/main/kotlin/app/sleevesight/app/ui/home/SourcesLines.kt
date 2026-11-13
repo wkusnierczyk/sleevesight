@@ -33,11 +33,14 @@ import kotlin.time.Instant
  * the album's insight is written from, and keyed by, its own lines numbered on their own. [album]
  * holds the ids of the album's lines as shown, whose scope says "album"; [purposes], those of the web
  * lines named by what they were read for (#1205, [LinePurpose]: "genres"), in place of their scope.
+ * [asked] is [evidence] before those pages joined it (#1205): what a genre's reason is asked and keyed
+ * on (`reasonedOn`), so pages listed for showing never change a reason's key, nor cost one again.
  */
 internal class SourcesLines(
     val evidence: EvidenceSet?,
     val album: Set<String> = emptySet(),
     val purposes: Map<String, LinePurpose> = emptyMap(),
+    val asked: EvidenceSet? = evidence,
 )
 
 /**
@@ -87,7 +90,7 @@ internal fun withPages(
     val shown = evidence.with(drafts, JvmHasher)
     val own = evidence.ids.toSet()
     val named = shown.lines.filter { it.id !in own }.associate { it.id to purpose }
-    return SourcesLines(shown, lines.album, lines.purposes + named)
+    return SourcesLines(shown, lines.album, lines.purposes + named, lines.asked)
 }
 
 /**

@@ -347,7 +347,7 @@ internal fun NowPlayingContent(
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 PlayerRow(playing.player, state.playback, actions)
                 ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
-                val notes = panelNotes(actions, cite, shown.modelAllowed, lines.evidence)
+                val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
                 TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
                 InsightCard(

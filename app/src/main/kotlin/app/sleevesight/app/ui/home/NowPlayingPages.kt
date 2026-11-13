@@ -74,7 +74,7 @@ internal fun NowPlayingPageContent(
                         GenresPage(
                             shown.track,
                             state.settings,
-                            genreNotes(shown, actions, lines.evidence),
+                            genreNotes(shown, actions, lines),
                             GenresWays(retries::ofAll, actions.openSettingsAt) { handoff.moveTo(back) },
                             // *Search with AI* under no genre (#773), as in the panel on Home.
                             PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
@@ -89,18 +89,20 @@ internal fun NowPlayingPageContent(
 }
 
 // What the genres' page shows above its table (#523): a citation in a reason, or of a genre an
-// artist's description names (#1000, from [lines], *Sources*' own), opens *Sources*' page at its line.
+// artist's description names (#1000, from [lines], *Sources*' own), opens *Sources*' page at its line;
+// a reason is asked on those lines as they were before the pages listed for showing joined (#1205).
 private fun genreNotes(
     shown: Showing,
     actions: NowPlayingActions,
-    lines: EvidenceSet?,
+    lines: SourcesLines,
 ) = PanelNotes(
     actions.genreNotes,
     { id -> actions.openPage(HomePage.Sources(cite = id)) },
     shown.modelAllowed,
     actions.readAloud,
     actions.openSettingsAt,
-    lines,
+    lines.evidence,
+    lines.asked,
 )
 
 /**

@@ -77,7 +77,7 @@ internal fun GenreAbout(
     val openSettingsAt = shown.openSettingsAt
     // The track its reason is asked and read on: for a genre an artist's description names (#1000),
     // with the lines it was read from, those *Sources* lists.
-    val asked = reasonedOn(track, genre, shown.lines)
+    val asked = reasonedOn(track, genre, shown.asked)
     // A new subscription only when what the reason's key is made of changes, not on every state of
     // the track (a source landing, labels joining); and the play (#1059's review), which a tap on a
     // genre the AI's list lacks is remembered for.
