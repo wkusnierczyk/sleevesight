@@ -3,15 +3,23 @@ package app.sleevesight.app.session
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.CancellationSignal
 import android.util.Log
 import androidx.core.net.toUri
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
+import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Fetches album art given as an `https` URI. `:app` may not reach the network, so the
@@ -43,19 +51,26 @@ fun HttpArt.onlyWhen(allowed: () -> Flow<Boolean>): HttpArt =
  * Turns the art sources of a track ([SessionMapping.artSources]) into a bitmap, trying each in
  * turn: the session's bitmap as it is, a `content://` URI through the [resolver] (which works only
  * where the player grants read access: otherwise a `SecurityException`, and the next source), an
- * `https` URI through [http]. Reading and decoding run in [io].
+ * `https` URI through [http]. Decoding runs in [io].
+ *
+ * A `content://` read runs on a thread of [reader], not in [io]: the provider is another app's
+ * code, and a provider that never answers would hold a thread that coroutine cancellation cannot
+ * free. The read is given [CONTENT_TIMEOUT]; then, or when the load is cancelled, the open is
+ * cancelled through its `CancellationSignal` and the stream closed, which frees the thread where
+ * the provider honours either, and the next source is tried (#1042).
  */
 class ArtLoader(
     private val resolver: ContentResolver,
     private val http: HttpArt,
     private val io: CoroutineContext,
+    private val reader: Executor = CONTENT_READER,
 ) {
     suspend fun load(sources: List<ArtSource>): Bitmap? {
         for (source in sources) {
             val bitmap =
                 when (source) {
                     is ArtSource.Image -> source.bitmap
-                    is ArtSource.Content -> withContext(io) { readContent(source.uri)?.let(::decode) }
+                    is ArtSource.Content -> readContentInTime(source.uri)?.let { withContext(io) { decode(it) } }
                     is ArtSource.Http -> http.fetch(source.uri)?.let { withContext(io) { decode(it) } }
                 }
             if (bitmap != null) return bitmap
@@ -64,11 +79,44 @@ class ArtLoader(
         return null
     }
 
+    /** [uri]'s bytes, read on [reader] within [CONTENT_TIMEOUT], or null. */
+    private suspend fun readContentInTime(uri: String): ByteArray? {
+        val signal = CancellationSignal()
+        val opened = AtomicReference<Closeable?>()
+        val read = CompletableDeferred<ByteArray?>()
+        reader.execute {
+            try {
+                read.complete(readContent(uri, signal, opened))
+            } finally {
+                read.complete(null)
+            }
+        }
+        try {
+            return withTimeoutOrNull(CONTENT_TIMEOUT) { read.await() }
+                .also { if (!read.isCompleted) Log.i(TAG, "Art not read in time") }
+        } finally {
+            if (!read.isCompleted) {
+                // Cancel before reading [opened]: the reader stores the stream before it checks the
+                // signal, so one of the two sides closes it.
+                signal.cancel()
+                closeQuietly(opened.get())
+            }
+        }
+    }
+
     // A provider is another app's code: anything it throws means no art from it, not a crash.
     @Suppress("TooGenericExceptionCaught")
-    private fun readContent(uri: String): ByteArray? =
+    private fun readContent(
+        uri: String,
+        signal: CancellationSignal,
+        opened: AtomicReference<Closeable?>,
+    ): ByteArray? =
         try {
-            resolver.openInputStream(uri.toUri())?.use(::readBounded)
+            resolver.openAssetFileDescriptor(uri.toUri(), "r", signal)?.use { file ->
+                val stream = file.createInputStream()
+                opened.set(stream)
+                if (signal.isCanceled) null else stream.use(::readBounded)
+            }
         } catch (e: IOException) {
             Log.i(TAG, "Art not readable: ${e::class.simpleName}")
             null
@@ -77,6 +125,17 @@ class ArtLoader(
             Log.i(TAG, "Art not readable: ${e::class.simpleName}")
             null
         }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun closeQuietly(closeable: Closeable?) {
+        try {
+            closeable?.close()
+        } catch (e: IOException) {
+            Log.i(TAG, "Art stream not closed: ${e::class.simpleName}")
+        } catch (e: RuntimeException) {
+            Log.i(TAG, "Art stream not closed: ${e::class.simpleName}")
+        }
+    }
 
     /** The whole of [stream], or null past [MAX_BYTES]: the size is the provider's choice. */
     private fun readBounded(stream: InputStream): ByteArray? {
@@ -122,5 +181,15 @@ class ArtLoader(
         const val MAX_SIDE = 1024
 
         const val BUFFER = 16 * 1024
+
+        /** As `ArtFetcher.TIMEOUT`, the bound on the other way art is read: far above a cover's read. */
+        val CONTENT_TIMEOUT = 15.seconds
+
+        /**
+         * A thread per read in flight, kept a minute once idle: a read that hangs holds only its
+         * own thread, never `Dispatchers.IO`'s, and does not queue the next track's read behind it.
+         */
+        val CONTENT_READER: Executor =
+            Executors.newCachedThreadPool { task -> Thread(task, "art-read").apply { isDaemon = true } }
     }
 }
