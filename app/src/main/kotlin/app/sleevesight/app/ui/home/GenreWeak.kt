@@ -90,7 +90,8 @@ private const val WEAK_SELECTED = 0.72f
  * lyrics, or the featured artist;
  * for Instrumental only the artist's description gives (#1000, #998's artist hint), what it says,
  * quoted, and the citation of its line, a link to it in *Sources* ([onCite]).
- * Nothing for a genre that is not weak, nor for Instrumental weak as LRCLIB's mark alone (#1055).
+ * for Instrumental weak as LRCLIB's mark alone (#1055, #1232), that only LRCLIB's user-submitted
+ * records mark the track so. Nothing for a genre that is not weak.
  */
 @Composable
 internal fun WeakEvidenceNote(
@@ -138,8 +139,7 @@ private fun WeakLine(
             is WeakEvidence.Featured -> stringResource(R.string.genre_weak_featured, why.name)
             // [WeakEvidenceNote]'s, with its citation.
             is WeakEvidence.ArtistHint -> return
-            // LRCLIB's mark alone (#1055): the chip's weak style says it; no line of its own yet.
-            WeakEvidence.LibraryMark -> return
+            WeakEvidence.LibraryMark -> stringResource(R.string.genre_weak_library, ALBUM_MARK)
         }
     Text(
         withAlbum(line, genre.label),

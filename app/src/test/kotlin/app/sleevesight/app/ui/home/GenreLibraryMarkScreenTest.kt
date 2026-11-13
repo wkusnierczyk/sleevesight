@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.font.FontStyle
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.AiSearch
@@ -39,7 +40,7 @@ import org.robolectric.annotation.Config
 /**
  * The Instrumental LRCLIB's mark adds for a song whose work credits composers alone (#1024), as
  * *Genres* shows it: a source's chip on the track's row, weak as LRCLIB's mark alone (#1055: its
- * records are submitted by its users) with no line of its own, not marked AI, read as any source's
+ * records are submitted by its users) with its line saying so (#1232), not marked AI, read as any source's
  * weak genre; under *Tag sources*, "LRCLIB", not linked; no check of the track's vocals. Alone,
  * it leaves *Search with AI* offered, and "None found." unsaid.
  */
@@ -119,9 +120,18 @@ class GenreLibraryMarkScreenTest {
     fun theMarksInstrumentalIsAWeakSourcesChipCreditedToLrclib() =
         show {
             compose.onNodeWithTag(CHIP).assertExists()
-            // Weak as LRCLIB's mark alone (#1055), with no line of its own under the definition.
+            // Weak as LRCLIB's mark alone (#1055), its line under the definition saying why (#1232),
+            // the genre in italics.
             compose.onNodeWithContentDescription("Instrumental, weak evidence").assertExists()
-            compose.onNodeWithTag(GENRE_WEAK_TAG).assertDoesNotExist()
+            val line =
+                compose
+                    .onNodeWithTag(GENRE_WEAK_TAG)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .single()
+            assertEquals("Only LRCLIB’s user-submitted records mark this track Instrumental.", line.text)
+            val italic = line.spanStyles.filter { it.item.fontStyle == FontStyle.Italic }
+            assertEquals(listOf("Instrumental"), italic.map { line.text.substring(it.start, it.end) })
             compose
                 .onNodeWithContentDescription("Instrumental, from", substring = true)
                 .assertDoesNotExist()

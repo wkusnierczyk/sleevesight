@@ -98,6 +98,10 @@
          while another artist's or the album's tags give it: %1$s is that artist, as the track
          credits them. It does not name the genre. -->
     <string name="genre_weak_featured">This track also credits %1$s and may feature vocals.</string>
+    <!-- When only LRCLIB's mark backs Instrumental (#1055, #1232): its records are submitted by its
+         users. %1$s is the genre, in italics, as its chip names it. No clause on other levels'
+         tags: the mark is the track's alone. -->
+    <string name="genre_weak_library">Only LRCLIB’s user-submitted records mark this track %1$s.</string>
     <!-- How a screen reader reads a genre the artist's description names (#1000), as a chip and in
          its Described row of Genre tags: %1$s is the genre ("Instrumental, from the artist’s
          description"). -->
