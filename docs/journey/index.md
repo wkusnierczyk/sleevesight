@@ -91,7 +91,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 **The sources.** The sources are what the AI may use, under *Sources* in the settings, each with a link to its website:
 
 - *MusicBrainz*, and *Wikipedia and Wikidata*: no key needed; on by default. Under MusicBrainz, *Wait when busy* (15 s by default) sets how long a busy MusicBrainz is asked again before the app goes on without it.
-- *LRCLIB*: an open lyrics library, no key needed, on by default; asked only whether a track has lyrics, when one of its genres is *Instrumental*.
+- *LRCLIB*: an open lyrics library, no key needed, on by default; asked only whether a track has lyrics, when one of its genres is *Instrumental* or MusicBrainz credits the song to composers alone.
 - *Last.fm*: it needs your own Last.fm API key ([create an API account](https://www.last.fm/api/account/create), free for non-commercial use), saved under *Secrets* in the same ways as an AI key above (typed, from a computer, or from a QR code); without one its switch is off and cannot be switched on. Saving the key switches it on too, unless you untick *Enable Last.fm* in its dialog.
 - *Exa web search*: likewise off until your Exa API key ([Exa dashboard](https://dashboard.exa.ai/api-keys); $10 of free credit a month, then billed per search) is saved under *Secrets*, which switches it on unless you untick *Enable Exa web search*.
 - *Search in the track’s language* (*If needed* by default): for a track sung in a language other than English, also looks it up on Wikipedia and searches the web in that language, and the insight says which citations it translated.
