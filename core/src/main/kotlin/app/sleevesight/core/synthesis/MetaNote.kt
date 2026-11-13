@@ -58,7 +58,7 @@ data class MetaNote(
             while (next != null) {
                 text = next.first
                 notes.addFirst(next.second)
-                next = noteAtEnd(text)
+                next = if (notes.size < MAX_NOTES) noteAtEnd(text) else null
             }
             return if (notes.isEmpty()) null else MetaNote(kept = text, withdrawn = notes.joinToString(" "))
         }
@@ -90,8 +90,9 @@ data class MetaNote(
         }
 
         // The bracketed note at [text]'s end, with any emphasis marks just before and after it; null for
-        // none. Read back from the end rather than by a pattern, which took time growing with the square
-        // of a long run of `*` or `_` (#1247).
+        // none. Read back from the very end (unlike a pattern's `$`, which also matches before a last line
+        // break) rather than by a pattern, which took time growing with the square of a long run of `*`
+        // or `_` (#1247).
         private fun trailingBracket(text: String): TrailingBracket? {
             val end = text.trimEnd('*', '_').length
             val open = if (text.getOrNull(end - 1) == ']') text.lastIndexOf('[', end - 2) else -1
@@ -172,10 +173,11 @@ data class MetaNote(
         // emphasised titles or lyrics; null when a quotation in it is left open, or closes with none
         // open. An emphasis is read only when it is the whole sentence, bracketed notes and
         // punctuation aside (`*One site … so I can't quote it.*`); one with words of the sentence
-        // around it is a title or a lyric, whatever its punctuation.
+        // around it is a title or a lyric, whatever its punctuation. Null too past [MAX_SPANS]
+        // emphases, as each is weighed against the whole sentence (#1247): no note's sentence has so many.
         private fun readOf(sentence: String): String? {
             val read = Quotations.of(sentence).takeIf { !it.open && !it.stray }?.outside
-            return read?.let {
+            return read?.takeIf { EMPHASIS_SPAN.findAll(it).take(MAX_SPANS + 1).count() <= MAX_SPANS }?.let {
                 EMPHASIS_SPAN.replace(it) { span ->
                     val around = it.removeRange(span.range).replace(BRACKET, " ")
                     if (CONTENT.containsMatchIn(around)) "…" else span.value
@@ -240,6 +242,14 @@ data class MetaNote(
          */
         private val MATERIAL =
             Regex("\\b(?:evidence|sources?|source lines?|citations?|cite[sd]?|citing|quote[sd]?|quoting)\\b")
+
+        /**
+         * The most notes taken out of one reply, and the most emphases a note's sentence is read with:
+         * each costs a pass over the whole text, so a reply of marks alone would take time growing
+         * with the square of its length (#1247). Beyond them, the text stays.
+         */
+        private const val MAX_NOTES = 8
+        private const val MAX_SPANS = 64
 
         /** A run of one emphasis mark. */
         private val EMPHASIS_RUN = Regex("\\*+|_+")

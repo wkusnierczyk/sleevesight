@@ -201,13 +201,22 @@ class MetaNoteTest {
 
     @Test
     fun `a long run of emphasis marks is read in linear time`() {
-        // 200k marks, alone and around a note: each took seconds or more by the old pattern (#1247).
+        // 200k marks alone, before a note or after one; the first and last took seconds or more by the
+        // old pattern (#1247).
         for (mark in listOf("*", "_")) {
             val run = mark.repeat(200_000)
             for (reply in listOf("$CLEAN $run", "$CLEAN $run[omit]", "$CLEAN [omit]$run")) {
                 val took = measureTime { assertNull(MetaNote.of(reply)) }
                 assertTrue(took < 1.seconds, "${reply.length} characters took $took")
             }
+        }
+        // Many emphases in the last sentence, or many notes in a row: each was weighed against the whole
+        // text, again seconds or more.
+        val tails = listOf("* ".repeat(100_000), "_ ".repeat(100_000), "*a* ".repeat(50_000), "[omit]*".repeat(30_000))
+        for (tail in tails) {
+            val reply = "$CLEAN $tail"
+            val took = measureTime { MetaNote.of(reply) }
+            assertTrue(took < 1.seconds, "${reply.length} characters took $took")
         }
     }
 
