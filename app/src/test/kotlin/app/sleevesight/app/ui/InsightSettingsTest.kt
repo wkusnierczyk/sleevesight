@@ -52,7 +52,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * *Insights* (#444): *Reactive*, a button group (#947), with *Crossfade* under it only while it is
  * *Skip*, each mode chosen there told to the pipeline (#625), and its description a table of the
- * modes (#945); *Saver* right after it, its count *Stop after* a button group (#947); *Proactive*,
+ * modes (#945); *Saver* right after it, its count a button group of the numbers (#947, #1212); *Proactive*,
  * a switch; *Don't repeat artist facts* (#407, #546), a switch; the rows in their order; and the
  * rows about writing fixed while *Show insights* is off.
  */
@@ -80,7 +80,8 @@ class InsightSettingsTest {
 
     private fun button(id: Int) = button(text(id))
 
-    private fun changes(count: Int) = app.resources.getQuantityString(R.plurals.settings_changes, count, count)
+    // A button of *Saver*'s count: the number alone (#1212).
+    private fun changes(count: Int) = "$count"
 
     // Where a text in *Reactive*'s description is drawn (the unmerged tree), whether on screen or not.
     private fun drawn(said: String): Rect {
@@ -235,7 +236,7 @@ class InsightSettingsTest {
                 )
             val tops = order.map(::top)
             assertEquals(tops.sorted(), tops)
-            // Neither *Saver* nor *Stop after* is indented: both start where *Reactive* does.
+            // Neither *Saver* nor its count is indented: both start where *Reactive* does.
             val starts =
                 listOf(
                     R.string.settings_write_automatically,

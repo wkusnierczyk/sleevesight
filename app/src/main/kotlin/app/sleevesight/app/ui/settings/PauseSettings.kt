@@ -10,8 +10,10 @@ import app.sleevesight.core.settings.WriteAutomatically
 /**
  * *Saver* (#203, #444): a switch, on while automatic writing pauses after a number of track
  * changes while Sleevesight is not on screen (`pauseAutoWriteAfter`), and under it, while on, that
- * number, *n*, *Stop after*, a button group of the counts ([saverCounts], #947); a value stored
- * that is not among the choices is offered too. Switched on, it pauses after the default number
+ * number, *n*: a line saying what it counts, in place of a name, over a button group of the counts
+ * by their numbers alone ([saverCounts], #947, #1212), so no label wraps at any font size; a value
+ * stored that is not among the choices is offered too. A screen reader reads each button after the
+ * line ([ChoiceButtonGroup]'s `name`). Switched on, it pauses after the default number
  * ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]). Fixed while nothing is written automatically (*Show
  * insights* off, or *Reactive* under *Demand*). What the number chosen does shows under the
  * buttons in full, not folded (#874), and is read with each.
@@ -43,7 +45,7 @@ internal fun SaverRows(
     ) { n -> update { it.copy(pauseAutoWriteAfter = n) } }
 }
 
-/** *Saver* and, while it is on, *Stop after*, as the settings' search finds them (#649). */
+/** *Saver* and, while it is on, its count, as the settings' search finds them (#649). */
 @Composable
 internal fun saverIndexRows(settings: Settings): List<IndexedRow> {
     val saver =
@@ -89,10 +91,8 @@ private fun pauseSummary(
 }
 
 /** *Saver*'s counts to choose from, [count] the one set among them. */
-@Composable
 internal fun saverCounts(count: Int): List<Pair<Int, String>> =
     (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
 
-/** A choice of *Saver*'s count, as its button names it: [count] changes (#947). */
-@Composable
-private fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_changes, count, count)
+/** A choice of *Saver*'s count, as its button names it: the number alone (#1212). */
+private fun pauseLabel(count: Int): String = "%d".format(count)

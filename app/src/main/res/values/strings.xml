@@ -179,7 +179,7 @@
     <string name="settings_new_track_unfolded">Unfolded</string>
     <string name="settings_new_track_as_left">As left</string>
     <string name="settings_background">Look up in the background</string>
-    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to Skip or Change, insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
+    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to Skip or Change, insights are then written, and paid for, whether you read them or not, up to Saver’s number of track changes when it is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>
     <!-- %1$s is settings_session_gap, a link to that row; %2$s is settings_section_history (#581). -->
     <string name="settings_artist_facts_once_summary">When you play several tracks by the same artist, each insight would tell the artist’s background again. With this on, an insight leaves out what an earlier one in the same listening session already said about the artist, and focuses on the song when there is enough to say about it. A new session starts after a break in listening, set under %1$s in %2$s.</string>
@@ -313,12 +313,7 @@
     <string name="diagnostics_reset_failed">What skip detection has learned could not be reset. Try again.</string>
     <string name="diagnostics_reset_explained">Skip detection goes back to its fixed rules until it learns again from the next track changes. The track changes recorded are kept.</string>
 
-    <!-- A choice of Stop after, in its button group (#947): the number of track changes away. -->
-    <plurals name="settings_changes">
-        <item quantity="one">%d change</item>
-        <item quantity="other">%d changes</item>
-    </plurals>
-    <!-- Stop after's description for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On track skip (auto)) is counted but not written. Opening Sleevesight resumes automatic writing (#625). -->
+    <!-- Saver's count's description for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On track skip (auto)) is counted but not written. Opening Sleevesight resumes automatic writing (#625). -->
     <plurals name="settings_pause_auto_write_summary_count">
         <item quantity="one">While Sleevesight is in the background, it writes insights automatically for up to %1$d track change. After more than %1$d, it stops writing insights automatically until you open it again.</item>
         <item quantity="other">While Sleevesight is in the background, it writes insights automatically for up to %1$d track changes. After more than %1$d, it stops writing insights automatically until you open it again.</item>

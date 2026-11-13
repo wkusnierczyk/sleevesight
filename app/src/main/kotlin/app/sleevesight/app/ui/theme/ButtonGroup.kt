@@ -108,7 +108,9 @@ internal fun <T> ChoiceButtonGroup(
     val buttons =
         choices.map { (value, label) ->
             val said = spoken[value] ?: label
-            val read = listOfNotNull(name?.let { "$it: $said" } ?: said, details[value]).joinToString(". ")
+            // A name that ends in a colon, a line leading into the buttons (#1212), is read without it.
+            val read =
+                listOfNotNull(name?.let { "${it.removeSuffix(":")}: $said" } ?: said, details[value]).joinToString(". ")
             GroupButton(
                 label,
                 enabled && value !in disabled,
