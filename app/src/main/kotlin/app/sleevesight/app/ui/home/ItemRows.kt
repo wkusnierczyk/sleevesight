@@ -313,7 +313,7 @@ internal fun HomeItems(
             settings,
             actions,
             cite,
-            sourcesLines(actions.itemNotes, shown.track).evidence,
+            sourcesLines(actions.itemNotes, shown.track, actions.genreNotes).evidence,
             onReport,
         )
     val rows = itemRows(header, actions.normalize(header))
