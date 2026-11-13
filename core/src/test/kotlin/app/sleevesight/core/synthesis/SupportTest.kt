@@ -90,7 +90,10 @@ class SupportTest {
         )
     }
 
-    /** A name its line does not hold, the producer's credited to the guitarist's line. */
+    /**
+     * A name its line does not hold, the producer's credited to the guitarist's line; mid-sentence,
+     * since a name that opens one is not compared.
+     */
     @Test
     fun `a name its line does not hold is unsupported`() {
         val lines =
@@ -101,7 +104,7 @@ class SupportTest {
         assertEquals(
             listOf(SentenceStatus.UNSUPPORTED, SentenceStatus.OK, SentenceStatus.OK),
             statuses(
-                "Lenny Waronker played lead guitar on it [W2]. Red Shea played lead guitar [W2]. " +
+                "The lead guitar was played by Lenny Waronker [W2]. Red Shea played lead guitar [W2]. " +
                     "Lenny Waronker produced it [W2][W1].",
                 lines,
             ),
@@ -124,18 +127,23 @@ class SupportTest {
         assertEquals(List(7) { SentenceStatus.OK }, statuses(reply, lines))
     }
 
-    /** Names: any case, diacritics, a shared stem, the sources' own names, the track's names. */
+    /**
+     * Multi-word names: any case, diacritics, a shared stem, the sources' own names, places, the
+     * track's names.
+     */
     @Test
     fun `names are read loosely`() {
         val lines =
             listOf(
-                line("Beyonce recorded it in Canada with Motorhead's producer."),
-                line("Released by Island in the United States."),
+                line("Beyonce Knowles recorded it with the Newfoundlanders Choir."),
+                line("Released by Island Records in the United States."),
             )
         val reply =
-            "Beyonc\u00e9 recorded it with the Mot\u00f6rhead producer [W1]. It is a Canadian recording [W1]. " +
-                "According to Wikipedia, Island released it [W2]. Their single Halo came out in the United States [W2]."
-        assertEquals(List(4) { SentenceStatus.OK }, statuses(reply, lines, subject = listOf("Halo", "Beyonc\u00e9")))
+            "It was recorded by Beyonc\u00e9 Knowles with the Newfoundland Choir [W1]. " +
+                "It is a Canadian recording [W1]. " +
+                "According to Wikipedia, Island Records released it [W2]. " +
+                "Their single Crazy In Love came out in the United States [W2]."
+        assertEquals(List(4) { SentenceStatus.OK }, statuses(reply, lines, subject = listOf("Crazy In Love")))
         assertEquals(
             listOf(SentenceStatus.OK, SentenceStatus.OK, SentenceStatus.OK, SentenceStatus.UNSUPPORTED),
             statuses(reply, lines),
@@ -143,17 +151,17 @@ class SupportTest {
     }
 
     /**
-     * A sentence's first word is never compared as a name: "Despite", "Released", "Arthur"; the
-     * words after it are ("Smith").
+     * A name that opens a sentence is not compared ("Despite", "Released"); the same name later in
+     * a sentence is ("Arthur Smith").
      */
     @Test
-    fun `a sentence's first word is not compared as a name`() {
+    fun `a name that opens a sentence is not compared`() {
         val lines = listOf(line("Scammell wrote the song in 1928; it was released later."))
         assertEquals(
             listOf(SentenceStatus.OK, SentenceStatus.OK, SentenceStatus.UNSUPPORTED),
             statuses(
                 "Despite its sound, Scammell wrote it in 1928 [W1]. Released later, it sold [W1]. " +
-                    "Arthur Smith wrote it [W1].",
+                    "It was written by Arthur Smith [W1].",
                 lines,
             ),
         )
@@ -267,6 +275,56 @@ class SupportTest {
                 "It came out in the 1970s [W1]. It was issued on 1974-03-25 [W2]. He was 35 when he recorded it [W3].",
                 lines,
             ),
+        )
+    }
+
+    /**
+     * Codex, PR #1238, round 2: a single capitalised word is never compared, so a people's name
+     * beside its country's passes.
+     */
+    @Test
+    fun `a single capitalised word is not compared`() {
+        val lines =
+            listOf(
+                line("It was released in Switzerland."),
+                line("It charted in Poland, Greece and Turkey."),
+            )
+        assertEquals(
+            List(2) { SentenceStatus.OK },
+            statuses("It was a Swiss release [W1]. It was a Polish, Greek and Turkish hit [W2].", lines),
+        )
+    }
+
+    /** Codex, PR #1238, round 2: a year's last two digits, `'01`, back it. */
+    @Test
+    fun `a year's two-digit form backs it`() {
+        assertEquals(
+            listOf(SentenceStatus.OK),
+            statuses("It came out in 2001 [W1].", listOf(line("It came out in '01."))),
+        )
+    }
+
+    /** Codex, PR #1238, round 2: digit groups are joined on both sides, so `1,974` is `1974`. */
+    @Test
+    fun `digit groups are joined before years are compared`() {
+        assertEquals(
+            listOf(SentenceStatus.OK),
+            statuses("Last.fm counts 1974 listeners [W1].", listOf(line("Last.fm counts 1,974 listeners."))),
+        )
+    }
+
+    /** Codex, PR #1238, round 2: a chart place in other words, and decades in words, either way. */
+    @Test
+    fun `chart places and decades in words are backed`() {
+        val lines =
+            listOf(
+                line("It reached number 1."),
+                line("It came out in 1974."),
+                line("It was a hit of the Seventies."),
+            )
+        assertEquals(
+            List(3) { SentenceStatus.OK },
+            statuses("It reached No. One [W1]. It is from the Seventies [W2]. It came out in 1974 [W3].", lines),
         )
     }
 }
