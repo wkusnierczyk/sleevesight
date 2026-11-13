@@ -89,7 +89,7 @@ private const val WEAK_SELECTED = 0.72f
  * the sign: the vocalist MusicBrainz credits, the lyricist of its work (#998), the language of the
  * lyrics, or the featured artist;
  * for Instrumental only the artist's description gives (#1000, #998's artist hint), what it says,
- * quoted, and the citation of its line, a link to it in *Sources* ([onCite]).
+ * quoted, and the citation of its line, a link to it in *Sources* ([onCite]);
  * for Instrumental weak as LRCLIB's mark alone (#1055, #1232), that only LRCLIB's user-submitted
  * records mark the track so. Nothing for a genre that is not weak.
  */
