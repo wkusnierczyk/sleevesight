@@ -75,6 +75,7 @@ internal fun GenreAbout(
     val modelAllowed = shown.modelAllowed
     val reader = shown.readAloud
     val openSettingsAt = shown.openSettingsAt
+    val sources = shown.lines
     // The track its reason is asked and read on: for a genre an artist's description names (#1000),
     // with the lines it was read from, those *Sources* lists.
     val asked = reasonedOn(track, genre, shown.asked)
@@ -128,7 +129,7 @@ internal fun GenreAbout(
                 shown,
                 question,
                 InsightContext(asked, true, true, modelAllowed, InsightOffers()),
-                ReasonActions(onCite, readAloud, explain, afterRetry, openSettingsAt),
+                ReasonActions(onCite, readAloud, explain, afterRetry, openSettingsAt, sources),
             )
         }
     }

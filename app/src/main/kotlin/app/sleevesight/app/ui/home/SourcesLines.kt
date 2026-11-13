@@ -94,6 +94,23 @@ internal fun withPages(
 }
 
 /**
+ * The id of the line [sources] (*Sources*' lines) shows for the line [id] of [evidence], a reason's
+ * own (#1205): a web page's by its address ([webLineOf]), whatever its id in [evidence], else the same
+ * source, scope and words ([shownId]); null for none. A reason keeps its own ids, as it was checked
+ * and kept; only what shows them is mapped, so a citation lands on its page however *Sources*
+ * numbers it.
+ */
+internal fun shownLine(
+    id: String,
+    evidence: EvidenceSet?,
+    sources: EvidenceSet?,
+): String? {
+    val line = evidence?.get(id) ?: return null
+    val page = line.url?.takeIf { line.source == SourceId.WEB }?.let { webLineOf(it, sources) }
+    return page ?: shownId(id, evidence, sources)
+}
+
+/**
  * The id of the line [lines] shows the page at [url] under (`sameAddress`), among its web lines; null
  * for none.
  */
@@ -137,7 +154,9 @@ internal fun withAlbum(
 /**
  * What *Sources* lists for [track]: its evidence, with its album's lines, its artist's web lines
  * (#912) and its song's (#958), once [notes] gathered them; then the pages the AI's genre list from
- * [genres] rests on (#1205), named *genres*, once it lists any genre.
+ * [genres] rests on (#1205), once it lists any genre, and those the genres' reasons found on the web
+ * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each address once.
+ * A reason's citations show these ids by address ([shownLine]), so they never point at another page.
  */
 @Composable
 internal fun sourcesLines(
@@ -155,12 +174,17 @@ internal fun sourcesLines(
     val song by remember(notes, track?.normalized, track?.resolution, track?.sources) {
         track?.let(notes::songEvidence) ?: flowOf(null)
     }.collectAsState(null)
-    val pages =
+    val listed =
         track
             ?.let { aiGenres(it, genres) }
             ?.takeIf { it.genres.isNotEmpty() }
             ?.pages
             .orEmpty()
+    // And the pages the genres' reasons found on the web (#801), numbered with the list's, after them.
+    val searched by remember(genres, track?.normalized, track?.nowPlaying?.duration) {
+        track?.let(genres::searchedPages) ?: flowOf(emptyList())
+    }.collectAsState(emptyList())
+    val pages = listed + searched
     val evidence = track?.evidence
     val taken = track?.albumIds.orEmpty()
     return remember(evidence, album, artist, song, taken, pages) {

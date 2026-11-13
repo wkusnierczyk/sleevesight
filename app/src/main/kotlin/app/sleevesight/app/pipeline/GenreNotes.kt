@@ -13,6 +13,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiOutcome
 import app.sleevesight.core.pipeline.AiQuestion
 import app.sleevesight.core.pipeline.AiSearches
+import app.sleevesight.core.pipeline.CardEntity
 import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.GenreListState
@@ -32,6 +33,7 @@ import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.sources.WebPage
+import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GenreListMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -44,6 +46,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -200,6 +203,13 @@ interface GenreNotes : DefinitionFeed {
      * not under the settings now).
      */
     fun aiGenres(track: TrackState): Flow<AiGenreList?> = flowOf(null)
+
+    /**
+     * The pages the reasons of [track]'s genres found on the web (#801), as they are known (written on
+     * this run or read from the cache), for *Sources* to list (#1205): by genre, each reason's in its
+     * order; none for none.
+     */
+    fun searchedPages(track: TrackState): Flow<List<WebPage>> = flowOf(emptyList())
 
     /**
      * LRCLIB's answer for [track] (#997), for an Instrumental the AI's genre list added, which the
@@ -417,6 +427,26 @@ class AppGenreNotes private constructor(
     ) {
         work[Forgets]?.let { writing.remove(key, it.count) }
     }
+
+    override fun searchedPages(track: TrackState): Flow<List<WebPage>> =
+        shown.map { reasons -> searchedPages(reasons, track) }.distinctUntilChanged()
+
+    // The web pages of [reasons]' written for [track]'s genres (#1205), by genre, each in its own order.
+    private fun searchedPages(
+        reasons: Map<CardKey, Entry<InsightState>>,
+        track: TrackState,
+    ): List<WebPage> =
+        reasons.entries
+            .mapNotNull { (key, entry) ->
+                val about = (key.entity as? CardEntity.Track)?.takeIf { key.kind == CardKind.GENRE }
+                val searched = (entry.state as? InsightState.Written)?.searched
+                val same = about?.track == track.normalized && about?.duration == track.nowPlaying.duration
+                searched?.takeIf { same }?.let { about?.subject.orEmpty() to it }
+            }.sortedBy { it.first }
+            .flatMap { (_, searched) -> searched.lines }
+            .mapNotNull { line ->
+                line.url?.takeIf { line.source == SourceId.WEB }?.let { WebPage(it, null, line.text) }
+            }
 
     override fun aiGenres(track: TrackState): Flow<AiGenreList?> =
         combine(parts, settings) { made, now ->
