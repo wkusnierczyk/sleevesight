@@ -43,7 +43,8 @@ fun TrackGenres.showsInstrumental(): Boolean =
 /**
  * These genres weighed with LRCLIB's [answer] (#997, [app.sleevesight.core.genres.Singing.library]):
  * lyrics drop Instrumental from every row, combined again without it, as MusicBrainz's lyrics links
- * do; its instrumental mark lifts what left Instrumental weak; no match leaves them as they were.
+ * do; its instrumental mark lifts the signs that left Instrumental weak, though it stays weak as the
+ * mark's alone (#1055); no match leaves them as they were.
  * Itself with no answer, or one already weighed. What the panel's own answer does (#997): it asks
  * only about an Instrumental already on a row, so the mark adds none there ([withLibraryMark] is the
  * run's, #1024).
@@ -63,8 +64,9 @@ fun TrackGenres.withLibrary(answer: LibraryLyrics?): TrackGenres {
  * ([app.sleevesight.core.genres.Singing.composersHint]), which asked LRCLIB with no row showing
  * Instrumental, and LRCLIB marks the track instrumental, [instrumental], the vocabulary's label of it,
  * joins the track's row after its labels, credited to LRCLIB ([TrackLabel.markedBy]: named under *Tag
- * sources*, not linked, as LRCLIB has no page for a track), a source's genre, not weak and not marked
- * AI, while the row has room; a track row made for it where there was none. The paid check of the
+ * sources*, not linked, as LRCLIB has no page for a track), a source's genre, not marked AI, and weak
+ * as LRCLIB's mark alone (#1055, `WeakEvidence.LibraryMark`: its records are submitted by its users),
+ * while the row has room; a track row made for it where there was none. The paid check of the
  * track's vocals is settled by the mark already. Not added with Instrumental on any row (the mark
  * lifts it there, and it is not added twice), with lyrics MusicBrainz lists (a free sign that drops
  * it wins), or the recording marked instrumental by MusicBrainz, which LRCLIB is not asked about:
