@@ -357,14 +357,16 @@ data class TrackGenres(
      * Why the genre [identity], the AI's for the track (#762, #773: *Search with AI*'s genres, shown
      * with no row), is weak: the sign that the track is sung that leaves it at most weak (#996), as for
      * a track's tag, a vocalist, a lyricist (#998) or a language, never a featured artist; or, where
-     * only LRCLIB's mark lifts such a sign, that mark (#1055, [WeakEvidence.LibraryMark]). Null for any
-     * other genre, or with none.
+     * only LRCLIB's mark backs Instrumental, that mark (#1055, [WeakEvidence.LibraryMark]): it lifts
+     * such a sign, or a row's Instrumental is the one it added ([TrackLabel.markedBy], #1024), as the
+     * row's chip is weak for it. Null for any other genre, or with none.
      */
-    fun aiWeakEvidence(identity: String): WeakEvidence? =
-        signOfVocals(identity, null)
-            ?: WeakEvidence.LibraryMark.takeIf {
-                singing.libraryAlone && signOfVocals(identity, null, lifted = false) != null
-            }
+    fun aiWeakEvidence(identity: String): WeakEvidence? {
+        val added = everyLabel.any { it.genre.identity == INSTRUMENTAL && it.markedBy != null }
+        val backs = added || signOfVocals(identity, null, lifted = false) != null
+        return signOfVocals(identity, null)
+            ?: WeakEvidence.LibraryMark.takeIf { identity == INSTRUMENTAL && singing.libraryAlone && backs }
+    }
 
     // [signOfVocals] for [identity] on [row]; with none, the track's; [lifted], unless weighed without
     // what lifts it (#1055's [libraryMark]).

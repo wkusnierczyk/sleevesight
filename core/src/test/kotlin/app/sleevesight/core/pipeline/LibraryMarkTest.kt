@@ -169,6 +169,23 @@ class LibraryMarkTest {
     }
 
     @Test
+    fun `Search with AI answering Instrumental for the mark's track weighs it weak, as the mark's chip`() {
+        val alone =
+            combineGenres(
+                emptyMap(),
+                listOf(ARTIST),
+                Singing(composersOnly = true, library = LibraryLyrics.INSTRUMENTAL),
+            ).withLibraryMark(instrumental)
+        // Alone, no tag: *Search with AI* is offered, and may answer Instrumental.
+        assertFalse(alone.hasTags)
+        assertEquals(WeakEvidence.LibraryMark, alone.aiWeakEvidence(TrackGenres.INSTRUMENTAL))
+        assertNull(alone.aiWeakEvidence("jazz"))
+        // With the source's tags beside it, the same.
+        val tagged = bite().withLibrary(LibraryLyrics.INSTRUMENTAL).withLibraryMark(instrumental)
+        assertEquals(WeakEvidence.LibraryMark, tagged.aiWeakEvidence(TrackGenres.INSTRUMENTAL))
+    }
+
+    @Test
     fun `the mark's Instrumental alone is no tag, for Search with AI, though the genres are not empty`() {
         val alone =
             combineGenres(
