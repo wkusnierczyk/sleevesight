@@ -53,6 +53,7 @@ import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -299,8 +300,7 @@ class LyricsAiScreenTest {
     @Test
     fun theExplanationShowsCitedThenItsPagesThenTheModel() =
         show {
-            // Saved titles with invisible characters, as kept before #1041: shown without them; one of
-            // nothing else shows its site.
+            // Each page by its host, as *Sources* names a page (#1040), whatever title it gives itself.
             val songfacts = CitedPage("S1", "https://www.songfacts.example/sundown", "Sundown:\u200B song facts\u202E")
             val interview = CitedPage("S2", "https://music-mag.example/interview", "\u200B \u2060")
             val reply = "It is about jealousy. [S1] It reads as a warning. The title is a time of day. [S2]"
@@ -329,8 +329,8 @@ class LyricsAiScreenTest {
             assertTrue(heading.top >= placed(prose).bottom)
             assertTrue(shows(text(R.string.home_lyrics_pages_cited)))
             assertTrue(bounds(lyricsCitedPageTag("S1")).top >= heading.bottom)
-            assertTrue(shows("Sundown: song facts"))
-            // Untitled, or titled with nothing a person sees: its site.
+            assertTrue(shows("songfacts.example"))
+            assertFalse(shows("Sundown: song facts"))
             assertTrue(shows("music-mag.example"))
             compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("by Claude Haiku 5.5")
             assertTrue(bounds(explainTag(AI_SEARCH_BY_TAG)).top >= bounds(lyricsCitedPageTag("S2")).bottom)

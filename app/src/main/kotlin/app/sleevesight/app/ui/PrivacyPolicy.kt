@@ -9,10 +9,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -37,24 +35,6 @@ internal val PRIVACY_POLICY_SHOWN: String = shownAddress(PRIVACY_POLICY_URL)
 
 /** The web address [url] as a link shows it: without its scheme. */
 internal fun shownAddress(url: String): String = url.removePrefix("https://")
-
-/**
- * Opens [url] in the browser. Where no app opens web pages, nothing happens; the address is shown
- * wherever a link is offered, so it can be typed in elsewhere.
- */
-@Composable
-internal fun rememberOpenUrl(url: String): () -> Unit {
-    val uriHandler = LocalUriHandler.current
-    return remember(uriHandler, url) {
-        {
-            try {
-                uriHandler.openUri(url)
-            } catch (_: IllegalArgumentException) {
-                // No app opens web pages: the address is on the screen.
-            }
-        }
-    }
-}
 
 /**
  * [url], shown without its scheme, as a link of its own ([LinkLabel]) that opens the page in the

@@ -14,6 +14,7 @@ import app.sleevesight.fixtures.Fixtures
 import app.sleevesight.fixtures.RegressionCase
 import app.sleevesight.net.NetError
 import app.sleevesight.net.NetMethod
+import app.sleevesight.net.NetResponse
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -281,6 +282,20 @@ class ExaWebSearchTest {
                 assertTrue(result.evidence.isEmpty())
             }
         }
+
+    @Test
+    fun `a result whose address is not a web address is dropped where the response is read`() {
+        val body =
+            """
+            {"results": [
+              {"url": "intent://a#Intent;package=com.example;end", "title": "A", "highlights": ["a"]},
+              {"url": "javascript:alert(1)", "title": "B", "highlights": ["b"]},
+              {"url": "https://a.example/1", "title": "C", "highlights": ["c"]}
+            ]}
+            """.trimIndent()
+        val response = checkNotNull(ExaWebSearch.parse(NetResponse(200, emptyMap(), body.encodeToByteArray())))
+        assertEquals(listOf("https://a.example/1"), response.results.map { it.url })
+    }
 
     @Test
     fun `duplicate URLs and results without a highlight give no line`() =
