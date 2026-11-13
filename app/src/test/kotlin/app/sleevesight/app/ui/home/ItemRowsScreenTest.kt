@@ -584,7 +584,12 @@ class ItemRowsScreenTest {
     fun theAlbumsLinesComingInKeepTheSourcesHiddenWithTheChips() {
         show(state(onDemand)) {
             compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
-            compose.onNodeWithTag(CHIP_PREFIX + SourceId.WIKIPEDIA.tag).performScrollTo().performClick()
+            compose
+                .onNodeWithTag(
+                    CHIP_PREFIX + SourceId.WIKIPEDIA.tag,
+                    useUnmergedTree = true,
+                ).performScrollTo()
+                .performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(LINE_PREFIX + "W1").assertDoesNotExist()
             // The album's insight gathers its lines: Wikipedia's, the album's among them, stay hidden.

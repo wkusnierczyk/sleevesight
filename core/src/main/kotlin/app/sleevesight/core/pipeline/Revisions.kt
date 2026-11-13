@@ -12,7 +12,8 @@ import app.sleevesight.core.text.trimJs
 // `ItemInsights`): while it streams, after it ends, and when it is served from the cache.
 
 /**
- * [text] as a card would show it, checked against [evidence]: the grounding check's reply; or, when
+ * [text] as a card would show it, checked against [evidence]: the grounding check's reply, a note
+ * on the model's own evidence at its end taken out (`MetaNote`, #1207); or, when
  * that still revises itself, the part after the revision ([SelfRevision.salvage]), the rest
  * withdrawn; null when nothing usable is left. [revised] is told of a revision found, and whether
  * anything was salvaged.
@@ -23,7 +24,7 @@ internal fun readReply(
     allowModel: Boolean,
     revised: (SelfRevision.Found, Boolean) -> Unit = { _, _ -> },
 ): InsightReply? {
-    val reply = GroundingCheck.check(text, evidence, allowModel)
+    val reply = GroundingCheck.check(text, evidence, allowModel, notes = true)
     val grounded = (reply as? InsightReply.Written)?.grounded
     val found = grounded?.let { SelfRevision.find(it.text) } ?: return reply
     val salvaged = SelfRevision.salvage(checkNotNull(grounded), found, evidence.ids.toSet())

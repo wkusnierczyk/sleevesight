@@ -513,9 +513,8 @@ class SettingsScreenTest {
             // On by default, after 5, with nothing written away while *Look up in the background* is off.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsOn()
             compose.onNodeWithText(pauseSummary(5, background = false)).performScrollTo().assertIsDisplayed()
-            // *Stop after*, a button group of the counts (#947).
-            val ten = app.resources.getQuantityString(R.plurals.settings_changes, 10, 10)
-            compose.onNode(hasText(ten) and isSelectable()).performScrollTo().performClick()
+            // Its count, a button group of the numbers (#947, #1212).
+            compose.onNode(hasText("10") and isSelectable()).performScrollTo().performClick()
             waitFor("a pause after 10 track changes stored") { current().pauseAutoWriteAfter == 10 }
             compose.onNodeWithText(pauseSummary(10, background = false)).performScrollTo().assertIsDisplayed()
 

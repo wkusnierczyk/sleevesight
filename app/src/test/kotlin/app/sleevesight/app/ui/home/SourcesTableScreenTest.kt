@@ -19,9 +19,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.assertTouchHeightIsEqualTo
-import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
@@ -150,8 +149,9 @@ class SourcesTableScreenTest {
         compose.waitForIdle()
     }
 
+    // The unmerged tree: a chip, a name or a status is part of its row's switch (#1223).
     private fun tap(tag: String) {
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithTag(tag, useUnmergedTree = true).performScrollTo().performClick()
         compose.waitForIdle()
     }
 
@@ -187,13 +187,14 @@ class SourcesTableScreenTest {
         return words
     }
 
+    /** The row of [tag] is one switch (#1223), read first by its source's [name], its lines [shown] or not. */
     private fun switch(
         tag: String,
         name: String,
         shown: Boolean,
     ) = compose
-        .onNodeWithTag(CHIP_PREFIX + tag)
-        .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(name)))
+        .onNodeWithTag(ROW_PREFIX + tag)
+        .assert(SemanticsMatcher("read first as $name") { said(tag).firstOrNull() == name })
         .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
         .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState(shown)))
         .assert(
@@ -210,9 +211,10 @@ class SourcesTableScreenTest {
             // Off (Discogs) or without its key (Last.fm): no row. Rejected (web search) and the
             // model's own knowledge: a row.
             assertEquals(listOf("MB", "W", "S", "AI"), rows())
-            assertEquals(listOf(text(R.string.home_source_found, text(R.string.home_source_finding_track))), said("MB"))
-            assertEquals(listOf(text(R.string.home_source_found, text(R.string.home_source_finding_track))), said("W"))
-            // A dimmed chip's row says its name; a rejected match is nothing found.
+            // Each row says its source's name and what it found (#1223); a rejected match is nothing found.
+            val found = text(R.string.home_source_found, text(R.string.home_source_finding_track))
+            assertEquals(listOf(text(R.string.settings_source_musicbrainz), found), said("MB"))
+            assertEquals(listOf(text(R.string.home_source_chip_wikipedia), found), said("W"))
             assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_none)), said("S"))
             assertEquals(
                 listOf(text(R.string.settings_source_model), text(R.string.home_source_model_allowed)),
@@ -242,10 +244,19 @@ class SourcesTableScreenTest {
             unfold()
             val track = text(R.string.home_source_finding_track)
             val and = text(R.string.home_source_finding_and, track, text(R.string.home_source_finding_artist))
-            assertEquals(listOf(text(R.string.home_source_found, and)), said("MB"))
+            assertEquals(
+                listOf(text(R.string.settings_source_musicbrainz), text(R.string.home_source_found, and)),
+                said("MB"),
+            )
             val pair = text(R.string.home_source_finding_and, track, text(R.string.home_source_finding_original_song))
-            assertEquals(listOf(text(R.string.home_source_found, pair)), said("W"))
-            assertEquals(listOf(text(R.string.home_source_found_pages)), said("S"))
+            assertEquals(
+                listOf(text(R.string.home_source_chip_wikipedia), text(R.string.home_source_found, pair)),
+                said("W"),
+            )
+            assertEquals(
+                listOf(text(R.string.home_source_name_web), text(R.string.home_source_found_pages)),
+                said("S"),
+            )
             // The words as the owner picked them.
             assertEquals("Found the track and the artist", text(R.string.home_source_found, and))
             assertEquals("Found pages about the track", text(R.string.home_source_found_pages))
@@ -253,7 +264,7 @@ class SourcesTableScreenTest {
     }
 
     @Test
-    fun aChipWithLinesIsASwitchNamedByItsSourceAndADimmedOneIsNoButton() =
+    fun aRowWithLinesIsASwitchNamedByItsSourceAndADimmedOneIsNoButton() =
         show(mixed) {
             unfold()
             switch("MB", text(R.string.settings_source_musicbrainz), shown = true)
@@ -261,45 +272,103 @@ class SourcesTableScreenTest {
             assertEquals(
                 text(R.string.home_source_filter, text(R.string.home_source_chip_wikipedia)),
                 compose
-                    .onNodeWithTag(CHIP_PREFIX + "W")
+                    .onNodeWithTag(ROW_PREFIX + "W")
                     .fetchSemanticsNode()
                     .config[SemanticsActions.OnClick]
                     .label,
             )
             for (tag in listOf("S", "AI")) {
-                val chip = compose.onNodeWithTag(CHIP_PREFIX + tag).fetchSemanticsNode().config
-                assertFalse(tag, SemanticsActions.OnClick in chip)
-                assertFalse(tag, SemanticsProperties.Role in chip)
-                assertFalse(tag, SemanticsProperties.ToggleableState in chip)
-                // Nor an empty node a screen reader would stop on: no node of the chip merges.
-                val merging =
-                    compose
-                        .onAllNodes(hasTestTag(CHIP_PREFIX + tag) or hasAnyAncestor(hasTestTag(CHIP_PREFIX + tag)))
-                        .fetchSemanticsNodes()
-                        .filter { it.config.isMergingSemanticsOfDescendants }
-                assertEquals(tag, emptyList<SemanticsNode>(), merging)
+                val row = compose.onNodeWithTag(ROW_PREFIX + tag).fetchSemanticsNode().config
+                assertFalse(tag, SemanticsActions.OnClick in row)
+                assertFalse(tag, SemanticsProperties.Role in row)
+                assertFalse(tag, SemanticsProperties.ToggleableState in row)
             }
-            // A switch is one node, as before.
-            assertTrue(
-                compose
-                    .onNodeWithTag(CHIP_PREFIX + "W")
-                    .fetchSemanticsNode()
-                    .config.isMergingSemanticsOfDescendants,
-            )
             // A dimmed chip's row is read as one text: the source's name and what it found.
             val web = text(R.string.home_source_name_web)
             compose
                 .onNode(hasText(web) and hasText(text(R.string.home_source_none)))
                 .assertTextEquals(web, text(R.string.home_source_none))
-            // A switch says its source's name: the name beside it is not read again.
-            val musicBrainz = text(R.string.settings_source_musicbrainz)
-            assertEquals(0, compose.onAllNodesWithText(musicBrainz).fetchSemanticsNodes().size)
-            // Each chip answers a touch across 48 dp, though it lays out less; on screen, to be measured.
+            // The row answers a touch across its whole height, at least 48 dp, and its width.
             compose
-                .onNodeWithTag(CHIP_PREFIX + "W")
+                .onNodeWithTag(ROW_PREFIX + "W")
                 .performScrollTo()
-                .assertTouchHeightIsEqualTo(48.dp)
-                .assertTouchWidthIsEqualTo(48.dp)
+                .assertHeightIsAtLeast(48.dp)
+            val row =
+                compose
+                    .onNodeWithTag(ROW_PREFIX + "W")
+                    .fetchSemanticsNode()
+                    .size.width
+            val table =
+                compose
+                    .onNodeWithTag(SOURCES_TABLE_TAG, useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .size.width
+            assertEquals(table, row)
+        }
+
+    // #1223: a screen reader stops once on each row, a switch, and not again on its chip or its words.
+    @Test
+    fun aScreenReaderFindsOneSwitchPerRowAndNoOtherStopInIt() =
+        show(mixed) {
+            unfold()
+            val switches =
+                compose
+                    .onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
+                    .fetchSemanticsNodes()
+                    .filter { it.tag()?.startsWith(ROW_PREFIX) == true || inTable(it) }
+            assertEquals(listOf(ROW_PREFIX + "MB", ROW_PREFIX + "W"), switches.map { it.tag() })
+            for (tag in rows()) {
+                // Nothing in a row is a node of its own in the tree a screen reader is given: no
+                // chip, no name, no status.
+                val inRow =
+                    compose
+                        .onAllNodes(hasAnyAncestor(hasTestTag(ROW_PREFIX + tag)))
+                        .fetchSemanticsNodes()
+                assertEquals(tag, emptyList<SemanticsNode>(), inRow)
+                // Nor a click of its own on the chip, which only shows the state.
+                val chip = compose.onNodeWithTag(CHIP_PREFIX + tag, useUnmergedTree = true).fetchSemanticsNode().config
+                assertFalse(tag, SemanticsActions.OnClick in chip)
+                assertFalse(tag, SemanticsProperties.Role in chip)
+            }
+            // A source's name is read once, in its row.
+            val musicBrainz = text(R.string.settings_source_musicbrainz)
+            assertEquals(
+                listOf(ROW_PREFIX + "MB"),
+                compose.onAllNodesWithText(musicBrainz).fetchSemanticsNodes().map { it.tag() },
+            )
+        }
+
+    private fun inTable(node: SemanticsNode): Boolean {
+        var parent = node.parent
+        while (parent != null) {
+            if (parent.tag() == SOURCES_TABLE_TAG) return true
+            parent = parent.parent
+        }
+        return false
+    }
+
+    // #1223: the name and what the source found toggle it as its chip does.
+    @Test
+    fun aTapOnASourcesNameOrWhatItFoundHidesAndShowsItsLines() =
+        show(mixed) {
+            unfold()
+            val wikipedia = text(R.string.home_source_chip_wikipedia)
+            compose.onNodeWithText(wikipedia, useUnmergedTree = true).performScrollTo().performClick()
+            compose.waitForIdle()
+            switch("W", wikipedia, shown = false)
+            assertEquals(0, count(LINE_PREFIX + "W1"))
+            assertEquals(1, count(LINE_PREFIX + "MB1"))
+            tap(STATUS_PREFIX + "W")
+            switch("W", wikipedia, shown = true)
+            assertEquals(1, count(LINE_PREFIX + "W1"))
+            tap(STATUS_PREFIX + "MB")
+            switch("MB", text(R.string.settings_source_musicbrainz), shown = false)
+            assertEquals(0, count(LINE_PREFIX + "MB1"))
+            // A dimmed row's words do nothing: the lines stay as they were.
+            tap(STATUS_PREFIX + "S")
+            switch("W", wikipedia, shown = true)
+            switch("MB", text(R.string.settings_source_musicbrainz), shown = false)
+            assertEquals(1, count(LINE_PREFIX + "W1"))
         }
 
     @Test
@@ -344,102 +413,113 @@ class SourcesTableScreenTest {
     fun theRowsSitCloseWithTheChipsRightAlignedInTheirColumn() =
         show(mixed) {
             unfold()
-            val rows =
-                rows().map { tag ->
-                    compose.onNodeWithTag(ROW_PREFIX + tag, useUnmergedTree = true).fetchSemanticsNode().let {
-                        it.positionInRoot.y to it.positionInRoot.y + it.size.height
-                    }
-                }
+            val rows = rows().map(::rowBounds)
+            // Each row its own touch area, at least 48 dp, the next beginning where it ends (#1223).
             val gaps = rows.zipWithNext { above, below -> (below.first - above.second) / density() }
-            assertTrue("rows about 6 dp apart: $gaps", gaps.all { abs(it - ROW_GAP_DP) < 1f })
+            assertTrue("rows abut: $gaps", gaps.all { abs(it) < 1f })
+            val heights = rows.map { (top, bottom) -> (bottom - top) / density() }
+            assertTrue("rows 48 dp at the least: $heights", heights.all { it >= TARGET_DP - 0.5f })
             val chips =
-                listOf("MB", "W", "S", "AI").map { compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode() }
+                listOf("MB", "W", "S", "AI").map {
+                    compose.onNodeWithTag(CHIP_PREFIX + it, useUnmergedTree = true).fetchSemanticsNode()
+                }
             val ends = chips.map { it.positionInRoot.x + it.size.width }
             assertTrue("one right edge: $ends", ends.maxOf { it } - ends.minOf { it } < 1f)
-            // A chip lays out its own height, not its 48 dp target.
+            // A chip lays out its own height, not a 48 dp target: the row is the target.
             for (chip in chips) assertTrue("${chip.size.height} px", chip.size.height / density() < TARGET_DP)
         }
 
-    /** Touches the screen at [dp] from [chip]'s top (negative above it), at its horizontal centre. */
+    // #1223: the rows' padding is taken back at the table's edges, so its first row's contents start
+    // and its last row's end where they did with a gap between rows, and the legend sits as close.
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun theTableEndsAtItsFirstAndLastRowsContentsAndTheirEdgesStillTakeATouch() =
+        show(mixed) {
+            unfold()
+            val tags = rows()
+            val (tableTop, tableBottom) = bounds(SOURCES_TABLE_TAG)
+            val (firstTop, _) = rowBounds(tags.first())
+            val (_, lastBottom) = rowBounds(tags.last())
+            assertEquals("first row's top", -EDGE_DP, (firstTop - tableTop) / density(), 0.5f)
+            assertEquals("last row's bottom", EDGE_DP, (lastBottom - tableBottom) / density(), 0.5f)
+            // The first chip centred in its row's contents, which start at the table's top.
+            val chip = compose.onNodeWithTag(CHIP_PREFIX + tags.first(), useUnmergedTree = true).fetchSemanticsNode()
+            val contents = rowBounds(tags.first()).let { (top, bottom) -> (bottom - top) / density() - 2 * EDGE_DP }
+            val above = (chip.positionInRoot.y - tableTop) / density()
+            assertEquals("first chip's top", (contents - chip.size.height / density()) / 2, above, 0.5f)
+            // The legend right under the table, as it was under the last row.
+            val (legendTop, _) = bounds(SOURCES_LEGEND_TAG)
+            assertTrue("legend at $legendTop, table ends at $tableBottom", legendTop >= tableBottom - 0.5f)
+            // A touch in the first row's top padding, above the table's edge, still toggles that row.
+            compose.onNodeWithTag(ROW_PREFIX + "MB", useUnmergedTree = true).performScrollTo()
+            val x =
+                compose
+                    .onNodeWithTag(STATUS_PREFIX + "MB", useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .boundsInRoot.center.x
+            touch("MB", 1f, x)
+            assertEquals(false to true, shown("MB") to shown("W"))
+        }
+
+    private fun rowBounds(tag: String) =
+        compose.onNodeWithTag(ROW_PREFIX + tag, useUnmergedTree = true).fetchSemanticsNode().let {
+            it.positionInRoot.y to it.positionInRoot.y + it.size.height
+        }
+
+    /** Touches the screen at [dp] from [row]'s top (negative above it), at [x] px from the left. */
     private fun touch(
-        chip: String,
+        row: String,
         dp: Float,
+        x: Float,
     ) {
-        val bounds = compose.onNodeWithTag(CHIP_PREFIX + chip).fetchSemanticsNode().boundsInRoot
-        compose.onRoot().performTouchInput { click(Offset(bounds.center.x, bounds.top + dp * density())) }
+        val (top, _) = rowBounds(row)
+        compose.onRoot().performTouchInput { click(Offset(x, top + dp * density())) }
         compose.waitForIdle()
     }
 
     private fun shown(tag: String) =
-        compose.onNodeWithTag(CHIP_PREFIX + tag).fetchSemanticsNode().config[SemanticsProperties.ToggleableState] ==
+        compose.onNodeWithTag(ROW_PREFIX + tag).fetchSemanticsNode().config[SemanticsProperties.ToggleableState] ==
             ToggleableState.On
 
     /**
-     * Touches just outside a chip, above and below it, and between two rows, each nearer one chip:
-     * the nearer chip toggles, and only it. At [fontScale].
+     * Touches just inside a row's top and bottom edges, over its chip and over its words (#1223):
+     * that row toggles, and only it; one in the dimmed row toggles nothing. At [fontScale].
      */
-    private fun touchesGoToTheNearerChip(fontScale: Float) =
+    private fun touchesGoToTheirRow(fontScale: Float) =
         show(mixed, fontScale = fontScale) {
             unfold()
             compose.onNodeWithTag(ROW_PREFIX + "S", useUnmergedTree = true).performScrollTo()
-            val height =
+            val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB", useUnmergedTree = true).fetchSemanticsNode()
+            val overChip = chip.boundsInRoot.center.x
+            val overWords =
                 compose
-                    .onNodeWithTag(CHIP_PREFIX + "MB")
+                    .onNodeWithTag(STATUS_PREFIX + "MB", useUnmergedTree = true)
                     .fetchSemanticsNode()
-                    .size.height / density()
-            val wikipedia =
-                compose
-                    .onNodeWithTag(CHIP_PREFIX + "W")
-                    .fetchSemanticsNode()
-                    .boundsInRoot.top
-            val musicBrainz =
-                compose
-                    .onNodeWithTag(CHIP_PREFIX + "MB")
-                    .fetchSemanticsNode()
-                    .boundsInRoot.bottom
-            // Halfway between MusicBrainz's chip and Wikipedia's, in dp from MusicBrainz's top.
-            val between = height + (wikipedia - musicBrainz) / density() / 2
-            // How far beyond its edges a chip answers: up to its 48 dp, none once it is as tall.
-            val reach = (TARGET_DP - height) / 2
-            if (reach > NEAR) {
-                // Above MusicBrainz's chip, within its 48 dp.
-                touch("MB", -NEAR)
+                    .boundsInRoot.center.x
+            val height = (rowBounds("MB").second - rowBounds("MB").first) / density()
+            for (x in listOf(overChip, overWords)) {
+                // Just inside MusicBrainz's row, at its top and at its bottom.
+                touch("MB", NEAR, x)
                 assertEquals(false to true, shown("MB") to shown("W"))
-                touch("MB", -NEAR)
+                touch("MB", height - NEAR, x)
                 assertEquals(true to true, shown("MB") to shown("W"))
-                // Below it, nearer it than Wikipedia's.
-                touch("MB", between - NEAR)
-                assertEquals(false to true, shown("MB") to shown("W"))
-                touch("MB", between - NEAR)
-                // Below that, nearer Wikipedia's.
-                touch("MB", between + NEAR)
+                // Just inside Wikipedia's, below it.
+                touch("W", NEAR, x)
                 assertEquals(true to false, shown("MB") to shown("W"))
-                touch("MB", between + NEAR)
+                touch("W", NEAR, x)
+                // In the dimmed web search's row: nothing.
+                touch("S", NEAR, x)
                 assertEquals(true to true, shown("MB") to shown("W"))
-                // Below Wikipedia's chip, nearer it than the dimmed web search's, which takes no touch.
-                touch("W", height + NEAR)
-                assertEquals(true to false, shown("MB") to shown("W"))
-            } else {
-                // A chip as tall as its target: a touch outside it, above or between two, toggles
-                // nothing; one just inside its edge toggles it.
-                touch("MB", -NEAR)
-                touch("MB", between - NEAR.coerceAtMost(between - height - 1f))
-                touch("MB", between + NEAR.coerceAtMost(between - height - 1f))
-                assertEquals(true to true, shown("MB") to shown("W"))
-                touch("MB", NEAR)
-                assertEquals(false to true, shown("MB") to shown("W"))
-                touch("W", NEAR)
-                assertEquals(false to false, shown("MB") to shown("W"))
             }
         }
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun aTouchNearAChipGoesToTheNearerChip() = touchesGoToTheNearerChip(1f)
+    fun aTouchAnywhereInARowGoesToItsRow() = touchesGoToTheirRow(1f)
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun aTouchNearAChipGoesToTheNearerChipInALargeFont() = touchesGoToTheNearerChip(2f)
+    fun aTouchAnywhereInARowGoesToItsRowInALargeFont() = touchesGoToTheirRow(2f)
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -449,7 +529,7 @@ class SourcesTableScreenTest {
             // Unclipped: a chip scrolled out of view has empty bounds in the root.
             val centres =
                 listOf("MB", "W", "S", "AI").map {
-                    val chip = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
+                    val chip = compose.onNodeWithTag(CHIP_PREFIX + it, useUnmergedTree = true).fetchSemanticsNode()
                     chip.positionInRoot.y + chip.size.height / 2f
                 }
             val pitches = centres.zipWithNext { above, below -> (below - above) / density() }
@@ -489,7 +569,7 @@ class SourcesTableScreenTest {
             unfold()
             assertEquals("P", rows().first())
             switch("P", text(R.string.home_source_chip_player), shown = true)
-            assertEquals(listOf(text(R.string.home_source_release)), said("P"))
+            assertEquals(listOf(text(R.string.home_source_chip_player), text(R.string.home_source_release)), said("P"))
         }
     }
 
@@ -553,6 +633,7 @@ class SourcesTableScreenTest {
             assertEquals(listOf("MB", "W", "D", "S", "L", "AI"), rows())
             assertEquals(
                 listOf(
+                    text(R.string.settings_source_musicbrainz),
                     text(
                         R.string.home_source_cached,
                         text(R.string.home_source_found, text(R.string.home_source_finding_track)),
@@ -568,7 +649,7 @@ class SourcesTableScreenTest {
             )
             // Still a switch where it has lines, dimmed where it has none.
             switch("MB", text(R.string.settings_source_musicbrainz), shown = true)
-            val discogs = compose.onNodeWithTag(CHIP_PREFIX + "D").fetchSemanticsNode().config
+            val discogs = compose.onNodeWithTag(ROW_PREFIX + "D").fetchSemanticsNode().config
             assertFalse(SemanticsActions.OnClick in discogs)
             compose.onNodeWithText(text(R.string.home_rejected_title)).performScrollTo().assertExists()
             val web = text(R.string.home_source_name_web)
@@ -625,7 +706,7 @@ class SourcesTableScreenTest {
     // The chip as drawn, its rounded shape and no more, scrolled into view.
     private fun picture(tag: String): Bitmap =
         compose
-            .onNodeWithTag(tag)
+            .onNodeWithTag(tag, useUnmergedTree = true)
             .performScrollTo()
             .captureToImage()
             .asAndroidBitmap()
@@ -671,10 +752,12 @@ class SourcesTableScreenTest {
         // How far apart, summed, two colours are to be told apart at a glance.
         const val DISTINCT = 60
 
-        const val ROW_GAP_DP = 6f
         const val TARGET_DP = 48f
 
-        // How far from a chip's edge, or from halfway between two, a touch lands, in dp.
+        // The rows' padding above and below their contents, taken back at the table's edges (#1223).
+        const val EDGE_DP = 3f
+
+        // How far inside a row's edge a touch lands, in dp.
         const val NEAR = 4f
     }
 }

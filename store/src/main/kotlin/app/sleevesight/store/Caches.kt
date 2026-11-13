@@ -36,13 +36,20 @@ import kotlin.time.Instant
  * connection between threads and is for single-threaded tests only.
  */
 class Caches(
-    driver: SqlDriver,
+    private val driver: SqlDriver,
     private val settings: () -> Settings,
     normalizer: Normalizer,
     private val clock: Clock = Clock.System,
 ) {
     internal val queries: CacheQueries = CacheDatabase(driver).cacheQueries
     private val context = CacheContext(queries, settings, clock, ::enforceLimit)
+    private val unwiped = Wiping.Unwiped()
+
+    /**
+     * Whether the last [clearAll] or [purgeExpired] left deleted entries in the write-ahead log, a
+     * reader having kept its checkpoint busy ([Wiping]); the next one checkpoints it again.
+     */
+    val logUnwiped: Boolean get() = unwiped.pending
 
     val retrieval: RetrievalCache = RetrievalCache(context, normalizer)
     val artists: ArtistCache = ArtistCache(context)
@@ -60,11 +67,11 @@ class Caches(
      * so a shortened one deletes what it no longer keeps. Reads never return an expired entry
      * either way; this frees the space. An entry kept under an adapter's older extraction version,
      * or an older version of its artist-level part, is not expired: it is deleted when read,
-     * replaced, or evicted. `:cli` calls this at start, and the app on start. Returns how many
-     * entries it deleted.
+     * replaced, or evicted. `:cli` calls this at start, and the app on start. What it deletes is
+     * wiped from the files ([Wiping]). Returns how many entries it deleted.
      */
     fun purgeExpired(now: Instant = clock.now()): Long =
-        queries.transactionWithResult {
+        wiping {
             val current = settings()
             var deleted = 0L
             for (source in SourceId.entries) {
@@ -107,13 +114,26 @@ class Caches(
     /**
      * Deletes everything the caches keep, for *Clear history* (#547): the retrieval entries, the
      * artist resolutions, the artist-level results and the written insights and cards, in one
-     * transaction, so a failure leaves them as they were. Returns how many entries it deleted.
+     * transaction, so a failure leaves them as they were, and wiped from the files ([Wiping]).
+     * Returns how many entries it deleted.
      */
     fun clearAll(): Long =
-        queries.transactionWithResult {
+        wiping {
             queries.retrievalDeleteAll().value + queries.artistDeleteAll().value +
                 queries.artistResultDeleteAll().value + queries.synthesisDeleteAll().value
         }
+
+    // [delete] in one transaction, wiped from the files ([Wiping]): what it deletes is overwritten,
+    // and the write-ahead log checkpointed once it commits. Returns what [delete] returns.
+    private fun wiping(delete: () -> Long): Long {
+        val deleted =
+            queries.transactionWithResult {
+                Wiping.secureDelete(driver)
+                delete()
+            }
+        unwiped.checkpoint(driver)
+        return deleted
+    }
 
     // Rows holding a source tag the app no longer knows, as the adapter's source or among the
     // sources of its lines or consulted (or, for an artist-level result, depended on); a read
