@@ -194,20 +194,22 @@ object GroundingCheck {
     /**
      * [grounded] with each sentence that cites only lines of [evidence] ([SentenceStatus.OK]) and
      * that they do not back ([Support]) marked [SentenceStatus.UNSUPPORTED] (#1036); the words of
-     * [subject] count as backed. Itself when none is.
+     * [subject], and of [evidence]'s player release line ([SourceId.PLAYER]), count as backed. Itself when none is.
      */
     fun supported(
         grounded: GroundedText,
         evidence: EvidenceSet,
         subject: Collection<String> = emptyList(),
     ): GroundedText {
+        // The player's release line names the album and its year for every card, cited or not.
+        val known = subject + evidence.lines.filter { it.source == SourceId.PLAYER }.map { it.text }
         var changed = false
         val paragraphs =
             grounded.paragraphs.map { paragraph ->
                 paragraph.map { sentence ->
                     val lines = sentence.cites.mapNotNull { evidence[it] }
                     val unsupported =
-                        sentence.status == SentenceStatus.OK && !Support.backs(sentence.text, lines, subject)
+                        sentence.status == SentenceStatus.OK && !Support.backs(sentence.text, lines, known)
                     if (unsupported) {
                         changed = true
                         sentence.copy(status = SentenceStatus.UNSUPPORTED)

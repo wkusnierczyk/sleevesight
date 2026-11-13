@@ -7,30 +7,31 @@ import app.sleevesight.core.evidence.EvidenceLine
  * *Grounding check*): the grounding check otherwise confirms only that a cited line exists, so a
  * plausible false sentence with a valid citation would pass. Narrow on purpose, since it matches
  * words, not meaning: a false *unsupported* dims a true sentence, so it compares only what a wrong
- * detail most often changes, and reads each loosely.
+ * detail most often changes, reads each loosely, and in doubt finds the sentence backed.
  *
  * What it compares, the sentence's citations taken out:
- * - **Numbers in digits** (`1974`, `12,838`, `9th`, `1970s`): each must be in a cited line, in digits
- *   (leading zeros and digit-group commas aside: `03` is `3`, `12,838` is `12838`) or in words up to
- *   the tens (`one` to `ninety-nine`, `hundred`, `thousand`; ordinals `first` to `twentieth`). Two
- *   digits also match a four-digit number ending in them (`'74`, `1970-75`), and a decade's four
- *   digits its two (`1970s` beside `70s`). Numbers in words in the sentence are not compared (`one of
- *   the`, `number one`).
- * - **Names**: a word of three letters or more that opens with a capital, but for a few small words
- *   ([SMALL_WORDS]: `The`, `Of`, `And`), the names of the sources ([SOURCE_NAMES]), Roman numerals,
- *   and the sentence's first word when the word after it does not open with a capital too (`Despite
- *   its …`, `Released in …`: the capital is the sentence's, not a name's). Each must be in a cited
- *   line, in any case, a letter with a diacritic matching any letter (`Beyonce`, `Beyoncé`), or as a
- *   word that shares all but its last three letters, five at least (`Canada`, `Canadian`). A month's
- *   name also matches its abbreviation or an ISO date of that month (`March`, `Mar.`, `1974-03-25`).
+ * - **Years** (a four-digit number from 1000 to 2099): each must be in a cited line, or its last two
+ *   digits must be (`'74`). A decade (`1970s`) is backed by any year in it, or by the decade written
+ *   either way (`70s`). Other numbers are not compared: a count, a chart place, a day of the month or
+ *   an age may be written another way or worked out (35, from a birth in 1938 and a recording in
+ *   1973), which words cannot tell.
+ * - **Names**: a word of three letters or more that opens with a capital, but not the sentence's
+ *   first word (`Released in …`: its capital may be the sentence's), a few small words
+ *   ([SMALL_WORDS]: `The`, `And`), the sources' names ([SOURCE_NAMES]), Roman numerals, and places
+ *   and their peoples ([PLACES]: `United States`, `USA`, `British`, `Britain`), which lines and
+ *   sentences name in too many ways to match. Each must be in a cited line, in any case, a letter
+ *   with a diacritic matching any letter (`Beyonce`, `Beyoncé`), or as a word that shares all but
+ *   its last three letters, five at least (`Newfoundland`, `Newfoundlanders`). A month's name also
+ *   matches its abbreviation or an ISO date of that month (`March`, `Mar.`, `1974-03-25`).
  * - Either may instead be a word of what the card is about ([subject]: the track's title, artists and
- *   album, the artist's or album's name), which a line often leaves out (`it`, `the song`).
+ *   album, the artist's or album's name, the player's release line), which a line often leaves out
+ *   (`it`, `the song`).
  *
  * Not checked: a sentence that cites a line in another language (#902, `EvidenceLine.language`),
- * which the model translated and the app has only as found; any word in lower case; numbers in
- * words. Portable: no regex classes (D2), letters and digits read with the standard library.
+ * which the model translated and the app has only as found; any word in lower case; numbers other
+ * than years. Portable: no regex classes (D2), letters and digits read with the standard library.
  */
-@Suppress("TooManyFunctions", "MagicNumber") // One step of the comparison each; numbers' and months' own values.
+@Suppress("TooManyFunctions", "MagicNumber") // One step of the comparison each; years' and months' own values.
 internal object Support {
     /**
      * Whether [lines], those [sentence] cites, back it, as [Support] compares them; true when one
@@ -48,11 +49,10 @@ internal object Support {
         val words = (cited + known).filter { !it.number }.mapTo(mutableSetOf()) { fold(it.text) }
         val numbers = (cited + known).filter { it.number }.mapTo(mutableSetOf()) { it.text }
         val months = monthsIn(lines, words)
-        val letters = said.filter { !it.number }
         return said.withIndex().all { (index, token) ->
             when {
-                token.number -> numberBacked(token.text, said.getOrNull(index + 1), numbers, words)
-                !isName(token, letters) -> true
+                token.number -> yearBacked(token.text, said.getOrNull(index + 1), numbers)
+                !isName(token) -> true
                 else -> {
                     val folded = fold(token.text)
                     val month = MONTHS[folded]
@@ -62,8 +62,8 @@ internal object Support {
         }
     }
 
-    // A run of letters or of digits in a text, [number] for digits (without leading zeros, and
-    // without the commas between groups of three: `12,838`).
+    // A run of letters or of digits in a text, [number] for digits (without leading zeros), [first]
+    // for the text's first run of letters.
     private class Token(
         val text: String,
         val number: Boolean,
@@ -74,16 +74,15 @@ internal object Support {
         val tokens = mutableListOf<Token>()
         var i = 0
         while (i < text.length) {
-            val c = text[i]
+            val start = i
             when {
-                c.isDigit() -> {
-                    val (digits, end) = digitsAt(text, i)
+                text[i].isDigit() -> {
+                    while (i < text.length && text[i].isDigit()) i++
+                    val digits = text.substring(start, i).trimStart('0').ifEmpty { "0" }
                     tokens += Token(digits, number = true, first = false)
-                    i = end
                 }
 
-                c.isLetter() -> {
-                    val start = i
+                text[i].isLetter() -> {
                     while (i < text.length && text[i].isLetter()) i++
                     tokens += Token(text.substring(start, i), number = false, first = tokens.none { !it.number })
                 }
@@ -96,84 +95,29 @@ internal object Support {
         return tokens
     }
 
-    // The number whose digits start at [start] in [text], without leading zeros and with the commas
-    // between groups of three left out, and where it ends.
-    private fun digitsAt(
-        text: String,
-        start: Int,
-    ): Pair<String, Int> {
-        val run = StringBuilder()
-        var i = start
-        while (i < text.length && inNumber(text, i)) {
-            if (text[i].isDigit()) run.append(text[i])
-            i++
-        }
-        return run.toString().trimStart('0').ifEmpty { "0" } to i
-    }
-
-    // Whether the character at [i] in [text] is part of a number: a digit, or a comma before a group
-    // of three.
-    private fun inNumber(
-        text: String,
-        i: Int,
-    ): Boolean = text[i].isDigit() || (text[i] == ',' && groupOfThree(text, i + 1))
-
-    // Whether three digits, and no fourth, start at [at] in [text].
-    private fun groupOfThree(
-        text: String,
-        at: Int,
-    ): Boolean =
-        at + DIGIT_GROUP <= text.length &&
-            (at until at + DIGIT_GROUP).all { text[it].isDigit() } &&
-            text.getOrNull(at + DIGIT_GROUP)?.isDigit() != true
-
-    // Whether [token] is compared as a name ([Support]): a capital, three letters or more, not a
-    // small word, a source's name or a Roman numeral; the sentence's first word only before another
-    // capital word.
-    private fun isName(
-        token: Token,
-        letters: List<Token>,
-    ): Boolean {
+    // Whether [token] is compared as a name ([Support]): a capital, three letters or more, not the
+    // sentence's first word, a small word, a source's name, a place's or its people's, or a Roman
+    // numeral.
+    private fun isName(token: Token): Boolean {
         val text = token.text
         val folded = fold(text)
-        val candidate =
-            text.length >= MIN_NAME &&
-                text[0].isUpperCase() &&
-                folded !in SMALL_WORDS &&
-                folded !in SOURCE_NAMES &&
-                !ROMAN.matches(text)
-        val next = letters.getOrNull(letters.indexOf(token) + 1)
-        return candidate && (!token.first || next?.text?.get(0)?.isUpperCase() == true)
+        val excluded = folded in SMALL_WORDS || folded in SOURCE_NAMES || folded in PLACES || ROMAN.matches(text)
+        return !token.first && text.length >= MIN_NAME && text[0].isUpperCase() && !excluded
     }
 
-    // Whether the number [digits] (followed in the sentence by [next]) is in [numbers] or [words].
-    private fun numberBacked(
+    // Whether the number [digits] (followed in the sentence by [next]) is backed by [numbers]: only a
+    // year is compared ([Support]).
+    private fun yearBacked(
         digits: String,
         next: Token?,
         numbers: Set<String>,
-        words: Set<String>,
     ): Boolean {
-        // `'74` and `1970-75` beside a year; `1970s` beside `70s`.
-        val yearEnd = digits.length == 2 && numbers.any { it.length == YEAR_DIGITS && it.endsWith(digits) }
-        val decade = digits.length == YEAR_DIGITS && digits.endsWith("0") && next?.text == "s"
-        val value = digits.toIntOrNull()
+        val year = digits.toIntOrNull()?.takeIf { it in YEARS } ?: return true
+        val decade = next?.text == "s" && year % DECADE == 0
+        val years = numbers.mapNotNull { it.toIntOrNull() }.filter { it in YEARS }
         return digits in numbers ||
-            yearEnd ||
-            (decade && digits.takeLast(2) in numbers) ||
-            (value != null && inWords(value).any { form -> form.all { it in words } })
-    }
-
-    // The ways [value] is written in words that [numberBacked] accepts, each as the words it takes.
-    private fun inWords(value: Int): List<List<String>> {
-        val forms = mutableListOf<List<String>>()
-        CARDINALS[value]?.let { forms += listOf(it) }
-        ORDINALS[value]?.let { forms += listOf(it) }
-        if (value in TWO_DIGIT_WORDS && value % TEN != 0) {
-            val tens = CARDINALS[value - value % TEN]
-            val unit = CARDINALS[value % TEN]
-            if (tens != null && unit != null) forms += listOf(tens, unit)
-        }
-        return forms
+            digits.takeLast(2) in numbers ||
+            (decade && years.any { it / DECADE == year / DECADE })
     }
 
     // The months [lines] name, by number: in their words ([words], folded) or in an ISO date.
@@ -184,11 +128,9 @@ internal object Support {
         words.mapNotNullTo(mutableSetOf()) { MONTHS[it] } +
             lines.flatMap { line -> ISO_MONTH.findAll(line.text).mapNotNull { it.groupValues[1].toIntOrNull() } }
 
-    // [word] in lower case, each letter with a diacritic ([isAccented]) as [ANY_LETTER].
+    // [word] in lower case, each letter with a diacritic ([LATIN_ACCENTED]) as [ANY_LETTER].
     private fun fold(word: String): String =
-        word.lowercase().map { if (isAccented(it)) ANY_LETTER else it }.joinToString("")
-
-    private fun isAccented(c: Char): Boolean = c in LATIN_ACCENTED
+        word.lowercase().map { if (it in LATIN_ACCENTED) ANY_LETTER else it }.joinToString("")
 
     // Whether two folded words name the same: equal, or sharing all but the last three letters of
     // the shorter, five at least; a letter with a diacritic matches any.
@@ -230,41 +172,30 @@ internal object Support {
     private val SOURCE_NAMES: Set<String> =
         setOf("wikipedia", "wikidata", "musicbrainz", "discogs", "last", "lastfm", "lrclib", "exa", "sleevesight")
 
-    private val CARDINALS: Map<Int, String> =
+    // Places, their peoples and the words of their names, which lines and sentences give in many
+    // ways (`US`, `USA`, `United States`, `America`, `American`): not compared, rather than matched
+    // by a table of equivalents that would miss some. A word of a band's name among them (`New
+    // Order`) goes uncompared too, which only lets a sentence pass.
+    private val PLACES: Set<String> =
         (
-            "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen " +
-                "fifteen sixteen seventeen eighteen nineteen twenty"
-        ).split(' ').withIndex().associate { (index, word) -> index to word } +
-            mapOf(
-                30 to "thirty",
-                40 to "forty",
-                50 to "fifty",
-                60 to "sixty",
-                70 to "seventy",
-                80 to "eighty",
-                90 to "ninety",
-                100 to "hundred",
-                1000 to "thousand",
-                1_000_000 to "million",
-            )
-
-    private val ORDINALS: Map<Int, String> =
-        (
-            "first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelfth " +
-                "thirteenth fourteenth fifteenth sixteenth seventeenth eighteenth nineteenth twentieth"
-        ).split(' ').withIndex().associate { (index, word) -> index + 1 to word }
+            "united states kingdom america american americans usa britain british brit brits england " +
+                "english scotland scottish ireland irish wales welsh canada canadian canadians australia " +
+                "australian australians new zealand german germany french france italian italy spanish " +
+                "spain japan japanese sweden swedish norway norwegian denmark danish finland finnish " +
+                "dutch netherlands holland belgium belgian brazil brazilian mexico mexican jamaica " +
+                "jamaican europe european africa african nigeria nigerian korea korean china chinese " +
+                "india indian russia russian soviet north south east west northern southern eastern western"
+        ).split(' ').toSet()
 
     private const val MIN_NAME = 3
     private const val STEM = 5
     private const val STEM_SLACK = 3
-    private const val YEAR_DIGITS = 4
-    private const val DIGIT_GROUP = 3
-    private const val TEN = 10
-    private val TWO_DIGIT_WORDS = 21..99
+    private const val DECADE = 10
+    private val YEARS = 1000..2099
     private const val ANY_LETTER = '\u0000'
 
     // Latin letters with diacritics: Latin-1's (but × and ÷), Latin Extended-A and -B.
-    private val LATIN_ACCENTED: CharRange = '\u00C0'..'\u024F'
+    private val LATIN_ACCENTED: CharRange = 'À'..'ɏ'
 
     private val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
     private val ROMAN = Regex("[IVXLC]+")

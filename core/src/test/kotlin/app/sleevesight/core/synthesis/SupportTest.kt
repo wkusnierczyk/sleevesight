@@ -143,17 +143,17 @@ class SupportTest {
     }
 
     /**
-     * A sentence's first word is a name only before another capital word: "Despite its sound" and
-     * "Released in" are not names, "Arthur Scammell" is.
+     * A sentence's first word is never compared as a name: "Despite", "Released", "Arthur"; the
+     * words after it are ("Smith").
      */
     @Test
-    fun `a sentence's first word is a name only before another name`() {
+    fun `a sentence's first word is not compared as a name`() {
         val lines = listOf(line("Scammell wrote the song in 1928; it was released later."))
         assertEquals(
             listOf(SentenceStatus.OK, SentenceStatus.OK, SentenceStatus.UNSUPPORTED),
             statuses(
                 "Despite its sound, Scammell wrote it in 1928 [W1]. Released later, it sold [W1]. " +
-                    "Arthur Scammell wrote it [W1].",
+                    "Arthur Smith wrote it [W1].",
                 lines,
             ),
         )
@@ -171,7 +171,7 @@ class SupportTest {
             listOf(SentenceStatus.OK, SentenceStatus.UNSUPPORTED),
             statuses(
                 "It reached number one in the United States in December 1985 [W1]. " +
-                    "It reached number one in the United States [W2].",
+                    "It reached number one for Island Records [W2].",
                 lines,
             ),
         )
@@ -206,5 +206,67 @@ class SupportTest {
             grounded.counts,
         )
         assertEquals(true, grounded.citesSource)
+    }
+
+    /**
+     * Codex, PR #1238: an ordinary opening word before a capital one ("Released March") was read as
+     * a name. The first word is never compared.
+     */
+    @Test
+    fun `an opening word before a month is not a name`() {
+        assertEquals(
+            listOf(SentenceStatus.OK),
+            statuses("Released March 1974 on Reprise [W1].", listOf(line("Single issued 25 March 1974 on Reprise."))),
+        )
+    }
+
+    /** Codex, PR #1238: places and their peoples are named in many ways, and are not compared. */
+    @Test
+    fun `places and peoples are not compared`() {
+        val lines = listOf(line("It topped the US chart and was a hit in Britain."))
+        assertEquals(
+            List(3) { SentenceStatus.OK },
+            statuses(
+                "It reached number one in the United States [W1]. It was a British hit [W1]. " +
+                    "It charted in the USA and the United Kingdom [W1].",
+                lines,
+            ),
+        )
+    }
+
+    /**
+     * Codex, PR #1238: the album, which `CardEntity.Track` does not name, is in the player's release
+     * line, whose words count as backed for every sentence, cited or not.
+     */
+    @Test
+    fun `the player's release line backs the album's name`() {
+        val lines =
+            listOf(
+                line("This recording is on the release \"Sundown Sessions\" (1974).", SourceId.PLAYER),
+                line("It topped the charts."),
+            )
+        // `P1` is the player's line, `W1` Wikipedia's.
+        assertEquals(listOf(SentenceStatus.OK), statuses("It opens the album Sundown Sessions [W1].", lines))
+    }
+
+    /**
+     * Codex, PR #1238: a decade beside a year in it, a date written another way, and an age worked
+     * out from two years are backed; only years are compared.
+     */
+    @Test
+    fun `decades, dates in another form and worked-out ages are backed`() {
+        val lines =
+            listOf(
+                line("It was released in 1974."),
+                line("Single issued 25 March 1974."),
+                line("He was born in 1938 and recorded the song in 1973."),
+            )
+        assertEquals(
+            List(3) { SentenceStatus.OK },
+            statuses(
+                "It came out in the 1970s [W1]. It was issued on 1974-03-25 [W2]. He was 35 when he recorded it [W3].",
+                lines,
+            ),
+        )
     }
 }
