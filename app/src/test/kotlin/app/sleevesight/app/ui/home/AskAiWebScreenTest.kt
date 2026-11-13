@@ -409,6 +409,14 @@ class AskAiWebScreenTest {
         assertEquals("en.wikipedia.org", siteOf("https://en.wikipedia.org/wiki/Grace"))
         assertEquals("not a url", siteOf("not a url"))
     }
+
+    @Test
+    fun theSiteIsTheHostTheLinkOpens() {
+        // Read as a browser reads it (#1245), not as the address may look.
+        assertEquals("a.example", siteOf("https://a.example\\@b.example/x"))
+        assertEquals("a.example", siteOf("https://a.example#@b.example/x"))
+        assertEquals("c.example", siteOf("https://a@b@c.example/x"))
+    }
 }
 
 /** The *Dates* panel's album sentence for an answer of January 1974. */

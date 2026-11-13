@@ -10,6 +10,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.ReplyFailures
+import app.sleevesight.core.text.WebLinks
 import kotlin.time.Duration
 
 // The words the home screen puts to what it shows.
@@ -131,15 +132,11 @@ private val FAILURE_TEXTS: Map<String, Int> =
         PipelineHost.FAILED to R.string.home_failure_failed,
     )
 
-/** The host of [url], for an evidence line's link; null when it has none. */
-internal fun hostOf(url: String?): String? =
-    url
-        ?.substringAfter("://", "")
-        ?.substringBefore('/')
-        ?.substringBefore('?')
-        ?.substringAfter('@')
-        ?.removePrefix("www.")
-        ?.takeIf { it.isNotEmpty() }
+/**
+ * The host of [url] ([WebLinks.host], as a browser reads it, so it names the site the link opens),
+ * without `www.`, for an evidence line's link; null when it has none.
+ */
+internal fun hostOf(url: String?): String? = WebLinks.host(url)?.removePrefix("www.")?.takeIf { it.isNotEmpty() }
 
 /** `m:ss`, or `h:mm:ss` from an hour. */
 internal fun clock(duration: Duration): String {

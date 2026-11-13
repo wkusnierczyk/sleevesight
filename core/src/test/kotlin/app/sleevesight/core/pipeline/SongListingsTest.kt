@@ -68,6 +68,13 @@ class SongListingsTest {
     }
 
     @Test
+    fun `the host is the one a browser opens, not one later in the address`() {
+        assertFalse(SongListings.isListingHost("https://a.example#@open.spotify.com/x"))
+        assertFalse(SongListings.isListingHost("https://a.example\\@open.spotify.com/x"))
+        assertTrue(SongListings.isListingHost("https://a.example@open.spotify.com/x"))
+    }
+
+    @Test
     fun `a page that reads like a listing is one, on any host`() {
         listOf(
             "Phil's First Tear was released on April 5, 2024.",

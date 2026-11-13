@@ -274,6 +274,16 @@ class HomeModelTest {
     }
 
     @Test
+    fun aLinksHostIsTheHostItOpens() {
+        // Read as a browser reads it (#1245), not as the address may look.
+        assertEquals("a.example", hostOf("https://a.example#@b.example/x"))
+        assertEquals("a.example", hostOf("https://a.example\\@b.example/x"))
+        assertEquals("a.example", hostOf("https://a.example?@b.example/x"))
+        assertEquals("c.example", hostOf("https://a@b@c.example/x"))
+        assertEquals("example.com", hostOf("https://WWW.Example.com:8443/x"))
+    }
+
+    @Test
     fun theSourcesSayThePhoneIsOfflineOnlyWhileItIsAndASourceIsUnreachable() {
         val unreachable =
             track(sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.WEB to done(Outcome.Unreachable)))

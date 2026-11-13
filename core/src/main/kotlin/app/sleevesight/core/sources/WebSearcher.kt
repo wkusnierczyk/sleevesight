@@ -1,5 +1,7 @@
 package app.sleevesight.core.sources
 
+import app.sleevesight.core.text.WebLinks
+
 /**
  * A page a web search found (#801): its [url], its [title] where the engine gives one, and [text],
  * a passage of it the engine chose for the query (Exa's highlights), cut short.
@@ -26,16 +28,8 @@ sealed interface WebSearchOutcome {
  * carry its tags: a question's pages leave them out (D12, #801), so no tag reaches a prompt.
  */
 fun isMusicBrainzPage(url: String): Boolean {
-    val host =
-        url
-            .substringAfter("://", "")
-            .substringBefore('/')
-            .substringBefore('?')
-            .substringBefore('#')
-            .substringAfterLast('@')
-            .substringBefore(':')
-            .lowercase()
-            .trimEnd('.')
+    // The host as a browser reads it (#1245); an address with none is no MusicBrainz page.
+    val host = WebLinks.host(url)?.trimEnd('.') ?: return false
     return host == MUSICBRAINZ_HOST || host.endsWith(".$MUSICBRAINZ_HOST")
 }
 
