@@ -239,7 +239,7 @@ class SourcesLegendScreenTest {
     fun theLegendSitsInTheTablesColumnsUnderItBeforeTheNote() =
         show {
             unfold()
-            val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB").fetchSemanticsNode()
+            val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB", useUnmergedTree = true).fetchSemanticsNode()
             val pill =
                 compose.onNodeWithTag(SOURCES_LEGEND_PILL_TAG, useUnmergedTree = true).fetchSemanticsNode()
             // What Last.fm's row found, under its name, where the names' column starts.

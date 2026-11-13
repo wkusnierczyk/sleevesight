@@ -14,10 +14,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -305,7 +306,7 @@ class NowPlayingScreenTest {
         show(state(PipelineView(track(insight = written("It topped the charts [W1].")), aiReady = true))) {
             unfold()
             // Wikipedia's chip hides its lines (a display filter only).
-            compose.onNodeWithTag(CHIP_PREFIX + "W").performScrollTo().performClick()
+            compose.onNodeWithTag(CHIP_PREFIX + "W", useUnmergedTree = true).performScrollTo().performClick()
             assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "W1").fetchSemanticsNodes().size)
             assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "WD1").fetchSemanticsNodes().size)
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
@@ -394,7 +395,7 @@ class NowPlayingScreenTest {
 
             // Wikipedia's lines hidden (a display filter only); the action shows its line.
             unfold()
-            compose.onNodeWithTag(CHIP_PREFIX + "W").performScrollTo().performClick()
+            compose.onNodeWithTag(CHIP_PREFIX + "W", useUnmergedTree = true).performScrollTo().performClick()
             assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "W1").fetchSemanticsNodes().size)
             compose.runOnUiThread { assertTrue(actions.single().action()) }
             compose.waitForIdle()
@@ -584,15 +585,19 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun aChipIsReadAsItsSourcesNameAndWhetherItsLinesShow() =
+    fun aSourcesRowIsReadAsItsNameWhatItFoundAndWhetherItsLinesShow() =
         show(state(PipelineView(track()))) {
             unfold()
-            val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB").performScrollTo()
+            // The whole row is the switch (#1223): its name first, then what it found.
+            val chip = compose.onNodeWithTag(ROW_PREFIX + "MB").performScrollTo()
             chip.assert(
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.ContentDescription,
-                    listOf(text(R.string.settings_source_musicbrainz)),
-                ),
+                SemanticsMatcher("named MusicBrainz") {
+                    it.config
+                        .getOrNull(SemanticsProperties.Text)
+                        ?.firstOrNull()
+                        ?.text ==
+                        text(R.string.settings_source_musicbrainz)
+                },
             )
             // Its letter is drawn, not read.
             assertEquals(0, compose.onAllNodesWithText("MB").fetchSemanticsNodes().size)
@@ -609,7 +614,7 @@ class NowPlayingScreenTest {
                     text(R.string.home_source_lines_hidden),
                 ),
             )
-            chip.assertTouchHeightIsEqualTo(48.dp)
+            chip.assertHeightIsAtLeast(48.dp)
         }
 
     @Test

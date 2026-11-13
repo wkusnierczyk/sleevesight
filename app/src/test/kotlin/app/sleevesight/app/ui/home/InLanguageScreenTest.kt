@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -231,19 +232,26 @@ class InLanguageScreenTest {
             unfold()
             assertEquals(listOf("MB", "W", "W:hi", "S", "S:hi"), rows())
             // The English rows say what their own lines found; the Hindi ones theirs.
-            assertEquals(listOf(text(R.string.home_source_found, text(R.string.home_source_finding_track))), said("W"))
             assertEquals(
-                listOf(text(R.string.home_source_found, text(R.string.home_source_finding_album))),
+                listOf(
+                    text(R.string.home_source_chip_wikipedia),
+                    text(R.string.home_source_found, text(R.string.home_source_finding_track)),
+                ),
+                said("W"),
+            )
+            assertEquals(
+                listOf(
+                    "Wikipedia in Hindi",
+                    text(R.string.home_source_found, text(R.string.home_source_finding_album)),
+                ),
                 said("W:hi"),
             )
             assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_none)), said("S"))
-            assertEquals(listOf(text(R.string.home_source_found_pages)), said("S:hi"))
-            // Its letter is a switch named for the lookup.
+            assertEquals(listOf("Web search in Hindi", text(R.string.home_source_found_pages)), said("S:hi"))
+            // Its row is a switch named for the lookup (#1223).
             compose
-                .onNodeWithTag(CHIP_PREFIX + "W:hi")
-                .assert(
-                    SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Wikipedia in Hindi")),
-                )
+                .onNodeWithTag(ROW_PREFIX + "W:hi")
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
         }
 
     @Test
@@ -330,7 +338,7 @@ class InLanguageScreenTest {
             unfold()
             // No row in Hindi: the line is the English web search's, which found pages.
             assertEquals(listOf("MB", "W", "S"), rows())
-            assertEquals(listOf(text(R.string.home_source_found_pages)), said("S"))
+            assertEquals(listOf(text(R.string.home_source_name_web), text(R.string.home_source_found_pages)), said("S"))
             assertEquals(1, count("web · youtube.com · in Hindi"))
             assertEquals(0, count("web · example.org · in", substring = true))
         }
