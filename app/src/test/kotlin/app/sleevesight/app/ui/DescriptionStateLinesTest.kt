@@ -62,7 +62,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * What folding leaves in full or marks (#847): a model found unavailable is said under its row in
- * full, never folded, and so are what *Stop after*'s count does and *No players yet* (#874); and a
+ * full, never folded, and so are what *Saver*'s count does and *No players yet* (#874); and a
  * search's marks show in a description's paragraph with a link, the link still working.
  *
  * Drawn as on a phone (native graphics): Robolectric's own graphics measure text too narrow for

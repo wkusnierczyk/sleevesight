@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.CHIP_PADDING
@@ -236,14 +239,14 @@ private fun linkedNote(
  * scopes of its own [lines], *Found the track and the artist*, #768). A lookup in the track's
  * language has a row of its own after its source's (#902: *Wikipedia in Hindi*), from its own lines;
  * its letter shows and hides its source's lines with the source's own row's. The chip
- * shows, at a glance, what a tap does to its source's [lines] ([focus]): filled while they show,
- * outlined while they are hidden, a tap showing them again (unfolded to by [fold]); dimmed for a
- * source that gave none, with nothing to show or hide, and no button. The rows sit close, the
- * chips' 48 dp targets not laid out ([CompactChipFrame]). With grounding [details], the rows
- * of the sources that are off and the statuses that are diagnostics show too, the whole table in
- * the developer mark (#536). A screen reader reads a chip that filters as a switch, its source's
- * name, with its lines shown or hidden, and then what it found; a dimmed one's row as text, its
- * name and what it found. A source whose lines are all [unverified] (#951) has a chip as one with
+ * shows, at a glance, what a tap on its row does to its source's [lines] ([focus]): filled while
+ * they show, outlined while they are hidden, a tap showing them again (unfolded to by [fold]);
+ * dimmed for a source that gave none, with nothing to show or hide, and its row no button. Each row
+ * that filters is one switch, tapped anywhere (#1223), at least 48 dp tall. With grounding
+ * [details], the rows of the sources that are off and the statuses that are diagnostics show too,
+ * the whole table in the developer mark (#536). A screen reader reads a row that filters as a
+ * switch, its source's name and what it found, with its lines shown or hidden; a dimmed one's row
+ * as text, its name and what it found. A source whose lines are all [unverified] (#951) has a chip as one with
  * lines has, filled grey while they show ([LetterState.UNVERIFIED]), its state saying they are
  * unverified, and its row says what it found with *(unverified)* after it. Under the table, outside
  * the mark, its legend ([Legend], #723, #951), in the table's columns.
@@ -281,10 +284,16 @@ private fun Table(
     focus: LineFocus,
     fold: SourcesFold,
 ) {
-    Column(
-        modifier = Modifier.testTag(SOURCES_TABLE_TAG),
-        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
-    ) {
+    // The rows' padding taken back at the table's top and bottom: its first and last rows' contents
+    // where they were with a gap between rows, each row still its whole 48 dp touch area (#1223).
+    val edge =
+        Modifier.layout { measurable, constraints ->
+            val inset = (ROW_GAP / 2).roundToPx()
+            val placeable = measurable.measure(constraints.offset(vertical = 2 * inset))
+            val height = (placeable.height - 2 * inset).coerceAtLeast(0)
+            layout(placeable.width, height) { placeable.place(0, -inset) }
+        }
+    Column(modifier = Modifier.testTag(SOURCES_TABLE_TAG).then(edge)) {
         for (row in rows) {
             val verified = row.own(lines).isNotEmpty()
             val onlyUnverified = !verified && row.ownUnverified(unverified).isNotEmpty()
@@ -326,7 +335,11 @@ private val ChipStatus.wentWrong: Boolean
 /**
  * One row of the table: [chip]'s letter, right-aligned in a column [width] wide, its name and what
  * it found, from its own lines among [lines] (#768), marked *(unverified)* when they are all
- * [unverified] (#951).
+ * [unverified] (#951). A row whose chip filters is one switch, the whole row (#1223), as the
+ * legend's line is one button: a tap anywhere on it, the chip, the name or what it found, shows or
+ * hides its source's lines ([onToggle]), and a screen reader reads it once, its name, what it found
+ * and whether its lines show (and that they are unverified when they are). A dimmed chip's row is
+ * read as one text, its name and what it found, and does nothing on a tap.
  */
 @Suppress("LongParameterList") // The row, its letter's column and state, what it found from, and what a tap does.
 @Composable
@@ -340,30 +353,51 @@ private fun SourceRow(
     onToggle: () -> Unit,
 ) {
     val name = rowName(chip.source, chip.language)
-    val filters = state != LetterState.DIMMED
-    // At least [ROW_HEIGHT] tall, the chip centred: with [ROW_GAP], each chip's 48 dp touch area
-    // ends where the next row's begins, so a touch between two chips goes to the nearer.
+    val action =
+        if (state == LetterState.DIMMED) {
+            Modifier.semantics(mergeDescendants = true) {}
+        } else {
+            val label = stringResource(R.string.home_source_filter, name)
+            val shown = state != LetterState.HIDDEN
+            val said =
+                stringResource(
+                    when {
+                        unverified && shown -> R.string.home_source_unverified_shown
+                        unverified -> R.string.home_source_unverified_hidden
+                        shown -> R.string.home_source_lines_shown
+                        else -> R.string.home_source_lines_hidden
+                    },
+                )
+            Modifier
+                .clickable(onClickLabel = label, role = Role.Switch, onClick = onToggle)
+                .semantics {
+                    stateDescription = said
+                    toggleableState = ToggleableState(shown)
+                }
+        }
+    // At least [ROW_TARGET] tall, a touch area, the row's content [ROW_GAP] / 2 in from its top and
+    // bottom: rows as far apart as with a gap between them, and a touch between two rows goes to one.
     Row(
         horizontalArrangement = Arrangement.spacedBy(COLUMN_GAP),
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
                 .testTag(ROW_PREFIX + chip.key)
-                .heightIn(min = ROW_HEIGHT),
+                .fillMaxWidth()
+                .heightIn(min = ROW_TARGET)
+                .then(action)
+                .padding(vertical = ROW_GAP / 2),
     ) {
         Box(Modifier.width(width), contentAlignment = Alignment.CenterEnd) {
-            LetterChip(chip, name, state, unverified, onToggle)
+            LetterChip(chip, state)
         }
-        // A dimmed chip's row is read as one text, its name and what it found; a switch's says its
-        // name itself, so the name here is not read again.
-        Column(Modifier.weight(1f).then(if (filters) Modifier else Modifier.semantics(mergeDescendants = true) {})) {
+        Column(Modifier.weight(1f)) {
             Text(
                 name,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = if (filters) Modifier.clearAndSetSemantics {} else Modifier,
             )
             // With grounding details, a failure and a rejected match in the error colour, as the
             // status chips had them (#440).
@@ -382,49 +416,21 @@ private fun SourceRow(
 /**
  * A source's letter as a chip, drawn as a genre chip is but without its 48 dp laid out
  * ([CompactChipFrame]), in its [state]'s look ([look]): filled while its lines show (grey while they
- * are all [unverified], #951), outlined while hidden, and dimmed with none, then not a button, nor a
- * node a screen reader stops on. A screen reader hears it as a switch, its state saying whether its
- * lines show, and that they are unverified when they are.
+ * are all unverified, #951), outlined while hidden, and dimmed with none. Not a button itself, nor a
+ * node a screen reader stops on: its row is the switch (#1223), which says what the chip shows.
  */
 @Composable
 private fun LetterChip(
     chip: SourceChip,
-    name: String,
     state: LetterState,
-    unverified: Boolean,
-    onToggle: () -> Unit,
 ) {
     val look = state.look()
     // The outline drawn over the chip, in its shape.
     val outline = look.outline?.let { Modifier.border(it, CHIP_SHAPE) } ?: Modifier
-    val action =
-        if (state == LetterState.DIMMED) {
-            Modifier.clearAndSetSemantics {}
-        } else {
-            val label = stringResource(R.string.home_source_filter, name)
-            val shown = state != LetterState.HIDDEN
-            val said =
-                stringResource(
-                    when {
-                        unverified && shown -> R.string.home_source_unverified_shown
-                        unverified -> R.string.home_source_unverified_hidden
-                        shown -> R.string.home_source_lines_shown
-                        else -> R.string.home_source_lines_hidden
-                    },
-                )
-            Modifier
-                .semantics(mergeDescendants = true) {}
-                .clickable(onClickLabel = label, role = Role.Switch, onClick = onToggle)
-                .clearAndSetSemantics {
-                    contentDescription = name
-                    stateDescription = said
-                    toggleableState = ToggleableState(shown)
-                }
-        }
     CompactChipFrame(
         look.fill,
         modifier = Modifier.testTag(CHIP_PREFIX + chip.key).then(outline),
-        action = action,
+        action = Modifier.clearAndSetSemantics {},
     ) {
         Text(
             chip.source.tag,
@@ -460,11 +466,11 @@ internal fun chipColumnWidth(
     }
 }
 
-// The space between two rows of the table, and between its columns; a row's least height, which
-// with the gap makes rows 48 dp apart at the least, a chip's touch area.
+// The space between two rows' contents, and between the table's columns; a row's least height, its
+// touch area (#1223).
 private val ROW_GAP = 6.dp
 private val COLUMN_GAP = 12.dp
-private val ROW_HEIGHT = 42.dp
+private val ROW_TARGET = 48.dp
 
 // The note's link to the settings.
 private const val SETTINGS_LINK = "settings"

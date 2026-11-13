@@ -141,7 +141,7 @@ class SourcesUnverifiedScreenTest {
     private fun unfold() = tap(SOURCES_CHIP_TAG)
 
     private fun tap(tag: String) {
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithTag(tag, useUnmergedTree = true).performScrollTo().performClick()
         compose.waitForIdle()
     }
 
@@ -164,8 +164,8 @@ class SourcesUnverifiedScreenTest {
 
     private fun switch(shown: Boolean) =
         compose
-            .onNodeWithTag(CHIP_PREFIX + "L")
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Last.fm")))
+            .onNodeWithTag(ROW_PREFIX + "L")
+            .assert(SemanticsMatcher("read first as Last.fm") { said("L").firstOrNull() == "Last.fm" })
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState(shown)))
             .assert(
@@ -181,18 +181,18 @@ class SourcesUnverifiedScreenTest {
             unfold()
             val found = text(R.string.home_source_found, text(R.string.home_source_finding_artist))
             assertEquals("Found the artist (unverified)", text(R.string.home_source_unverified, found))
-            assertEquals(listOf(text(R.string.home_source_unverified, found)), said("L"))
+            assertEquals(listOf("Last.fm", text(R.string.home_source_unverified, found)), said("L"))
             // A source with cited lines says what it found as before.
             val track = text(R.string.home_source_found, text(R.string.home_source_finding_track))
-            assertEquals(listOf(track), said("MB"))
+            assertEquals(listOf(text(R.string.settings_source_musicbrainz), track), said("MB"))
         }
 
     @Test
     fun itsChipIsASwitchThatSaysItsLinesAreUnverifiedAndATapHidesAndShowsThem() =
         show {
             unfold()
-            val chip = compose.onNodeWithTag(CHIP_PREFIX + "L").fetchSemanticsNode().config
-            assertTrue(SemanticsActions.OnClick in chip)
+            val row = compose.onNodeWithTag(ROW_PREFIX + "L").fetchSemanticsNode().config
+            assertTrue(SemanticsActions.OnClick in row)
             switch(shown = true)
             assertTrue(shown(kult))
             assertTrue(shown(listeners))
@@ -279,7 +279,7 @@ class SourcesUnverifiedScreenTest {
                 assertTrue(shown(maybe))
                 // Its chip as before: lines shown, not unverified.
                 compose
-                    .onNodeWithTag(CHIP_PREFIX + "MB")
+                    .onNodeWithTag(ROW_PREFIX + "MB")
                     .assert(
                         SemanticsMatcher.expectValue(
                             SemanticsProperties.StateDescription,
@@ -329,7 +329,7 @@ class SourcesUnverifiedScreenTest {
             unfold()
             keep("unverified-font-200")
             val found = text(R.string.home_source_found, text(R.string.home_source_finding_artist))
-            assertEquals(listOf(text(R.string.home_source_unverified, found)), said("L"))
+            assertEquals(listOf("Last.fm", text(R.string.home_source_unverified, found)), said("L"))
             switch(shown = true)
             tap(CHIP_PREFIX + "L")
             switch(shown = false)
@@ -337,7 +337,7 @@ class SourcesUnverifiedScreenTest {
 
     private fun picture(tag: String): Bitmap =
         compose
-            .onNodeWithTag(tag)
+            .onNodeWithTag(tag, useUnmergedTree = true)
             .performScrollTo()
             .captureToImage()
             .asAndroidBitmap()

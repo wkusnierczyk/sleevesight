@@ -162,7 +162,7 @@ class SourcesFoldScreenTest {
 
     private fun tap(tag: String) {
         compose
-            .onAllNodesWithTag(tag)
+            .onAllNodesWithTag(tag, useUnmergedTree = true)
             .onFirst()
             .performScrollTo()
             .performClick()
@@ -240,7 +240,7 @@ class SourcesFoldScreenTest {
             assertEquals(Fold.PAGE, linesShown())
             compose.onNodeWithTag(LINE_PREFIX + "MB8").assertExists()
             assertEquals(0, count(LINE_PREFIX + "MB9"))
-            compose.onNodeWithTag(CHIP_PREFIX + "MB").assertExists()
+            compose.onNodeWithTag(CHIP_PREFIX + "MB", useUnmergedTree = true).assertExists()
             // *Show less* there but disabled at the first screenful.
             assertTrue(pagingShown())
             assertEquals(setOf(FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
@@ -374,9 +374,9 @@ class SourcesFoldScreenTest {
             compose
                 .onNodeWithTag(FOLD_STATUS_TAG)
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
-            // A chip is the filter switch it was.
+            // A source's row is the filter switch its chip was (#1223).
             compose
-                .onNodeWithTag(CHIP_PREFIX + "MB")
+                .onNodeWithTag(ROW_PREFIX + "MB")
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
         }
 
@@ -612,7 +612,7 @@ class SourcesFoldScreenTest {
             open()
             assertEquals(3, linesShown())
             compose
-                .onNodeWithTag(CHIP_PREFIX + "MB")
+                .onNodeWithTag(ROW_PREFIX + "MB")
                 .assert(
                     SemanticsMatcher.expectValue(
                         SemanticsProperties.StateDescription,
