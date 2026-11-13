@@ -19,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.CHIP_PADDING
@@ -282,7 +284,16 @@ private fun Table(
     focus: LineFocus,
     fold: SourcesFold,
 ) {
-    Column(modifier = Modifier.testTag(SOURCES_TABLE_TAG)) {
+    // The rows' padding taken back at the table's top and bottom: its first and last rows' contents
+    // where they were with a gap between rows, each row still its whole 48 dp touch area (#1223).
+    val edge =
+        Modifier.layout { measurable, constraints ->
+            val inset = (ROW_GAP / 2).roundToPx()
+            val placeable = measurable.measure(constraints.offset(vertical = 2 * inset))
+            val height = (placeable.height - 2 * inset).coerceAtLeast(0)
+            layout(placeable.width, height) { placeable.place(0, -inset) }
+        }
+    Column(modifier = Modifier.testTag(SOURCES_TABLE_TAG).then(edge)) {
         for (row in rows) {
             val verified = row.own(lines).isNotEmpty()
             val onlyUnverified = !verified && row.ownUnverified(unverified).isNotEmpty()

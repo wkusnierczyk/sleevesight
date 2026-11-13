@@ -429,6 +429,38 @@ class SourcesTableScreenTest {
             for (chip in chips) assertTrue("${chip.size.height} px", chip.size.height / density() < TARGET_DP)
         }
 
+    // #1223: the rows' padding is taken back at the table's edges, so its first row's contents start
+    // and its last row's end where they did with a gap between rows, and the legend sits as close.
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun theTableEndsAtItsFirstAndLastRowsContentsAndTheirEdgesStillTakeATouch() =
+        show(mixed) {
+            unfold()
+            val tags = rows()
+            val (tableTop, tableBottom) = bounds(SOURCES_TABLE_TAG)
+            val (firstTop, _) = rowBounds(tags.first())
+            val (_, lastBottom) = rowBounds(tags.last())
+            assertEquals("first row's top", -EDGE_DP, (firstTop - tableTop) / density(), 0.5f)
+            assertEquals("last row's bottom", EDGE_DP, (lastBottom - tableBottom) / density(), 0.5f)
+            // The first chip centred in its row's contents, which start at the table's top.
+            val chip = compose.onNodeWithTag(CHIP_PREFIX + tags.first(), useUnmergedTree = true).fetchSemanticsNode()
+            val contents = rowBounds(tags.first()).let { (top, bottom) -> (bottom - top) / density() - 2 * EDGE_DP }
+            val above = (chip.positionInRoot.y - tableTop) / density()
+            assertEquals("first chip's top", (contents - chip.size.height / density()) / 2, above, 0.5f)
+            // The legend right under the table, as it was under the last row.
+            val (legendTop, _) = bounds(SOURCES_LEGEND_TAG)
+            assertTrue("legend at $legendTop, table ends at $tableBottom", legendTop >= tableBottom - 0.5f)
+            // A touch in the first row's top padding, above the table's edge, still toggles that row.
+            compose.onNodeWithTag(ROW_PREFIX + "MB", useUnmergedTree = true).performScrollTo()
+            val x =
+                compose
+                    .onNodeWithTag(STATUS_PREFIX + "MB", useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .boundsInRoot.center.x
+            touch("MB", 1f, x)
+            assertEquals(false to true, shown("MB") to shown("W"))
+        }
+
     private fun rowBounds(tag: String) =
         compose.onNodeWithTag(ROW_PREFIX + tag, useUnmergedTree = true).fetchSemanticsNode().let {
             it.positionInRoot.y to it.positionInRoot.y + it.size.height
@@ -721,6 +753,9 @@ class SourcesTableScreenTest {
         const val DISTINCT = 60
 
         const val TARGET_DP = 48f
+
+        // The rows' padding above and below their contents, taken back at the table's edges (#1223).
+        const val EDGE_DP = 3f
 
         // How far inside a row's edge a touch lands, in dp.
         const val NEAR = 4f
