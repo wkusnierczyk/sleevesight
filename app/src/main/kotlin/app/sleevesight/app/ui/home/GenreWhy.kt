@@ -201,7 +201,7 @@ internal fun ReasonShown(
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ReasonCredits(shown, state, evidence, Modifier.weight(1f))
+                    ReasonCredits(shown, state, evidence, shownAs, Modifier.weight(1f))
                     actions.readAloud?.let { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) }
                 }
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
@@ -235,13 +235,14 @@ internal fun ReasonShown(
 }
 
 // Under a written reason ([state]): "by {model}", the grounding note, which of its citations of
-// [evidence] it translated from the track's language (#902), and, kept from before, when it was
-// written (#851).
+// [evidence] it translated from the track's language (#902), named as its chips are ([shownAs],
+// #1205), and, kept from before, when it was written (#851).
 @Composable
 private fun ReasonCredits(
     shown: GenreReason.Shown,
     state: InsightState.Written,
     evidence: EvidenceSet?,
+    shownAs: (String) -> String,
     modifier: Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -250,7 +251,7 @@ private fun ReasonCredits(
         val by = if (fromWeb) R.string.genre_why_by_web else R.string.genre_why_by
         shown.model?.let { SearchCredit(stringResource(by, it)) }
         GroundingLine(state.grounded, details = false)
-        TranslatedLine(state.grounded, evidence)
+        TranslatedLine(state.grounded, evidence, label = shownAs)
         shown.keptAt?.let { KeptLine(it) }
     }
 }

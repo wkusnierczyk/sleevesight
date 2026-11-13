@@ -48,7 +48,8 @@ import kotlin.time.Instant
  * The pages a genre's reason found on the web and those the AI's genre list rests on, numbered
  * together in *Sources* (#1205): each numbers its pages after the track's own lines on its own, so
  * both may call a different page S7. *Sources* lists the list's page as S7 and the reason's as S8,
- * and the reason's own S7 shows, and opens, as S8, the line of its page.
+ * and the reason's own S7 shows, and opens, as S8, the line of its page, in its prose and in the
+ * line that says it was translated.
  */
 @RunWith(RobolectricTestRunner::class)
 class GenreReasonPagesScreenTest {
@@ -67,9 +68,9 @@ class GenreReasonPagesScreenTest {
     private val listed = WebPage("https://en.wikipedia.org/wiki/Way_Down_We_Go", null, "A song by Kaleo.")
     private val found = WebPage("https://lyricstories.com/way-down-we-go", null, "A brooding folk-rock ballad.")
 
-    // The reason's own evidence: the track's lines, then the page its search found, its S7.
+    // The reason's own evidence: the track's lines, then the page its search found, its S7, in Hindi.
     private val searched =
-        own.with(listOf(EvidenceDraft(SourceId.WEB, Scope.WEB, found.text, found.url, at)), JvmHasher)
+        own.with(listOf(EvidenceDraft(SourceId.WEB, Scope.WEB, found.text, found.url, at, language = "hi")), JvmHasher)
 
     private val folkRock = GenreLabel("folk rock", "Folk Rock", "folkrock", level = GenreLevel.TRACK)
 
@@ -134,6 +135,14 @@ class GenreReasonPagesScreenTest {
             val reason = compose.onNodeWithText("folk-rock ballad", substring = true).performScrollTo()
             val text = reason.fetchSemanticsNode().config[SemanticsProperties.Text].joinToString { it.text }
             assertTrue(text, "S8" in text && "S7" !in text)
+            // Its line under the credit names the translated citation as the chip does.
+            val translated =
+                compose
+                    .onNodeWithTag(TRANSLATED_PREFIX + "hi", useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .joinToString { it.text }
+            assertTrue(translated, "S8" in translated && "S7" !in translated)
             reason.performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "S7" }
             compose.waitForIdle()
             assertEquals(listOf("S8"), cited)
