@@ -64,7 +64,8 @@ data class KeptCheck(
  * up to three searches, at most four calls. Never from the model's own knowledge: with *AI web search*
  * off, or no web search engine ([web]), there is no check ([key] null). The model answers
  * `instrumental`, `vocals` or `unknown` with the address of the page that says so ([VocalsPrompt]);
- * an answer whose page no search found is read as `unknown`, as *Ask AI*'s are grounded.
+ * an answer whose page no search found, or whose page's title and passage do not say it in words
+ * ([VocalsAnswer.saidIn], #1053), is read as `unknown`, as *Ask AI*'s are grounded.
  *
  * It is kept in the synthesis cache ([cache]) as a card of [CardKind.VOCALS], for as long as a
  * reason: keyed by the track, its length and the album the player names (the prompt's only data),
@@ -185,7 +186,8 @@ class VocalsChecks(
             override fun agent(limit: Int): String = VocalsPrompt.agent(track.nowPlaying, track.normalized, limit)
         }
 
-    // The answer in [reply], grounded in [pages]: an answer with no page among them, or none, is
+    // The answer in [reply], grounded in [pages]: an answer with no page among them, or none, or a
+    // page whose title and passage do not say it in words (#1053, `VocalsAnswer.saidIn`), is
     // `unknown`; null when the reply is not the JSON object asked for.
     private fun read(
         reply: String,
@@ -195,7 +197,10 @@ class VocalsChecks(
         val answer = AiSearchAnswers.objectIn(reply) ?: return null
         val said = VocalsAnswer.of(stringOf(answer["answer"])) ?: VocalsAnswer.UNKNOWN
         val source = stringOf(answer["source"])
-        val page = source?.let { s -> pages.firstOrNull { sameAddress(it.url, s) } }
+        val page =
+            source
+                ?.let { s -> pages.firstOrNull { sameAddress(it.url, s) } }
+                ?.takeIf { said.saidIn(it.title, it.text) }
         return when {
             said == VocalsAnswer.UNKNOWN || page == null -> VocalsState.Checked(VocalsAnswer.UNKNOWN, key.model)
             else -> VocalsState.Checked(said, key.model, page)

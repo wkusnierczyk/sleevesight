@@ -7,16 +7,35 @@ package app.sleevesight.core.genres
  */
 enum class VocalsAnswer(
     val key: String,
+    private val words: List<String>,
 ) {
     /** A page describes the track as instrumental: what left Instrumental weak is lifted. */
-    INSTRUMENTAL("instrumental"),
+    INSTRUMENTAL("instrumental", listOf("instrumental")),
 
     /** A page says the track has vocals: Instrumental is dropped, as lyrics found drop it. */
-    VOCALS("vocals"),
+    VOCALS("vocals", listOf("vocals", "sung", "sings", "featuring", "lyrics")),
 
     /** No page says either: Instrumental stays as it was, weak with its line. */
-    UNKNOWN("unknown"),
+    UNKNOWN("unknown", emptyList()),
     ;
+
+    // Any of [words], whole: no letter or digit either side, the one before matched rather than looked
+    // behind (portable, no lookbehind: D2, as `GroundingCheck`'s; ICU-safe, #1113); none for no words.
+    private val pattern: Regex? =
+        words.takeIf { it.isNotEmpty() }?.let {
+            Regex("(?:^|[^\\p{L}\\p{N}])(?:${it.joinToString("|")})(?![\\p{L}\\p{N}])", RegexOption.IGNORE_CASE)
+        }
+
+    /**
+     * Whether a page with [title] and [passage] says this answer in words (#1053): one of its words,
+     * whole, in either, case aside (*instrumental*; *vocals*, *sung*, *sings*, *featuring* or
+     * *lyrics*). An answer whose page does not is read as [UNKNOWN], so a page cited by its address
+     * alone grounds nothing. Never for [UNKNOWN], which no page needs to say.
+     */
+    fun saidIn(
+        title: String?,
+        passage: String,
+    ): Boolean = pattern?.let { it.containsMatchIn(title.orEmpty()) || it.containsMatchIn(passage) } == true
 
     companion object {
         /** The answer named [key], or null for none of them. */

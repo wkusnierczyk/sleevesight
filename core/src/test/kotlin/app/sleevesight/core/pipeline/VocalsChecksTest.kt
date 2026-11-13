@@ -29,6 +29,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.ZERO
+import kotlin.time.Instant
 
 /**
  * The check of a track's vocals (#998): only with *AI web search* used; *Once* one app-built search
@@ -66,7 +67,14 @@ class VocalsChecksTest {
     private fun checks(provider: FakeProvider) =
         VocalsChecks(AiAccess(provider, Secret("k")), cache, JvmHasher, web = web)
 
-    private fun answer(said: String) = FakeProvider.done("""{"answer": "$said", "source": "${page.url}"}""")
+    // A page that calls it an instrumental, in its passage.
+    private val instrumentalPage =
+        WebPage("https://store.example/kokoro", "Kokoro", "Track 3, Nasnusa, is an instrumental.")
+
+    private fun answer(
+        said: String,
+        cited: WebPage = page,
+    ) = FakeProvider.done("""{"answer": "$said", "source": "${cited.url}"}""")
 
     @Test
     fun `there is no check with AI web search off or no web search engine`() {
@@ -123,9 +131,10 @@ class VocalsChecksTest {
                             CompletionEvent.Done(FakeProvider.USAGE, StopReason.TOOL_USE),
                         )
                     } else {
-                        answer("instrumental")
+                        answer("instrumental", instrumentalPage)
                     }
                 }
+            outcome = WebSearchOutcome.Found(listOf(instrumentalPage))
             val checks = checks(provider)
             val key = checkNotNull(checks.key(track, settings.copy(aiWebSearch = AiWebSearch.UP_TO)))
             val end = checks.ask(key, track, AiSearches.Asking(AiWebSearch.UP_TO), { counted += it }) { _, _ -> }
@@ -157,21 +166,53 @@ class VocalsChecksTest {
         }
 
     @Test
+    fun `an answer whose cited page does not say it in words is unknown`() =
+        runTest {
+            // The page found, cited by its address, says nothing of instrumental: "sung by" only.
+            val provider = FakeProvider { answer("instrumental") }
+            val checks = checks(provider)
+            val key = checkNotNull(checks.key(track, settings))
+            val end = checks.ask(key, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
+            assertEquals(VocalsState.Checked(VocalsAnswer.UNKNOWN, key.model), end)
+            // Nor vocals from a page that calls it an instrumental, nor from one with no words at all.
+            val silent = WebPage("https://lyrics.example/nasnusa-vocals", "Nasnusa", "Sababa 5, 2023.")
+            outcome = WebSearchOutcome.Found(listOf(instrumentalPage, silent))
+            for (cited in listOf(instrumentalPage, silent)) {
+                val asked = checks(FakeProvider { answer("vocals", cited) })
+                val other =
+                    checkNotNull(asked.key(track.copy(nowPlaying = track.nowPlaying.copy(album = cited.url)), settings))
+                val read = asked.ask(other, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
+                assertEquals(VocalsState.Checked(VocalsAnswer.UNKNOWN, key.model), read, cited.url)
+            }
+        }
+
+    @Test
+    fun `a kept answer whose page does not say it is read as unknown`() =
+        runTest {
+            // Kept before the word check (#1053): read and grounded again, it is taken no more.
+            val checks = checks(FakeProvider { answer("instrumental") })
+            val key = checkNotNull(checks.key(track, settings))
+            val reply = """{"answer": "instrumental", "source": "${page.url}"}"""
+            cache.keep(key, KeptVocalsText(reply, listOf(KeptPage.of(page))).text(), Instant.fromEpochMilliseconds(0))
+            assertEquals(VocalsState.Checked(VocalsAnswer.UNKNOWN, key.model), checkNotNull(checks.kept(key)).state)
+        }
+
+    @Test
     fun `an answer is kept per track, so a replay asks nothing, and a failure is not`() =
         runTest {
             val other = WebPage("https://example.org/sababa-5", "Sababa 5", "A band from Tel Aviv.")
-            outcome = WebSearchOutcome.Found(listOf(other, page))
-            val provider = FakeProvider { answer("instrumental") }
+            outcome = WebSearchOutcome.Found(listOf(other, instrumentalPage))
+            val provider = FakeProvider { answer("instrumental", instrumentalPage) }
             val checks = checks(provider)
             val key = checkNotNull(checks.key(track, settings))
             assertNull(checks.kept(key))
             checks.ask(key, track, AiSearches.Asking(AiWebSearch.ONCE)) { _, _ -> }
             // Kept with the page it rests on alone.
             val text = checkNotNull(cache.cards[key])
-            assertTrue(page.url in text)
+            assertTrue(instrumentalPage.url in text)
             assertFalse(other.url in text)
             val kept = checkNotNull(checks.kept(key))
-            assertEquals(VocalsState.Checked(VocalsAnswer.INSTRUMENTAL, key.model, page), kept.state)
+            assertEquals(VocalsState.Checked(VocalsAnswer.INSTRUMENTAL, key.model, instrumentalPage), kept.state)
             // The same key on the next play: the track, its length and album, not the evidence.
             assertEquals(key, checks.key(track.copy(evidence = EvidenceSet.of(emptyList(), JvmHasher)), settings))
             // A search that fails keeps nothing.
