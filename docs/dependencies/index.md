@@ -8,7 +8,7 @@
 # use or licence, the credits or the build tools changes this page by hand.
 title: Dependencies
 permalink: /docs/dependencies/
-docs_version: 0.1.18
+docs_version: 0.6.6
 nav:
   - id: licences-and-gpl-30
     label: Licences
@@ -142,15 +142,16 @@ Limits as used here: the port is a third party's, under MIT; Google's original i
 
 ## Data sources
 
-The app's credits screen lists each source with what the app takes from it and its licence or terms. Every evidence line in the app links the page it came from.
+The app's credits screen lists each source with what the app takes from it and its licence or terms, where it states them. Every evidence line in the app links the page it came from.
 
 | Source | What the app takes from it | Licence or terms |
 |---|---|---|
-| MusicBrainz | Recordings, releases, artists, credits and dates | Core data under [CC0](https://creativecommons.org/publicdomain/zero/1.0/); the web service is free for non-commercial use |
+| MusicBrainz | Recordings, releases, artists, credits and dates; albums' tracklists | Core data under [CC0](https://creativecommons.org/publicdomain/zero/1.0/); the web service is free for non-commercial use |
 | MusicBrainz tags | Genre labels from the track's and the artists' tags; used for labels only, never sent to the AI service | Supplementary data under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/), credited to the MusicBrainz contributors |
-| Wikipedia | Sentences from articles; in a genre's panel, the first two sentences of the genre's article | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by the Wikipedia contributors |
+| Wikipedia | Sentences from articles, also from Wikipedia in the track's language; in a genre's panel, the first two sentences of the genre's article | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by the Wikipedia contributors |
 | Wikidata | Facts on songs, albums and artists; the way from a genre to its Wikipedia article | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| Last.fm | Artist bios; listeners, tags, genre labels and similar artists | Bios under CC BY-SA, by Last.fm users; the rest under Last.fm's API terms. Needs the user's own key |
+| Last.fm | Artist bios and album summaries; listeners, tags, genre labels and similar artists | Bios and summaries under CC BY-SA, by Last.fm users; the rest under Last.fm's API terms. Needs the user's own key |
+| LRCLIB | Whether a track has lyrics, or is marked instrumental, as a sign for the genre *Instrumental*; never the lyrics themselves | Free and open, with no key; asks clients to name themselves and to honour its rate limit |
 | Exa | Web search results | Exa's terms of service. Needs the user's own key |
 
 Two of these are open questions rather than settled ones. MusicBrainz's tags are non-commercial and share-alike: showing them as labels on the user's own screen fits the licence while the app stays free, without advertising or paid features, but MetaBrainz's own reading is still to be asked for before the Play release relies on it, and the tags stay out of every prompt. Exa's terms forbid displaying or passing on what its service returns without its written leave; what that means for an app that shows a result to the user who searched with their own key is not settled. The reasoning, with the sources quoted, is in [`design/architecture.md`](https://github.com/wkusnierczyk/sleevesight/blob/main/design/architecture.md#licensing) under *Licensing*. Discogs is planned as a source for a later phase, and is not in the app.
@@ -167,6 +168,8 @@ The AI services that write the insights (Anthropic, OpenAI or Google, on the use
 
 The Open Font License lets a font be bundled with any program, a GPL one included, as long as each copy carries its copyright notice and licence. Apache-2.0 asks that each copy carry the licence. So the licences' texts ship inside the app, and the credits screen names each font with its copyright, and the icon set, each with its licence.
 
+The words *Load keys* shows, which seal a QR code of keys, are the Electronic Frontier Foundation's short wordlist 2, bundled unchanged. It is under CC BY 3.0 US, which asks for the credit the credits screen gives it.
+
 ## Build-time tools
 
 These build, check and test the app; none of them is in what ships, and `checkDependencyPage` does not read this section. The licences are from the artifacts' POMs unless the table says otherwise.
@@ -182,6 +185,7 @@ These build, check and test the app; none of them is in what ships, and `checkDe
 | `kotlin-test`, `kotlinx-coroutines-test` | Tests in the JVM modules, with virtual time | Apache-2.0 |
 | Ktor's `MockEngine`, OkHttp's `mockwebserver3` | Network tests: replayed responses, and a loopback server for what the real engine sends | Apache-2.0 |
 | Robolectric, JUnit 4, Compose's `ui-test-junit4` | The app's tests, on the JVM, without a phone | Robolectric: MIT. JUnit 4: Eclipse Public License 1.0. Compose: Apache-2.0 |
+| AndroidX Test's runner, with JUnit 4 | The instrumented tests, which CI runs on an Android emulator | AndroidX Test: Apache-2.0. JUnit 4: Eclipse Public License 1.0 |
 | Compose's `ui-tooling` | Renders the screens' previews in the IDE; debug build only | Apache-2.0 |
 | SQLite JDBC driver (`org.xerial:sqlite-jdbc`) | `:store`'s and the app's tests, and the command-line tool's database | Apache-2.0 |
 

@@ -6,7 +6,7 @@
 # (`app/.../ui/settings/`), `strings.xml`, `strings_settings.xml` and `strings_home.xml`.
 title: Setting up external services
 permalink: /docs/services/
-docs_version: 0.1.18
+docs_version: 0.6.6
 nav:
   - id: 1-which-services-need-a-key-and-why
     label: Need a key
@@ -33,11 +33,12 @@ Services fall into two groups in *Settings*: **Sources** (which gather facts abo
 
 | Service | Where in Settings | Key needed? | What it does | What if it is not enabled? |
 |---|---|---|---|---|
-| **MusicBrainz** | *Sources* | No (on by default) | Identifies the recording, artists, release dates, credits and tags. | Other sources match by name alone, without MusicBrainz's identifier check; release years and MusicBrainz genre tags are missing. |
-| **Wikipedia and Wikidata** | *Sources* | No (on by default) | Articles on songs, albums and artists, facts from Wikidata, and genre definitions. | No Wikipedia or Wikidata lines in the evidence, and no Wikipedia definition in a genre's panel. |
+| **MusicBrainz** | *Sources* | No (on by default) | Identifies the recording, artists, release dates, credits and tags, and gives the album's tracklist. | Other sources match by name alone, without MusicBrainz's identifier check; release dates, the album's tracklist and MusicBrainz genre tags are missing. |
+| **Wikipedia and Wikidata** | *Sources* | No (on by default) | Articles on songs, albums and artists, facts from Wikidata, and genre definitions; for a track sung in another language, also the Wikipedia in that language. | No Wikipedia or Wikidata lines in the evidence, and no Wikipedia definition in a genre's panel. |
+| **LRCLIB** | *Sources* | No (on by default) | An open lyrics library: whether a track has lyrics, to tell sung tracks from instrumental ones. | Whether a track is instrumental rests on the other sources' tags and, with *AI web search* on, a web search. |
 | **Last.fm** | *Sources* | **Yes** | Listeners' genre tags, artist biographies, listener counts and similar artists. | Stays off. The app works without it, using MusicBrainz and Wikipedia for facts and MusicBrainz alone for genre labels. |
-| **Exa web search** | *Sources* | **Yes** | Searches the web for articles and quotes about the track, and, with *AI web search*, the pages *Ask AI* answers from. | Stays off. Insights rely on MusicBrainz, Wikipedia, Wikidata and Last.fm, which often suffices for well-known tracks; newer or less-documented tracks may have little or nothing to write from. *Ask AI* answers from the model's own knowledge. |
-| **Anthropic**, **OpenAI**, or **Google** (Gemini) | *AI services* | **Yes** (one service at a time) | Writes the track's insight (and *Why is this …?* in a genre's panel) from the sources' evidence, and answers *Ask AI* when a source has nothing. | The app still looks the track up and shows the genre labels and all evidence under *Sources*, but writes no insight (*Key insights* says *Choose an AI service and save its key in Settings to have insights written.*). |
+| **Exa web search** | *Sources* | **Yes** | Searches the web for articles and quotes about the track and the album, and, with *AI web search*, the pages your AI service answers from: *Ask AI*, *Find the lyrics*, *Explain the song*, the check whether a track is instrumental, and the artist's or the song's insight when the other sources fall short. | Stays off. Insights rely on MusicBrainz, Wikipedia, Wikidata and Last.fm, which often suffices for well-known tracks; newer or less-documented tracks may have little or nothing to write from. *Ask AI* and *Find the lyrics* answer from the model's own knowledge, and *Explain the song* is not offered. |
+| **Anthropic**, **OpenAI**, or **Google** (Gemini) | *AI services* | **Yes** (one service at a time) | Writes the track's insight, and the song's, the artist's and the album's, from the sources' evidence; answers *Why is this …?* in a genre's panel, *Explain the song*, and *Ask AI* or *Find the lyrics* when a source has nothing. | The app still looks the track up and shows the genre labels and all evidence under *Sources*, but writes no insight (*Key insights* says *Choose an AI service and save its key in Settings to have insights written.*). |
 
 Every request goes straight from your phone to the services you switch on, over HTTPS, with each API key sent only to its own service. A service that is off receives nothing.
 
@@ -65,7 +66,7 @@ Tap the service's row under *Secrets* (or tap *Set your … API key here.* direc
 
 - **Manual (paste, type, or password manager):** paste or type the key into the *Key* field, or pick it from your password manager's autofill prompt. While typing or pasting, the eye icon (*Show key*) lets you check it before saving.
 - **Type on a computer (keyboard icon in the field):** if the key is on your computer, open [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}) in Chrome or Edge on the computer (with Bluetooth on). Tap the keyboard icon in the phone's *Key* field, scan the QR code on the computer screen, then click *Connect* on the computer and pick the phone. What you type or paste on the computer is sent encrypted over Bluetooth straight into the field.
-- **QR code of a single key (QR icon in the field):** open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) on a computer, uncheck *Seal the code with the phone's words*, and paste that single key into its field. Tap the QR icon in the phone's *Key* field and scan the code. (A key read from a QR code is kept hidden and cannot be revealed with the eye icon.)
+- **QR code of a single key (QR icon in the field):** open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) on a computer, open *A code without the words, for a single key*, tick *Make the code without the words*, and paste that single key into its field. Tap the QR icon in the phone's *Key* field and scan the code. (A key read from a QR code is kept hidden and cannot be revealed with the eye icon.)
 
 Under the field, a box offers to switch the service on as the key is saved ([section 4](#4-how-to-enable-the-services)); tap **Save**, and a summary says what was saved and switched on, with *Done*.
 
@@ -73,10 +74,13 @@ Under the field, a box offers to switch the service on as the key is saved ([sec
 
 To load any combination of AI, Last.fm and Exa keys in one scan:
 
-1. On the phone, under *Secrets*, tap **Load keys**. The screen shows five random words.
-2. On a computer, open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) (the page makes no network requests and sends your keys nowhere). Type the five words into the first box (the first three letters of each word are enough), then paste your keys into their fields or drop a `NAME=value` keys file onto the page. The page draws one QR code sealed with those words.
-3. On the phone, tap **Next** and scan the QR code. The phone unseals it and lists the keys it found by their last four characters, each ticked to be saved, and names any that did not scan. Tap **Next** to save the ticked keys.
-4. The phone then asks *Which services do you want to enable?*: the sources are ticked, and an AI service is ticked when its key is the only AI key and no AI service was set up before; otherwise it starts as it was, so a key saved again for a service switched off leaves it off. With several AI services to choose from, choose one, or none. Tap **Next**, and a summary says which keys were saved and which services were switched on or off; **Done** closes it. *Cancel* on the services keeps the keys saved and switches nothing.
+1. On the phone, under *Secrets*, tap **Load keys**. The first screen names the page that makes the code; tap **Start**.
+2. **Step 1, *Encryption words*.** The phone shows five random words, to be used within 5 minutes; when they expire, new ones are drawn by themselves. On a computer, open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}) (the page makes no network requests and sends your keys nowhere). Type the five words into its boxes (the first three letters of each word are enough), then paste your keys into their fields or drop a `NAME=value` keys file onto the page. The page draws one QR code sealed with those words. On the phone, tap **Next**.
+3. **Step 2, *QR Code*.** Scan the code. The phone unseals it and says *QR code read*; tap **Next**.
+4. **Step 3, *Keys to save*.** The phone lists the keys it found by their last four characters, each ticked to be saved, and names any that did not scan. Untick any you do not want, and tap **Next**.
+5. **Step 4, *Services to enable*.** The phone asks *Which services do you want to enable?*: the sources are ticked, and an AI service is ticked when its key is the only AI key and no AI service was set up before; otherwise it starts as it was, so a key saved again for a service switched off leaves it off. With several AI services to choose from, choose one, or none. Tap **Complete**: only now are the keys saved and the services switched. The *Summary* says which keys were saved and which services were switched on or off; **Done** closes it.
+
+**Previous** goes back a step, and *Cancel* leaves with nothing saved and nothing switched.
 
 ## 4. How to enable the services
 
@@ -92,10 +96,10 @@ Play a song in a music player you follow (Spotify is followed by default; enable
 
 - **Check the sources (*Last.fm* and *Exa*):** tap the **Sources** chip at the bottom of the home screen to unfold the sources panel.
   - The table at the top lists every enabled source: `MB` (*MusicBrainz*), `W` (*Wikipedia*), `L` (*Last.fm*) and `S` (*Web search*, for Exa).
-  - Under each source's name, its status shows *Looking…* and then what it found (such as *Found the track and the artist*, *Found the artist*, or *Nothing found*). When a source contributed lines to the evidence below, its letter chip on the left is filled (`L`, `S`).
-  - If a key was rejected or a source could not be reached, a note right under the table says so (for example, *Last.fm failed.* or *Web search could not be reached.*).
+  - Under each source's name, its status shows *Looking…* and then what it found (such as *Found the track and the artist*, *Found the artist*, or *Nothing found*). When a source contributed lines to the evidence below, its letter chip on the left is filled (`L`, `S`); a tap on its row shows or hides those lines. **?** under the table (*Explain the source chips*) says what each look of the chips means.
+  - If a key was rejected or a source could not be reached, a note right under the table says so (for example, *Last.fm failed.* or *Web search could not be reached.*, with *Retry*).
 - **Check the AI service:** look at **Key insights** on the home screen.
   - Once the sources finish (*Gathering evidence…*), tap **Write insight** (after your first tap, automatic modes write on their own on the next track changes).
   - The card shows *Writing…* and streams the insight with citation chips (`MB1`, `W1`, `L1`, `S1`) at the end of each factual sentence.
-  - If there is a problem with your AI key, account credit, or model availability, *Key insights* says *Writing failed:* followed by the exact reason (for example, *the AI service did not accept the key*, *the AI service account needs credit, or has reached its spending limit*, or *The currently selected … model … is not available*).
+  - If there is a problem with your AI key or account credit, *Key insights* says *Writing failed:* followed by the exact reason (for example, *the AI service did not accept the key*, or *the AI service account needs credit, or has reached its spending limit*). A model the service no longer offers is named instead: *The currently selected … model … is not available.*
 - **Detailed timings and status (optional):** in *Settings → Developer* (shown in test builds, or enabled by tapping *Settings → About → Version* seven times), turn on **Diagnostics** and tap **Open diagnostics** to see each source lookup and AI request with its exact outcome and duration.
