@@ -1,6 +1,9 @@
 package app.sleevesight.app
 
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
@@ -22,6 +25,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.nio.file.Files
 import java.sql.DriverManager
+import java.sql.SQLException
 import java.util.Properties
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -146,6 +150,35 @@ class WipedFromFilesTest {
 
         assertFalse("the next clear checkpointed the log", history.logUnwiped)
         assertFalse("the title is wiped from the files", inFiles(file, LINEMAN))
+    }
+
+    @Test
+    fun `a checkpoint that fails does not fail the clear, and leaves the log said to be unwiped`() {
+        val (_, driver) = open("history.db", wal = true)
+        HistoryDatabase.Schema.create(driver)
+        val history = SessionHistory(FailingCheckpoint(driver))
+        history.play(LINEMAN, START)
+
+        history.clear()
+
+        assertTrue("the rows are gone", history.latestSession().isEmpty())
+        assertTrue("the log is said to be unwiped", history.logUnwiped)
+    }
+
+    // [driver], but a write-ahead log checkpoint fails, as an I/O error would.
+    private class FailingCheckpoint(
+        private val driver: SqlDriver,
+    ) : SqlDriver by driver {
+        override fun <R> executeQuery(
+            identifier: Int?,
+            sql: String,
+            mapper: (SqlCursor) -> QueryResult<R>,
+            parameters: Int,
+            binders: (SqlPreparedStatement.() -> Unit)?,
+        ): QueryResult<R> {
+            if (sql.contains("wal_checkpoint")) throw SQLException("disk I/O error")
+            return driver.executeQuery(identifier, sql, mapper, parameters, binders)
+        }
     }
 
     @Test

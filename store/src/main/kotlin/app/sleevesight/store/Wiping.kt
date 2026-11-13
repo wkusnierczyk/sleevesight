@@ -2,6 +2,7 @@ package app.sleevesight.store
 
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Deleted rows wiped from the database's files, not only from its tables (#1044). SQLite leaves a
@@ -23,8 +24,9 @@ import app.cash.sqldelight.db.SqlDriver
  * the checkpoint cannot truncate past it: SQLite reports it busy, after waiting in the driver's
  * busy handler, rather than failing. [checkpoint] tries [ATTEMPTS] times, each waiting there, and
  * then says so; the deletion stands (the rows are gone from the tables), and the callers keep
- * [Unwiped.pending] set until a later checkpoint succeeds, which runs after every clear and every
- * retention run (each start among them). The app's Android driver keeps one connection per
+ * [Unwiped.pending] set until a later checkpoint succeeds (as they do when it fails outright),
+ * which runs after every clear and every retention run (each start among them). The app's
+ * Android driver keeps one connection per
  * database, so no such reader is expected there; the JDBC driver opens one per thread.
  */
 object Wiping {
@@ -68,9 +70,23 @@ object Wiping {
         var pending: Boolean = false
             private set
 
-        /** Checkpoints [driver] after a deletion, and records whether the log is still unwiped. */
+        /**
+         * Checkpoints [driver] after a deletion, and records whether the log is still unwiped. A
+         * checkpoint that fails (an I/O error, a lock) never fails the deletion, which has
+         * committed: the log is left pending, as for a busy one.
+         */
         internal fun checkpoint(driver: SqlDriver) {
-            pending = !Wiping.checkpoint(driver)
+            pending =
+                try {
+                    !Wiping.checkpoint(driver)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (
+                    // The driver's database error, whatever its type; the next deletion tries again.
+                    @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
+                ) {
+                    true
+                }
         }
     }
 }
