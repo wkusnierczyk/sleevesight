@@ -95,6 +95,21 @@ class UnsupportedCitationScreenTest {
         assertEquals(setOf("W1"), unsupportedLines(insight.grounded))
     }
 
+    /**
+     * Codex, PR #1238: a line another sentence cites is not outlined in *Sources*, whatever that
+     * sentence's status, one citing a missing line too.
+     */
+    @Test
+    fun aLineAnotherSentenceCitesIsNotOutlinedInSources() {
+        val mixed = written("It topped the charts in 1986 [W1]. It was a hit [W1][MB9].", support = true)
+        val statuses =
+            mixed.grounded.paragraphs
+                .flatten()
+                .map { it.status }
+        assertEquals(listOf(SentenceStatus.UNSUPPORTED, SentenceStatus.UNKNOWN), statuses)
+        assertEquals(emptySet<String>(), unsupportedLines(mixed.grounded))
+    }
+
     @Test
     fun theSentenceIsDimmedNotedAndReadAsNotBacked() =
         show {

@@ -18,13 +18,12 @@ import app.sleevesight.core.synthesis.SentenceStatus
 
 /**
  * The ids of the lines [grounded] cites only from sentences they do not back (#1036,
- * `SentenceStatus.UNSUPPORTED`): a line that backs another of its sentences is not one.
+ * `SentenceStatus.UNSUPPORTED`): a line that any other of its sentences cites, whatever that one's
+ * status, is not one.
  */
 internal fun unsupportedLines(grounded: GroundedText): Set<String> {
-    val sentences = grounded.paragraphs.flatten()
-    val backing =
-        sentences.filter { it.status == SentenceStatus.OK || it.status == SentenceStatus.MODEL }.flatMap { it.cites }
-    return sentences.filter { it.status == SentenceStatus.UNSUPPORTED }.flatMap { it.cites }.toSet() - backing.toSet()
+    val (unsupported, others) = grounded.paragraphs.flatten().partition { it.status == SentenceStatus.UNSUPPORTED }
+    return unsupported.flatMap { it.cites }.toSet() - others.flatMap { it.cites }.toSet()
 }
 
 // Where [text]'s outlined chips are ([OUTLINE_TAG]), as character ranges.
@@ -58,8 +57,12 @@ internal fun Modifier.drawChipOutlines(
         }
     }
 
-// The rectangle of each line each of [chips] spans in [layout], across its characters drawn there.
-private fun chipRects(
+/**
+ * The rectangles of [chips] in [layout]: on each line a chip spans, one for each stretch of it drawn
+ * without a gap, so a chip that bidirectional text splits (its spaces set apart from its id) is
+ * outlined where its glyphs are and nowhere between them, as `Marks.kt` marks a link.
+ */
+internal fun chipRects(
     layout: TextLayoutResult,
     chips: List<IntRange>,
 ): List<Rect> =
@@ -68,11 +71,29 @@ private fun chipRects(
             .map { offset -> layout.getLineForOffset(offset) to layout.getBoundingBox(offset) }
             .filter { (_, box) -> box.width > 0f }
             .groupBy({ it.first }, { it.second })
-            .map { (line, boxes) ->
-                val left = boxes.minOf { it.left }
-                Rect(left, layout.getLineTop(line), boxes.maxOf { it.right }, layout.getLineBottom(line))
+            .flatMap { (line, boxes) ->
+                stretches(boxes).map { (left, right) ->
+                    Rect(left, layout.getLineTop(line), right, layout.getLineBottom(line))
+                }
             }
     }
+
+// The stretches, left to right, that [boxes] (of one line) cover without a gap.
+private fun stretches(boxes: List<Rect>): List<Pair<Float, Float>> {
+    val stretches = mutableListOf<Pair<Float, Float>>()
+    for (box in boxes.sortedBy { it.left }) {
+        val last = stretches.lastOrNull()
+        if (last != null && box.left <= last.second + TOUCHING) {
+            stretches[stretches.lastIndex] = last.first to maxOf(last.second, box.right)
+        } else {
+            stretches += box.left to box.right
+        }
+    }
+    return stretches
+}
+
+// Characters of one stretch touch, give or take rounding, in pixels.
+private const val TOUCHING = 0.5f
 
 private val CHIP_OUTLINE = 1.dp
 private val CHIP_CORNER = 2.dp
