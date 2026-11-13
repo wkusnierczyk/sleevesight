@@ -200,7 +200,7 @@ class ButtonGroupTest {
 
     @Test
     fun labelsTooLongToShareTheWidthEquallyEachGetWhatTheyNeedInOneRow() =
-        showChoice(choices = LONG_AND_SHORT, width = 300) {
+        showChoice(choices = LONG_AND_SHORT, width = NARROW_WIDTH) {
             val (long, short) = LONG_AND_SHORT.map { bounds(it.second) }
             assertEquals("one row", long.top, short.top)
             assertTrue("the longer label's button is wider", long.width > short.width)
@@ -210,11 +210,11 @@ class ButtonGroupTest {
     @Test
     @Config(fontScale = 2f)
     fun atTwiceTheFontSizeLabelsThatDoNotFitStayInOneRowWrappingBetweenTheirWords() =
-        showChoice(choices = LONG_AND_SHORT) {
+        showChoice(choices = LONG_AND_SHORT, width = LARGE_FONT_WIDTH) {
             val (long, short) = LONG_AND_SHORT.map { bounds(it.second) }
             assertEquals("one row", long.top, short.top, 1f)
             assertTrue("side by side", long.right <= short.left)
-            assertEquals("across the width", GROUP_WIDTH.toFloat(), (short.right - long.left) / density, 1f)
+            assertEquals("across the width", LARGE_FONT_WIDTH.toFloat(), (short.right - long.left) / density, 1f)
             assertTrue("48 dp or more high", long.height / density >= 48f - 0.5f)
             val (longLabel, shortLabel) = LONG_AND_SHORT.map { it.second }
             assertBetweenWords(longLabel, lines = 2)
@@ -379,6 +379,19 @@ class ButtonGroupTest {
 
         /** About a settings row's width on a phone. */
         const val GROUP_WIDTH = 340
+
+        /**
+         * Narrow enough that [LONG_AND_SHORT] do not fit it equally at the default font size, wide
+         * enough that they fit side by side on one line. With no room for a check mark (#1234), they
+         * fit equally at 300 dp.
+         */
+        const val NARROW_WIDTH = 240
+
+        /**
+         * At twice the font size, too narrow for [LONG_AND_SHORT] on one line, wide enough for the
+         * first's words: with no room for a check mark (#1234), they fit on one line at [GROUP_WIDTH].
+         */
+        const val LARGE_FONT_WIDTH = 300
 
         /** At twice the font size, too long to share the row on one line, the first's words short enough. */
         val LONG_AND_SHORT = listOf(Theme.SYSTEM to "Expandable boxes", Theme.DARK to "Pages")

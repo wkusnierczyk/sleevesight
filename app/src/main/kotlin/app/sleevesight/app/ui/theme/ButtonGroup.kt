@@ -8,19 +8,16 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -41,7 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.sleevesight.app.R
 
 // A connected button group (#637), after Material 3's (m3.material.io/components/button-groups):
 // its own `ButtonGroup` and `ToggleButton` come with material3 1.5, still alpha, and the project's
@@ -68,20 +63,17 @@ internal val GROUP_INNER_CORNER = CornerSize(4.dp)
 /** The room inside a button at each side of its label, as in the chips ([CHIP_PADDING]). */
 internal val GROUP_PADDING = CHIP_PADDING
 
-/** The check before the chosen button's label, and the gap after it. */
-private val CHECK_SIZE = 18.dp
-private val CHECK_GAP = 6.dp
-
 /** The alpha of a button's content that cannot be used, and of its fill, as Material's. */
 private const val DISABLED_CONTENT_ALPHA = 0.38f
 private const val DISABLED_CONTAINER_ALPHA = 0.12f
 
 /**
  * One of a few values to choose, as a connected button group (#637): [choices], each a value and
- * its label, in one row, the [selected] one filled in the text's colour, with a check before its
- * label (none where the row has no room for it, [ConnectedButtons]) and every corner round; a tap
- * on another calls [onSelect] with its value. The group follows [selected], so whatever changes
- * the value elsewhere shows here at once. Not [enabled], none can be chosen and all are dimmed.
+ * its label, in one row, the [selected] one filled in the text's colour and round at every
+ * corner, with no check mark (#1234): the fill alone marks it, so its label needs no more room
+ * than the others'; a tap on another calls [onSelect] with its value. The group follows
+ * [selected], so whatever changes the value elsewhere shows here at once. Not [enabled], none
+ * can be chosen and all are dimmed.
  *
  * A screen reader reads the group as one group of radio buttons, the chosen one selected, each by
  * its label, after the name of what is chosen ([name], a setting's, so a button reached straight
@@ -116,12 +108,12 @@ internal fun <T> ChoiceButtonGroup(
                 read = read,
             ) { onSelect(value) }
         }
-    ConnectedButtons(buttons, modifier.selectableGroup(), checks = true)
+    ConnectedButtons(buttons, modifier.selectableGroup())
 }
 
 /**
  * A row of actions, as a connected button group (#637): each of [actions] a plain button, by its
- * label, which a tap runs while it is enabled; none is ever chosen, so none is filled or checked.
+ * label, which a tap runs while it is enabled; none is ever chosen, so none is filled.
  * A screen reader reads each as a button, a disabled one as disabled. Laid out as
  * [ChoiceButtonGroup] is, across the width it has; with [compact] (#759), only as wide as its
  * labels need, at that side of the width, while side by side they fit, as wide as the widest
@@ -144,7 +136,7 @@ internal fun ActionButtonGroup(
                 onClick = it.onClick,
             )
         }
-    ConnectedButtons(buttons, modifier, checks = false, compact)
+    ConnectedButtons(buttons, modifier, compact)
 }
 
 /**
@@ -228,42 +220,29 @@ internal fun groupShares(
 /**
  * [buttons] in one row, sharing it by [groupShares], from the widths their labels, and their
  * longest words, need on one line in the buttons' style (in the app's language, font and font
- * size), their padding, and, in a choice ([checks]), room for the check in every one, so the
- * buttons keep their widths whichever is chosen; where the longest words do not fit the row with
- * that room, as at a large font size on a narrow phone, the choice shows no check, its fill alone
- * marking the chosen one, so no word breaks. The buttons are of one height, at least
- * [GROUP_HEIGHT], in a row at least [GROUP_TARGET] high, each answering a tap across 48 dp (Compose
- * widens a smaller target into the room around it). With [compact], buttons that fit as wide as the
- * widest needs ([GroupArrangement.EQUAL]) are that wide, and the row is placed at that side;
- * otherwise they share the width as without it.
+ * size) and their padding, so the buttons keep their widths whichever is chosen: the chosen one
+ * shows no check mark (#1234), and its label needs no more room than when it is not chosen. The
+ * buttons are of one height, at least [GROUP_HEIGHT], in a row at least [GROUP_TARGET] high, each
+ * answering a tap across 48 dp (Compose widens a smaller target into the room around it). With
+ * [compact], buttons that fit as wide as the widest needs ([GroupArrangement.EQUAL]) are that
+ * wide, and the row is placed at that side; otherwise they share the width as without it.
  */
 @Composable
 private fun ConnectedButtons(
     buttons: List<GroupButton>,
     modifier: Modifier,
-    checks: Boolean,
     compact: Alignment.Horizontal? = null,
 ) {
     val style = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val labels = buttons.map { it.label }
-    // Each measured with room for the check and without it (#821).
-    val withCheck =
-        remember(labels, style, density, measurer) {
-            Widths.measured(labels, measurer, style, density, checks = true)
-        }
-    val noCheck =
-        remember(labels, style, density, measurer) {
-            Widths.measured(labels, measurer, style, density, checks = false)
-        }
+    val (needing, words) =
+        remember(labels, style, density, measurer) { Widths.measured(labels, measurer, style, density) }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val gap = with(density) { GROUP_GAP.roundToPx() }
         val bounded = constraints.hasBoundedWidth
         val room = constraints.maxWidth
-        // A choice leaves its check out where the words do not fit the row with room for it.
-        val check = checks && (!bounded || fits(withCheck.words, gap, room))
-        val (needing, words) = if (check) withCheck else noCheck
         val shares = if (bounded) groupShares(needing, words, gap, room) else null
         // Compact only where every button fits as wide as the widest label needs.
         val equal = bounded && groupArrangement(needing, gap, room) == GroupArrangement.EQUAL
@@ -280,7 +259,6 @@ private fun ConnectedButtons(
                         button,
                         groupShape(index, buttons.size, button.selected == true),
                         width.fillMaxHeight(),
-                        check,
                     )
                 }
             }
@@ -300,12 +278,8 @@ private data class Widths(
             measurer: TextMeasurer,
             style: TextStyle,
             density: Density,
-            checks: Boolean,
         ): Widths {
-            val extra =
-                with(density) {
-                    2 * GROUP_PADDING.roundToPx() + if (checks) (CHECK_SIZE + CHECK_GAP).roundToPx() else 0
-                }
+            val extra = with(density) { 2 * GROUP_PADDING.roundToPx() }
             return Widths(
                 oneLine(labels, measurer, style, extra),
                 labels.map { label ->
@@ -316,9 +290,8 @@ private data class Widths(
         }
 
         /**
-         * The widths [texts] need on one line in [style], with [extra] for the buttons' padding and,
-         * in a choice, room for the check; a pixel over, so that a label measured to fit is not
-         * wrapped by rounding.
+         * The widths [texts] need on one line in [style], with [extra] for the buttons' padding; a
+         * pixel over, so that a label measured to fit is not wrapped by rounding.
          */
         private fun oneLine(
             texts: List<String>,
@@ -371,16 +344,14 @@ internal fun groupShape(
 
 /**
  * One button: its label on a fill as the chips' ([chipColours]), the text's colour when chosen, a
- * light fill of it otherwise, the chosen one's label after a check where the group has room for
- * it ([check]); dimmed when it cannot be used. One node for a screen reader: a radio button in a
- * choice, a button in a row of actions.
+ * light fill of it otherwise, with no check mark (#1234); dimmed when it cannot be used. One node
+ * for a screen reader: a radio button in a choice, a button in a row of actions.
  */
 @Composable
 private fun GroupButtonView(
     button: GroupButton,
     shape: Shape,
     modifier: Modifier,
-    check: Boolean,
 ) {
     val chosen = button.selected == true
     val colours = MaterialTheme.colorScheme
@@ -411,15 +382,6 @@ private fun GroupButtonView(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (chosen && check) {
-            Icon(
-                painterResource(R.drawable.ic_check),
-                contentDescription = null,
-                modifier = Modifier.size(CHECK_SIZE),
-                tint = content,
-            )
-            Spacer(Modifier.width(CHECK_GAP))
-        }
         Text(
             button.label,
             style = MaterialTheme.typography.labelLarge,

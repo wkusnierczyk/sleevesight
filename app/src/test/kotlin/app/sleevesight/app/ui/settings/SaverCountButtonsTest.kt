@@ -41,7 +41,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * *Saver*'s count (#1212): a line saying what it counts, over a button group of the numbers alone,
- * so that the chosen button's label, with its check, never wraps where the others do not: at the
+ * so that the chosen button's label never wraps where the others do not: at the
  * default font size, a large one and twice the default on a narrow phone, with each count chosen,
  * every label is on one line and every button as tall as the others. A screen reader reads each
  * button after the line, then its number. Native graphics, for the labels' real widths.
