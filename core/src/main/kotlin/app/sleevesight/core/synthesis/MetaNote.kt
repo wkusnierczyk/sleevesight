@@ -1,5 +1,6 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.text.isJsWhitespace
 import app.sleevesight.core.text.trimJs
 
 /**
@@ -19,7 +20,9 @@ data class MetaNote(
     companion object {
         /**
          * The note at the end of [reply], or null when it ends with none. Narrow on purpose, so an
-         * insight's own text is never cut. Only the reply's end is read, and a note is taken out
+         * insight's own text is never cut: when in doubt, the text stays. Only the reply's end is
+         * read; a note is never taken out from inside an emphasis or a quotation that opened before
+         * it (read over the whole paragraph, so a lyric in emphasis over two sentences is one), and
          * only when text (a letter or a digit, not marks alone) is left before it, so a reply that
          * is a note alone is left as written. Taken out, again and again while one is found at the
          * new end:
@@ -29,22 +32,19 @@ data class MetaNote(
          *   ([NOTE_WORDS]: omit, not usable, uncited, unsupported, no evidence; drop, skip or
          *   exclude only with what they act on, `drop it`). Emphasis around the note alone
          *   (`**[omit]**`) goes with it; closing marks after it with none before it close the
-         *   prose's emphasis and are kept (`*… quote it. [Not usable; omit]*`).
-         * - **A last sentence**, split as the grounding check splits a reply, that cites nothing, is
-         *   no stated gap ([isHedge]: "Little else is documented.", the fixed
-         *   sentence of a song whose sources only list it), sits in no quotation opened before it,
-         *   and, read without what it quotes (`"..."`, `“...”`, single quotations as [Quotations]
-         *   reads them) and without emphasised titles or lyrics (an emphasis with words of the
-         *   sentence around it, whatever its punctuation; one that is the whole sentence is read),
-         *   holds a bracketed note, says the evidence lacks something ([EVIDENCE_TALK]: "not in the
-         *   evidence", followed by the clause's end or its going on, not by a noun, as in "the
-         *   evidence locker"; "the evidence doesn't say", "the sources don't say", "my citations"),
-         *   or speaks of its own work in the first person ([FIRST_PERSON]: "I can't quote", "I
-         *   can't cite", "I'll omit"). The words are matched with their case where a title would
-         *   capitalise them (Monk's *Evidence*, *I Can't Quote It*).
+         *   prose's emphasis and are kept.
+         * - **A last sentence**, split as the grounding check splits a reply, that cites nothing and,
+         *   read without what it quotes (`"..."`, `“...”`, single quotations as [Quotations] reads
+         *   them) and without emphasised titles or lyrics inside it (an emphasis with words of the
+         *   sentence around it; one that is the whole sentence is read), is both in the first
+         *   person ([FIRST_PERSON]: I, I'm, I'll, I can't, my) and names the model's own material
+         *   ([MATERIAL]: evidence, sources, citation, cite, quote), as the phone's "…, so I can't
+         *   quote it." does. An insight is written in the third person; the first person in it is
+         *   a lyric's, which is quoted or set in emphasis, or the model's own.
          *
-         * The cost: such a note in the middle of the reply, or worded otherwise, stays, flagged as
-         * uncited; a lyric set in emphasis as a whole sentence of its own (`*I can't quote it.*`),
+         * The cost: a note in the middle of the reply, or one not in the first person ("The
+         * sources don't say who produced it."), stays, flagged as uncited; a lyric in the first
+         * person that names a quote or the evidence, written without quotation marks or emphasis,
          * uncited, at the reply's very end, would be taken out.
          */
         fun of(reply: String): MetaNote? {
@@ -67,55 +67,84 @@ data class MetaNote(
 
         // [text] without a bracketed note at its end, and the note; null for none. Emphasis that wraps
         // the note alone (`**[omit]**`) goes with it; closing marks after it with none opening before
-        // it close the prose's emphasis and are kept (`*… quote it. [omit]*`); other marks are left
-        // as written, and so is the note.
+        // it close the prose's emphasis and are kept; other marks are left as written, and so is the
+        // note. Never from inside an emphasis or a quotation opened before it.
         private fun withoutBracketNote(text: String): Pair<String, String>? {
             val match = TRAILING_BRACKET.find(text) ?: return null
             val (opening, inside, closing) = match.destructured
+            val at = match.range.first
             val kept =
                 when {
-                    !isNote(inside) -> null
+                    !isNote(inside) || enclosed(text, at) -> null
                     opening.isEmpty() -> closing
                     closing.startsWith(opening) -> closing.removePrefix(opening)
                     else -> null
                 }
             return kept?.let {
-                val before = text.substring(0, match.range.first).trimJs()
+                val before = text.substring(0, at).trimJs()
                 (before + it).trimJs() to "$opening[$inside]$opening"
             }
         }
 
         // [text] without its last sentence when that is a note, and the sentence; null when it is not.
         private fun withoutLastSentence(text: String): Pair<String, String>? {
-            val start =
-                PARAGRAPH_BREAK
-                    .findAll(text)
-                    .lastOrNull()
-                    ?.range
-                    ?.last
-                    ?.plus(1) ?: 0
-            val paragraph = text.substring(start)
-            val last = sentenceSpans(paragraph).lastOrNull() ?: return null
+            val start = paragraphStart(text, text.length)
+            val last = sentenceSpans(text.substring(start)).lastOrNull() ?: return null
             val at = start + last.first
             val sentence = text.substring(at, start + last.last + 1)
-            val apart = !Quotations.of(text, end = at).open && !CITATION.containsMatchIn(sentence) && !isHedge(sentence)
+            val apart = !enclosed(text, at) && !CITATION.containsMatchIn(sentence)
             val read = if (apart) readOf(sentence) else null
-            val says =
-                read != null &&
-                    (
-                        BRACKET.findAll(read).any { isNote(it.groupValues[1]) } ||
-                            EVIDENCE_TALK.containsMatchIn(read) ||
-                            FIRST_PERSON.containsMatchIn(read)
-                    )
+            val says = read != null && FIRST_PERSON.containsMatchIn(read) && MATERIAL.containsMatchIn(read)
             return if (says) text.substring(0, at).trimJs() to sentence.trimJs() else null
+        }
+
+        // Whether [at] in [text] is inside a quotation or an emphasis opened before it in its
+        // paragraph, and still open there.
+        private fun enclosed(
+            text: String,
+            at: Int,
+        ): Boolean = Quotations.of(text, end = at).open || emphasisOpen(text, paragraphStart(text, at), at)
+
+        // Where the paragraph that holds [at] in [text] starts: after the last blank line before it.
+        private fun paragraphStart(
+            text: String,
+            at: Int,
+        ): Int =
+            PARAGRAPH_BREAK
+                .findAll(text.substring(0, at))
+                .lastOrNull()
+                ?.range
+                ?.last
+                ?.plus(1) ?: 0
+
+        // Whether an emphasis opened in [text] from [from] is still open at [end]: each run of `*` or
+        // `_` that is a mark (not inside a word, as in `snake_case`, nor alone between spaces) closes
+        // the last one opened with the same run, else opens one.
+        private fun emphasisOpen(
+            text: String,
+            from: Int,
+            end: Int,
+        ): Boolean {
+            val open = ArrayDeque<String>()
+            for (run in EMPHASIS_RUN.findAll(text.substring(0, end), from)) {
+                val before = text.getOrNull(run.range.first - 1)
+                val after = text.getOrNull(run.range.last + 1)
+                val inWord = before?.isLetterOrDigit() == true && after?.isLetterOrDigit() == true
+                val alone = (before == null || isJsWhitespace(before)) && (after == null || isJsWhitespace(after))
+                when {
+                    inWord || alone -> Unit
+                    open.lastOrNull() == run.value -> open.removeLast()
+                    else -> open.addLast(run.value)
+                }
+            }
+            return open.isNotEmpty()
         }
 
         // [sentence] as read: without what it quotes, each quotation an ellipsis, and without its
         // emphasised titles or lyrics; null when a quotation in it is left open, or closes with none
         // open. An emphasis is read only when it is the whole sentence, bracketed notes and
         // punctuation aside (`*One site … so I can't quote it.*`); one with words of the sentence
-        // around it is a title or a lyric, whatever its punctuation (`repeats *the evidence shows
-        // you lied...* over two chords`).
+        // around it is a title or a lyric, whatever its punctuation.
         private fun readOf(sentence: String): String? {
             val read = Quotations.of(sentence).takeIf { !it.open && !it.stray }?.outside
             return read?.let {
@@ -152,29 +181,18 @@ data class MetaNote(
                 RegexOption.IGNORE_CASE,
             )
 
-        /** The evidence or the sources spoken of as what the reply is written from. */
-        private val EVIDENCE_TALK =
-            Regex(
-                "(?:\\bnot|n't|n’t)\\s+(?:in|among|part of|found in|given in|supported by|backed by|" +
-                    "covered by)\\s+(?:the|my)\\s+evidence$EVIDENCE_ENDS|" +
-                    "\\b[Tt]he evidence\\s+(?:does(?:n't|n’t| not)|did(?:n't|n’t| not))\\s+" +
-                    "(?:say|mention|give|state|cover|include|support|confirm|name|quote|show)\\b|" +
-                    "\\bevidence lines?\\b|" +
-                    "\\b[Tt]he sources?\\s+(?:do(?:es)?(?:n't|n’t| not)|did(?:n't|n’t| not))\\s+" +
-                    "(?:say|mention|give|state|cover|include|support|confirm|name|quote)\\b|" +
-                    "(?:\\bnot|n't|n’t)\\s+(?:supported by|backed by|in|among|found in|given in)\\s+" +
-                    "(?:the|my)\\s+sources\\b|" +
-                    "\\b[Mm]y (?:citations?|sources|evidence)\\b",
-            )
+        /** The first person, the model speaking of itself: I, I'm, I'll, I can't, my. */
+        private val FIRST_PERSON = Regex("\\b(?:I|[Mm]y)\\b")
 
-        /** The first person on what it can or will do with a line: quote, cite, verify, omit. */
-        private val FIRST_PERSON =
-            Regex(
-                "\\bI\\s+(?:can't|can’t|cannot|can not|couldn't|couldn’t|could not|won't|won’t|will not|" +
-                    "am unable to|didn't|didn’t|did not|don't|don’t|do not)\\s+(?:quote|cite|verify|confirm)\\b|" +
-                    "\\bI(?:'m|’m) unable to\\s+(?:quote|cite|verify|confirm)\\b|" +
-                    "\\bI(?:'ll|’ll| will|'m|’m| am)\\s+(?:omit|omitting|leave out|leaving out|skip|skipping)\\b",
-            )
+        /**
+         * The model's own material, lower case where a title would capitalise it (Monk's
+         * *Evidence*): its evidence, its sources and their lines, and citing or quoting them.
+         */
+        private val MATERIAL =
+            Regex("\\b(?:evidence|sources?|source lines?|citations?|cite[sd]?|citing|quote[sd]?|quoting)\\b")
+
+        /** A run of one emphasis mark. */
+        private val EMPHASIS_RUN = Regex("\\*+|_+")
 
         /** A bracketed note at the text's end, with any emphasis marks just before and after it. */
         private val TRAILING_BRACKET = Regex("([*_]*)\\[([^\\[\\]\\n]*)\\]([*_]*)$")
@@ -187,14 +205,6 @@ data class MetaNote(
 
         /** A letter or a digit: text, not marks alone. */
         private val CONTENT = Regex("[\\p{L}\\p{N}]")
-
-        /**
-         * What follows "the evidence" when it is the reply's evidence: the sentence's punctuation or
-         * end, a bracket, or a word that goes on with the clause (`…, so I can't quote it`); not a
-         * noun it qualifies (`the evidence locker`).
-         */
-        private const val EVIDENCE_ENDS =
-            "(?=[\\s*_)]*(?:[,.;:!?\\[]|$)|\\s+(?:so|and|but|which|either|here)\\b)"
 
         private val PARAGRAPH_BREAK = Regex("\\n[ \\t]*\\n")
         private val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")

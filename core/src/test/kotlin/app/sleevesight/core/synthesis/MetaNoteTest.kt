@@ -27,7 +27,7 @@ class MetaNoteTest {
         assertEquals(GroundingCounts(ok = 2, model = 0, hedge = 0, uncited = 0, unknown = 0), grounded.counts)
         val withdrawn = assertNotNull(grounded.withdrawn)
         assertTrue(withdrawn.startsWith("*One lyrics site"), withdrawn)
-        assertTrue(withdrawn.endsWith("[Not usable; omit]"), withdrawn)
+        assertTrue(withdrawn.endsWith("[Not usable; omit]*"), withdrawn)
     }
 
     @Test
@@ -36,11 +36,10 @@ class MetaNoteTest {
             listOf(
                 " [Not usable; omit]",
                 " [omit]",
-                " The sources don't say who produced it.",
                 " A review calls it a ballad, but I can't cite it.",
-                " One site dates it to 1984, which is not in the evidence. [unsupported]",
+                " One site dates it to 1984, but I can't cite it. [unsupported]",
                 "\nThe evidence does not give the B-side, so I'll omit it.",
-                "\n\n*A fan page names the session players, but that page is not in the evidence.*",
+                "\n\n*A fan page names the session players, but I can't cite that page.*",
                 " A blog reads it as a farewell, but I can't quote it, since my sources don't hold its text.",
             )
         for (note in notes) {
@@ -139,6 +138,30 @@ class MetaNoteTest {
         assertEquals(0, grounded.counts.uncited)
         assertEquals("**[Not usable; omit]**", grounded.withdrawn)
         assertNull(MetaNote.of("**[Not usable; omit]**"))
+    }
+
+    @Test
+    fun `a lyric in emphasis over two sentences is not cut at its second`() {
+        val reply = "$CLEAN The refrain runs *I'm done. I'll leave out your name.*"
+        assertNull(MetaNote.of(reply))
+        assertEquals(reply, written(reply).text)
+        // The same with the model's words: inside an emphasis opened before it, never taken out.
+        val quoting = "$CLEAN The refrain runs *I'm done. I can't quote the evidence.*"
+        assertNull(MetaNote.of(quoting))
+    }
+
+    @Test
+    fun `talk of the evidence not in the first person is the insight's own`() {
+        for (ending in listOf(
+            " The lyrics say the evidence does not confirm the narrator's guilt.",
+            // An accepted miss: a note not in the first person stays, flagged as uncited.
+            " The sources don't say who produced it.",
+            " One site dates it to 1984, which is not in the evidence.",
+        )) {
+            val reply = CLEAN + ending
+            assertNull(MetaNote.of(reply), ending)
+            assertEquals(reply, written(reply).text, ending)
+        }
     }
 
     @Test
