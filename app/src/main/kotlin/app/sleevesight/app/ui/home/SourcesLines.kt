@@ -15,6 +15,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.VocalsState
 import app.sleevesight.core.pipeline.linesBeyond
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.sources.WebPage
@@ -45,13 +46,15 @@ internal class SourcesLines(
 
 /**
  * What a web line in *Sources* was read for, named in place of its scope (#1205): *genres · host*
- * for a page the AI's genre list rests on. One word each, [label], so another check's pages can be
- * named the same way.
+ * for a page the AI's genre list rests on; *vocals check · host* for the page the check of the
+ * track's vocals cites (#1053). A few words each, [label], so another check's pages can be named the
+ * same way.
  */
 internal enum class LinePurpose(
     @param:StringRes val label: Int,
 ) {
     GENRES(R.string.home_line_purpose_genres),
+    VOCALS_CHECK(R.string.home_line_purpose_vocals_check),
 }
 
 /**
@@ -158,8 +161,11 @@ internal fun withAlbum(
  * What *Sources* lists for [track]: its evidence, with its album's lines, its artist's web lines
  * (#912) and its song's (#958), once [notes] gathered them; then the pages the AI's genre list from
  * [genres] rests on (#1205), once it lists any genre, and those the genres' reasons found on the web
- * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each address once.
- * A reason's citations show these ids by address ([shownLine]), so they never point at another page.
+ * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each address once;
+ * last, the page the check of the track's vocals cites (#1053, [GenreNotes.vocals]), named *vocals
+ * check*, only when its answer was taken (`instrumental` or `vocals`: an `unknown` cites none), and
+ * not again when another line has its address. A reason's citations, and the check's, show these ids
+ * by address ([shownLine], [webLineOf]), so they never point at another page.
  */
 @Composable
 internal fun sourcesLines(
@@ -188,10 +194,12 @@ internal fun sourcesLines(
         track?.let(genres::searchedPages) ?: flowOf(emptyList())
     }.collectAsState(emptyList())
     val pages = listed + searched
+    val checked = listOfNotNull((vocalsOf(track, genres)?.state as? VocalsState.Checked)?.page)
     val evidence = track?.evidence
     val taken = track?.albumIds.orEmpty()
-    return remember(evidence, album, artist, song, taken, pages) {
-        withPages(withAlbum(evidence, album, artist, song, taken), pages, LinePurpose.GENRES)
+    return remember(evidence, album, artist, song, taken, pages, checked) {
+        val genreLines = withPages(withAlbum(evidence, album, artist, song, taken), pages, LinePurpose.GENRES)
+        withPages(genreLines, checked, LinePurpose.VOCALS_CHECK)
     }
 }
 

@@ -737,6 +737,9 @@
     <!-- A web line in Sources named by what it was read for, in place of its scope (#1205): a page
          the AI's genre list rests on, "genres · en.wikipedia.org". -->
     <string name="home_line_purpose_genres">genres</string>
+    <!-- A web line in Sources named by what it was read for (#1053): the page the check of the
+         track's vocals cites, "vocals check · bandcamp.com". -->
+    <string name="home_line_purpose_vocals_check">vocals check</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <string name="home_source_name_discogs">Discogs</string>
     <string name="home_source_name_web">Web search</string>
