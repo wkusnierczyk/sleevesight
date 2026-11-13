@@ -38,8 +38,9 @@ import org.robolectric.annotation.Config
 
 /**
  * The Instrumental LRCLIB's mark adds for a song whose work credits composers alone (#1024), as
- * *Genres* shows it: a source's chip on the track's row, not weak, not marked AI, read as any
- * source's genre; under *Tag sources*, "LRCLIB", not linked; no check of the track's vocals. Alone,
+ * *Genres* shows it: a source's chip on the track's row, weak as LRCLIB's mark alone (#1055: its
+ * records are submitted by its users) with no line of its own, not marked AI, read as any source's
+ * weak genre; under *Tag sources*, "LRCLIB", not linked; no check of the track's vocals. Alone,
  * it leaves *Search with AI* offered, and "None found." unsaid.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -115,10 +116,12 @@ class GenreLibraryMarkScreenTest {
             .joinToString { it.text }
 
     @Test
-    fun theMarksInstrumentalIsASourcesChipCreditedToLrclib() =
+    fun theMarksInstrumentalIsAWeakSourcesChipCreditedToLrclib() =
         show {
             compose.onNodeWithTag(CHIP).assertExists()
-            compose.onNodeWithContentDescription("Instrumental, weak evidence").assertDoesNotExist()
+            // Weak as LRCLIB's mark alone (#1055), with no line of its own under the definition.
+            compose.onNodeWithContentDescription("Instrumental, weak evidence").assertExists()
+            compose.onNodeWithTag(GENRE_WEAK_TAG).assertDoesNotExist()
             compose
                 .onNodeWithContentDescription("Instrumental, from", substring = true)
                 .assertDoesNotExist()
