@@ -116,8 +116,8 @@ sealed interface InsightReply {
  * [GAP_SENTENCE], is a hedge (#46). The tests
  * check it on stored replies, against their stored results (`core/src/test/resources/grounding/`).
  * Before it splits a reply, a correction the model made of it in the open is taken out, leaving
- * the fresh version ([SelfCorrection], #597), and then a note the model left at its end on its own
- * evidence or work ([MetaNote], #1207): the counts describe what the card shows.
+ * the fresh version ([SelfCorrection], #597), and then, for an insight, a note the model left at
+ * its end on its own evidence or work ([MetaNote], #1207): the counts describe what the card shows.
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -155,24 +155,34 @@ object GroundingCheck {
     /** The reply that says there is no usable evidence. */
     const val NO_EVIDENCE: String = "NO_EVIDENCE"
 
-    /** Checks [reply] against [evidence]; `[AI]` is allowed only when [allowModel]. */
+    /**
+     * Checks [reply] against [evidence]; `[AI]` is allowed only when [allowModel]; a note on the
+     * model's own evidence at its end is taken out only with [notes] ([MetaNote]).
+     */
     fun check(
         reply: String,
         evidence: EvidenceSet,
         allowModel: Boolean,
-    ): InsightReply = check(reply, evidence.ids.toSet(), allowModel)
+        notes: Boolean = false,
+    ): InsightReply = check(reply, evidence.ids.toSet(), allowModel, notes)
 
-    /** Checks [reply] against the evidence [ids]; `[AI]` is allowed only when [allowModel]. */
+    /**
+     * Checks [reply] against the evidence [ids]; `[AI]` is allowed only when [allowModel]. With
+     * [notes], for an insight's reply, a note on the model's own evidence or work at its end is
+     * taken out ([MetaNote], #1207); not for a reply whose subject may be the evidence itself (why a
+     * genre is or is not given, an explanation, a search's answer).
+     */
     fun check(
         reply: String,
         ids: Set<String>,
         allowModel: Boolean,
+        notes: Boolean = false,
     ): InsightReply {
         val whole = reply.trimJs()
         if (isNoEvidence(whole)) return InsightReply.NoEvidence
         val correction = SelfCorrection.of(whole)
         val corrected = correction?.kept ?: whole
-        val note = MetaNote.of(corrected)
+        val note = if (notes) MetaNote.of(corrected) else null
         val text = note?.kept ?: corrected
         val withdrawn = listOfNotNull(correction?.withdrawn, note?.withdrawn).joinToString("\n\n").ifEmpty { null }
         val paragraphs =

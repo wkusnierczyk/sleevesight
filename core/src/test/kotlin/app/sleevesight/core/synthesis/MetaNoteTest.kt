@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  */
 class MetaNoteTest {
     private fun written(reply: String): GroundedText =
-        assertIs<InsightReply.Written>(GroundingCheck.check(reply, IDS, allowModel = false)).grounded
+        assertIs<InsightReply.Written>(GroundingCheck.check(reply, IDS, allowModel = false, notes = true)).grounded
 
     @Test
     fun `the phone's reply drops its note on the source it did not use`() {
@@ -107,6 +107,15 @@ class MetaNoteTest {
         val withdrawn = assertNotNull(grounded.withdrawn)
         assertTrue(withdrawn.startsWith("It came out in 1985 [MB1]. It was a hit everywhere."), withdrawn)
         assertTrue(withdrawn.endsWith("so I can't cite it."), withdrawn)
+    }
+
+    @Test
+    fun `a reply that is no insight's keeps its talk of the evidence`() {
+        // A genre's reason may say what the evidence does not support: that is its answer.
+        val reason = "$CLEAN The evidence does not support the Alternative label."
+        val grounded = assertIs<InsightReply.Written>(GroundingCheck.check(reason, IDS, allowModel = false)).grounded
+        assertEquals(reason, grounded.text)
+        assertNull(grounded.withdrawn)
     }
 
     /** No stored reply of the grounding check's (`grounding/replies.json`) ends with a note. */
