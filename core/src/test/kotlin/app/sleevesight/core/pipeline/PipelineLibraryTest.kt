@@ -100,7 +100,7 @@ class PipelineLibraryTest {
         }
 
     @Test
-    fun `LRCLIB's instrumental mark lifts the featured artist's weak sign`() =
+    fun `LRCLIB's instrumental mark lifts the featured artist's weak sign, weak as the mark's alone`() =
         runTest {
             settings = Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.LRCLIB)
             val off = pipeline(FakeLibrary(Lookup.Found(LibraryLyrics.INSTRUMENTAL)), time = PipelineTime())
@@ -114,7 +114,7 @@ class PipelineLibraryTest {
                 pipeline(FakeLibrary(Lookup.Found(LibraryLyrics.INSTRUMENTAL)), time = PipelineTime())
                     .run(nasnusa, write = false)
             assertTrue(state.instrumental())
-            assertNull(state.genres.weakEvidence(TrackGenres.INSTRUMENTAL))
+            assertEquals(WeakEvidence.LibraryMark, state.genres.weakEvidence(TrackGenres.INSTRUMENTAL))
         }
 
     @Test

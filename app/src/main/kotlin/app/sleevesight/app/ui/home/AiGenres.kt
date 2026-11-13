@@ -165,8 +165,9 @@ internal fun AiGenres(
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
     // Marked AI, as the genres the AI's list adds are (#762, #801), credited to [model].
     val row = GenreRow(GenreLevel.TRACK, null, genres.map { TrackLabel(it, emptyList(), aiModel = model) })
-    // Instrumental on a sung track (#996): weak, as the rows' AI genres are, with its line.
-    val labels = row.labels.map { PlacedLabel(row, it, weak = track.genres.aiSignOfVocals(it.genre.identity) != null) }
+    // Instrumental on a sung track (#996), or one only LRCLIB's mark lifts (#1055): weak, as the rows'
+    // AI genres are, with its line.
+    val labels = row.labels.map { PlacedLabel(row, it, weak = track.genres.aiWeakEvidence(it.genre.identity) != null) }
     val open = genres.firstOrNull { it.identity == chosen }
     val handoff = rememberFocusHandoff()
     val chips = remember(track.normalized.lookupKey) { mutableMapOf<String, FocusRequester>() }
@@ -189,7 +190,7 @@ internal fun AiGenres(
                             )
                         }
                     }
-                    WeakEvidenceNote(track.genres.aiSignOfVocals(genre.identity), genre)
+                    WeakEvidenceNote(track.genres.aiWeakEvidence(genre.identity), genre)
                 }
             }
         }
