@@ -32,6 +32,9 @@ class ComposedDateResolutionTest {
             val work = "https://musicbrainz.org/work/9727cab0-f302-3b71-b937-5ccd416dd36e"
             assertEquals(ComposedDate("1788", "1788", SourceId.MUSICBRAINZ, work), resolution.composed)
             assertEquals("2024-10-25", resolution.firstReleaseDate)
+            // The movement's sonata (#1133), whose Wikidata item the identity check asks for: the
+            // movement has none.
+            assertEquals("a2ad223d-d73b-3775-9580-fd25b4d986e1", resolution.work?.whole?.mbid)
             // The adapter keeps it with MusicBrainz's result, for a replay.
             val result = MusicBrainzSource().lookup(track, CompletableDeferred(resolution))
             assertEquals(resolution.composed, result.composed)

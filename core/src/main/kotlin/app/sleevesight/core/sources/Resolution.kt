@@ -359,10 +359,17 @@ data class ReleaseDate(
     }
 }
 
-/** A MusicBrainz work: the song, apart from any one recording of it. */
+/**
+ * A MusicBrainz work: the song, apart from any one recording of it. [whole] is the work it is a part of
+ * when it is a composed work's part (#1133): a movement's sonata, an aria's opera; its first `parts`
+ * parent, which MusicBrainz gives with the work's own lookup. The identity check looks for the whole's
+ * Wikidata item when the part has none (`IdentityCheck.musicBrainzItems`): K. 545's Andante has no
+ * item, its sonata has one, with the sonata's article. Null for any other work, and when not known.
+ */
 data class ResolvedWork(
     val mbid: String,
     val title: String,
+    val whole: ResolvedWork? = null,
 )
 
 /**

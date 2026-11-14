@@ -81,13 +81,23 @@ class IdentityCheck(
         data object Unreachable : Verdict
     }
 
-    /** The Wikidata items MusicBrainz links to the recording or its work: its URL links, else the work's P435. */
+    /**
+     * The Wikidata items MusicBrainz links to the recording or its work: its URL links, else the work's
+     * P435, else, for a composed work's part with none (`ResolvedWork.whole`, #1133), the whole work's
+     * P435 (K. 545's Andante has no item; its sonata, Q991701, has, with the sonata's article): one
+     * more search, only then. A failed search is a failure, as before.
+     */
     suspend fun musicBrainzItems(resolution: Resolution): Lookup<List<String>> {
         val work = resolution.work
+        val whole = work?.whole
         return when {
             resolution.wikidataIds.isNotEmpty() -> Lookup.Found(resolution.wikidataIds)
             work == null -> Lookup.Found(emptyList())
-            else -> wikidata.itemsWithStatement(Wd.MUSICBRAINZ_WORK, work.mbid)
+            else -> {
+                val own = wikidata.itemsWithStatement(Wd.MUSICBRAINZ_WORK, work.mbid)
+                val none = own is Lookup.NotFound || (own as? Lookup.Found)?.value?.isEmpty() == true
+                if (none && whole != null) wikidata.itemsWithStatement(Wd.MUSICBRAINZ_WORK, whole.mbid) else own
+            }
         }
     }
 

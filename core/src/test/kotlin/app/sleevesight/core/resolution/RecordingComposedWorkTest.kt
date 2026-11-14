@@ -89,6 +89,24 @@ class RecordingComposedWorkTest {
         }
 
     @Test
+    fun `a composed work's part keeps the work it is a part of, for the whole's Wikidata item (#1133)`() =
+        runTest {
+            val parent = MbParentWork("sonata", "Sonata for Piano no. 16", "Sonata")
+            val resolution = resolve(musicBrainz(work(parents = listOf(parent))), track("Andante", "Pianist"))
+            assertEquals("sonata", resolution.work?.whole?.mbid)
+            assertEquals("Sonata for Piano no. 16", resolution.work?.whole?.title)
+        }
+
+    @Test
+    fun `a song's work keeps no whole, though it is a part of one (#1133)`() =
+        runTest {
+            val parent = MbParentWork("opera", "A Rock Opera", "Opera")
+            val resolution =
+                resolve(musicBrainz(work(type = "Song", parents = listOf(parent))), track("Andante", "Pianist"))
+            assertNull(resolution.work?.whole)
+        }
+
+    @Test
     fun `a work's own type decides before its parent's - a song from an opera is covered as a song`() =
         runTest {
             val parent = MbParentWork("opera", "A Rock Opera", "Opera")

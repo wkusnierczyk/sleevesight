@@ -407,9 +407,11 @@ class WikipediaSource(
          * a day in that year (#1203), so a result kept against the recording chosen before is looked
          * up again; [ARTIST_PART] stays. 6: the song's item gives when the music was composed
          * (`SourceResult.composed`, #1132), so a song's result kept without it is looked up again;
-         * [ARTIST_PART] stays.
+         * [ARTIST_PART] stays. 7: a composed work's part with no Wikidata item of its own is checked
+         * by the whole work's item (`IdentityCheck.musicBrainzItems`, #1133: K. 545's Andante by its
+         * sonata's), so a song's result kept without it is looked up again; [ARTIST_PART] stays.
          */
-        const val EXTRACTION_VERSION: Int = 6
+        const val EXTRACTION_VERSION: Int = 7
 
         private val json = Json { encodeDefaults = false }
 
