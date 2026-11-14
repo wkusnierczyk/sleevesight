@@ -16,7 +16,7 @@ class GenreFamilyDroppedTest {
         val labels =
             listOf(
                 GenreLabel("folk rock", "Folk Rock", "folkrock", "https://www.last.fm/music/A", artist = "A"),
-                GenreLabel("instrumental", "Instrumental", "instrumental", beyondCap = true),
+                GenreLabel("instrumental", "Instrumental", "instrumental", weight = 0.5),
             )
         val result = SourceResult(Outcome.SongArticle, emptyList(), 12.milliseconds, genres = labels)
         val now = RetrievalCodec.encode(result)

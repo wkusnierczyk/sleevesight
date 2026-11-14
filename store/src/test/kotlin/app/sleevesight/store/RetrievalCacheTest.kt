@@ -287,23 +287,45 @@ class RetrievalCacheTest {
     }
 
     @Test
-    fun `the vocal credits and a label past the cap round-trip, and an entry kept before them decodes without`() {
+    fun `the vocal credits and the labels' weights round-trip, and an entry kept before them decodes without`() {
         val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
         val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
         assertEquals(listOf("Gordon Lightfoot"), decoded.lyrics?.vocalists)
-        assertEquals(listOf(false, false, true), decoded.genres.map { it.beyondCap })
-        // As kept before #996: no vocal credits, no label past the cap.
+        assertEquals(listOf(1.0, null, 0.25), decoded.genres.map { it.weight })
+        // As kept before #996: no vocal credits; and before #1019: no weights.
         val before =
             result.copy(
                 lyrics = result.lyrics?.copy(vocalists = emptyList()),
-                genres = result.genres.map { it.copy(beyondCap = false) },
+                genres = result.genres.map { it.copy(weight = null) },
             )
         val text = RetrievalCodec.encode(before)
         assertFalse("vocalists" in text)
-        assertFalse("beyondCap" in text)
+        assertFalse("weight" in text)
         val old = assertNotNull(RetrievalCodec.decode(text))
         assertEquals(emptyList(), old.lyrics?.vocalists)
-        assertTrue(old.genres.none { it.beyondCap })
+        assertTrue(old.genres.none { it.weight != null })
+    }
+
+    @Test
+    fun `an entry kept with a label past its source's cap decodes with the mark ignored`() {
+        // From #996 to #1019 a label past its source's cap was kept marked, on no row; labels are no
+        // longer capped before the sources combine, and such an entry is still read.
+        val result =
+            sample(Outcome.SongArticle, SourceId.MUSICBRAINZ).let {
+                it.copy(
+                    genres =
+                        it.genres.map { label ->
+                            label.copy(weight = null)
+                        },
+                )
+            }
+        val marked =
+            RetrievalCodec
+                .encode(
+                    result,
+                ).replace("\"tag\":\"instrumental\",", "\"tag\":\"instrumental\",\"beyondCap\":true,")
+        assertTrue("beyondCap" in marked)
+        assertEquals(result.genres, assertNotNull(RetrievalCodec.decode(marked)).genres)
     }
 
     @Test
@@ -607,7 +629,7 @@ class RetrievalCacheTest {
         )
     }
 
-    // The artists' labels; Instrumental past the cap, on no row (#996).
+    // The artists' labels, two with their weights at the source (#1019).
     private val labels =
         listOf(
             GenreLabel(
@@ -616,9 +638,10 @@ class RetrievalCacheTest {
                 "folkrock",
                 "https://www.last.fm/music/Gordon+Lightfoot",
                 artist = "Gordon Lightfoot",
+                weight = 1.0,
             ),
             GenreLabel("folk", "Folk", "folk"),
-            GenreLabel("instrumental", "Instrumental", "instrumental", beyondCap = true),
+            GenreLabel("instrumental", "Instrumental", "instrumental", weight = 0.25),
         )
 
     // The recording's tags, with their votes (#799).
