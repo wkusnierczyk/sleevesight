@@ -39,11 +39,15 @@ interface LanguageSearch {
     val web: LanguageAdapter?
 }
 
-/** What a lookup in a language is about: the [track], as [resolution] resolved it, and the [language]. */
+/**
+ * What a lookup in a language is about: the [track], as [resolution] resolved it, and the [language];
+ * with its artists' [roles] (#1180), as the resolution tells them unless given.
+ */
 class LanguageQuery(
     val track: NormalizedTrack,
     val resolution: Resolution,
     val language: Language,
+    val roles: ArtistRoles = ArtistRoles.of(track, resolution.roles),
 )
 
 /**

@@ -97,7 +97,7 @@ class ExaSongSearch(
         val language = song.language
         val body =
             if (language == null) {
-                ExaSearchRequest.ofSongReview(song.track.searchTitle, song.track.primary)
+                ExaSearchRequest.ofSongReview(song.track.searchTitle, song.roles.lead(song.track))
             } else {
                 ExaSearchRequest.ofSongInLanguage(native.searchTitle, native.primary, language.song)
             }
@@ -125,7 +125,7 @@ class ExaSongSearch(
     private suspend fun nativeOf(song: SongWebQuery): NormalizedTrack {
         val language = song.language ?: return song.track
         val resolution = song.resolution
-        val query = LanguageQuery(song.track, resolution ?: Resolution.NONE, language)
+        val query = LanguageQuery(song.track, resolution ?: Resolution.NONE, language, song.roles)
         val named =
             try {
                 if (resolution == null) LanguageItems.NONE else items(query)

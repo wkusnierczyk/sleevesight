@@ -1,0 +1,853 @@
+{
+ "relations": [
+  {
+   "attribute-values": {},
+   "begin": "1921-03",
+   "target-credit": "",
+   "type": "composer",
+   "direction": "backward",
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f",
+   "attribute-ids": {},
+   "source-credit": "",
+   "end": "1924-03",
+   "ended": true,
+   "artist": {
+    "id": "a693df4a-8762-4a45-b7fd-6695b558385e",
+    "country": "IT",
+    "name": "Giacomo Puccini",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Puccini, Giacomo",
+    "disambiguation": "Italian composer",
+    "type": "Person"
+   },
+   "attributes": [],
+   "target-type": "artist"
+  },
+  {
+   "attribute-ids": {},
+   "artist": {
+    "country": "IT",
+    "id": "a252b852-a2ad-4a33-80cf-5eb4a4eea023",
+    "name": "Giuseppe Adami",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Adami, Giuseppe",
+    "type": "Person",
+    "disambiguation": ""
+   },
+   "attributes": [],
+   "target-type": "artist",
+   "end": null,
+   "source-credit": "",
+   "ended": false,
+   "target-credit": "",
+   "type": "librettist",
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "7474ab81-486f-40b5-8685-3a4f8ea624cb",
+   "direction": "backward"
+  },
+  {
+   "direction": "backward",
+   "type-id": "7474ab81-486f-40b5-8685-3a4f8ea624cb",
+   "begin": null,
+   "attribute-values": {},
+   "target-credit": "",
+   "type": "librettist",
+   "ended": false,
+   "source-credit": "",
+   "end": null,
+   "target-type": "artist",
+   "artist": {
+    "disambiguation": "",
+    "type": "Person",
+    "sort-name": "Simoni, Renato",
+    "name": "Renato Simoni",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "IT",
+    "id": "da8511d1-7a64-4a97-9656-5394e38fb710"
+   },
+   "attributes": [],
+   "attribute-ids": {}
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": ", ",
+      "name": "Luciano Pavarotti",
+      "artist": {
+       "type": null,
+       "disambiguation": "tenor",
+       "sort-name": "Pavarotti, Luciano",
+       "name": "Luciano Pavarotti",
+       "type-id": null,
+       "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+       "country": "IT"
+      }
+     },
+     {
+      "joinphrase": ", ",
+      "name": "Royal Philharmonic Orchestra",
+      "artist": {
+       "name": "Royal Philharmonic Orchestra",
+       "type-id": null,
+       "id": "299597ae-3a20-4bf1-973e-03704af69f6b",
+       "country": "GB",
+       "disambiguation": "",
+       "type": null,
+       "sort-name": "Royal Philharmonic Orchestra"
+      }
+     },
+     {
+      "joinphrase": "",
+      "name": "Kurt Herbert Adler",
+      "artist": {
+       "type": null,
+       "disambiguation": "conductor",
+       "sort-name": "Adler, Kurt Herbert",
+       "type-id": null,
+       "name": "Kurt Herbert Adler",
+       "id": "1d0eb81c-3205-482e-90bc-382aba30f9b3",
+       "country": "AT"
+      }
+     }
+    ],
+    "video": false,
+    "id": "45255a45-c74d-4df8-9328-cd8c7dd94428",
+    "length": 201866,
+    "disambiguation": "live, 1982-04: Royal Albert Hall, London, UK",
+    "title": "Turandot: “Nessun dorma”"
+   },
+   "type": "performance",
+   "target-credit": "",
+   "begin": "1982-04",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "live"
+   ],
+   "ended": true,
+   "source-credit": "",
+   "end": "1982-04",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   }
+  },
+  {
+   "end": "1993-06-26",
+   "source-credit": "",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "target-type": "recording",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "recording": {
+    "length": 199266,
+    "disambiguation": "",
+    "title": "Turandot: “Nessun dorma”",
+    "artist-credit": [
+     {
+      "joinphrase": ", ",
+      "name": "Luciano Pavarotti",
+      "artist": {
+       "country": "IT",
+       "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+       "type-id": null,
+       "name": "Luciano Pavarotti",
+       "sort-name": "Pavarotti, Luciano",
+       "disambiguation": "tenor",
+       "type": null
+      }
+     },
+     {
+      "joinphrase": ", ",
+      "name": "Members of the New York Philharmonic",
+      "artist": {
+       "sort-name": "New York Philharmonic",
+       "type": null,
+       "disambiguation": "",
+       "country": "US",
+       "id": "7cdb68bc-c4f1-4a92-9bd2-739641c5eff0",
+       "type-id": null,
+       "name": "New York Philharmonic"
+      }
+     },
+     {
+      "artist": {
+       "name": "Leone Magiera",
+       "type-id": null,
+       "country": "IT",
+       "id": "0a470c25-de1c-4042-b7cb-828b13b68c43",
+       "disambiguation": "conductor, pianist",
+       "type": null,
+       "sort-name": "Magiera, Leone"
+      },
+      "name": "Leone Magiera",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "f1d0cb60-677f-448c-bb6a-38285b719ae3"
+   },
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": "1993-06-26",
+   "attribute-values": {},
+   "target-credit": "",
+   "type": "performance"
+  },
+  {
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "attributes": [
+    "live"
+   ],
+   "target-type": "recording",
+   "end": "1994-07-16",
+   "source-credit": "",
+   "ended": true,
+   "type": "performance",
+   "target-credit": "",
+   "begin": "1994-07-16",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "length": 204266,
+    "disambiguation": "",
+    "title": "Turandot: “Nessun dorma!”",
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "name": "Luciano Pavarotti",
+       "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+       "country": "IT",
+       "disambiguation": "tenor",
+       "type": null,
+       "sort-name": "Pavarotti, Luciano"
+      },
+      "joinphrase": "",
+      "name": "Luciano Pavarotti"
+     }
+    ],
+    "video": false,
+    "id": "38e73992-38de-43b1-ba07-420c9e2e9cc1"
+   },
+   "direction": "backward"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "id": "d0289c4f-19bd-4ce5-b798-b2fb7a1f7c6c",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+       "country": "IT",
+       "name": "Luciano Pavarotti",
+       "type-id": null,
+       "sort-name": "Pavarotti, Luciano",
+       "type": null,
+       "disambiguation": "tenor"
+      },
+      "name": "Luciano Pavarotti",
+      "joinphrase": ""
+     }
+    ],
+    "title": "Turandot: “Nessun dorma”",
+    "disambiguation": "",
+    "length": 198000
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "type": "performance",
+   "begin": null,
+   "attribute-values": {},
+   "attributes": [
+    "live"
+   ],
+   "target-type": "recording",
+   "end": null,
+   "source-credit": "",
+   "ended": false,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   }
+  },
+  {
+   "attribute-ids": {},
+   "attributes": [],
+   "target-type": "url",
+   "source-credit": "",
+   "end": null,
+   "url": {
+    "id": "c4f4bb5d-e8ba-4c1f-b347-c4d279ec4d5c",
+    "resource": "https://www.wikidata.org/wiki/Q815342"
+   },
+   "ended": false,
+   "type": "wikidata",
+   "target-credit": "",
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
+   "direction": "backward"
+  },
+  {
+   "direction": "forward",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "begin": null,
+   "attribute-values": {},
+   "type": "arrangement",
+   "target-credit": "",
+   "ended": false,
+   "work": {
+    "id": "9617f834-2896-4120-b9b0-0e86a71eaecf",
+    "language": "zxx",
+    "title": "“Nessun dorma” (from Turandot)",
+    "attributes": [],
+    "type-id": null,
+    "iswcs": [
+     "T-900.139.754-2"
+    ],
+    "type": null,
+    "disambiguation": "for brass band, arr. Snell",
+    "languages": [
+     "zxx"
+    ]
+   },
+   "source-credit": "",
+   "end": null,
+   "target-type": "work",
+   "attributes": [],
+   "attribute-ids": {}
+  },
+  {
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "direction": "forward",
+   "type": "arrangement",
+   "target-credit": "",
+   "attribute-values": {},
+   "begin": null,
+   "attributes": [],
+   "target-type": "work",
+   "work": {
+    "language": null,
+    "id": "efbc933a-3292-4e3b-b74c-a65bc0b7af43",
+    "attributes": [],
+    "type-id": null,
+    "title": "“Nessun dorma” (from Turandot)",
+    "languages": [],
+    "type": null,
+    "disambiguation": "",
+    "iswcs": []
+   },
+   "end": null,
+   "source-credit": "",
+   "ended": false,
+   "attribute-ids": {}
+  },
+  {
+   "type": "arrangement",
+   "target-credit": "",
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "direction": "forward",
+   "attribute-ids": {},
+   "target-type": "work",
+   "attributes": [],
+   "ended": false,
+   "work": {
+    "type": null,
+    "disambiguation": "catch‐all for arrangements",
+    "iswcs": [],
+    "languages": [],
+    "title": "“Nessun dorma” (from Turandot)",
+    "type-id": null,
+    "attributes": [],
+    "language": null,
+    "id": "26bdc21d-88ae-489d-b30a-43dd3741be0b"
+   },
+   "end": null,
+   "source-credit": ""
+  },
+  {
+   "type": "based on",
+   "target-credit": "",
+   "attribute-values": {},
+   "begin": null,
+   "type-id": "6bb1df6b-57f3-434d-8a39-5dc363d2eb78",
+   "direction": "forward",
+   "attribute-ids": {},
+   "attributes": [],
+   "target-type": "work",
+   "work": {
+    "language": null,
+    "id": "c8041560-2244-49da-93ea-da152334656a",
+    "type-id": null,
+    "attributes": [],
+    "title": "Nessun Dorma \"Gari Wunang\"",
+    "languages": [],
+    "type": null,
+    "disambiguation": "",
+    "iswcs": []
+   },
+   "end": null,
+   "source-credit": "",
+   "ended": false
+  },
+  {
+   "target-type": "work",
+   "attributes": [],
+   "ended": false,
+   "end": null,
+   "source-credit": "",
+   "work": {
+    "type-id": null,
+    "attributes": [],
+    "title": "Nessun dorma",
+    "id": "62b1cefb-238b-476b-aeb1-094224ac3743",
+    "language": null,
+    "languages": [],
+    "iswcs": [],
+    "type": null,
+    "disambiguation": "Rapsody, rap song very loosely based on Puccini's Turandot"
+   },
+   "attribute-ids": {},
+   "type-id": "6bb1df6b-57f3-434d-8a39-5dc363d2eb78",
+   "direction": "forward",
+   "target-credit": "",
+   "type": "based on",
+   "begin": null,
+   "attribute-values": {}
+  },
+  {
+   "target-type": "work",
+   "attributes": [],
+   "ended": false,
+   "work": {
+    "disambiguation": "",
+    "type": "Song",
+    "iswcs": [
+     "T-070.204.902-2"
+    ],
+    "languages": [
+     "eng"
+    ],
+    "title": "Who Needs to Dream?",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "id": "24420354-0bf4-4fb4-86a1-c7c698f686d3",
+    "language": "eng"
+   },
+   "source-credit": "",
+   "end": null,
+   "attribute-ids": {},
+   "type-id": "6bb1df6b-57f3-434d-8a39-5dc363d2eb78",
+   "direction": "forward",
+   "type": "based on",
+   "target-credit": "",
+   "attribute-values": {},
+   "begin": null
+  },
+  {
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "languages": [
+     "eng"
+    ],
+    "type": "Song",
+    "iswcs": [
+     "T-903.287.876-5"
+    ],
+    "disambiguation": "",
+    "language": "eng",
+    "id": "e3b3967a-d0df-41e5-8abf-85159a131195",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "title": "Who Needs to Dream (reprise)"
+   },
+   "ended": false,
+   "attributes": [],
+   "target-type": "work",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "6bb1df6b-57f3-434d-8a39-5dc363d2eb78",
+   "attribute-values": {},
+   "begin": null,
+   "target-credit": "",
+   "type": "based on"
+  },
+  {
+   "attribute-ids": {},
+   "target-type": "work",
+   "attributes": [],
+   "ended": false,
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "language": null,
+    "id": "70e53569-258c-463d-9505-5b69dcbf374a",
+    "attributes": [],
+    "type-id": null,
+    "title": "Can’t Stop the Classics, Part 2",
+    "languages": [],
+    "type": null,
+    "iswcs": [],
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "type": "medley",
+   "attribute-values": {},
+   "begin": null,
+   "type-id": "c1dca2cd-194c-36dd-93f8-6a359167e992",
+   "direction": "backward"
+  },
+  {
+   "attribute-ids": {},
+   "end": null,
+   "source-credit": "",
+   "work": {
+    "languages": [
+     "ita"
+    ],
+    "type": "Song",
+    "disambiguation": "",
+    "iswcs": [],
+    "attributes": [],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "title": "Opera Mortis",
+    "language": "ita",
+    "id": "092412e4-e8c3-4bae-892d-215f6ca2cd26"
+   },
+   "ended": false,
+   "attributes": [],
+   "target-type": "work",
+   "begin": null,
+   "attribute-values": {},
+   "ordering-key": 3,
+   "target-credit": "",
+   "type": "medley",
+   "direction": "backward",
+   "type-id": "c1dca2cd-194c-36dd-93f8-6a359167e992"
+  },
+  {
+   "attributes": [],
+   "target-type": "work",
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "language": null,
+    "id": "481aec9e-783f-4589-a525-5c8b8c6a09c3",
+    "title": "A Matter of Going",
+    "type-id": null,
+    "attributes": [],
+    "type": null,
+    "disambiguation": "",
+    "iswcs": [
+     "T-920.974.048-7"
+    ],
+    "languages": []
+   },
+   "ended": false,
+   "attribute-ids": {},
+   "type-id": "c5decae0-535c-4730-aa5f-ab78eadd98ba",
+   "direction": "backward",
+   "target-credit": "",
+   "type": "musical quotation",
+   "begin": null,
+   "attribute-values": {}
+  },
+  {
+   "work": {
+    "languages": [],
+    "disambiguation": "",
+    "type": null,
+    "iswcs": [
+     "T-920.974.047-6"
+    ],
+    "type-id": null,
+    "attributes": [],
+    "title": "Escape to Danger",
+    "id": "11c25c31-26b0-4ecb-8946-30fb62484272",
+    "language": null
+   },
+   "source-credit": "",
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "target-type": "work",
+   "attribute-ids": {},
+   "direction": "backward",
+   "type-id": "c5decae0-535c-4730-aa5f-ab78eadd98ba",
+   "attribute-values": {},
+   "begin": null,
+   "type": "musical quotation",
+   "target-credit": ""
+  },
+  {
+   "target-type": "work",
+   "attributes": [],
+   "ended": false,
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "attributes": [],
+    "type-id": null,
+    "title": "Finale and Curtain Call",
+    "id": "87807bd6-7dcf-445a-b5ef-aa26914f2bdf",
+    "language": null,
+    "languages": [],
+    "type": null,
+    "iswcs": [
+     "T-921.167.414-5"
+    ],
+    "disambiguation": ""
+   },
+   "attribute-ids": {},
+   "type-id": "c5decae0-535c-4730-aa5f-ab78eadd98ba",
+   "direction": "backward",
+   "target-credit": "",
+   "type": "musical quotation",
+   "begin": null,
+   "attribute-values": {}
+  },
+  {
+   "ended": false,
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "type": null,
+    "iswcs": [],
+    "disambiguation": "English translation of Nessun dorma",
+    "languages": [],
+    "title": "Hear My Prayer",
+    "attributes": [],
+    "type-id": null,
+    "id": "c3ea5e6b-abf9-4f61-9182-a738c877b47a",
+    "language": null
+   },
+   "target-type": "work",
+   "attributes": [
+    "translated"
+   ],
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "direction": "forward",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "begin": null,
+   "attribute-values": {},
+   "target-credit": "",
+   "type": "other version"
+  },
+  {
+   "begin": null,
+   "attribute-values": {},
+   "type": "other version",
+   "target-credit": "",
+   "direction": "forward",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "work": {
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "title": "El nostre heroi",
+    "language": "cat",
+    "id": "d00e02ac-36eb-48e6-8ab3-cbddaaa10630",
+    "languages": [
+     "cat"
+    ],
+    "iswcs": [],
+    "type": "Song",
+    "disambiguation": ""
+   },
+   "end": null,
+   "source-credit": "",
+   "ended": false,
+   "attributes": [
+    "translated"
+   ],
+   "target-type": "work"
+  },
+  {
+   "attribute-values": {},
+   "begin": null,
+   "target-credit": "",
+   "type": "other version",
+   "direction": "forward",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "ended": false,
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "disambiguation": "",
+    "type": "Aria",
+    "iswcs": [
+     "T-909.707.140-4"
+    ],
+    "languages": [
+     "jpn"
+    ],
+    "id": "4721391d-91f0-41de-ba52-2cdce5694127",
+    "language": "jpn",
+    "title": "誰も寝てはならぬ",
+    "attributes": [],
+    "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9"
+   },
+   "target-type": "work",
+   "attributes": [
+    "translated"
+   ]
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "work": {
+    "title": "Going to Win",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": [],
+    "id": "0556fa7e-270f-4efa-87e9-aacc6ed309dc",
+    "language": "eng",
+    "disambiguation": "",
+    "type": "Song",
+    "iswcs": [],
+    "languages": [
+     "eng"
+    ]
+   },
+   "ended": false,
+   "attributes": [
+    "translated"
+   ],
+   "target-type": "work",
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "direction": "forward",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "begin": null,
+   "attribute-values": {},
+   "target-credit": "",
+   "type": "other version"
+  },
+  {
+   "type": "other version",
+   "target-credit": "",
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "direction": "forward",
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "attributes": [
+    "translated"
+   ],
+   "target-type": "work",
+   "work": {
+    "language": "eng",
+    "id": "d6972d3a-5556-4773-b854-7012e09b50ce",
+    "attributes": [],
+    "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9",
+    "title": "Turandot: None Shall Sleep",
+    "languages": [
+     "eng"
+    ],
+    "type": "Aria",
+    "disambiguation": "",
+    "iswcs": []
+   },
+   "end": null,
+   "source-credit": "",
+   "ended": false
+  },
+  {
+   "work": {
+    "languages": [
+     "deu"
+    ],
+    "disambiguation": "",
+    "type": "Aria",
+    "iswcs": [],
+    "language": "deu",
+    "id": "732ab005-9ca5-4f69-8c23-f17f7db67e2f",
+    "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9",
+    "attributes": [],
+    "title": "Turandot: Akt III. „Keiner schlafe“ (Calaf)"
+   },
+   "end": null,
+   "source-credit": "",
+   "ended": false,
+   "attributes": [
+    "translated"
+   ],
+   "target-type": "work",
+   "attribute-ids": {
+    "translated": "ed11fcb1-5a18-4e1d-b12c-633ed19c8ee1"
+   },
+   "direction": "forward",
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "attribute-values": {},
+   "begin": null,
+   "type": "other version",
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "type-id": "ca8d3642-ce5f-49f8-91f2-125d72524e6a",
+   "ordering-key": 2,
+   "attribute-values": {},
+   "begin": null,
+   "target-credit": "",
+   "type": "parts",
+   "ended": false,
+   "end": null,
+   "source-credit": "",
+   "work": {
+    "languages": [
+     "ita"
+    ],
+    "disambiguation": "",
+    "type": null,
+    "iswcs": [],
+    "attributes": [],
+    "type-id": null,
+    "title": "Turandot: Atto III",
+    "language": "ita",
+    "id": "939ac942-5e2d-4113-94a2-e82ef6b44f33"
+   },
+   "target-type": "work",
+   "attributes": [
+    "number"
+   ],
+   "attribute-ids": {
+    "number": "f4c9322b-2bfa-4c55-bb96-254be574b365"
+   }
+  }
+ ],
+ "languages": [
+  "ita"
+ ],
+ "type": "Aria",
+ "iswcs": [],
+ "disambiguation": "",
+ "id": "876aa6e9-0a0a-3408-bbfa-0565582cf8e0",
+ "language": "ita",
+ "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9",
+ "attributes": [],
+ "title": "Turandot: Atto III, scena 1. Aria “Nessun dorma” (Calaf)"
+}

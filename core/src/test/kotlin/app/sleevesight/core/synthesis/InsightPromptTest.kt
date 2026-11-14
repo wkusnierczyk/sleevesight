@@ -7,6 +7,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.text.APP_DATE_RULE
 import app.sleevesight.core.text.US_DATES
 import app.sleevesight.core.text.US_DATE_RULE
@@ -14,6 +15,7 @@ import app.sleevesight.fixtures.Fixtures
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 
@@ -98,33 +100,39 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `a composer-led track's block names its performers, any other track's is as before (#1195)`() {
+    fun `a composer-led track's block names its composer and performers, any other track's is as before`() {
+        // #1195 gave the performers; #1180 names the composer as such, in place of `Primary artist:`.
         val k545 =
             FixtureEvidence.nowPlaying(1).copy(
                 title = "Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante",
                 artists = "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
                 album = "Mozart: Piano Concertos Nos. 20 & 23",
             )
+        val normalized = normalizer.normalize(k545)
         assertEquals(
             "<track>\n" +
                 "Title: Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante\n" +
                 "Artists: Wolfgang Amadeus Mozart, Khatia Buniatishvili\n" +
                 "Release: Mozart: Piano Concertos Nos. 20 & 23\n" +
                 "Normalized title: Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante\n" +
-                "Primary artist: Wolfgang Amadeus Mozart\n" +
+                "Composer: Wolfgang Amadeus Mozart\n" +
                 "Performers: Khatia Buniatishvili\n" +
                 "</track>",
-            InsightPrompt.trackBlock(k545, normalizer.normalize(k545), performers = true),
+            InsightPrompt.trackBlock(k545, normalized, ArtistRoles.of(normalized)),
         )
         val sundown = FixtureEvidence.nowPlaying(1)
-        val pop = InsightPrompt.trackBlock(sundown, normalizer.normalize(sundown), performers = true)
+        val sundownNormalized = normalizer.normalize(sundown)
+        val pop = InsightPrompt.trackBlock(sundown, sundownNormalized, ArtistRoles.of(sundownNormalized))
+        assertTrue("\nPrimary artist: Gordon Lightfoot\n" in pop)
         assertFalse("Performers:" in pop)
-        // The key insight's user message has it; the block without the flag, as the genre reason's
-        // prompt takes it, does not.
-        val normalized = normalizer.normalize(k545)
+        assertFalse("Composer:" in pop)
+        // The key insight's user message has them; the block without roles, as the genre reason's
+        // prompt takes it, is as before.
         val evidence = FixtureEvidence.of(1)
         assertTrue("\nPerformers: Khatia Buniatishvili\n" in InsightPrompt.user(k545, normalized, evidence))
-        assertFalse("Performers:" in InsightPrompt.trackBlock(k545, normalized))
+        val bare = InsightPrompt.trackBlock(k545, normalized)
+        assertTrue("\nPrimary artist: Wolfgang Amadeus Mozart\n" in bare)
+        assertFalse("Performers:" in bare)
         // Credited to the composer and the arranger the title names alone: no one to call a performer.
         val arranged =
             FixtureEvidence.nowPlaying(1).copy(
@@ -133,13 +141,46 @@ class InsightPromptTest {
             )
         val arrangedNormalized = normalizer.normalize(arranged)
         assertTrue(arrangedNormalized.composer != null)
-        assertFalse("Performers:" in InsightPrompt.trackBlock(arranged, arrangedNormalized, performers = true))
+        val alone = InsightPrompt.trackBlock(arranged, arrangedNormalized, ArtistRoles.of(arrangedNormalized))
+        assertTrue("\nComposer: Johann Sebastian Bach\n" in alone)
+        assertFalse("Performers:" in alone)
         // With a performer besides them, only the performer.
         val grimaud = arranged.copy(artists = "Johann Sebastian Bach, Ferruccio Busoni, Hélène Grimaud")
+        val grimaudNormalized = normalizer.normalize(grimaud)
         assertTrue(
             "\nPerformers: Hélène Grimaud\n" in
-                InsightPrompt.trackBlock(grimaud, normalizer.normalize(grimaud), performers = true),
+                InsightPrompt.trackBlock(grimaud, grimaudNormalized, ArtistRoles.of(grimaudNormalized)),
         )
+    }
+
+    @Test
+    fun `a composer MusicBrainz tells, with no lead in the title, is named so beside the performers`() {
+        // #1180: *Turandot: "Nessun dorma!"* credited to Puccini first; once resolved, MusicBrainz's work
+        // names Puccini its composer, and the recording has the other three.
+        val aria =
+            FixtureEvidence.nowPlaying(1).copy(
+                title = "Turandot: \"Nessun dorma!\"",
+                artists = "Giacomo Puccini, Luciano Pavarotti, Zubin Mehta, Los Angeles Philharmonic",
+                album = "The Three Tenors in Concert 1994",
+            )
+        val normalized = normalizer.normalize(aria)
+        assertNull(normalized.composer)
+        val told =
+            ArtistRoles(
+                listOf("Giacomo Puccini"),
+                listOf("Luciano Pavarotti", "Zubin Mehta", "Los Angeles Philharmonic"),
+            )
+        val user = InsightPrompt.user(aria, normalized, FixtureEvidence.of(1), told)
+        assertTrue(
+            "\nComposer: Giacomo Puccini\nPerformers: Luciano Pavarotti, Zubin Mehta, Los Angeles Philharmonic\n" in
+                user,
+        )
+        assertFalse("Primary artist:" in user)
+        // Before resolution, nothing tells: the first credited artist, as before.
+        assertTrue("\nPrimary artist: Giacomo Puccini\n" in InsightPrompt.user(aria, normalized, FixtureEvidence.of(1)))
+        // A pop song whose singer wrote it: a performer, so no `Composer:` line.
+        val pop = ArtistRoles(emptyList(), normalized.artists)
+        assertFalse("Composer:" in InsightPrompt.user(aria, normalized, FixtureEvidence.of(1), pop))
     }
 
     @Test

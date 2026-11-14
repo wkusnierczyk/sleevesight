@@ -394,7 +394,7 @@ class ItemInsights(
     ): SongWebQuery {
         val language = track.knownLanguage()?.takeUnless { settings.trackLanguageSearch == TrackLanguageSearch.OFF }
         val resolution = track.resolution?.takeIf { settings.isEnabled(SourceId.WIKIDATA) }
-        return SongWebQuery(track.normalized, language, resolution)
+        return SongWebQuery(track.normalized, language, resolution, track.roles)
     }
 
     // The artist-level lines of the run's [own] evidence, numbered on their own, those in the track's
@@ -1317,6 +1317,7 @@ class ItemInsights(
                 key.modelKnowledge,
                 dates(),
                 evidence.onlyListings,
+                track.roles,
             )
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
         var billed: Usage? = null
@@ -1374,7 +1375,11 @@ class ItemInsights(
         val artist = artistWeb
         val query = artistQuery(track)
         if (item == InsightItem.ARTIST && artist != null && query != null) attempt { artist.renew(query) }
-        if (item == InsightItem.SONG) songWeb?.let { attempt { it.renew(SongWebQuery(track.normalized)) } }
+        if (item ==
+            InsightItem.SONG
+        ) {
+            songWeb?.let { attempt { it.renew(SongWebQuery(track.normalized, roles = track.roles)) } }
+        }
         val subject =
             when (item) {
                 InsightItem.ARTIST -> query?.let { LanguageSubject.Artist(it.name, it.mbid) }

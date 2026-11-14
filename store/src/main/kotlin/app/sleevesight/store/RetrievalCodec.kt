@@ -8,6 +8,7 @@ import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.Rejection
@@ -133,6 +134,7 @@ internal object RetrievalCodec {
                             it.composersOnly,
                         )
                     },
+                roles = result.roles?.let { RolesJson(it.composers, it.performers) },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
                 language = result.language,
@@ -189,6 +191,7 @@ internal object RetrievalCodec {
                         )
                     },
                 lyrics = stored.lyrics?.let(::lyrics),
+                roles = stored.roles?.let { ArtistRoles(it.composers, it.performers) },
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
                 language = stored.language,
@@ -282,6 +285,8 @@ internal object RetrievalCodec {
         val original: OriginalJson? = null,
         // Absent in an entry kept before #728: not known.
         val lyrics: LyricsJson? = null,
+        // MusicBrainz's roles of the credited artists (#1180); absent when it told none, or kept before.
+        val roles: RolesJson? = null,
         val trackOnly: Boolean = false,
         // Absent in an entry kept before #905: none.
         val pages: List<String> = emptyList(),
@@ -289,6 +294,13 @@ internal object RetrievalCodec {
         val language: String? = null,
         // LRCLIB's answer for a track (#997, `SourceResult.library`), on that answer's entry only.
         val library: String? = null,
+    )
+
+    // The composers and performers MusicBrainz told (#1180, `SourceResult.roles`).
+    @Serializable
+    private data class RolesJson(
+        val composers: List<String> = emptyList(),
+        val performers: List<String> = emptyList(),
     )
 
     // A first release (#724): of the recording, or of a cover's original.

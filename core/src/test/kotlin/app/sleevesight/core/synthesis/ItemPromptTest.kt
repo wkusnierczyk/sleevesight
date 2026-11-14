@@ -2,6 +2,7 @@ package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.text.APP_DATE_RULE
 import app.sleevesight.core.text.US_DATES
 import app.sleevesight.core.text.US_DATE_RULE
@@ -36,9 +37,26 @@ class ItemPromptTest {
             val style = { prompt: String ->
                 prompt.substringAfter("\nSTYLE\n").substringBefore(InsightPrompt.CONTRACT_HEADING)
             }
-            val app = ItemPrompt.build(subject, playing, normalized, FixtureEvidence.of(1), false)
+            val app =
+                ItemPrompt.build(
+                    subject,
+                    playing,
+                    normalized,
+                    FixtureEvidence.of(1),
+                    false,
+                    roles = ArtistRoles.of(normalized),
+                )
             assertTrue(APP_DATE_RULE in style(app), kind.key)
-            val us = ItemPrompt.build(subject, playing, normalized, FixtureEvidence.of(1), false, US_DATES)
+            val us =
+                ItemPrompt.build(
+                    subject,
+                    playing,
+                    normalized,
+                    FixtureEvidence.of(1),
+                    false,
+                    US_DATES,
+                    roles = ArtistRoles.of(normalized),
+                )
             assertTrue(US_DATE_RULE in style(us), kind.key)
             assertFalse(APP_DATE_RULE in us, kind.key)
         }
@@ -51,7 +69,14 @@ class ItemPromptTest {
         val subject = ItemPrompt.Subject(CardKind.SONG, normalized.title)
         assertEquals(
             stored("item-song-1.txt"),
-            ItemPrompt.build(subject, playing, normalized, FixtureEvidence.of(1), allowModel = false),
+            ItemPrompt.build(
+                subject,
+                playing,
+                normalized,
+                FixtureEvidence.of(1),
+                allowModel = false,
+                roles = ArtistRoles.of(normalized),
+            ),
         )
     }
 
@@ -62,7 +87,14 @@ class ItemPromptTest {
         val subject = ItemPrompt.Subject(CardKind.ARTIST, normalized.primary)
         assertEquals(
             stored("item-artist-41.txt"),
-            ItemPrompt.build(subject, playing, normalized, FixtureEvidence.of(41), allowModel = true),
+            ItemPrompt.build(
+                subject,
+                playing,
+                normalized,
+                FixtureEvidence.of(41),
+                allowModel = true,
+                roles = ArtistRoles.of(normalized),
+            ),
         )
     }
 

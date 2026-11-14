@@ -59,6 +59,14 @@ class RecordingResolver(
      * (`performedBy`): every name its credit gives is one of theirs, and one is a performer's. An
      * orchestra's search finds its recordings under other conductors and with other soloists, each
      * crediting the orchestra; a recording credited to the composer alone may be anyone's.
+     *
+     * Without a composer the title names, when the first search finds nothing that fits, the next
+     * credited artists are searched in turn, up to [SEARCHES] searches in all, until one finds what
+     * fits (`further`, #1180): a classical track credited to its composer first with no lead in
+     * its title (*Turandot: "Nessun dorma!"* by Puccini, Pavarotti, …) is found by a performer, as
+     * MusicBrainz credits the performers. A recording only those searches found counts only when every
+     * name its credit gives is one of the track's (`performedBy`): a soloist's search finds their
+     * recordings with other orchestras and conductors.
      */
     suspend fun resolve(
         track: NormalizedTrack,
@@ -70,21 +78,23 @@ class RecordingResolver(
         val ours: (MbRecording) -> Boolean = { track.composer == null || names.performedBy(it, track) }
         val fits: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fits }
         val first = musicBrainz.searched(title, searchArtist(track), measured, fits)
-        val searched = musicBrainz.asWritten(track, first, measured, fits)
+        val searched = musicBrainz.further(track, first, measured, fits) { names.performedBy(it, track) }
         return when (val answer = searched.answer) {
             is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(answer.reason)
             is Lookup.Found ->
-                choose(track, duration, searched.found.filter(ours)).let {
+                choose(track, duration, searched.found.filter(ours), searched.later).let {
                     it.copy(provisional = it.provisional || searched.incomplete)
                 }
         }
     }
 
+    // [later]: a credited artist after the first was searched by (`further`, #1180).
     private suspend fun choose(
         track: NormalizedTrack,
         duration: Duration?,
         found: List<MbRecording>,
+        later: Boolean,
     ): Resolution {
         val all = found.map { candidate(track, duration, it) }
         // A recording read without the composer's lead counts only when none read as the player writes
@@ -101,11 +111,7 @@ class RecordingResolver(
         val credited = fitting.filter { it.creditedArtists > 0 }
         val accepted = narrowed(credited, duration)
         val collision = collision(track, (narrowed(fitting, duration) + accepted).distinct())
-        // With a composer, those crediting the most of the track's performers first (#1129): the
-        // orchestra's recording with the conductor the player credits over its earlier one alone.
-        val performers = track.performers.takeIf { track.composer != null }.orEmpty()
-        val most = accepted.maxOfOrNull { c -> performers.count { it in c.ids } } ?: 0
-        val chosen = accepted.filter { c -> performers.count { it in c.ids } == most }.minWithOrNull(PREFERENCE)
+        val chosen = leaders.choice(accepted, track, later)
         return when {
             collision != null -> collision
             chosen == null -> weaker(track, duration, candidates, leaders, fitting) ?: unmatched(track, candidates)
@@ -347,6 +353,10 @@ class RecordingResolver(
         // Recording dates only, on both sides: others' recordings carry no release date, so the
         // chosen one's release date standing in would favour ours. Never for a cover.
         val ourFirstSession = own.mapNotNull { it.date }.minOrNull()
+        // Who plays on the recording (#1180, [rolesOf]): a credit standing for them ([Candidate.ids]: by
+        // name, as a band they lead, …), and the recording's performer relationships.
+        val credited = { artist: String -> chosen.ids[artist].orEmpty().isNotEmpty() }
+        val relations = withRecording.credits.filter { it.role == CreditRole.PERFORMER }
         val earliest =
             !cover && original != null && ourFirstSession != null && isEarlier(ourFirstSession, original.date)
         return withRecording.copy(
@@ -354,6 +364,7 @@ class RecordingResolver(
             cover = cover,
             earliest = earliest,
             original = original?.takeIf { named },
+            roles = names.rolesOf(track, withRecording.artists, credited, relations, work),
             credits = workCredits(work.artistRelations) + withRecording.credits,
             wikidataIds = (withRecording.wikidataIds + work.wikidataIds).distinct(),
         )
@@ -557,6 +568,61 @@ class RecordingResolver(
                 confirmed[key] = leaders
             }
             return confirmed
+        }
+
+        /**
+         * The one of the [accepted] candidates to choose for [track], the first in the choice's order
+         * ([PREFERENCE]) of those crediting the most of:
+         * - With a composer, the track's performers (#1129): the orchestra's recording with the conductor
+         *   the player credits over its earlier one alone.
+         * - With a [later] artist searched (#1180), the track's artists; then, among the first [TRIES] of
+         *   those, the one whose performer relationships name the most of them, that order deciding a
+         *   tie: MusicBrainz credits a classical recording to its soloist alone, and names the conductor
+         *   and the orchestra only in its relationships. The details looked up are kept ([details]), so
+         *   the chosen one's is not asked again; one lookup failing, the first in that order.
+         * - Else none: the first in that order.
+         */
+        suspend fun choice(
+            accepted: List<Candidate>,
+            track: NormalizedTrack,
+            later: Boolean,
+        ): Candidate? {
+            val counted =
+                when {
+                    track.composer != null -> track.performers
+                    later -> track.artists
+                    else -> emptyList()
+                }
+            val most = accepted.maxOfOrNull { c -> counted.count { it in c.ids } } ?: 0
+            val ordered = accepted.filter { c -> counted.count { it in c.ids } == most }.sortedWith(PREFERENCE)
+            return if (later) mostNamed(ordered, track.artists) else ordered.firstOrNull()
+        }
+
+        // Of [ordered], the one whose performer relationships name the most of [artists], among the first
+        // [TRIES], the first deciding a tie; with one, or a lookup that fails, the first ([choice]).
+        private suspend fun mostNamed(
+            ordered: List<Candidate>,
+            artists: List<String>,
+        ): Candidate? {
+            var best = ordered.firstOrNull()
+            var most = -1
+            for (candidate in ordered.take(TRIES).takeIf { it.size > 1 }.orEmpty()) {
+                val detail = detail(candidate.recording.mbid)
+                if (detail is Lookup.Failed) {
+                    best = ordered.first()
+                    break
+                }
+                val relations = (detail as? Lookup.Found)?.value?.artistRelations.orEmpty()
+                val named =
+                    artists.count { artist ->
+                        relations.any { it.type in PERFORMER_TYPES && names.sameName(it.artistName, artist) }
+                    }
+                if (named > most) {
+                    best = candidate
+                    most = named
+                }
+            }
+            return best
         }
 
         private suspend fun detail(mbid: String): Lookup<MbRecordingDetail> =
@@ -886,36 +952,68 @@ private fun searchArtist(track: NormalizedTrack): String {
 }
 
 // One search's recordings: its first page and, when that is full, those [earlierThan] found;
-// [incomplete] when those may not be all.
+// [incomplete] when those may not be all; [later] when a credited artist after the first was searched
+// by (`further`, #1180).
 private class Searched(
     val answer: Lookup<List<MbRecording>>,
     val found: List<MbRecording>,
     val incomplete: Boolean,
+    val later: Boolean = false,
 )
 
-// With a composer the title names, when the [first] search found nothing that [fits] (by name or as
-// a band), the search by the title as written and the composer, the search made before #1129, and
-// both searches' recordings together, since one the first found may still be taken under a weaker
-// credit (an honorific variant, a joint credit); that search failing, it could not be reached. Else
-// [first].
-private suspend fun MusicBrainzLookup.asWritten(
+// At most this many searches by title and artist for one track (#1176, #1180), the searches by date a
+// full first page calls for aside.
+private const val SEARCHES = 3
+
+// The searches after the [first], while it found nothing that [fits] (by name or as a band):
+// - With a composer the title names, the search by the title as written and the composer, the search
+//   made before #1129, and both searches' recordings together, since one the first found may still be
+//   taken under a weaker credit (an honorific variant, a joint credit).
+// - Without one, the search by each next credited artist in turn, up to [SEARCHES] in all, until one
+//   finds what fits (#1180): a classical track credited to its composer first, with no lead in its
+//   title, is found by a performer. Of those searches' recordings only those [theirs] (every credit one
+//   of the track's artists) are added, and the search by date a full page calls for weighs only them.
+// A search that fails could not reach what may fit, so it is the answer (MusicBrainz unreachable, the
+// resolution asked again later). With nothing searched after it, [first].
+private suspend fun MusicBrainzLookup.further(
     track: NormalizedTrack,
     first: Searched,
     measured: Boolean,
     fits: (MbRecording) -> Boolean,
+    theirs: (MbRecording) -> Boolean,
 ): Searched {
-    val composer = track.composer?.name?.takeIf { first.answer !is Lookup.Failed && first.found.none(fits) }
-    val second = composer?.let { searched(track.title, it, measured, fits) }
-    return when {
-        second == null -> first
-        second.answer is Lookup.Failed -> second
-        else -> {
-            val both = (first.found + second.found).distinctBy { it.mbid }
-            val anyFound = first.answer is Lookup.Found || second.answer is Lookup.Found
-            val answer = if (anyFound) Lookup.Found(both) else first.answer
-            Searched(answer, both, first.incomplete || second.incomplete)
+    val composer = track.composer?.name
+    val later = composer == null
+    val next =
+        if (composer != null) {
+            listOf(Triple(track.title, composer) { _: MbRecording -> true })
+        } else {
+            val searchedBy = searchArtist(track)
+            track.artists
+                .filter { it.isNotBlank() && it != searchedBy }
+                .distinct()
+                .take(SEARCHES - 1)
+                .map { Triple(track.searchTitle, it, theirs) }
         }
+    var sofar = first
+    for ((title, artist, kept) in next) {
+        if (sofar.answer is Lookup.Failed || sofar.found.any(fits)) break
+        val more = searched(title, artist, measured) { kept(it) && fits(it) }
+        sofar =
+            if (more.answer is Lookup.Failed) {
+                more
+            } else {
+                val found = (sofar.found + more.found.filter(kept)).distinctBy { it.mbid }
+                val anyFound = sofar.answer is Lookup.Found || more.answer is Lookup.Found
+                Searched(
+                    if (anyFound) Lookup.Found(found) else sofar.answer,
+                    found,
+                    sofar.incomplete || more.incomplete,
+                    later,
+                )
+            }
     }
+    return sofar
 }
 
 // The search by [title] and [artist], with the searches by date a full first page calls for.

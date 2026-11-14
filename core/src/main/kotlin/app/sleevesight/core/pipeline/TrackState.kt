@@ -11,6 +11,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.GroundedText
@@ -73,6 +74,19 @@ data class TrackState(
     val libraryUnreachable: Boolean = false,
     val albumIds: Set<String> = emptySet(),
 ) {
+    /**
+     * Who of the credited artists composed the work and who performs it (#1180, [ArtistRoles.of]): as
+     * MusicBrainz's resolution told, else as its result kept from an earlier play holds it
+     * (`SourceResult.roles`; a replay served from the cache makes no resolution), else as the title's
+     * composer lead tells. Where a search or a prompt means the performer, [ArtistRoles.lead].
+     */
+    val roles: ArtistRoles
+        get() =
+            ArtistRoles.of(
+                normalized,
+                resolution?.roles ?: (sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.roles,
+            )
+
     /**
      * Whether every source has landed, those searched in the track's language too (#902), and the
      * search in it is not still deciding or looking up ([searchingInLanguage]).

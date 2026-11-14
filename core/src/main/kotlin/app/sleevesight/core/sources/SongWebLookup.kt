@@ -60,10 +60,13 @@ interface SongWebLookup {
  * A song to search the web for, or whose lines to keep (#958): the [track], as normalized, kept by
  * its lookup key; its [language] when the track's search in its language named one other than
  * English and *Search in the track's language* is not *Off*, in which the one search is made; and
- * the [resolution] Wikidata's names in that language are asked by, when there is one, this play's.
+ * the [resolution] Wikidata's names in that language are asked by, when there is one, this play's;
+ * and its artists' [roles] (#1180), whose lead performer the search names
+ * ([ArtistRoles.lead]: for a classical track credited to its composer first, a performer).
  */
 class SongWebQuery(
     val track: NormalizedTrack,
     val language: Language? = null,
     val resolution: Resolution? = null,
+    val roles: ArtistRoles,
 )

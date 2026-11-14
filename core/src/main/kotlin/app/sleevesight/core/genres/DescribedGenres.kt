@@ -303,6 +303,9 @@ private fun artistOf(
     }
     return when {
         artists.size == 1 -> artists.single()
+        // The artist's web search looks up the Artist panel's subject, the first credited artist, a
+        // classical track's composer among them, so its page is theirs, not the lead performer's (#1180;
+        // the panel's subject is #1181's).
         line.source == SourceId.WEB -> artists.firstOrNull()
         else -> artists.firstOrNull { occurrences(line.text, it).isNotEmpty() }
     }

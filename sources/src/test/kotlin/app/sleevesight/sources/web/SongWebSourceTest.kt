@@ -21,7 +21,7 @@ import kotlin.time.Instant
 
 /** A song's web lines (#958): searched only when asked, kept per track, "found nothing" included. */
 class SongWebSourceTest {
-    private val song = SongWebQuery(Normalizer(JvmAccentFolder).normalize("Phil's First Tear", "Kolonel Djafaar"))
+    private val song = songQuery(Normalizer(JvmAccentFolder).normalize("Phil's First Tear", "Kolonel Djafaar"))
 
     private class Web(
         private val lines: List<String> = listOf("A heavy horn line."),
@@ -67,7 +67,7 @@ class SongWebSourceTest {
     fun `a title searched without its composer's lead keeps its lines apart, so earlier ones are searched again`() =
         runTest {
             val k545 =
-                SongWebQuery(
+                songQuery(
                     Normalizer(JvmAccentFolder).normalize(
                         "Mozart: Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante",
                         "Wolfgang Amadeus Mozart, Khatia Buniatishvili",

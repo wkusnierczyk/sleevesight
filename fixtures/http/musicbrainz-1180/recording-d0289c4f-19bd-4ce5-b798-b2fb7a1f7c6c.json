@@ -1,0 +1,56 @@
+{
+ "length": 198000,
+ "video": false,
+ "first-release-date": "2006",
+ "disambiguation": "",
+ "artist-credit": [
+  {
+   "name": "Luciano Pavarotti",
+   "artist": {
+    "disambiguation": "tenor",
+    "name": "Luciano Pavarotti",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Pavarotti, Luciano",
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "country": "IT",
+    "type": "Person"
+   },
+   "joinphrase": ""
+  }
+ ],
+ "title": "Turandot: “Nessun dorma”",
+ "id": "d0289c4f-19bd-4ce5-b798-b2fb7a1f7c6c",
+ "relations": [
+  {
+   "attributes": [
+    "live"
+   ],
+   "target-credit": "",
+   "begin": null,
+   "type": "performance",
+   "ended": false,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "source-credit": "",
+   "end": null,
+   "work": {
+    "type": "Aria",
+    "title": "Turandot: Atto III, scena 1. Aria “Nessun dorma” (Calaf)",
+    "language": "ita",
+    "id": "876aa6e9-0a0a-3408-bbfa-0565582cf8e0",
+    "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9",
+    "attributes": [],
+    "iswcs": [],
+    "disambiguation": "",
+    "languages": [
+     "ita"
+    ]
+   },
+   "target-type": "work",
+   "direction": "forward"
+  }
+ ]
+}

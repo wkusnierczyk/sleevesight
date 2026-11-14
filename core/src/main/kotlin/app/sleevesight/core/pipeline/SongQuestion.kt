@@ -43,7 +43,7 @@ internal class SongQuestion(
         get() = prompt(asked.evidence)
 
     override val query: String
-        get() = songReviewQuery(track.normalized.searchTitle, track.normalized.primary)
+        get() = songReviewQuery(track.normalized.searchTitle, track.roles.lead(track.normalized))
 
     // No names ([WebQuestion.subjectNames]): a page is judged as it came, a part naming only the song
     // included, before [line] cleans it.
@@ -75,7 +75,16 @@ internal class SongQuestion(
     override fun drafts(): List<EvidenceDraft> = numbered.values.toList()
 
     private fun prompt(lines: EvidenceSet): String =
-        ItemPrompt.build(subject, track.nowPlaying, track.normalized, lines, allowModel, dates, asked.onlyListings)
+        ItemPrompt.build(
+            subject,
+            track.nowPlaying,
+            track.normalized,
+            lines,
+            allowModel,
+            dates,
+            asked.onlyListings,
+            track.roles,
+        )
 
     // Of [pages], the lines of those that give one ([line]) and no line of the track's own quotes, at
     // most [ArtistQuestion.PAGES_PER_SEARCH].

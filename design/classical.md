@@ -117,6 +117,51 @@ changes, since its search by the composer rarely reaches the performers' recordi
 reads "the first performer" where it reads `primary` today, falling back to `primary` when nothing
 tells. C adds requests for a signal that is wrong for many performers; not worth it.
 
+Done so in #1180. **The roles** (`ArtistRoles`, `Resolution.roles`, `rolesOf`): when
+the recording's work was looked up and names a composer, a credited artist the work names its
+composer (by name), or the composer the title leads with (a work's composer relationship may name an
+arrangement's arranger instead), is a composer unless they play on the recording. For a work of a
+classical form (its type, or with none its parent's, as #1178 reads it) and for the title's composer on
+a work of no type, only a performer relationship shows that they play: MusicBrainz often credits the
+composer on a classical recording, its release imported from a streaming service's artists, composer
+first. For any other work (a `Song`, …) the recording's credit shows it too (no id from its credit or
+its performer relationships, no credit standing for them), so `Band: Song` by Band and a guest keeps
+Band a performer. The other credited artists are performers, but an artist the title names beside its
+composer whom the recording does not have (`(Arr. Busoni)`). A songwriter who sings their own song is
+on the recording, so a performer: a pop song has no composer and its prompt is unchanged. With no
+work, a failed work lookup or no composer relationship, `Resolution.roles` is null and the title's
+lead decides (`ArtistRoles.of`: its composer, and `NormalizedTrack.performers`; without a lead, no
+composer and every credited artist a performer). MusicBrainz's result keeps the roles
+(`SourceResult.roles`, its extraction version 17), so a replay served from the cache, which makes no
+resolution, has them too (`TrackState.roles`). **The search order** (`RecordingResolver`, `further`): without a
+composer lead, when the first credited artist's search finds nothing that fits, the next credited
+artists are searched in turn, up to three searches in all; a recording only those found counts only
+when every name its credit gives is one of the track's. Of those that fit, the ones crediting the most
+of the track's artists come first, then, of the earliest three, the one whose performer relationships
+name the most of them (one recording lookup each, the chosen one's not asked again), the earliest
+deciding a tie: a recording crediting the soloist alone is still accepted, and with no relationship to
+tell them apart, the earliest such recording is taken, whoever conducts it. Checked 2026-11-14 on *Turandot: "Nessun
+dorma!"* by Puccini, Pavarotti, Mehta and the Los Angeles Philharmonic (`fixtures/http/musicbrainz-1180/`):
+MusicBrainz has nothing by Puccini; Pavarotti's search finds `38e73992`, credited to him alone, beside
+his recordings with other orchestras (1991, Royal Philharmonic and Adler; 1993, New York
+Philharmonic members and Magiera), which crediting others the rule leaves out, and his 2006 one,
+credited to him alone too, whose relationships do not name Mehta or the orchestra; the work, *Turandot: Atto III, scena 1.
+Aria "Nessun dorma"*, names Puccini its composer, and the recording names Mehta (`conductor`) and the
+orchestra (`performing orchestra`): Puccini is the composer, the other three the performers.
+**Where the first performer is read** (`ArtistRoles.lead`, the first performer, else the first
+credited artist): the key insight's and the *Key insights*' prompts (`Composer:` and `Performers:` in
+place of `Primary artist:`, `design.md`, *Appendix. Prompt contracts*), the song review search
+(`SongQuestion.query`, `ExaSongSearch`, in English and in the track's language), the language search's
+native track (`ExaLanguageQuery.nativeTrack`'s primary artist) and Wikipedia's song titles
+(`WikipediaSource.songTitles`: asked before the resolution lands, so by the title's roles only).
+**Where the first credited artist stays**: Last.fm's track and album tags and LRCLIB, which keep the
+names the players send (Last.fm files Spotify's scrobbles under the first artist; LRCLIB has
+*Nessun dorma* under Giacomo Puccini as often as under Luciano Pavarotti, checked 2026-11-14), and a
+web line's artist for the genres a description names (`DescribedGenres`): the artist's web search
+looks up the Artist panel's subject, the first credited artist, so its page is theirs until #1181
+decides the panel's subject. The Artist panel, *Dates*' composition date and the Song insight's music
+part read the roles in #1181, #1132 and #1133.
+
 ## 3. Which artist the Artist panel is about (proposal, for a decision)
 
 | Option | For | Against |

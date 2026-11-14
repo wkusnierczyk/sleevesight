@@ -1,0 +1,203 @@
+{
+ "video": false,
+ "length": 204266,
+ "title": "Turandot: “Nessun dorma!”",
+ "first-release-date": "1994-08-29",
+ "id": "38e73992-38de-43b1-ba07-420c9e2e9cc1",
+ "relations": [
+  {
+   "begin": "1994-07-16",
+   "end": "1994-07-16",
+   "target-type": "artist",
+   "target-credit": "",
+   "ended": true,
+   "attribute-values": {},
+   "attributes": [],
+   "artist": {
+    "type": "Person",
+    "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+    "name": "Zubin Mehta",
+    "sort-name": "Mehta, Zubin",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "IN",
+    "disambiguation": "conductor"
+   },
+   "type": "conductor",
+   "direction": "backward",
+   "attribute-ids": {},
+   "type-id": "234670ce-5f22-4fd0-921b-ef1662695c5d",
+   "source-credit": ""
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "artist": {
+    "disambiguation": "audio engineer",
+    "country": null,
+    "type": "Person",
+    "id": "9b110b2a-a193-437b-89f5-8dc325a77b61",
+    "name": "John Pellowe",
+    "sort-name": "Pellowe, John",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "type": "engineer",
+   "direction": "backward",
+   "attribute-ids": {},
+   "type-id": "5dcc52af-7064-4051-8d62-7d80f4c3c907",
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "end": null,
+   "target-type": "artist"
+  },
+  {
+   "target-credit": "",
+   "ended": false,
+   "end": null,
+   "target-type": "artist",
+   "begin": null,
+   "source-credit": "",
+   "artist": {
+    "disambiguation": "sound engineer",
+    "name": "Philip Siney",
+    "id": "08536219-b31a-45be-8dda-42b008ec93e4",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Siney, Philip",
+    "type": "Person",
+    "country": null
+   },
+   "type": "engineer",
+   "direction": "backward",
+   "attribute-ids": {
+    "assistant": "8c4196b1-7053-4b16-921a-f22b2898ed44"
+   },
+   "type-id": "5dcc52af-7064-4051-8d62-7d80f4c3c907",
+   "attributes": [
+    "assistant"
+   ],
+   "attribute-values": {}
+  },
+  {
+   "ended": true,
+   "target-credit": "",
+   "target-type": "artist",
+   "end": "1994-07-16",
+   "begin": "1994-07-16",
+   "source-credit": "",
+   "type-id": "3b6616c5-88ba-4341-b4ee-81ce1e6d7ebb",
+   "attribute-ids": {},
+   "direction": "backward",
+   "type": "performing orchestra",
+   "artist": {
+    "sort-name": "Los Angeles Philharmonic",
+    "type-id": "a0b36c92-3eb1-3839-a4f9-4799823f54a5",
+    "name": "Los Angeles Philharmonic",
+    "id": "98e4313e-dfb0-4084-805c-3e42ef9301d0",
+    "type": "Orchestra",
+    "country": "US",
+    "disambiguation": ""
+   },
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "ended": false,
+   "target-credit": "",
+   "end": null,
+   "target-type": "artist",
+   "begin": null,
+   "source-credit": "",
+   "direction": "backward",
+   "attribute-ids": {},
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "artist": {
+    "country": "GB",
+    "id": "5f92768f-3d0b-4e27-baac-c4bbb58fe843",
+    "name": "Christopher Raeburn",
+    "sort-name": "Raeburn, Christopher",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "disambiguation": "producer"
+   },
+   "type": "producer",
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "source-credit": "",
+   "artist": {
+    "disambiguation": "tenor",
+    "country": "IT",
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "name": "Luciano Pavarotti",
+    "sort-name": "Pavarotti, Luciano",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person"
+   },
+   "type": "vocal",
+   "attribute-ids": {
+    "tenor vocals": "122c11da-651f-46cc-9118-c523a14afa1d"
+   },
+   "direction": "backward",
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "attributes": [
+    "tenor vocals"
+   ],
+   "attribute-credits": {},
+   "attribute-values": {},
+   "target-credit": "",
+   "ended": true,
+   "end": "1994-07-16",
+   "target-type": "artist",
+   "begin": "1994-07-16"
+  },
+  {
+   "attribute-values": {},
+   "attributes": [
+    "live"
+   ],
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "forward",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "type": "performance",
+   "source-credit": "",
+   "work": {
+    "attributes": [],
+    "disambiguation": "",
+    "id": "876aa6e9-0a0a-3408-bbfa-0565582cf8e0",
+    "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9",
+    "language": "ita",
+    "type": "Aria",
+    "title": "Turandot: Atto III, scena 1. Aria “Nessun dorma” (Calaf)",
+    "iswcs": [],
+    "languages": [
+     "ita"
+    ]
+   },
+   "begin": "1994-07-16",
+   "target-type": "work",
+   "end": "1994-07-16",
+   "ended": true,
+   "target-credit": ""
+  }
+ ],
+ "artist-credit": [
+  {
+   "joinphrase": "",
+   "artist": {
+    "disambiguation": "tenor",
+    "country": "IT",
+    "sort-name": "Pavarotti, Luciano",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "name": "Luciano Pavarotti",
+    "type": "Person"
+   },
+   "name": "Luciano Pavarotti"
+  }
+ ],
+ "disambiguation": ""
+}

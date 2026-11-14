@@ -9,6 +9,7 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbParentWork
 import app.sleevesight.core.resolution.MbWork
 import app.sleevesight.core.resolution.RecordingResolver
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.fixtures.BelowSoundtrack
@@ -207,6 +208,46 @@ class MusicBrainzResolutionTest {
                 listOf("${MusicBrainzClient.BASE}/recording/e0a505da-98a7-4b76-a120-dbfb56a2ac02"),
                 net.sent.filter { it.url.startsWith("${MusicBrainzClient.BASE}/recording/") }.map { it.url },
             )
+        }
+
+    @Test
+    fun `a composer credited first with no lead in the title - a performer's search finds the recording`() =
+        runTest {
+            // #1180: *Nessun dorma* credited to Puccini first, its title with no `Puccini: ` lead.
+            // MusicBrainz has nothing by Puccini; the tenor's search finds the 1994 concert recording,
+            // crediting him alone, beside his recordings with other orchestras, which are not taken
+            // (`fixtures/http/musicbrainz-1180/`).
+            val net = ReplayNetClient("musicbrainz-1180")
+            val track =
+                RecordedTracks.normalize(
+                    "Turandot: \"Nessun dorma!\"",
+                    "Giacomo Puccini, Luciano Pavarotti, Zubin Mehta, Los Angeles Philharmonic",
+                )
+            val resolution = RecordingResolver(MusicBrainzClient(net), RecordedTracks.names).resolve(track, 204.seconds)
+            assertEquals(Outcome.SongArticle, resolution.outcome)
+            assertEquals("38e73992-38de-43b1-ba07-420c9e2e9cc1", resolution.recordingMbid)
+            assertEquals(
+                listOf(
+                    "recording:\"Turandot: \\\"Nessun dorma!\\\"\" AND artist:\"Giacomo Puccini\"",
+                    "recording:\"Turandot: \\\"Nessun dorma!\\\"\" AND artist:\"Luciano Pavarotti\"",
+                ),
+                net.sent.filter { it.url == "${MusicBrainzClient.BASE}/recording" }.map { it.query["query"] },
+            )
+            // The work names Puccini its composer, and the recording has the other three (the conductor
+            // and the orchestra in its relationships).
+            assertEquals(
+                ArtistRoles(
+                    listOf("Giacomo Puccini"),
+                    listOf("Luciano Pavarotti", "Zubin Mehta", "Los Angeles Philharmonic"),
+                ),
+                resolution.roles,
+            )
+            // An aria: a performance of a composed work, no cover (#1178).
+            assertFalse(resolution.cover)
+            assertNull(resolution.original)
+            // The adapter keeps the roles with MusicBrainz's result, for a replay.
+            val result = MusicBrainzSource().lookup(track, CompletableDeferred(resolution))
+            assertEquals(resolution.roles, result.roles)
         }
 
     @Test

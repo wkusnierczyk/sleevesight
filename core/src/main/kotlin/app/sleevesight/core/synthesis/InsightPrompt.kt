@@ -7,6 +7,7 @@ import app.sleevesight.core.language.Languages
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.text.DateForm
 import app.sleevesight.core.text.DateWords
 import app.sleevesight.core.text.SourceText
@@ -171,28 +172,28 @@ object InsightPrompt {
         }
 
     /**
-     * The user message: [nowPlaying], normalized as [normalized], in `<track>`, and [evidence] in
-     * `<evidence>`, each fenced as data ([DATA_GUARD]).
+     * The user message: [nowPlaying], normalized as [normalized], in `<track>`, with its artists'
+     * [roles] (#1180), and [evidence] in `<evidence>`, each fenced as data ([DATA_GUARD]).
      */
     fun user(
         nowPlaying: NowPlaying,
         normalized: NormalizedTrack,
         evidence: EvidenceSet,
-    ): String = trackBlock(nowPlaying, normalized, performers = true) + "\n\n" + evidenceBlock(evidence)
+        roles: ArtistRoles = ArtistRoles.of(normalized),
+    ): String = trackBlock(nowPlaying, normalized, roles) + "\n\n" + evidenceBlock(evidence)
 
     /**
      * The track as the player reports it, and as normalized, fenced in `<track>`, each field on one
-     * line. With [performers] (the key insight's, [user]), for a title that leads with its composer
-     * (#1195), its performers too (`NormalizedTrack.performers`), which [RECORDING_RULE] tells this
-     * recording by; not when the track credits no one but the composer and the artists the title
-     * names (`Liszt: … (Arr. Busoni)` by Liszt and Busoni), whom the line would call performers.
-     * Without it (the genre reason's, `GenreReasonPrompt.user`, whose version and keys stay), the
-     * block is as before for every track.
+     * line. With [roles] (the key insight's, [user]), the artists by role ([roleLines], #1180): a
+     * composer told (by the title's lead, #1195, or by MusicBrainz's work once resolved) is named
+     * `Composer:` in place of `Primary artist:`, with the performers, which [RECORDING_RULE] tells
+     * this recording by. Without them (the genre reason's, `GenreReasonPrompt.user`, whose version and
+     * keys stay), the block is as before for every track.
      */
     internal fun trackBlock(
         nowPlaying: NowPlaying,
         normalized: NormalizedTrack,
-        performers: Boolean = false,
+        roles: ArtistRoles? = null,
     ): String =
         buildString {
             appendLine("<track>")
@@ -200,12 +201,28 @@ object InsightPrompt {
             appendLine("Artists: ${oneLine(nowPlaying.artists)}")
             nowPlaying.album?.let { appendLine("Release: ${oneLine(it)}") }
             appendLine("Normalized title: ${oneLine(normalized.title)}")
-            appendLine("Primary artist: ${oneLine(normalized.primary)}")
-            if (performers && normalized.composer?.name?.let { it !in normalized.performers } == true) {
-                appendLine("Performers: ${oneLine(normalized.performers.joinToString(", "))}")
-            }
+            roleLines(normalized, roles).forEach(::appendLine)
             normalized.from?.let { appendLine("From: ${oneLine(it)}") }
             append("</track>")
+        }
+
+    /**
+     * The `<track>` block's lines on who the artists are (#1180): with a composer in [roles],
+     * `Composer:` and, when any is credited, `Performers:` (the performers, in the player's order:
+     * the first credited artist is no performer there); else, or without [roles], `Primary artist:`,
+     * the first credited artist, as before, so a pop song's prompt is unchanged.
+     */
+    internal fun roleLines(
+        normalized: NormalizedTrack,
+        roles: ArtistRoles?,
+    ): List<String> =
+        if (roles == null || roles.composers.isEmpty()) {
+            listOf("Primary artist: ${oneLine(normalized.primary)}")
+        } else {
+            listOfNotNull(
+                "Composer: ${oneLine(roles.composers.joinToString(", "))}",
+                roles.performers.takeIf { it.isNotEmpty() }?.let { "Performers: ${oneLine(it.joinToString(", "))}" },
+            )
         }
 
     /** [evidence] fenced in `<evidence>`, a line each ([evidenceLine]), or `(none)`. */
