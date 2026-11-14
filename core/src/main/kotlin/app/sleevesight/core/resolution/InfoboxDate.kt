@@ -32,7 +32,7 @@ internal object InfoboxDate {
     // The fields that date the composing in the infobox named [name], in order.
     private fun fieldsOf(name: String): List<String> =
         listOfNotNull(
-            COMPOSED.takeIf { name in YEAR_INFOBOXES || COMPOSITION_INFOBOXES.any { it in name } },
+            COMPOSED.takeIf { COMPOSITION_INFOBOXES.any { it in name } },
             YEAR.takeIf { name in YEAR_INFOBOXES },
         )
 
@@ -216,23 +216,25 @@ private class Scan(
 
     // The year after a dash, for a span from [from], with nothing after it; null for anything else.
     fun end(from: Int): Int? {
-        val dashed = at < text.length && text[at] in DASHES
-        if (dashed) at++
+        val dash = text.getOrNull(at)?.takeIf { it in DASHES }
+        if (dash != null) at++
         spaces()
         circa()
         val end = digits()
-        return end?.takeIf { dashed && atEnd() }?.let { full(it, from) }
+        return end?.takeIf { dash != null && atEnd() }?.let { full(it, from, shortened = dash == EN_DASH) }
     }
 
-    // [end] as a full year: four digits as they are, two (`1717–23`) in the century of [from], or the
-    // next when that would come before it (`1899–05`).
+    // [end] as a full year: four digits as they are; after an en dash, two (`1717–23`) in the century of
+    // [from], or the next when that would come before it (`1899–05`). Not after a hyphen: `1801-05` is
+    // a year and a month (May 1801), as ISO 8601 writes it, not a span.
     private fun full(
         end: String,
         from: Int,
+        shortened: Boolean,
     ): Int? =
-        when (end.length) {
-            YEAR_DIGITS -> end.toInt()
-            SHORT_YEAR_DIGITS ->
+        when {
+            end.length == YEAR_DIGITS -> end.toInt()
+            end.length == SHORT_YEAR_DIGITS && shortened ->
                 (from / CENTURY * CENTURY + end.toInt()).let { if (it < from) it + CENTURY else it }
             else -> null
         }
@@ -372,8 +374,9 @@ private fun isDigit(c: Char): Boolean = c in '0'..'9'
 // `circa` before `ca.` and `c.`, which it begins with.
 private val CIRCA_WORDS = listOf("circa", "ca.", "c.")
 
-// An en dash or a hyphen between two years.
-private const val DASHES = "–-"
+// An en dash or a hyphen between two years; `{{ndash}}` and `&ndash;` are written as the en dash.
+private const val EN_DASH = '–'
+private const val DASHES = "$EN_DASH-"
 
 private const val COMMENT_OPEN = "<!--"
 private const val COMMENT_CLOSE = "-->"

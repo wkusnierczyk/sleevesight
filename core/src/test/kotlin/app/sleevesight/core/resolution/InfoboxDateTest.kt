@@ -35,6 +35,9 @@ class InfoboxDateTest {
     fun `a span's end shortened to two digits is in the start's century, or the next`() {
         assertEquals(1717 to 1723, years("composed = 1717–23"))
         assertEquals(1899 to 1905, years("composed = 1899–05"))
+        assertEquals(1804 to 1808, years("composed = 1804{{ndash}}08"))
+        // After a hyphen, two digits are a month, as ISO 8601 writes one (May 1801), not a span's end.
+        assertNull(years("composed = 1801-05"))
     }
 
     @Test
