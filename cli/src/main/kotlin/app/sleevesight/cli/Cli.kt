@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.core.Secret
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.WikidataLabels
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -136,7 +137,7 @@ class Cli(
                     Settings.DEFAULT_SOURCES -
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
                 // MusicBrainz tags stay out of the report, which lists each track's labels (`Report`).
-                labelSources = setOf(LabelSource.LASTFM),
+                labelSources = setOf(LabelSource.LASTFM, LabelSource.WIKIDATA),
                 artistFactsOncePerSession = options.artistFactsOncePerSession,
             )
 
@@ -219,6 +220,10 @@ class Cli(
                             // LRCLIB (#997) live only: the recorded fixtures hold none of its answers.
                             lyricsLibrary = wiring.lyricsLibrary.takeIf { options.mode == Mode.LIVE },
                             vocabulary = wiring.genreVocabulary,
+                            // Wikidata's album genres (#1098) live only: the fixtures hold none of its answers.
+                            wikidataLabels =
+                                wiring.wikidataLabels.takeIf { options.mode == Mode.LIVE }
+                                    ?: WikidataLabels(wiring.genreVocabulary),
                             sessionFacts = ListeningSessionFacts { pass.toLong() },
                             // In the track's language (#902), as the app: the core default, *If needed*.
                             languageSearch =

@@ -177,7 +177,8 @@ internal fun GenresContent(
         RetryLine(
             stringResource(R.string.home_genres_partial, names),
             names,
-            retry(shown.unreachable.map { it.source }),
+            // Wikidata's by its own requests' and by Wikipedia's lookup, which brings its labels (#1098).
+            retry(shown.unreachable.flatMap { listOf(it.source, it.lookup) }.distinct()),
             afterRetry = toClose,
         )
     }
@@ -186,11 +187,19 @@ internal fun GenresContent(
     GenresSearch(track, shown, search, notes)
 }
 
-// [sources] named together: "Last.fm", "Last.fm and MusicBrainz".
+// [sources] named together, in their order: "Last.fm", "Last.fm and MusicBrainz", "Last.fm, MusicBrainz
+// and Wikidata" (#1098).
 @Composable
 private fun sourcesNamed(sources: List<LabelSource>): String {
     val names = sources.map { sourceName(it.source) }
-    return names.drop(1).fold(names.first()) { all, next -> stringResource(R.string.home_sources_two, all, next) }
+    if (names.size <= 2) {
+        return names.drop(1).fold(names.first()) { all, next -> stringResource(R.string.home_sources_two, all, next) }
+    }
+    val head =
+        names.dropLast(1).drop(1).fold(names.first()) { all, next ->
+            stringResource(R.string.home_sources_list, all, next)
+        }
+    return stringResource(R.string.home_sources_list_last, head, names.last())
 }
 
 /**
@@ -232,7 +241,7 @@ internal data class GenresShown(
             val on = LabelSource.entries.filter(settings::givesLabels)
             return if (track == null || !track.gathered || !track.genresAssembled) {
                 val states = track?.sources.orEmpty()
-                GenresShown(looking = on.filter { states[it.source] is SourceState.Pending }.ifEmpty { on })
+                GenresShown(looking = on.filter { states[it.lookup] is SourceState.Pending }.ifEmpty { on })
             } else {
                 gathered(track, on, empty)
             }
@@ -247,7 +256,7 @@ internal data class GenresShown(
         ): GenresShown {
             val later = track.laterLabels
             val looking = on.filter { later[it] == LaterLabels.ASKING }
-            val unreachable = on.filter { unreachable(track.sources[it.source]) || later[it] == LaterLabels.FAILED }
+            val unreachable = on.filter { unreachable(track.sources[it.lookup]) || later[it] == LaterLabels.FAILED }
             return GenresShown(
                 looking,
                 unreachable,

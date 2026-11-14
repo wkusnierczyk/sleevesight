@@ -169,6 +169,7 @@ internal class TrackRun(
             asking = input.again?.takeIf { it.only != null }?.let { it.asked + it.labelsAsked },
             library = library,
             instrumental = parts.vocabulary?.instrumental(),
+            wikidata = parts.wikidataLabels,
         )
 
     /**

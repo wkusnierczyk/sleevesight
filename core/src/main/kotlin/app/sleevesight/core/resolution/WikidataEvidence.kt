@@ -22,6 +22,17 @@ object WikidataEvidence {
     /** At most this many genres, labels and awards: a famous song can hold dozens of each. */
     const val MAX_VALUES: Int = 3
 
+    /**
+     * Every genre the accepted item states (P136), by its English label, in Wikidata's order: for its
+     * genre labels (#1098, `WikidataLabels`), which the lines' [MAX_VALUES] does not cap. None without
+     * genres, when the check dropped them.
+     */
+    fun genres(accepted: IdentityCheck.Verdict.Accepted): List<String> =
+        accepted.item
+            .values(Wd.GENRE)
+            .mapNotNull { accepted.labels[it] }
+            .distinct()
+
     /** The lines for an accepted item, dated [retrievedAt]. */
     fun lines(
         accepted: IdentityCheck.Verdict.Accepted,

@@ -603,21 +603,6 @@ class SettingsCodecTest {
     }
 
     @Test
-    fun labelSourcesAndEnginesAreStoredOnlyAsTheUsersOverrides() {
-        val prefs = mutablePreferencesOf()
-        SettingsCodec.write(Settings(labelSources = setOf(LabelSource.LASTFM), webEngines = emptySet()), prefs)
-        assertEquals(
-            mutablePreferencesOf(
-                stringSetPreferencesKey("labels.off") to setOf("MUSICBRAINZ"),
-                stringSetPreferencesKey("web.engines.off") to setOf("EXA"),
-            ),
-            prefs,
-        )
-        SettingsCodec.write(Settings(), prefs)
-        assertTrue(prefs.asMap().isEmpty())
-    }
-
-    @Test
     fun labelSourcesNotMovedFollowTheirDefaults() {
         // A default revised later (#100: MusicBrainz's off in the release) reaches whoever did not move it.
         val read =

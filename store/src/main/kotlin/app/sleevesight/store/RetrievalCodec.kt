@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.RecordingTags
+import app.sleevesight.core.genres.StatedGenre
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -66,6 +67,8 @@ internal object RetrievalCodec {
      * an optional field too, encoded only when true, made a miss the same way (MusicBrainz's
      * extraction version 15). When the music was composed (#1132, [SourceResult.composed]) is an
      * optional field too, made a miss the same way (MusicBrainz's extraction version 18, Wikipedia's 6).
+     * The genres Wikidata states (#1098, [SourceResult.statedGenres]) are an optional field too, made a
+     * miss the same way (Wikipedia's extraction version 7).
      */
     const val FORMAT: Int = 7
 
@@ -145,6 +148,7 @@ internal object RetrievalCodec {
                 pages = result.pages,
                 language = result.language,
                 library = result.library?.name,
+                statedGenres = result.statedGenres.map { StatedGenreJson(it.name, it.level.name, it.artist, it.url) },
             ),
         )
 
@@ -203,6 +207,9 @@ internal object RetrievalCodec {
                 pages = stored.pages,
                 language = stored.language,
                 library = stored.library?.let { name -> LibraryLyrics.entries.firstOrNull { it.name == name } },
+                // An unknown level throws, which reads as no entry.
+                statedGenres =
+                    stored.statedGenres.map { StatedGenre(it.name, GenreLevel.valueOf(it.level), it.artist, it.url) },
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -303,6 +310,17 @@ internal object RetrievalCodec {
         val language: String? = null,
         // LRCLIB's answer for a track (#997, `SourceResult.library`), on that answer's entry only.
         val library: String? = null,
+        // The genres Wikidata states (#1098, `SourceResult.statedGenres`), on Wikipedia's entry only.
+        val statedGenres: List<StatedGenreJson> = emptyList(),
+    )
+
+    // A genre Wikidata states (#1098, `StatedGenre`), its level by name.
+    @Serializable
+    private data class StatedGenreJson(
+        val name: String,
+        val level: String,
+        val artist: String? = null,
+        val url: String,
     )
 
     // The composers and performers MusicBrainz told (#1180, `SourceResult.roles`), and whether the work

@@ -437,7 +437,7 @@ class GenresButtonScreenTest {
                 settings = Settings(),
             ),
         ) {
-            opensTo("Looking on Last.fm and MusicBrainz…")
+            opensTo("Looking on Last.fm, MusicBrainz and Wikidata…")
         }
         // Last.fm's genres switched off: MusicBrainz alone.
         show(state(labelled(TrackGenres(), sources = both), Settings(labelSources = setOf(LabelSource.MUSICBRAINZ)))) {
@@ -497,7 +497,7 @@ class GenresButtonScreenTest {
     fun withEverySourceInButTheGenresNotYetAssembledThePanelIsStillLooking() =
         // The last source landed, its result still being kept: no genre yet is not none found.
         show(state(labelled(TrackGenres()).copy(genresAssembled = false))) {
-            opensTo("Looking on Last.fm and MusicBrainz…")
+            opensTo("Looking on Last.fm, MusicBrainz and Wikidata…")
             compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
         }
 
@@ -545,7 +545,11 @@ class GenresButtonScreenTest {
 
     @Test
     fun withEveryGenreSourceOffInSourcesThePanelLinksToSettingsSources() {
-        val off = Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ - SourceSwitch.LASTFM)
+        val off =
+            Settings(
+                enabledSources =
+                    Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ - SourceSwitch.LASTFM - SourceSwitch.WIKIPEDIA,
+            )
         show(state(labelled(TrackGenres()), off)) {
             assertEquals("Genre sources are disabled.", text(R.string.home_genres_off))
             opensTo(text(R.string.home_genres_off))

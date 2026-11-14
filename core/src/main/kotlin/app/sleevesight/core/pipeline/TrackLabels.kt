@@ -8,6 +8,7 @@ import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.WikidataLabels
 import app.sleevesight.core.genres.combineGenres
 import app.sleevesight.core.lyrics.NO_LINGUISTIC_CONTENT
 import app.sleevesight.core.lyrics.instrumental
@@ -31,7 +32,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * Last.fm's track and album labels ([lastFm], with the user's key). Their Instrumental is weighed
  * with LRCLIB's answer too, once known ([library], #997); where the work's composers alone asked it,
  * LRCLIB's instrumental mark adds [instrumental], the vocabulary's label of it (#1024,
- * [withLibraryMark]), none without the vocabulary.
+ * [withLibraryMark]), none without the vocabulary. Wikidata's genres (#1098, [wikidata]) come with
+ * Wikipedia's result, the song's and the artists', and, after the evidence, the album's.
  */
 @Suppress("LongParameterList") // The label sources, the run's settings and key, where it reports, and what it keeps.
 internal class TrackLabels(
@@ -45,6 +47,7 @@ internal class TrackLabels(
     private val asking: Set<SourceId>? = null,
     private val library: LibrarySign? = null,
     private val instrumental: GenreLabel? = null,
+    private val wikidata: WikidataLabels? = null,
 ) {
     // The sources all of whose requests the run before answered: only those a *Retry* may keep.
     private val keptAnswered: Set<LabelSource> = kept?.answered.orEmpty()
@@ -67,12 +70,14 @@ internal class TrackLabels(
         val landed = later.value
         return combineGenres(
             LabelSource.entries.filter(settings::givesLabels).associateWith { source ->
-                val result = current.done(source.source)
+                val result = current.done(source.lookup)
                 val given =
                     when (source) {
                         LabelSource.LASTFM -> result?.genres.orEmpty()
                         LabelSource.MUSICBRAINZ ->
                             result?.recordingTags?.let { musicBrainz?.recordingLabels(it) }.orEmpty()
+                        // Wikipedia's result holds them: its identity check reads the items.
+                        LabelSource.WIKIDATA -> result?.statedGenres?.let { wikidata?.labels(it) }.orEmpty()
                     }
                 credited(given + landed[source].orEmpty(), current.normalized.artists)
             },
@@ -176,7 +181,9 @@ internal class TrackLabels(
      * MusicBrainz's for the
      * artists [current]'s MusicBrainz result names; Last.fm's for the track and its album, by the
      * primary artist, once Last.fm's result shows an artist and has not rejected the primary (an
-     * artist it rejected may be another's of the name, whose track this is not). [addLater] asks
+     * artist it rejected may be another's of the name, whose track this is not); Wikidata's for the
+     * album (#1098), by its MusicBrainz release group, once MusicBrainz's result names one the
+     * player's album name names ([CardEntity.Album.of], as the album's card finds it). [addLater] asks
      * them, and [settle] ends what is left unanswered.
      */
     fun later(current: TrackState): List<Later> {
@@ -216,6 +223,10 @@ internal class TrackLabels(
                 ?.takeIf(String::isNotEmpty)
                 ?.let { album -> asks += Later(LabelSource.LASTFM) { fromLastFm.albumLookup(track.primary, album) } }
         }
+        wikidata
+            ?.takeIf { settings.givesLabels(LabelSource.WIKIDATA) && asks(LabelSource.WIKIDATA) }
+            ?.let { albumGenres(it, current, fold) }
+            ?.let { asks += it }
         pending.value = asks.groupingBy { it.source }.eachCount()
         return asks
     }
@@ -282,3 +293,22 @@ internal class TrackLabels(
 
 // ISO 639-3's code for an undetermined language (#996): no sign of words.
 private const val UNDETERMINED = "und"
+
+// Wikidata's request for the genres of [current]'s album (#1098), by its release group: the one the
+// player's album name names among the resolution's releases, else MusicBrainz's kept result's, as the
+// album's card finds it; none without Wikidata to ask, or with no group known.
+private fun albumGenres(
+    wikidata: WikidataLabels,
+    current: TrackState,
+    fold: (String) -> String,
+): TrackLabels.Later? {
+    val album =
+        current.nowPlaying.album
+            ?.trim()
+            ?.takeIf { wikidata.asksAlbums && it.isNotEmpty() }
+    val dates =
+        current.resolution?.releaseDates?.ifEmpty { null }
+            ?: (current.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.releaseDates.orEmpty()
+    val group = album?.let { CardEntity.Album.of(it, current.normalized.primary, dates, fold).group }
+    return group?.let { TrackLabels.Later(LabelSource.WIKIDATA) { wikidata.albumLookup(it) } }
+}

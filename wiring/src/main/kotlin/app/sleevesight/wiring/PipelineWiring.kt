@@ -10,6 +10,7 @@ import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
+import app.sleevesight.core.genres.WikidataLabels
 import app.sleevesight.core.lyrics.LyricsLibrary
 import app.sleevesight.core.lyrics.SharedLyricsLibrary
 import app.sleevesight.core.model.ProviderId
@@ -162,6 +163,13 @@ class PipelineWiring internal constructor(
     val musicBrainzLabels: MusicBrainzLabels by lazy {
         MusicBrainzLabels(MusicBrainzClient(net), vocabulary, artists = artists)
     }
+
+    /**
+     * Wikidata's genre labels (#1098), for `PipelineParts.wikidataLabels`: the song's and the artists'
+     * from Wikipedia's result, the album's asked for, and kept in the artist cache. One for the wiring,
+     * as [musicBrainzLabels].
+     */
+    val wikidataLabels: WikidataLabels by lazy { WikidataLabels(vocabulary, WikidataClient(net), artists = artists) }
 
     /**
      * Last.fm's genre labels for the track and its album (#439), on the user's [key], for

@@ -2,6 +2,8 @@ package app.sleevesight.sources.wikipedia
 
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.StatedGenre
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -11,6 +13,7 @@ import app.sleevesight.core.resolution.IdentityCheck.Route
 import app.sleevesight.core.resolution.IdentityCheck.Verdict
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.resolution.Wd
 import app.sleevesight.core.resolution.WikidataEvidence
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.ArtistPart
@@ -106,7 +109,7 @@ class WikipediaSource(
             }
             if (part.unreachable) findings.unreachable = true
         }
-        findings.artistFound = parts.any { it.accepted }
+        findings.artistFound = parts.any { it.accepted != null }
         // Each artist's lines say which artist they are about (#522), as the track credits it.
         val artistLines =
             credits.zip(parts).flatMap { (artist, part) ->
@@ -125,7 +128,33 @@ class WikipediaSource(
             // Every credited artist's article is looked up, and its finding, found or not, is about
             // the artist (#420): only a track with no artist to look up is about the track alone.
             trackOnly = credits.isEmpty(),
+            statedGenres = statedGenres(findings.song, credits.zip(parts)),
         )
+    }
+
+    // The genres the song's item and each artist's state (#1098), for genre labels: the track's own
+    // song's at the track's level, not an original's, whose genres may not be the cover's.
+    private fun statedGenres(
+        song: Verdict.Accepted?,
+        artists: List<Pair<ResolvedArtist, ArtistFinding>>,
+    ): List<StatedGenre> {
+        val own =
+            song?.takeIf { it.scope == Scope.SONG }?.let { accepted ->
+                WikidataEvidence.genres(accepted).map {
+                    StatedGenre(it, GenreLevel.TRACK, null, Wd.url(accepted.item.id))
+                }
+            }
+        val theirs =
+            artists.flatMap { (artist, part) ->
+                val stated = part.accepted
+                val item = stated?.item
+                if (stated == null || item == null) {
+                    emptyList()
+                } else {
+                    stated.genres.map { StatedGenre(it, GenreLevel.ARTIST, artist.name, item) }
+                }
+            }
+        return own.orEmpty() + theirs
     }
 
     private class Findings {
@@ -150,15 +179,25 @@ class WikipediaSource(
      * reason, and whether Wikidata or Wikipedia did not answer, which keeps it out of the artist
      * cache; for one the artist cache kept, when it stops being fresh; whether the rejection was only
      * for want of a MusicBrainz id (#1069), never so for one the artist cache kept, since only an
-     * artist with an id is kept.
+     * artist with an id is kept. [accepted] holds the genres the accepted item states (#1098) and the
+     * item's page, and is null when no article was confirmed.
      */
     private class ArtistFinding(
-        val accepted: Boolean,
+        val accepted: ItemGenres?,
         val lines: List<EvidenceDraft>,
         val rejection: String?,
         val unreachable: Boolean,
         val freshUntil: Instant? = null,
         val withoutMusicBrainz: Boolean = false,
+    )
+
+    /**
+     * The genres an accepted item states (#1098), by their English labels, and the item's page; none
+     * known for one the artist cache kept before it held them.
+     */
+    private class ItemGenres(
+        val item: String?,
+        val genres: List<String>,
     )
 
     /** One artist's identity check: its verdict, if any item was checked, and whether a lookup failed. */
@@ -175,12 +214,17 @@ class WikipediaSource(
         when (val verdict = checked.verdict) {
             is Verdict.Accepted -> {
                 val lines = lines(verdict, track, retrievedAt)
-                ArtistFinding(true, lines.drafts, null, checked.unreachable || lines.unreachable)
+                ArtistFinding(
+                    ItemGenres(Wd.url(verdict.item.id), WikidataEvidence.genres(verdict)),
+                    lines.drafts,
+                    null,
+                    checked.unreachable || lines.unreachable,
+                )
             }
 
             is Verdict.Rejected -> {
                 ArtistFinding(
-                    false,
+                    null,
                     emptyList(),
                     verdict.reason,
                     checked.unreachable,
@@ -189,11 +233,11 @@ class WikipediaSource(
             }
 
             Verdict.Unreachable -> {
-                ArtistFinding(false, emptyList(), null, true)
+                ArtistFinding(null, emptyList(), null, true)
             }
 
             null -> {
-                ArtistFinding(false, emptyList(), null, checked.unreachable)
+                ArtistFinding(null, emptyList(), null, checked.unreachable)
             }
         }
 
@@ -208,7 +252,13 @@ class WikipediaSource(
         return try {
             part?.let { json.decodeFromString(StoredArtist.serializer(), it.value) }?.let { kept ->
                 val lines = kept.lines.map { it.draft() }
-                ArtistFinding(kept.accepted, lines, kept.rejection, unreachable = false, freshUntil = part.freshUntil)
+                ArtistFinding(
+                    ItemGenres(kept.item, kept.genres).takeIf { kept.accepted },
+                    lines,
+                    kept.rejection,
+                    unreachable = false,
+                    freshUntil = part.freshUntil,
+                )
             }
         } catch (_: IllegalArgumentException) {
             null
@@ -222,20 +272,29 @@ class WikipediaSource(
     ) {
         val key = keyOf(artist)
         if (key == null || finding.unreachable) return
-        val kept = StoredArtist(finding.accepted, finding.lines.map(::StoredLine), finding.rejection)
+        val kept =
+            StoredArtist(
+                finding.accepted != null,
+                finding.lines.map(::StoredLine),
+                finding.rejection,
+                finding.accepted?.genres.orEmpty(),
+                finding.accepted?.item,
+            )
         artists.keep(artistPart, key, json.encodeToString(StoredArtist.serializer(), kept))
     }
 
     /**
      * One artist's finding in the artist cache: whether an article was confirmed, its lines (each
-     * with its source by tag, its scope by key and when it was retrieved, in ISO 8601), and the
-     * rejection's reason.
+     * with its source by tag, its scope by key and when it was retrieved, in ISO 8601), the
+     * rejection's reason, and the genres its item states with the item's page (#1098).
      */
     @Serializable
     private class StoredArtist(
         val accepted: Boolean,
         val lines: List<StoredLine>,
         val rejection: String? = null,
+        val genres: List<String> = emptyList(),
+        val item: String? = null,
     )
 
     @Serializable
@@ -391,9 +450,10 @@ class WikipediaSource(
         /**
          * [ARTIST_PART]'s version: [EXTRACTION_VERSION] until 3, which it stays at since an artist's
          * article, found through the artist's MusicBrainz id, does not depend on how a track resolves
-         * (#1129).
+         * (#1129). 4: it keeps the genres the artist's item states (#1098), so one kept without them is
+         * looked up again.
          */
-        const val ARTIST_PART_VERSION: Int = 3
+        const val ARTIST_PART_VERSION: Int = 4
 
         /**
          * [extractionVersion]: raised when what the adapter makes of the articles changes, or the
@@ -407,9 +467,11 @@ class WikipediaSource(
          * a day in that year (#1203), so a result kept against the recording chosen before is looked
          * up again; [ARTIST_PART] stays. 6: the song's item gives when the music was composed
          * (`SourceResult.composed`, #1132), so a song's result kept without it is looked up again;
-         * [ARTIST_PART] stays.
+         * [ARTIST_PART] stays. 7: the song's and the artists' items give the genres they state
+         * (`SourceResult.statedGenres`, #1098), so a result kept without them is looked up again;
+         * [ARTIST_PART] goes with it ([ARTIST_PART_VERSION] 4).
          */
-        const val EXTRACTION_VERSION: Int = 6
+        const val EXTRACTION_VERSION: Int = 7
 
         private val json = Json { encodeDefaults = false }
 

@@ -180,7 +180,9 @@ class BusyMessagesScreenTest {
     fun genresLookingHasTheRecordBeforeIt() =
         show(looking) {
             tap(GENRES_CHIP_TAG)
-            assertRecordBefore(compose.onNodeWithText(text(R.string.home_genres_looking, "Last.fm and MusicBrainz")))
+            assertRecordBefore(
+                compose.onNodeWithText(text(R.string.home_genres_looking, "Last.fm, MusicBrainz and Wikidata")),
+            )
         }
 
     @Test

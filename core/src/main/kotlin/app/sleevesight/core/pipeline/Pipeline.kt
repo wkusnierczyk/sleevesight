@@ -7,6 +7,7 @@ import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.WikidataLabels
 import app.sleevesight.core.lyrics.LyricsLibrary
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
@@ -85,7 +86,8 @@ class AiAccess(
  * elsewhere the app's ([DateForm.APP]). [lyricsLibrary] is LRCLIB (#997), asked whether the track has
  * lyrics when one of its genres is Instrumental ([LibrarySign]), or none (no such sign). [vocabulary] is
  * the genre list, for the Instrumental LRCLIB's mark adds where the work's composers alone asked it
- * (#1024, [withLibraryMark]); without it, none is added.
+ * (#1024, [withLibraryMark]); without it, none is added. [wikidataLabels] makes Wikidata's genres
+ * labels (#1098), or none (no labels from Wikidata).
  */
 @Suppress("LongParameterList") // Independent stages, and why one is missing; all but the first four are optional.
 class PipelineParts(
@@ -108,6 +110,7 @@ class PipelineParts(
     val songWeb: SongWebLookup? = null,
     val lyricsLibrary: LyricsLibrary? = null,
     val vocabulary: GenreVocabulary? = null,
+    val wikidataLabels: WikidataLabels? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

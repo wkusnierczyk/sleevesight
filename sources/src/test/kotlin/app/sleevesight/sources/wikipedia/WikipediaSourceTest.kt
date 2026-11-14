@@ -102,12 +102,13 @@ class WikipediaSourceTest {
         }
 
     @Test
-    fun `the kept part's version stays at 3 while the track results' moved to 6`() {
+    fun `the kept part's version moved to 4 with the track results' to 7, for the genres items state`() {
         // #1129 and #1203 changed what a track resolves to, which a track's result is checked against; an
-        // artist's article, reached by the artist's id, is not, so the artist cache is kept; nor does the
-        // song's composition date (#1132), which a track's result holds.
-        assertEquals(3, WikipediaSource.ARTIST_PART.extraction)
-        assertEquals(6, adapter.extractionVersion)
+        // artist's article, reached by the artist's id, is not, so the artist cache was kept; nor did the
+        // song's composition date (#1132), which a track's result holds. The genres the items state
+        // (#1098) are in both, so both moved.
+        assertEquals(4, WikipediaSource.ARTIST_PART.extraction)
+        assertEquals(7, adapter.extractionVersion)
     }
 
     @Test

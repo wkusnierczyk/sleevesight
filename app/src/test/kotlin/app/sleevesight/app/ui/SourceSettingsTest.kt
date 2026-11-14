@@ -129,8 +129,43 @@ class SourceSettingsTest {
             val row = compose.onNode(holding(R.string.settings_labels_musicbrainz_summary)).performScrollTo()
             row.assertIsOn()
             row.performClick()
-            waitFor("only Last.fm labels stored") { current().labelSources == setOf(LabelSource.LASTFM) }
+            waitFor("MusicBrainz's labels stored off") {
+                current().labelSources == setOf(LabelSource.LASTFM, LabelSource.WIKIDATA)
+            }
             waitForNode(holding(R.string.settings_labels_musicbrainz_summary) and isOff())
+        }
+
+    @Test
+    fun wikidataGenresAreASwitchOnByDefaultUnderWikipedia() =
+        show(SettingsSection.GENRES) {
+            // #1098: its title and summary, as decided; on by default.
+            val row =
+                compose
+                    .onNode(
+                        hasText(text(R.string.settings_labels_wikidata)) and
+                            holding(R.string.settings_labels_wikidata_summary),
+                    ).performScrollTo()
+            row.assertIsOn()
+            row.performClick()
+            waitFor("Wikidata's genres stored off") { LabelSource.WIKIDATA !in current().labelSources }
+            waitForNode(holding(R.string.settings_labels_wikidata_summary) and isOff())
+            // Its genres come with Wikipedia's lookup: off under *Sources*, the switch says so and cannot move.
+            runBlocking {
+                settings.update {
+                    it.copy(
+                        labelSources = Settings.DEFAULT_LABEL_SOURCES,
+                        enabledSources = it.enabledSources - SourceSwitch.WIKIPEDIA,
+                    )
+                }
+            }
+            waitForNode(
+                holding(R.string.settings_labels_wikidata_summary) and holding(R.string.settings_labels_source_off),
+            )
+            compose
+                .onNode(holding(R.string.settings_labels_wikidata_summary))
+                .performScrollTo()
+                .assertIsOff()
+                .assertIsNotEnabled()
         }
 
     @Test
@@ -149,7 +184,9 @@ class SourceSettingsTest {
             label.assertIsOn()
             label.assertIsEnabled()
             label.performClick()
-            waitFor("only MusicBrainz labels stored") { current().labelSources == setOf(LabelSource.MUSICBRAINZ) }
+            waitFor("Last.fm's labels stored off") {
+                current().labelSources == setOf(LabelSource.MUSICBRAINZ, LabelSource.WIKIDATA)
+            }
         }
 
     @Test

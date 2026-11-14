@@ -6,18 +6,22 @@ import kotlin.math.roundToLong
 /**
  * A source whose tags can become genre labels (D12, #84): which of them give labels is a user
  * setting (`Settings.labelSources`). Web search gives no tags, so it is not one; Discogs joins in
- * Phase 3. The order of the entries is the order their labels combine in ([combineLabels]).
+ * Phase 3. Wikidata gives genres it states rather than tags (#1098), weighed as tags
+ * are. The order of the entries is the order their labels combine in ([combineLabels]).
  *
  * @property source the evidence source whose lookup brings the tags: a label source gives labels
  *   only while that source is switched on under *Sources*, and Last.fm only with its key.
  * @property credit how a label from it is credited, beside its link.
  * @property licenceUrl the licence of its tags, which the credit links; null where the tags come
  *   under the source's API terms and no licence of their own.
+ * @property lookup the source whose lookup's result brings its labels, and whose state says whether
+ *   they are still to come: its own, but for Wikidata's, which come with Wikipedia's (#1098).
  */
 enum class LabelSource(
     val source: SourceId,
     val credit: String,
     val licenceUrl: String?,
+    val lookup: SourceId = source,
 ) {
     LASTFM(SourceId.LASTFM, "Last.fm", null),
 
@@ -31,6 +35,14 @@ enum class LabelSource(
         "MusicBrainz contributors, CC BY-NC-SA 3.0",
         "https://creativecommons.org/licenses/by-nc-sa/3.0/",
     ),
+
+    /**
+     * The genres Wikidata states (P136) for the track's song, its artists and its album (#1098,
+     * [WikidataLabels]), CC0: named under *Tag sources* only, linking the item that states them, with
+     * no credit line, and free to reach a prompt. Its labels come with Wikipedia's result and its
+     * identity check, so they follow the *Wikipedia* switch under *Sources*, as Wikidata does.
+     */
+    WIKIDATA(SourceId.WIKIDATA, "Wikidata", null, SourceId.WIKIPEDIA),
 }
 
 /**

@@ -200,8 +200,8 @@ class SettingsTest {
     }
 
     @Test
-    fun `both label sources are on by default, Last fm first`() {
-        assertEquals(listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ), LabelSource.entries)
+    fun `every label source is on by default, Last fm first and Wikidata last`() {
+        assertEquals(listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ, LabelSource.WIKIDATA), LabelSource.entries)
         assertEquals(LabelSource.entries.toSet(), defaults.labelSources)
         assertTrue(LabelSource.entries.all(defaults::givesLabels))
     }
@@ -211,6 +211,10 @@ class SettingsTest {
         val noMusicBrainz = defaults.copy(enabledSources = defaults.enabledSources - SourceSwitch.MUSICBRAINZ)
         assertFalse(noMusicBrainz.givesLabels(LabelSource.MUSICBRAINZ))
         assertTrue(noMusicBrainz.givesLabels(LabelSource.LASTFM))
+        // Wikidata's genres come with Wikipedia's lookup (#1098), under its switch.
+        val noWikipedia = defaults.copy(enabledSources = defaults.enabledSources - SourceSwitch.WIKIPEDIA)
+        assertFalse(noWikipedia.givesLabels(LabelSource.WIKIDATA))
+        assertTrue(noWikipedia.givesLabels(LabelSource.LASTFM))
 
         val lastFmOnly = defaults.copy(labelSources = setOf(LabelSource.LASTFM))
         assertFalse(lastFmOnly.givesLabels(LabelSource.MUSICBRAINZ))
