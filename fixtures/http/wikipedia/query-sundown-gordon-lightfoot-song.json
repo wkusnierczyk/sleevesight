@@ -6,7 +6,18 @@
     "pageid": 5571291,
     "ns": 0,
     "title": "Sundown (Gordon Lightfoot song)",
-    "extract": "\"Sundown\" is a song by Canadian folk artist Gordon Lightfoot, from the titular album, released as a single in March 1974.\n\"Sundown\" reached number one on the U.S. Billboard Hot 100 and easy listening charts and number 13 on the Hot Country singles chart, as well as number one in Canada on RPM's national singles chart. It was Lightfoot's only single to reach number one on the Hot 100."
+    "extract": "\"Sundown\" is a song by Canadian folk artist Gordon Lightfoot, from the titular album, released as a single in March 1974.\n\"Sundown\" reached number one on the U.S. Billboard Hot 100 and easy listening charts and number 13 on the Hot Country singles chart, as well as number one in Canada on RPM's national singles chart. It was Lightfoot's only single to reach number one on the Hot 100.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Infobox song\n| name          = Sundown\n| cover         = Sundown45.jpg\n| alt           = \n| type          = single\n| artist        = [[Gordon Lightfoot]]\n| album         = [[Sundown (Gordon Lightfoot album)|Sundown]]\n| B-side        = Too Late for Prayin'\n| released      = March 25, 1974\n| recorded      = November 1973\n| studio        = Eastern Sound, [[Toronto]]\n| genre         = * [[Folk rock]]<ref name= \"Breihan 2019\">{{cite web|first= Tom |last= Breihan |title= The Number Ones: Gordon Lightfoot's \"Sundown\"|website= [[Stereogum]] |date= May 23, 2019 |url= https://www.stereogum.com/2044755/the-number-ones-gordon-lightfoots-sundown/columns/the-number-ones/|quote= “Sundown” is a pretty atypical piece of mid-’70s folk-rock.|accessdate= June 19, 2023}}</ref>\n* [[country rock]]\n| length        = 3:37\n| label         = [[Reprise Records|Reprise]]\n| writer        = [[Gordon Lightfoot]]\n| producer      = [[Lenny Waronker]]\n| prev_title    = Can't Depend on Love\n| prev_year     = 1973\n| next_title    = [[Carefree Highway]]\n| next_year     = 1974\n| misc          = {{External music video|type=single|header=Audio|{{YouTube|MeRlumGqZlY|\"Sundown\"}}}}\n}}\n\"'''Sundown'''\" is a song by Canadian [[Folk music|folk]] artist [[Gordon Lightfoot]], from the [[Sundown (Gordon Lightfoot album)|titular album]], released as a single in March 1974.\n\n\"Sundown\" reached number one on the U.S. [[Billboard Hot 100|''Billboard'' Hot 100]] and [[Hot Adult Contemporary Tracks|easy listening]] charts<ref>{{cite book |title= The Billboard Book of Top 40 Hits: Eighth Edition |last=Whitburn |first=Joel |author-link=Joel Whitburn |year=2004 |publisher=Record Research |page=368}}</ref> and number 13 on the [[Hot Country Songs|Hot Country singles]] chart,<ref>{{cite book |title= The Billboard Book Of Top 40 Country Hits: 1944-2006, Second edition|last=Whitburn |first=Joel |author-link=Joel Whitburn |year=2004 |publisher=Record Research |page=201}}</ref> as well as number one in [[Canada]] on ''[[RPM (magazine)|RPM]]''{{'}}s [[List of number-one singles of 1974 (Canada)|national singles chart]]. It was Lightfoot's only single to reach number one on the Hot 100."
+       }
+      }
+     }
+    ]
    }
   ]
  }

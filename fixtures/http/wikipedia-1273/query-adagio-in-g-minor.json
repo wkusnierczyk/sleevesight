@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 2601906,
+    "ns": 0,
+    "title": "Adagio in G minor",
+    "extract": "Adagio in Sol minore per archi e organo su due spunti tematici e su un basso numerato di Tomaso Albinoni (Mi 26) (Adagio in G minor for strings and organ, on two thematic ideas and a figured bass by Tomaso Albinoni), also known as \"Albinoni's Adagio\", is a 1958 neo-Baroque composition often misattributed to the 18th-century Venetian composer Tomaso Albinoni. In fact, the work was composed by a 20th-century musicologist and Albinoni biographer named Remo Giazotto. The piece was purportedly based on the discovery of a bass line by Albinoni in a manuscript fragment. \nScholarly debate over the existence of the fragment persists, with some seeing the affair as a musical hoax perpetrated by Giazotto. There is no room for doubt when it comes to the source of everything in the Adagio other than the bassline, and Giazotto's authorship of these parts is not disputed.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1958 musical work by Remo Giazotto}}\n[[File:Remo Giazotto 1950.jpg|thumb|[[Remo Giazotto]] in 1950]]\n{{Use dmy dates|date=February 2021}}\n'''{{lang|it|Adagio in Sol minore per archi e organo su due spunti tematici e su un basso numerato di Tomaso Albinoni (Mi 26)|italic=no}}''' (Adagio in G minor for [[String section|strings]] and [[organ (music)|organ]], on two thematic ideas and a figured bass by Tomaso Albinoni), also known as '''\"Albinoni's Adagio\"''', is a 1958 [[Neo-Baroque music|neo-Baroque]] composition often misattributed to the 18th-century Venetian composer [[Tomaso Albinoni]].<ref name=\"Cross\">{{cite journal |last1=Cross |first1=Eric |last2= |first2= |date=February 1992 |title=Review of Tomaso Albinoni: The Venetian Composer and His World, by M. Talbot |url=http://www.jstor.org/stable/3127681 |journal=Early Music |volume=20 |issue=1 |publisher= |pages=157–159 |doi= |access-date=2025-12-18}}</ref> In fact, the work was composed by a 20th-century [[Musicology|musicologist]] and Albinoni [[biographer]] named [[Remo Giazotto]].<ref name=\"Cross\" /> The piece was purportedly based on the discovery of a bass line by Albinoni in a manuscript fragment. \n\nScholarly debate over the existence of the fragment persists, with some seeing the affair as a [[musical hoax]] perpetrated by Giazotto. There is no room for doubt when it comes to the source of everything in the ''Adagio'' other than the bassline, and Giazotto's authorship of these parts is not disputed.<ref name=\"cbc\">{{cite web|last=Dekel|first=Jon|title=Is Albinoni's Adagio the biggest fraud in music history?|date=24 February 2017|publisher=[[CBC Music]]|url=https://www.cbcmusic.ca/posts/18137/albinoni-adagio-g-minor-biggest-fraud|access-date=1 July 2019}}</ref><ref>{{Cite web |title=Giazotto, Remo |url=https://www.oxfordmusiconline.com/grovemusic/display/10.1093/gmo/9781561592630.001.0001/omo-9781561592630-e-0000011086 |access-date=2023-08-02 |website=Grove Music Online |language=en}}</ref>"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

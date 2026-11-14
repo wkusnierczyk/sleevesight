@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 149595,
+    "ns": 0,
+    "title": "Piano Sonata No. 14 (Beethoven)",
+    "extract": "The Piano Sonata No. 14 in C♯ minor, marked Quasi una fantasia, Op. 27, No. 2, is a piano sonata by Ludwig van Beethoven, completed in 1801 and dedicated in 1802 to his pupil Countess Julie \"Giulietta\" Guicciardi. Although known throughout the world as the Moonlight Sonata (German: Mondscheinsonate), it was not Beethoven who named it so. The title \"Moonlight Sonata'\" arose via imagery later proposed by the poet Ludwig Rellstab, which resonated with listeners.\nThe piece is one of Beethoven's most famous compositions for the piano, and was quite popular even in his own day. Beethoven wrote the Moonlight Sonata around the age of 30, after he had finished with some commissioned work; there is no evidence that he was commissioned to write this sonata.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1801 piano sonata by Ludwig van Beethoven}}\n{{Redirect|Moonlight Sonata|other uses}}\n{{pp-move|small=yes}}\n{{Infobox musical composition\n| name                = Piano Sonata No. 14\n| subtitle            = ''Sonata quasi una fantasia''\n| composer            = [[Ludwig van Beethoven]]\n| image               = Beethoven Piano Sonata 14 - title page 1802.jpg\n| image_upright       = \n| caption             = Title page of the first edition of the score, published on 2 August 1802 in Vienna by Giovanni Cappi e Comp{{efn|1=The title page is in Italian, and reads {{lang|it|SONATA quasi una FANTASIA per il Clavicembalo o Piano{{=}}forte composta e dedicata alla Damigella Contessa Giulietta Guicciardi da Luigi van Beethoven Opera 27 No. 2. In Vienna presso Gio. Cappi Sulla Piazza di St. Michele No. 5.}} (In English, \"Sonata, almost a ''fantasia'' for harpsichord or pianoforte. Composed, and dedicated to Mademoiselle Countess Julie \"Giulietta\" Guicciardi, by Ludwig van Beethoven. Opus 27 No. 2. Published in Vienna by Giovanni Cappi, Michaelerplatz No. 5.\") The suggestion that the work could be performed on the harpsichord reflected a common marketing practice of music publishers in the early 19th century ({{harvnb|Siepmann|1998|p=60}}).}}\n| other_name          = ''Moonlight Sonata''\n| key                 = [[C-sharp minor|C{{music|sharp}} minor]]\n| opus                = 27/2\n| style               = [[Classical period (music)|Classical]]-[[Romantic music|Romantic]] ([[Transition from Classical to Romantic music|transitional]])\n| composed            = 1801\n| dedication          = Countess [[Giulietta Guicciardi]]\n| published           = 1802\n| publisher           = Giovanni Cappi\n| duration            = 15 minutes\n| movements           = 3\n| misc                = {{Listen|plain=yes\n | filename =Beethoven Moonlight 1st movement.ogg|title =I. Adagio sostenuto\n | filename2=Beethoven Moonlight 2nd movement.ogg|title2=II. Allegretto\n | filename3=Beethoven Moonlight 3rd movement.ogg|title3=III. Presto agitato|description3=[[MIDI]] rendition\n}}\n}}\nThe '''Piano Sonata No. 14''' in [[C-sharp minor|C{{music|sharp}} minor]], marked '''''Quasi una fantasia''''', [[Piano Sonatas Nos. 13 and 14 (Beethoven)|Op. 27]], No. 2, is a [[piano sonata]] by [[Ludwig van Beethoven]], completed in 1801 and dedicated in 1802 to his pupil Countess [[Julie Guicciardi|Julie \"Giulietta\" Guicciardi]].{{efn|1=This dedication was not Beethoven's original intention, and he did not have Guicciardi in mind when writing the sonata. [[Alexander Wheelock Thayer|Thayer]], in his ''Life of Beethoven'', states that the work Beethoven originally intended to dedicate to Guicciardi was the [[Rondos, Op. 51 (Beethoven)|Rondo in G, Op. 51, No. 2]], but circumstances required that this be dedicated to Countess Lichnowsky. So he cast around at the last moment for a piece to dedicate to Guicciardi.{{sfn|Thayer|1967|pages=291, 297}}}} Although known throughout the world as the '''''Moonlight Sonata''''' ([[German language|German]]: ''Mondscheinsonate''), it was not Beethoven who named it so. The title \"Moonlight Sonata'\" arose via imagery later proposed by the poet [[Ludwig Rellstab]], which resonated with listeners.\n\nThe piece is one of Beethoven's most famous compositions for the piano, and was quite popular even in his own day.<ref name=\"Jones\" /> Beethoven wrote the ''Moonlight Sonata'' around the age of 30, after he had finished with some commissioned work; there is no evidence that he was commissioned to write this sonata.<ref name=\"Jones\" />"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

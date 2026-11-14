@@ -1,0 +1,382 @@
+[
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Piano Sonata No. 16 (Mozart)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-piano-sonata-no-16-mozart.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Piano Sonata No. 14 (Beethoven)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-piano-sonata-no-14-beethoven.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Goldberg Variations",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-goldberg-variations.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Nocturnes, Op. 9 (Chopin)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-nocturnes-op-9-chopin.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Suite bergamasque",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-suite-bergamasque.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Gymnopédies",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-gymnop-dies.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Nessun dorma",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-nessun-dorma.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "The Four Seasons (Vivaldi)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-the-four-seasons-vivaldi.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Pachelbel's Canon",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-pachelbel-s-canon.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Adagio for Strings",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-adagio-for-strings.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "In the Hall of the Mountain King",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-in-the-hall-of-the-mountain-king.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Adagio in G minor",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-adagio-in-g-minor.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Ellens dritter Gesang",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-ellens-dritter-gesang.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Enigma Variations",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-enigma-variations.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Piano Concerto No. 2 (Rachmaninoff)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-piano-concerto-no-2-rachmaninoff.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Spiegel im Spiegel",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-spiegel-im-spiegel.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Liebesträume",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-liebestr-ume.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Pavane (Fauré)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-pavane-faur.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Symphony No. 5 (Beethoven)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-symphony-no-5-beethoven.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Cello Suites (Bach)",
+   "prop": "extracts|revisions",
+   "exintro": "1",
+   "explaintext": "1",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-cello-suites-bach.json"
+ }
+]
