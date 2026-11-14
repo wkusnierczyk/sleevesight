@@ -351,8 +351,9 @@ private fun GenresBox(
             chosen = if (genre == open) null else genre
             touched = true
         }
-        // The pages the AI's genres came from, when from the web (#801), under the chips they marked.
-        if (labels.any { it.label.aiAdded }) for (source in track.genres.aiSources) FromSite(source)
+        // The pages the AI's genres came from, when from the web (#801), under the chips they marked,
+        // on one line (#1204).
+        if (labels.any { it.label.aiAdded }) FromSites(track.genres.aiSources)
         open?.let {
             PanelRule()
             Box(Modifier.onFocusChanged { state -> inside[0] = state.hasFocus }) {

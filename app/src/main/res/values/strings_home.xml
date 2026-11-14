@@ -324,7 +324,8 @@
     <!-- The same, written on an earlier day: its date ("31 October", with the year when not this year). -->
     <string name="home_ai_kept_on">Kept from before: written on %1$s.</string>
     <!-- Under a value found on the web (#801), on its own line: %1$s is the page's site ("discogs.com"),
-         a link to the page. -->
+         a link to the page. Under genres found on the web, %1$s is every page's site, each a link to its
+         page, " · " between (#1204): "From en.wikipedia.org · albumoftheyear.org". -->
     <string name="home_ai_from">From %1$s</string>
     <!-- In the answer's place, under the rule, the answer having nothing usable; %1$s is the model, as
          the AI settings name it: with AI web search off, then on (#801, #802). Kept, as an answer is;

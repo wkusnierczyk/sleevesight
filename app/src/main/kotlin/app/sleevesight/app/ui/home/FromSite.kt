@@ -28,6 +28,46 @@ internal fun FromSite(url: String) {
 }
 
 /**
+ * "From {site} · {site} · …" under the genres *Ask AI* found on the web (#801, #1204): "From" once,
+ * then each page's site ([siteOf]) a link of its own to its page ([urls], in their order, each page
+ * once), " · " between, as *Tag sources* separates its sources. The line wraps as text, between
+ * sites: a site's name never breaks ([unbroken]), and the dot stays with the site before it. A
+ * screen reader reaches each site as a link of its own. Nothing when there are no pages.
+ */
+@Composable
+internal fun FromSites(urls: List<String>) {
+    val pages = urls.distinct()
+    if (pages.isEmpty()) return
+    val sites =
+        pages.flatMapIndexed { i, url ->
+            val link = TextPart.Link(unbroken(siteOf(url)), url)
+            if (i == 0) listOf(link) else listOf(TextPart.Words(SITE_SEPARATOR), link)
+        }
+    val slot = TextPart.Words(SITES_SLOT)
+    val parts =
+        linkedParts(stringResource(R.string.home_ai_from), slot).flatMap { if (it === slot) sites else listOf(it) }
+    LinkedText(
+        parts,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.testTag(AI_SEARCH_FROM_TAG),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/**
+ * [site] that a line never breaks inside: a word joiner after each hyphen, the one place a host
+ * ("lyric-stories.com") may otherwise break (#1204). A dot between letters or digits is no break.
+ */
+internal fun unbroken(site: String): String = site.replace("-", "-$WORD_JOINER")
+
+/** Between two sites on the From line: the dot held to the site before it (a no-break space). */
+private const val SITE_SEPARATOR = "\u00A0· "
+
+private const val WORD_JOINER = "\u2060"
+
+private const val SITES_SLOT = "\u0000"
+
+/**
  * The site of the page at [url]: its host ([WebLinks.host], as a browser reads it, so it names the
  * site the link opens), without `www.`, or the address itself when it has none.
  */
