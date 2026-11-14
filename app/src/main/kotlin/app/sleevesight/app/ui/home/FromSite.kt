@@ -41,9 +41,10 @@ internal fun FromSource(
 /**
  * "From {site} · {site} · …" under the genres *Ask AI* found on the web (#801, #1204): "From" once,
  * then each page's site ([siteOf]) a link of its own to its page ([urls], in their order, each page
- * once), " · " between, as *Tag sources* separates its sources. The line wraps as text, between
- * sites: a site's name never breaks ([unbroken]), and the dot stays with the site before it. A
- * screen reader reaches each site as a link of its own. Nothing when there are no pages.
+ * once; two pages on one site each keep their own link), " · " between, as *Tag sources* separates
+ * its sources. The line wraps as text, between sites: a site's name never breaks ([unbroken]), the
+ * dot stays with the site before it, and "From" with the first site (a no-break space). A screen
+ * reader reaches each site as a link of its own. Nothing when there are no pages.
  */
 @Composable
 internal fun FromSites(urls: List<String>) {
@@ -55,8 +56,17 @@ internal fun FromSites(urls: List<String>) {
             if (i == 0) listOf(link) else listOf(TextPart.Words(SITE_SEPARATOR), link)
         }
     val slot = TextPart.Words(SITES_SLOT)
+    val template = linkedParts(stringResource(R.string.home_ai_from), slot)
     val parts =
-        linkedParts(stringResource(R.string.home_ai_from), slot).flatMap { if (it === slot) sites else listOf(it) }
+        template.flatMapIndexed { i, part ->
+            when {
+                part === slot -> sites
+                // The space before the sites, a no-break one: "From" never ends a line alone.
+                template.getOrNull(i + 1) === slot && part is TextPart.Words && part.text.endsWith(" ") ->
+                    listOf(TextPart.Words(part.text.dropLast(1) + NO_BREAK_SPACE))
+                else -> listOf(part)
+            }
+        }
     LinkedText(
         parts,
         style = MaterialTheme.typography.bodySmall,
@@ -72,7 +82,9 @@ internal fun FromSites(urls: List<String>) {
 internal fun unbroken(site: String): String = site.replace("-", "-$WORD_JOINER")
 
 /** Between two sites on the From line: the dot held to the site before it (a no-break space). */
-private const val SITE_SEPARATOR = "\u00A0· "
+private const val NO_BREAK_SPACE = "\u00A0"
+
+private const val SITE_SEPARATOR = "$NO_BREAK_SPACE· "
 
 private const val WORD_JOINER = "\u2060"
 

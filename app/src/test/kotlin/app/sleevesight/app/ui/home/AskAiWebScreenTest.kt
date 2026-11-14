@@ -50,8 +50,14 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreDefinition
+import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.LabelCredit
+import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.lyrics.LyricsSite
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -355,7 +361,7 @@ class AskAiWebScreenTest {
             tap(GENRES_CHIP_TAG)
             val named = listOf(vocabulary.labelsFor(listOf("folk rock"), level = GenreLevel.TRACK).single())
             set(SearchKind.GENRES, AiSearch.Answered(SearchAnswer.Genres(named, listOf(discogs)), model, web))
-            compose.onNodeWithTag(AI_SEARCH_FROM_TAG).assertTextEquals("From discogs.com")
+            compose.onNodeWithTag(AI_SEARCH_FROM_TAG).assertTextEquals("From\u00A0discogs.com")
             // The line above them, and the chips marked AI, read as the AI's list's are (#762).
             assertTrue(shows("The sources give no genres."))
             val chip = app.getString(R.string.genre_ai_added, named.single().label, model)
@@ -378,7 +384,7 @@ class AskAiWebScreenTest {
             assertEquals(1, count(AI_SEARCH_FROM_TAG))
             val line = compose.onNodeWithTag(AI_SEARCH_FROM_TAG).fetchSemanticsNode()
             val shown = line.config[SemanticsProperties.Text].single()
-            assertEquals("From en.wikipedia.org\u00A0· lyric-\u2060stories.com", shown.text)
+            assertEquals("From\u00A0en.wikipedia.org\u00A0· lyric-\u2060stories.com", shown.text)
             // Each site a link of its own to its page.
             val links = shown.getLinkAnnotations(0, shown.length)
             assertEquals(listOf(wiki, stories), links.map { (it.item as LinkAnnotation.Url).url })
@@ -387,6 +393,38 @@ class AskAiWebScreenTest {
                 links.map { shown.text.substring(it.start, it.end) },
             )
         }
+
+    @Test
+    fun theAiGenresAmongTheRowsNameTheirPagesOnOneLineEachPageOnce() {
+        val wiki = "https://en.wikipedia.org/wiki/Folk_rock"
+        val stories = "https://lyric-stories.com/song"
+        // A Last.fm tag on the track, and the AI's genre list adding Folk Rock from the web.
+        val soul =
+            TrackLabel(
+                GenreLabel("soul", "Soul", "soul", level = GenreLevel.TRACK),
+                listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/soul")),
+            )
+        val named = vocabulary.labelsFor(listOf("folk rock"), level = GenreLevel.TRACK)
+        val genres =
+            TrackGenres(
+                listOf(GenreRow(GenreLevel.TRACK, null, listOf(soul))),
+            ).withAi(named, model, listOf(wiki, stories, wiki))
+        show(state(empty().copy(genres = genres))) {
+            tap(GENRES_CHIP_TAG)
+            // One line under the chips (#1204), each page once, each site a link of its own.
+            assertEquals(1, count(AI_SEARCH_FROM_TAG))
+            val shown =
+                compose
+                    .onNodeWithTag(
+                        AI_SEARCH_FROM_TAG,
+                    ).fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .single()
+            assertEquals("From\u00A0en.wikipedia.org\u00A0· lyric-\u2060stories.com", shown.text)
+            val links = shown.getLinkAnnotations(0, shown.length)
+            assertEquals(listOf(wiki, stories), links.map { (it.item as LinkAnnotation.Url).url })
+        }
+    }
 
     @Test
     fun aLyricsPageAmongTheWebResultsIsShownWithNoAskAi() {
