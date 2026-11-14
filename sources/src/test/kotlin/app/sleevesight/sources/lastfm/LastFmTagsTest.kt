@@ -1,6 +1,7 @@
 package app.sleevesight.sources.lastfm
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.genres.CountedTag
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.net.NetError
 import app.sleevesight.sources.web.ReplayNetClient
@@ -34,6 +35,15 @@ class LastFmTagsTest {
                 request.query,
             )
             assertEquals(mapOf("api_key" to "key-1"), request.secrets.query)
+        }
+
+    @Test
+    fun `the counted calls give each tag's weight out of 100, for the labels' weights`() =
+        runTest {
+            // #1019: the weights reach `GenreLabel.weight` through the counted calls.
+            val expected = Lookup.Found(listOf(CountedTag("pop", 100), CountedTag("ballad", 40)))
+            assertEquals(expected, LastFmTags(ReplayNetClient.ok(TAGS), Secret("key-1")).countedTrackTags("A", "B"))
+            assertEquals(expected, LastFmTags(ReplayNetClient.ok(TAGS), Secret("key-1")).countedAlbumTags("A", "B"))
         }
 
     @Test

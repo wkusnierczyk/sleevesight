@@ -129,6 +129,14 @@ class LastFmAdapterTest {
                     .genres
                     .map { it.label },
             )
+            // Each weighs its count over the top tag's, Folk's 100 (#1019).
+            assertEquals(
+                listOf(1.0, 0.71, 0.24, 0.12),
+                lookup.artists
+                    .single()
+                    .genres
+                    .map { it.weight },
+            )
         }
 
     @Test
@@ -146,6 +154,13 @@ class LastFmAdapterTest {
                     .single()
                     .genres
                     .map { it.label },
+            )
+            // getInfo's tags have no counts: weighed by their place when the sources combine (#1019).
+            assertTrue(
+                lookup.artists
+                    .single()
+                    .genres
+                    .all { it.weight == null },
             )
         }
 

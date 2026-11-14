@@ -63,6 +63,26 @@ class MusicBrainzLabelsTest {
         }
 
     @Test
+    fun `an artist's tags weigh by their votes, from a fresh lookup and from the artist cache`() =
+        runTest {
+            // #1019: Rock's 2 votes and Pop's 1, each a share of `FULL_WEIGHT_VOTES` (5).
+            var asks = 0
+            val counted =
+                object : ArtistTags {
+                    override suspend fun artistTags(mbid: String): Lookup<List<String>> = error("names only")
+
+                    override suspend fun countedArtistTags(mbid: String): Lookup<List<CountedTag>> =
+                        Lookup.Found(listOf(CountedTag("rock", 2), CountedTag("pop", 1))).also { asks++ }
+                }
+            val kept = MemoryArtistResults()
+            val fresh = MusicBrainzLabels(counted, vocabulary, artists = kept).labels(artists("mb-a"))
+            assertEquals(listOf(0.4, 0.2), fresh.map { it.weight })
+            val stored = MusicBrainzLabels(counted, vocabulary, artists = kept).labels(artists("mb-a"))
+            assertEquals(listOf(0.4, 0.2), stored.map { it.weight })
+            assertEquals(1, asks)
+        }
+
+    @Test
     fun `the recording's tags give the track's labels, linking the recording's page`() {
         val found = labels().recordingLabels(RecordingTags("mb-rec", listOf("rock", "seen live", "folk")))
         assertEquals(listOf("Rock", "Folk"), found.map { it.label })
