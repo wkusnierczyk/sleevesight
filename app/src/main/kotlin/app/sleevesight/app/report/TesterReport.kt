@@ -372,7 +372,9 @@ private fun StringBuilder.appendWritten(insight: InsightState.Written) {
     )
     for (sentence in insight.grounded.paragraphs.flatten()) {
         val cites = if (sentence.cites.isEmpty()) "" else " ${sentence.cites.joinToString(" ") { "[$it]" }}"
-        appendLine("- ${sentence.status.name.lowercase()}$cites: ${sentence.text}")
+        // A part's heading (#1133) as such, not as the hedge it is checked as.
+        val kind = if (sentence.heading) "heading" else sentence.status.name.lowercase()
+        appendLine("- $kind$cites: ${sentence.text}")
     }
     // A kept reply's text as written, with a note on its old ids (`[M]`, #668; `[G1]`, #769).
     legacyCitationNotes(insight.grounded.text).forEach { appendLine(it) }

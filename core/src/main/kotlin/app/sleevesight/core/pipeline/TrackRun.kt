@@ -200,7 +200,7 @@ internal class TrackRun(
                 )
                 // LRCLIB's answer kept from before (#997), no request: the genres are weighed with it
                 // as they are assembled.
-                library.readKept()
+                library.readKept(state.value.roles)
                 // Published as asked for with the assembled genres, before they may start (#772): a
                 // panel says it is still looking.
                 val later = labels.later(state.value)
@@ -211,7 +211,7 @@ internal class TrackRun(
                     try {
                         labels.addLater(later)
                         // Once every label is in, LRCLIB, when a genre is Instrumental (#997).
-                        if (library.ask(state.value.genres)) {
+                        if (library.ask(state.value.genres, state.value.roles)) {
                             update {
                                 val genres = labels.of(it)
                                 it.copy(genres = genres, libraryUnreachable = library.unreachable(genres))

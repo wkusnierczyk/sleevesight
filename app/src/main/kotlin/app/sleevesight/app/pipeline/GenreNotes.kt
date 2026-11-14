@@ -473,7 +473,7 @@ class AppGenreNotes private constructor(
             }.distinctUntilChanged()
 
     override fun libraryLyrics(track: TrackState): Flow<PanelLibrary?> {
-        val query = LibraryQuery.of(track.normalized, track.nowPlaying) ?: return flowOf(null)
+        val query = libraryKey(track) ?: return flowOf(null)
         val known = combine(libraries, settings) { all, now -> all[query] to libraryLifetime(now) }
         return combine(parts, settings) { made, now -> made?.takeIf { asksLibrary(it, now) } }
             .distinctUntilChanged()
@@ -484,7 +484,7 @@ class AppGenreNotes private constructor(
     }
 
     override fun retryLibrary(track: TrackState) {
-        val query = LibraryQuery.of(track.normalized, track.nowPlaying) ?: return
+        val query = libraryKey(track) ?: return
         parts.value?.takeIf { asksLibrary(it, settings.value) }?.let { askLibrary(it, track, query) }
     }
 
@@ -506,7 +506,7 @@ class AppGenreNotes private constructor(
     // in an outage sends nothing); or an answer read from the retrieval cache, read again (no
     // request), as that cache expires it.
     private fun asksAgain(
-        query: LibraryQuery,
+        query: LibraryKey,
         track: TrackState,
     ): Boolean {
         val entry = libraries.value[query]
@@ -528,7 +528,7 @@ class AppGenreNotes private constructor(
     private fun askLibrary(
         made: PipelineParts,
         track: TrackState,
-        query: LibraryQuery,
+        query: LibraryKey,
     ) {
         val library = made.lyricsLibrary ?: return
         if (!libraryAsked.add(query)) return
@@ -543,7 +543,7 @@ class AppGenreNotes private constructor(
                                 library,
                                 made.cache,
                                 events,
-                            ).ask(track.normalized, track.nowPlaying)
+                            ).ask(track.normalized, track.nowPlaying, roles = track.roles)
                     ) {
                         is LibraryAnswer.Known -> {
                             events(PipelineEvent.LibraryAnswered(key, answer.lyrics, answer.cached))
@@ -566,13 +566,26 @@ class AppGenreNotes private constructor(
 
     // LRCLIB's answers for the AI's Instrumental (#997), by query, with when each was had, and those
     // being asked.
-    private val libraries = MutableStateFlow<Map<LibraryQuery, Entry<PanelLibrary>>>(emptyMap())
-    private val libraryAsked: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
-    private val fromStore: MutableSet<LibraryQuery> = ConcurrentHashMap.newKeySet()
+    private val libraries = MutableStateFlow<Map<LibraryKey, Entry<PanelLibrary>>>(emptyMap())
+    private val libraryAsked: MutableSet<LibraryKey> = ConcurrentHashMap.newKeySet()
+    private val fromStore: MutableSet<LibraryKey> = ConcurrentHashMap.newKeySet()
 
     // The play each query's last failure came in (`NowPlaying.play`), so a failure is asked about again
     // only on *Retry* or in another play; a track no play counted ([Played.play] null) only on *Retry*.
-    private val failedIn = ConcurrentHashMap<LibraryQuery, Played>()
+    private val failedIn = ConcurrentHashMap<LibraryKey, Played>()
+
+    // What the panel's LRCLIB answer for a track is held by (#1133): the first query and, on a track whose
+    // roles tell a composer apart, the lead performer's, which the answer may be ([LibraryQuery.byLead]),
+    // so two performances under one composer, of one title, album and length, hold their own.
+    private data class LibraryKey(
+        val first: LibraryQuery,
+        val byLead: LibraryQuery?,
+    )
+
+    private fun libraryKey(track: TrackState): LibraryKey? =
+        LibraryQuery.of(track.normalized, track.nowPlaying)?.let {
+            LibraryKey(it, LibraryQuery.byLead(track.normalized, track.nowPlaying, track.roles))
+        }
 
     private data class Played(
         val play: Long?,

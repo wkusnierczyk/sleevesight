@@ -13,10 +13,13 @@ import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.LEGACY_MODEL_NOTE
 import app.sleevesight.core.synthesis.LEGACY_WEB_NOTE
 import app.sleevesight.store.PlaybackStateRecord
@@ -214,6 +217,18 @@ class TesterReportTest {
         assertTrue(lines.contains("Citation check: ok 1, model 0, hedge 0, uncited 0, unknown 0, unsupported 0"))
         // Without a correction, no such line.
         assertFalse(TesterReport.nowPlaying(snapshot()).contains("Taken out"))
+    }
+
+    @Test
+    fun aPartsHeadingIsListedAsAHeadingNotAsAHedge() {
+        // The song's insight in two parts (#1133): its headings, read as such by the check.
+        val checked =
+            GroundingCheck.check("The music\n\nIt was recorded in 1973 [MB1].", setOf("MB1"), false, headings = true)
+        val parts = InsightState.Written((checked as InsightReply.Written).grounded, cached = false)
+        val view = PipelineView(track = track(insight = parts), aiReady = true)
+        val lines = TesterReport.nowPlaying(snapshot().let { it.copy(view = view) }).lines()
+        assertTrue(lines.joinToString("\n"), lines.contains("- heading: The music"))
+        assertFalse(lines.joinToString("\n"), lines.contains("- hedge: The music"))
     }
 
     @Test

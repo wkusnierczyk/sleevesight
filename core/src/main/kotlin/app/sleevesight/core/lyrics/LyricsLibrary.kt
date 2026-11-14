@@ -3,6 +3,7 @@ package app.sleevesight.core.lyrics
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.sources.ArtistRoles
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -65,6 +66,27 @@ data class LibraryQuery(
             return seconds?.takeIf { named && !removedVersion(track) }?.let {
                 LibraryQuery(track.primary, track.title, nowPlaying.album?.trim()?.takeIf(String::isNotEmpty), it)
             }
+        }
+
+        /**
+         * The query LRCLIB is asked again with when [of]'s finds nothing (#1133): the same, by the lead
+         * performer ([ArtistRoles.lead]) in place of the first credited artist, when [roles] tell a
+         * composer apart from the performers and the lead is not that artist (a classical track filed
+         * under its composer). LRCLIB files such a track under the name the uploader's player showed,
+         * the composer as often as the performer (*Nessun dorma* under Puccini and Pavarotti alike), so
+         * either name alone misses some. Null otherwise: a pop track, whose roles tell no composer, is
+         * asked once, as before.
+         */
+        fun byLead(
+            track: NormalizedTrack,
+            nowPlaying: NowPlaying,
+            roles: ArtistRoles?,
+        ): LibraryQuery? {
+            val first = of(track, nowPlaying) ?: return null
+            val lead = roles?.takeIf { it.composers.isNotEmpty() }?.lead(track)?.trim()
+            return lead
+                ?.takeIf { it.isNotEmpty() && !it.equals(first.artist.trim(), ignoreCase = true) }
+                ?.let { first.copy(artist = it) }
         }
 
         /**

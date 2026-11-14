@@ -6,6 +6,7 @@ import app.sleevesight.core.synthesis.CheckedSentence
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.SelfRevision
+import app.sleevesight.core.synthesis.SongParts
 import app.sleevesight.core.text.trimJs
 
 // A reply that revises itself where a card would show it (#798, `SelfRevision`), read the same way for
@@ -18,19 +19,23 @@ import app.sleevesight.core.text.trimJs
  * that still revises itself, the part after the revision ([SelfRevision.salvage]), the rest
  * withdrawn; null when nothing usable is left. [revised] is told of a revision found, and whether
  * anything was salvaged. Either way its sentences are checked for support by the lines they cite,
- * the words of [subject] (what the card is about) allowed besides (`Support`, #1036).
+ * the words of [subject] (what the card is about) allowed besides (`Support`, #1036). With
+ * [headings], the song's insight in two parts (#1133), its part headings are read as such
+ * (`SongParts`).
  */
+@Suppress("LongParameterList") // The reply, its lines, the switch, what it is about, how it is read.
 internal fun readReply(
     text: String,
     evidence: EvidenceSet,
     allowModel: Boolean,
     subject: Collection<String> = emptyList(),
+    headings: Boolean = false,
     revised: (SelfRevision.Found, Boolean) -> Unit = { _, _ -> },
 ): InsightReply? {
-    val reply = GroundingCheck.check(text, evidence, allowModel, notes = true, subject = subject)
+    val reply = GroundingCheck.check(text, evidence, allowModel, notes = true, subject = subject, headings = headings)
     val grounded = (reply as? InsightReply.Written)?.grounded
     val found = grounded?.let { SelfRevision.find(it.text) } ?: return reply
-    val salvaged = SelfRevision.salvage(checkNotNull(grounded), found, evidence.ids.toSet())
+    val salvaged = SelfRevision.salvage(checkNotNull(grounded), found, evidence.ids.toSet(), headings)
     revised(found, salvaged != null)
     return salvaged?.let { InsightReply.Written(GroundingCheck.supported(it, evidence, subject)) }
 }
@@ -73,23 +78,28 @@ internal fun subjectOf(
  * evidence it is kept with no longer has), and, with [described] (a line of that evidence describes
  * the song), without the plain sentence ([GroundingCheck.ONLY_RELEASE_SENTENCE]), so what is shown and
  * kept reads as written from that evidence: as it came when no sentence goes, or it is `NO_EVIDENCE`;
- * empty when no sentence is left.
+ * empty when no sentence is left. With [headings], the song's in two parts (#1133), a part's heading
+ * goes with the last sentence of its part, so no heading is left over nothing.
  */
 internal fun withoutCiting(
     reply: String,
     ids: Set<String>,
     described: Boolean = false,
+    headings: Boolean = false,
 ): String {
     val paragraphs =
-        (GroundingCheck.check(reply, ids, allowModel = true) as? InsightReply.Written)?.grounded?.paragraphs
+        (GroundingCheck.check(reply, ids, allowModel = true, headings = headings) as? InsightReply.Written)
+            ?.grounded
+            ?.paragraphs
     val goes = { sentence: CheckedSentence ->
         sentence.cites.any { it in ids } ||
             (described && sentence.text.trimJs() == GroundingCheck.ONLY_RELEASE_SENTENCE)
     }
     if (paragraphs == null || paragraphs.flatten().none(goes)) return reply
-    return paragraphs
-        .map { paragraph -> paragraph.filterNot(goes) }
-        .filter { it.isNotEmpty() }
+    val left = paragraphs.map { paragraph -> paragraph.filterNot(goes) }.filter { it.isNotEmpty() }
+    // A heading stays only before what is left of its part: not before another heading, nor at the end.
+    return SongParts
+        .withoutBare(left) { paragraph -> paragraph.singleOrNull()?.heading == true }
         .joinToString("\n\n") { paragraph ->
             paragraph.drop(1).fold(paragraph.first().text) { text, sentence ->
                 text + (if (sentence.afterLineBreak) "\n" else " ") + sentence.text

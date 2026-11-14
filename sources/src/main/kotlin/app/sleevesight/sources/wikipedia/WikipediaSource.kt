@@ -267,15 +267,19 @@ class WikipediaSource(
     )
 
     // The first confirmed song candidate; the rejections only when none is confirmed, since the
-    // other candidates were alternatives for the same song, not further subjects.
+    // other candidates were alternatives for the same song, not further subjects. The items MusicBrainz
+    // links first, then the articles found by name, then, with none confirmed, the items of the whole
+    // work a composed work's part belongs to (#1133, [IdentityCheck.wholeItems]), asked for only then:
+    // a movement's own article comes before its suite's.
     private suspend fun song(
         track: NormalizedTrack,
         resolution: Resolution,
         pages: Map<String, WpPage?>,
         findings: Findings,
     ): Verdict.Accepted? {
+        val found = check.musicBrainzItems(resolution)
         val linked =
-            when (val found = check.musicBrainzItems(resolution)) {
+            when (found) {
                 is Lookup.Found -> found.value
                 else -> emptyList<String>().also { findings.unreachable = true }
             }
@@ -286,6 +290,38 @@ class WikipediaSource(
                     named.mapNotNull { page -> page.item?.let { Candidate(it, Route.NAME, page.title) } }
             ).distinctBy { it.item }
         val rejections = mutableListOf<Rejection>()
+        val accepted =
+            confirmed(candidates, track, resolution, rejections, findings)
+                ?: confirmed(whole(resolution, found, candidates, findings), track, resolution, rejections, findings)
+        if (accepted == null) findings.rejections += rejections
+        return accepted
+    }
+
+    // The items of the whole work [resolution]'s work is a part of ([IdentityCheck.wholeItems]), when
+    // MusicBrainz links it to none ([linked]), as candidates, but those already [tried].
+    private suspend fun whole(
+        resolution: Resolution,
+        linked: Lookup<List<String>>,
+        tried: List<Candidate>,
+        findings: Findings,
+    ): List<Candidate> {
+        val items =
+            when (val found = check.wholeItems(resolution, linked)) {
+                is Lookup.Found -> found.value
+                else -> emptyList<String>().also { findings.unreachable = true }
+            }
+        val seen = tried.mapTo(mutableSetOf()) { it.item }
+        return items.filter { it !in seen }.distinct().map { Candidate(it, Route.MUSICBRAINZ, null) }
+    }
+
+    // The first of [candidates] the check confirms; the others' rejections added to [rejections].
+    private suspend fun confirmed(
+        candidates: List<Candidate>,
+        track: NormalizedTrack,
+        resolution: Resolution,
+        rejections: MutableList<Rejection>,
+        findings: Findings,
+    ): Verdict.Accepted? {
         for (candidate in candidates) {
             when (val verdict = check.song(candidate.item, track, resolution, candidate.route)) {
                 is Verdict.Accepted -> return verdict
@@ -300,7 +336,6 @@ class WikipediaSource(
                 is Verdict.Unreachable -> findings.unreachable = true
             }
         }
-        findings.rejections += rejections
         return null
     }
 
@@ -407,9 +442,12 @@ class WikipediaSource(
          * a day in that year (#1203), so a result kept against the recording chosen before is looked
          * up again; [ARTIST_PART] stays. 6: the song's item gives when the music was composed
          * (`SourceResult.composed`, #1132), so a song's result kept without it is looked up again;
-         * [ARTIST_PART] stays.
+         * [ARTIST_PART] stays. 7: a composed work's part with no Wikidata item of its own, and no
+         * article found by name, is checked by the whole work's item (`IdentityCheck.wholeItems`,
+         * #1133: K. 545's Andante by its sonata's), so a song's result kept without it is looked up
+         * again; [ARTIST_PART] stays.
          */
-        const val EXTRACTION_VERSION: Int = 6
+        const val EXTRACTION_VERSION: Int = 7
 
         private val json = Json { encodeDefaults = false }
 
