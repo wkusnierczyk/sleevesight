@@ -56,7 +56,7 @@ internal fun NowPlayingPageContent(
     val back = remember { FocusRequester() }
     ArtTheme(state.art) {
         PageFrame(
-            pageTitle(page),
+            pageTitle(page, shown, playing, actions),
             onBack,
             containerColor = ground,
             backModifier = Modifier.handoffTarget(handoff, back),
@@ -124,18 +124,29 @@ private fun PageNothingPlaying() {
 /** The test tag of the line a page shows once nothing plays. */
 const val PAGE_NOTHING_PLAYING_TAG: String = "page-nothing-playing"
 
-/** A page's title: the item's name. */
+/**
+ * A page's title: the item's kind, as its row on the track [shown] names it (*Authors*, #1199), else
+ * as the item names it.
+ */
 @Composable
-private fun pageTitle(page: HomePage): String =
+private fun pageTitle(
+    page: HomePage,
+    shown: Showing?,
+    playing: NowPlaying?,
+    actions: NowPlayingActions,
+): String =
     when (page) {
         is HomePage.Sources -> stringResource(R.string.home_sources_title)
         HomePage.Genres, is HomePage.GenresAt -> stringResource(R.string.home_genres)
-        is HomePage.Item -> itemKind(itemOf(page))
+        is HomePage.Item -> {
+            val item = itemOf(page)
+            val header = shown?.track?.nowPlaying ?: playing
+            itemKind(item, header?.let { itemRow(item, it, actions.normalize(it), shown?.track) })
+        }
     }
 
 // The item [page] shows; the song's for a name no item has (a back stack another version saved).
-private fun itemOf(page: HomePage.Item): InsightItem =
-    InsightItem.entries.firstOrNull { it.name == page.item } ?: InsightItem.SONG
+private fun itemOf(page: HomePage.Item): InsightItem = InsightItem.of(page.item) ?: InsightItem.SONG
 
 /**
  * The song's, the artist's or the album's page (#522): its name, then its insight, for the track
@@ -178,7 +189,7 @@ private fun ItemPageOf(
     // Its opening's write (#948), asked for once, on that track only: not again after a rotation.
     var due by rememberSaveable { mutableStateOf(true) }
     val opening = if (tapped && due) OpeningWrite(due = true) { due = false } else OpeningWrite.NONE
-    ItemPage(item, itemRow(item, header, actions.normalize(header)), context, tapped, opening, afterRetry)
+    ItemPage(item, itemRow(item, header, actions.normalize(header), shown.track), context, tapped, opening, afterRetry)
 }
 
 // The track an item page was opened on, saved as plain values ([savedTrack]).

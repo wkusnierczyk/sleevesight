@@ -227,7 +227,7 @@ class ItemRowsScreenTest {
         notes.asks.clear()
         show(state(unfolded)) {
             compose.waitForIdle()
-            assertEquals(InsightItem.entries.toSet(), notes.writes.toSet())
+            assertEquals(ROW_ITEMS.toSet(), notes.writes.toSet())
             assertEquals(setOf(ItemAsk.BY_ITSELF), notes.asks.toSet())
         }
     }

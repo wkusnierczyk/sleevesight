@@ -2,8 +2,10 @@ package app.sleevesight.app.ui.home
 
 import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.font.FontStyle
 import androidx.test.core.app.ActivityScenario
@@ -34,11 +36,29 @@ class KeyDataTest {
     private fun show(
         playing: NowPlaying,
         years: HeaderYears,
+        split: Boolean = false,
         block: () -> Unit,
     ) {
+        val normalized = normalizer.normalize(playing)
+        val roles = splitOf(null, normalized).takeIf { split }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.setContent { KeyData(normalizer.normalize(playing), playing, years) } }
+            scenario.onActivity { it.setContent { KeyData(normalized, playing, years, roles) } }
             block()
+        }
+    }
+
+    @Test
+    fun withTheComposerToldThePerformersAreOneLineAndTheComposerTheNextAnArrangerInTheTitleAlone() {
+        // `Bach: … (Arr. Busoni)` by Bach, Busoni and Grimaud (#1199): Grimaud alone performs.
+        val chaconne =
+            sundown.copy(
+                title = "Bach: Partita No. 2 in D Minor, BWV 1004: V. Chaconne (Arr. Busoni)",
+                artists = "Johann Sebastian Bach, Ferruccio Busoni, Hélène Grimaud",
+            )
+        show(chaconne, HeaderYears(), split = true) {
+            compose.onNodeWithText("Hélène Grimaud").assertExists()
+            compose.onNodeWithText("Ferruccio Busoni", substring = true).assertDoesNotExist()
+            compose.onNodeWithTag(KEY_AUTHORS_TAG).assertTextEquals("Composer: Johann Sebastian Bach")
         }
     }
 

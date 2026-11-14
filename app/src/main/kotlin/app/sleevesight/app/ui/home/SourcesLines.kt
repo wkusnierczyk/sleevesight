@@ -135,20 +135,23 @@ internal fun webLineOf(
 /**
  * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web
  * lines for an artist the sources say nothing about, #912), and [song]'s, the song's insight's (its web
- * lines for a song the sources only list, #958), mixed in by source and numbered on from the track's; a
+ * lines for a song the sources only list, #958), and the [others]', the composer's and the artists' a
+ * chip opened (#1199, each line about its artist), mixed in by source and numbered on from the track's; a
  * line the track, or the album, has already (its source, scope and words) once (`linesBeyond`). The
  * artist's lines say "artist" as their scope does. [taken] are the ids of [evidence]'s lines its run
  * took from the album's (#1131, `TrackState.albumIds`): they say "album" from that alone, whatever
  * [album] holds now.
  */
+@Suppress("LongParameterList") // The track's lines, and those each item gathered beyond them.
 internal fun withAlbum(
     evidence: EvidenceSet?,
     album: EvidenceSet?,
     artist: EvidenceSet? = null,
     song: EvidenceSet? = null,
     taken: Set<String> = emptySet(),
+    others: List<EvidenceSet> = emptyList(),
 ): SourcesLines {
-    val more = linesBeyond(evidence?.lines.orEmpty(), listOf(album, artist, song))
+    val more = linesBeyond(evidence?.lines.orEmpty(), listOf(album, artist) + others + song)
     if (evidence == null || (more.isEmpty() && taken.isEmpty())) return SourcesLines(evidence)
     val shown = evidence.with(more, JvmHasher)
     val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
@@ -162,8 +165,9 @@ internal fun withAlbum(
 
 /**
  * What *Sources* lists for [track]: its evidence, with its album's lines, its artist's web lines
- * (#912) and its song's (#958), once [notes] gathered them; then the pages the AI's genre list from
- * [genres] rests on (#1205), once it lists any genre, and those the genres' reasons found on the web
+ * (#912), the composer's and the chips' lines (#1199) and its song's (#958), once [notes] gathered
+ * them; then the pages the AI's genre list from [genres] rests on (#1205), once it lists any genre,
+ * and those the genres' reasons found on the web
  * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each address once;
  * last, the page the check of the track's vocals cites (#1053, [GenreNotes.vocals]), named *vocals
  * check*, while the genres *Genres* composes ([composedGenres], *Find the lyrics*' answer from
@@ -188,6 +192,10 @@ internal fun sourcesLines(
     val song by remember(notes, track?.normalized, track?.resolution, track?.sources) {
         track?.let(notes::songEvidence) ?: flowOf(null)
     }.collectAsState(null)
+    // The composer's and the chips' (#1199), each line about its artist.
+    val others by remember(notes, track?.normalized, track?.resolution, track?.sources) {
+        track?.let(notes::othersEvidence) ?: flowOf(emptyList())
+    }.collectAsState(emptyList())
     val listed =
         track
             ?.let { aiGenres(it, genres) }
@@ -202,8 +210,8 @@ internal fun sourcesLines(
     val evidence = track?.evidence
     val taken = track?.albumIds.orEmpty()
     val genreLines =
-        remember(evidence, album, artist, song, taken, pages) {
-            withPages(withAlbum(evidence, album, artist, song, taken), pages, LinePurpose.GENRES)
+        remember(evidence, album, artist, song, taken, others, pages) {
+            withPages(withAlbum(evidence, album, artist, song, taken, others), pages, LinePurpose.GENRES)
         }
     // The genres as *Genres* composes them, the artists' descriptions read from these lines.
     val composed = composedGenres(track, PanelNotes(genres, lines = genreLines.evidence), PanelSearch(search, track))

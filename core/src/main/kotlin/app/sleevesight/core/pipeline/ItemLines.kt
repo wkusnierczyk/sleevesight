@@ -55,14 +55,18 @@ data class ItemLines(
     fun albumIds(evidence: EvidenceSet): Set<String> = takenIds(evidence, album)
 
     companion object {
-        /** The lines of [album], [artist] and [song] beyond [own] ([linesBeyond]), the album's marked. */
+        /**
+         * The lines of [album], [artist], the [others] (the composer's and the other artists' a chip
+         * opened, #1199) and [song] beyond [own] ([linesBeyond]), the album's marked.
+         */
         fun beyond(
             own: List<EvidenceLine>,
             album: EvidenceSet?,
             artist: EvidenceSet?,
             song: EvidenceSet?,
+            others: List<EvidenceSet> = emptyList(),
         ): ItemLines {
-            val lines = linesBeyond(own, listOf(album, artist, song))
+            val lines = linesBeyond(own, listOf(album, artist) + others + song)
             val albums = album?.lines.orEmpty().mapTo(mutableSetOf()) { Triple(it.source, it.scope, it.text) }
             return ItemLines(lines, lines.filter { Triple(it.source, it.scope, it.text) in albums })
         }

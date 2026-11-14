@@ -21,6 +21,7 @@ import app.sleevesight.core.genres.describedGenres
 import app.sleevesight.core.genres.describedIn
 import app.sleevesight.core.genres.withDescribed
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.artistSplit
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.NameMatcher
 
@@ -31,7 +32,8 @@ import app.sleevesight.core.resolution.NameMatcher
  * [track] with the genres its artists' descriptions name (#1000, `TrackGenres.withDescribed`): a
  * plain match of [notes]' genre list ([app.sleevesight.app.pipeline.GenreNotes.vocabulary]) against
  * the artists' own lines among those *Sources* lists ([PanelNotes.lines], else the track's evidence),
- * in every mode, as soon as the lines are in, no AI; [track] itself with no list or no lines.
+ * in every mode, as soon as the lines are in, no AI; [track] itself with no list or no lines. A web
+ * page that names no artist is the Artist panel's subject's (#1199, `describedGenres`' `webArtist`).
  */
 @Composable
 internal fun withDescribed(
@@ -42,7 +44,13 @@ internal fun withDescribed(
     val lines = notes.lines ?: track?.evidence
     if (track == null || vocabulary == null || lines == null) return track
     val artists = track.normalized.artists
-    val found = remember(vocabulary, lines, artists) { describedGenres(vocabulary, lines.lines, artists, NAMES) }
+    // A web page naming no artist is the Artist panel's subject's (#1199): the lead performer once the
+    // roles tell a composer apart.
+    val lead = remember(track) { track.artistSplit(NAMES::sameName)?.lead }
+    val found =
+        remember(vocabulary, lines, artists, lead) {
+            describedGenres(vocabulary, lines.lines, artists, NAMES, webArtist = lead)
+        }
     return if (found.isEmpty()) track else track.copy(genres = track.genres.withDescribed(found))
 }
 

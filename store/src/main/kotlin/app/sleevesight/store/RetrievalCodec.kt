@@ -136,7 +136,7 @@ internal object RetrievalCodec {
                             it.composersOnly,
                         )
                     },
-                roles = result.roles?.let { RolesJson(it.composers, it.performers) },
+                roles = result.roles?.let { RolesJson(it.composers, it.performers, it.classical) },
                 composed = result.composed?.let { ComposedJson(it.from, it.to, it.source.tag, it.url) },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
@@ -194,7 +194,7 @@ internal object RetrievalCodec {
                         )
                     },
                 lyrics = stored.lyrics?.let(::lyrics),
-                roles = stored.roles?.let { ArtistRoles(it.composers, it.performers) },
+                roles = stored.roles?.let { ArtistRoles(it.composers, it.performers, it.classical) },
                 composed = stored.composed?.date(),
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
@@ -302,11 +302,13 @@ internal object RetrievalCodec {
         val library: String? = null,
     )
 
-    // The composers and performers MusicBrainz told (#1180, `SourceResult.roles`).
+    // The composers and performers MusicBrainz told (#1180, `SourceResult.roles`), and whether the work
+    // is of a classical form (#1199); false in one kept before.
     @Serializable
     private data class RolesJson(
         val composers: List<String> = emptyList(),
         val performers: List<String> = emptyList(),
+        val classical: Boolean = false,
     )
 
     // When the music was composed (#1132, `SourceResult.composed`), its source by its tag.

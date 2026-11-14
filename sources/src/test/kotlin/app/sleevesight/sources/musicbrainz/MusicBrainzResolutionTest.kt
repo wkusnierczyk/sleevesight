@@ -239,6 +239,8 @@ class MusicBrainzResolutionTest {
                 ArtistRoles(
                     listOf("Giacomo Puccini"),
                     listOf("Luciano Pavarotti", "Zubin Mehta", "Los Angeles Philharmonic"),
+                    // An aria: a classical work (#1199).
+                    classical = true,
                 ),
                 resolution.roles,
             )

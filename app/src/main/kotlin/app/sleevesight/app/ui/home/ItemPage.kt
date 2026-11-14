@@ -12,6 +12,7 @@ import app.sleevesight.app.R
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.TrackState
 
 // The song's, the artist's or the album's insight on a page of its own (#522), under *Layout*'s
 // *Separate pages*.
@@ -57,14 +58,16 @@ internal fun ItemPage(
 }
 
 /**
- * [item]'s row on [header], the track shown, as [normalized] reads it: the name it goes by, and the
- * song's version; null for an album the player does not name.
+ * [item]'s row on [header], the track shown, as [normalized] reads it, with the roles [track] knows
+ * ([splitOf], #1199): the name it goes by, and the song's version; null for an album the player does
+ * not name, and for the composer on a track whose roles tell none.
  */
 internal fun itemRow(
     item: InsightItem,
     header: NowPlaying,
     normalized: NormalizedTrack,
-): ItemRow? = itemRows(header, normalized).firstOrNull { it.item == item }
+    track: TrackState? = null,
+): ItemRow? = itemRows(header, normalized, splitOf(track, normalized)).firstOrNull { it.item == item }
 
 /** The test tag of an item's page's first line, its name. */
 const val ITEM_PAGE_NAME_TAG: String = "item-page:name"

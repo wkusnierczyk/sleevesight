@@ -158,11 +158,9 @@ native track (`ExaLanguageQuery.nativeTrack`'s primary artist) and Wikipedia's s
 (`WikipediaSource.songTitles`: asked before the resolution lands, so by the title's roles only).
 **Where the first credited artist stays**: Last.fm's track and album tags and LRCLIB, which keep the
 names the players send (Last.fm files Spotify's scrobbles under the first artist; LRCLIB has
-*Nessun dorma* under Giacomo Puccini as often as under Luciano Pavarotti, checked 2026-11-14), and a
-web line's artist for the genres a description names (`DescribedGenres`): the artist's web search
-looks up the Artist panel's subject, the first credited artist, so its page is theirs until #1181
-decides the panel's subject. The Artist panel, *Dates*' composition date and the Song insight's music
-part read the roles in #1181, #1132 and #1133.
+*Nessun dorma* under Giacomo Puccini as often as under Luciano Pavarotti, checked 2026-11-14).
+*Dates*' composition date and the Song insight's music part read the roles in #1132 and #1133; the
+Artist panel in #1199 (section 3).
 
 ## 3. Which artist the Artist panel is about (proposal, for a decision)
 
@@ -183,6 +181,29 @@ performers are chips that open their own insight in place, on tap only. The comp
 music: #1133's part on the work, with a chip there. Where nothing tells the roles apart, the panel is
 as today. If the choice stays a judgement call, a setting (*Artist for classical tracks: Performer
 (default) / Composer*) is the fallback. Needs a mock-up before any code.
+
+**Done so in #1199** (the D-Classical mock-up's pick, 2026-11-14; replaces d's composer with the
+music): where the roles (#1180, `TrackState.roles`) tell a composer apart from at least one performer
+(`ArtistSplit`), Home has a **Composer** row between Song and Artist, about the composer
+(`InsightItem.COMPOSER`), and the **Artist** row is about the lead performer (`ArtistRoles.lead`: the
+first performer in the player's order, the relationship order of this section not yet kept), its
+other performers chips under *Also performing on this recording*, each opening that performer's
+insight in place, written on the tap (`InsightItem.named`). Otherwise, one Artist row about the first
+credited artist, as before: no prefix and no resolution, a pop song, a track credited to its
+composer alone. The composer's, the artist's and a performer's insights are all artists' cards
+(`CardKind.ARTIST`, keyed by the artist), so the one about an artist is written once and shown
+wherever that artist is the subject. The Composer row is *Composer* for one composer; *Authors* for
+more than one author, a lyricist apart from the composer among them (MusicBrainz's `lyricist` work
+relationship, read for #998: a `librettist` is not read, so *Nessun dorma*'s composer stays its
+*Composer*), the panel then headed *Music* over the composer's insight and *Words* over the
+lyricists' chips; *Author* for one whose own words the work's lyricist relationship gives, on a
+title that does not lead with them (a songwriter, not a classical work). The Artist row is *Artists*
+when other performers are known (*Performer* and *Performers* are the other wording tried,
+`PERFORMER_ROW`). Home's artist lines put the composer on a line of their own under the performers
+("Composer: Wolfgang Amadeus Mozart"). A web line's artist for the genres a description names
+(`DescribedGenres`) is the Artist panel's subject, the lead performer, whose web search found it;
+the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about
+that artist, so a genre their page names goes to that artist's described row.
 
 ## 4. Classical regression tracks
 

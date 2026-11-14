@@ -35,6 +35,9 @@ fun nowPlaying(
     album: String? = null,
 ): NowPlaying = NowPlaying(title = title, artists = artists, album = album, player = "com.spotify.music")
 
+/** The items every track with a title, an artist and an album has a row for; the composer's only some (#1199). */
+val ROW_ITEMS: List<InsightItem> = listOf(InsightItem.SONG, InsightItem.ARTIST, InsightItem.ALBUM)
+
 fun line(
     source: SourceId,
     text: String,

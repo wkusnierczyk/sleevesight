@@ -61,6 +61,7 @@ import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.pipeline.ArtistSplit
 import kotlinx.coroutines.delay
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -253,6 +254,10 @@ private fun Progress(
  * them as one line; with no album reported, the line says so. No year when the album's name gives its
  * edition's ([albumLineYear], #1116: "Material Girl (2024 Remaster)"). When the recording first came out is
  * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place.
+ *
+ * With [split], the roles telling the composer apart (#1199), the performers on one line (an arranger
+ * the title names is in the title), then the composer, or every author, on a line of its own, after a quieter label
+ * ("Composer: Wolfgang Amadeus Mozart"), as the row before the artist's names them.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -260,6 +265,7 @@ internal fun KeyData(
     normalized: NormalizedTrack,
     header: NowPlaying,
     years: HeaderYears,
+    split: ArtistSplit? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
@@ -270,12 +276,14 @@ internal fun KeyData(
         val about =
             listOfNotNull(normalized.from?.let { stringResource(R.string.home_title_from, it) }, normalized.variant)
         if (about.isNotEmpty()) Small(about.joinToString(" · "))
-        val artists = normalized.artists.ifEmpty { listOf(header.artists).filter(String::isNotBlank) }
+        val credited = normalized.artists.ifEmpty { listOf(header.artists).filter(String::isNotBlank) }
+        val artists = split?.performers ?: credited
         FlowRow {
             artists.forEachIndexed { i, artist ->
                 Text(if (i < artists.lastIndex) "$artist, " else artist, style = MaterialTheme.typography.bodyLarge)
             }
         }
+        split?.let { AuthorsLine(it) }
         val album = header.album?.takeIf(String::isNotBlank)
         if (album == null) {
             Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)

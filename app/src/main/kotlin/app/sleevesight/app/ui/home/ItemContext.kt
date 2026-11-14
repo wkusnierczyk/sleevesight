@@ -142,6 +142,10 @@ internal class OpeningWrite(
  * it out of the byline's row. [afterRetry] runs after a tap on *Retry* beside sources not reached
  * (#1163), whose line then goes: it hands the focus on (to the panel's *Close*, the page's back
  * arrow), as the other panels' *Retry* does (#724).
+ *
+ * On a track whose roles tell the composer apart (#1199), the artist's and the composer's show the
+ * track's other people around it ([PeopleBefore], [PeopleAfter]): the other performers, the other
+ * authors, each a chip opening their own insight in place.
  */
 @Suppress("LongParameterList") // The item, what it is shown with, and how it was opened.
 @Composable
@@ -160,9 +164,16 @@ internal fun ItemContent(
         return
     }
     val now = shown ?: itemShown(item, context)
+    // The composer's and the artist's with the other people of the track (#1199).
+    val split =
+        remember(track, item) {
+            splitOf(track, track.normalized).takeIf { item == InsightItem.COMPOSER || item == InsightItem.ARTIST }
+        }
+    PeopleBefore(item, split)
     WritesOnTap(item, track, context, now, opening)
     val writingDue = opening.due && !context.automatic
     ItemShownContent(item, track, context, tapped, now, ItemShowing(readAloud, writingDue, afterRetry))
+    PeopleAfter(item, split, context)
 }
 
 /**
@@ -428,8 +439,8 @@ private fun itemReading(
     written: InsightState.Written,
     notes: ItemNotes,
 ): ReadAloudControl? =
-    readAloudControl(readAloud, Reading.item(item.kind.key)) {
-        readAloud?.readItem(track, item.kind.key, written, notes.item(track, item))
+    readAloudControl(readAloud, Reading.item(item.key)) {
+        readAloud?.readItem(track, item.key, written, notes.item(track, item))
     }
 
 /**
