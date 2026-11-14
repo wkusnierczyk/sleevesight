@@ -98,6 +98,32 @@ class LabelSourcesTest {
     }
 
     @Test
+    fun `weights equal but for floating-point rounding are a tie, kept in the sources' order`() {
+        // Rock: Last.fm's 0.1 and MusicBrainz's one vote of five, 0.2, sum to 0.30000000000000004;
+        // Pop's 0.3 is equal, and Last.fm's Pop, given first, keeps the fifth place.
+        val recording =
+            MusicBrainzLabels(ArtistTags { error("no artist asked") }, vocabulary)
+                .recordingLabels(RecordingTags("mb-rec", listOf("rock"), mapOf("rock" to 1)))
+        val combined =
+            combineLabels(
+                mapOf(
+                    LabelSource.LASTFM to
+                        counted(
+                            LASTFM_PAGE,
+                            "jazz" to 100,
+                            "soul" to 90,
+                            "folk" to 80,
+                            "funk" to 70,
+                            "pop" to 30,
+                            "rock" to 10,
+                        ),
+                    LabelSource.MUSICBRAINZ to recording,
+                ),
+            )
+        assertEquals(listOf("Jazz", "Soul", "Folk", "Funk", "Pop"), combined.map { it.genre.label })
+    }
+
+    @Test
     fun `a MusicBrainz tag of fewer votes than its full count weighs its share of them`() {
         // A recording's one-vote tags weigh 0.2 each, under Last.fm's tags of 40 and up.
         val recording =

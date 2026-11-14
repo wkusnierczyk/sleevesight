@@ -1,6 +1,7 @@
 package app.sleevesight.core.genres
 
 import app.sleevesight.core.model.SourceId
+import kotlin.math.roundToLong
 
 /**
  * A source whose tags can become genre labels (D12, #84): which of them give labels is a user
@@ -123,9 +124,16 @@ fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel
             weights[identity] = weights.getOrDefault(identity, 0.0) + weight
         }
     }
-    // A stable sort: at equal weight, the order the labels were first given in.
-    return combined.sortedByDescending { weights.getValue(it.genre.identity) }.take(GenreVocabulary.MAX_LABELS)
+    // A stable sort on the weights rounded to [WEIGHT_STEPS]ths, so sums equal but for floating-point
+    // rounding (0.1 + 0.2 against 0.3) are equal: at equal weight, the order the labels were first given in.
+    return combined
+        .sortedByDescending { (weights.getValue(it.genre.identity) * WEIGHT_STEPS).roundToLong() }
+        .take(GenreVocabulary.MAX_LABELS)
 }
+
+// The steps of weight [combineLabels] tells apart: a millionth, far finer than any count's share
+// (Last.fm's 1 of 100, a vote of MusicBrainz's thousands), far coarser than a double's rounding.
+private const val WEIGHT_STEPS: Double = 1_000_000.0
 
 // The weight of a label its source gave no count for: by its place, 1 for the first of [size] and
 // down by an equal step, so the last of five weighs 0.2.
