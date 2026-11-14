@@ -68,7 +68,7 @@ internal object RetrievalCodec {
      * extraction version 15). When the music was composed (#1132, [SourceResult.composed]) is an
      * optional field too, made a miss the same way (MusicBrainz's extraction version 18, Wikipedia's 6).
      * The genres Wikidata states (#1098, [SourceResult.statedGenres]) are an optional field too, made a
-     * miss the same way (Wikipedia's extraction version 7).
+     * miss the same way (Wikipedia's extraction version 8).
      */
     const val FORMAT: Int = 7
 
