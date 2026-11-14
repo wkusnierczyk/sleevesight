@@ -68,5 +68,5 @@ class SongWebQuery(
     val track: NormalizedTrack,
     val language: Language? = null,
     val resolution: Resolution? = null,
-    val roles: ArtistRoles = ArtistRoles.of(track),
+    val roles: ArtistRoles,
 )

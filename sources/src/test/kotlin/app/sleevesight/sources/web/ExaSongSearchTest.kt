@@ -10,7 +10,6 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.sources.LanguageItems
 import app.sleevesight.core.sources.LocalName
 import app.sleevesight.core.sources.Resolution
-import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.core.sources.WebPage
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -37,10 +36,10 @@ class ExaSongSearchTest {
             override fun now(): Instant = now
         }
     private val normalizer = Normalizer(JvmAccentFolder)
-    private val phil = SongWebQuery(normalizer.normalize("Phil's First Tear", "Kolonel Djafaar"))
+    private val phil = songQuery(normalizer.normalize("Phil's First Tear", "Kolonel Djafaar"))
     private val hindi = checkNotNull(Languages.ofCode("hi"))
     private val tumHiHo =
-        SongWebQuery(normalizer.normalize("Tum Hi Ho", "Arijit Singh"), hindi, Resolution.NONE)
+        songQuery(normalizer.normalize("Tum Hi Ho", "Arijit Singh"), hindi, Resolution.NONE)
 
     private fun search(
         net: ReplayNetClient,
@@ -65,7 +64,7 @@ class ExaSongSearchTest {
     fun `in English, one call, with the title and first artist, review interview, highlights on its sound`() =
         runTest {
             val net = ReplayNetClient.ok(answer())
-            val two = SongWebQuery(normalizer.normalize("Phil's First Tear", "Kolonel Djafaar, Someone Else"))
+            val two = songQuery(normalizer.normalize("Phil's First Tear", "Kolonel Djafaar, Someone Else"))
             search(net).search(two)
             val sent = body(net)
             assertEquals(
@@ -158,7 +157,7 @@ class ExaSongSearchTest {
                     },
                     clock,
                 )
-            source.search(SongWebQuery(tumHiHo.track, hindi, null))
+            source.search(songQuery(tumHiHo.track, hindi, null))
             assertEquals(0, asked)
             assertEquals("\"Tum Hi Ho\" Arijit Singh, ${hindi.song}", body(net)["query"]?.jsonPrimitive?.content)
         }
@@ -178,7 +177,7 @@ class ExaSongSearchTest {
         runTest {
             val net = ReplayNetClient.ok(answer())
             var sent = 0
-            val unchecked = SongWebQuery(normalizer.normalize("!!!", "???"))
+            val unchecked = songQuery(normalizer.normalize("!!!", "???"))
             assertEquals(Lookup.Found(emptyList()), search(net).search(unchecked, { sent++ }))
             assertEquals(0, sent)
             assertTrue(net.sent.isEmpty())

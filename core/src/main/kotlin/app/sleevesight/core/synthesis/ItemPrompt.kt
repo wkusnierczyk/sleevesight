@@ -91,7 +91,7 @@ object ItemPrompt {
         allowModel: Boolean,
         dates: DateForm = DateForm.APP,
         onlyListings: Boolean = false,
-        roles: ArtistRoles = ArtistRoles.of(normalized),
+        roles: ArtistRoles,
     ): String =
         buildString {
             appendLine(task(subject.kind))

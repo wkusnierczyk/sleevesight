@@ -1375,7 +1375,11 @@ class ItemInsights(
         val artist = artistWeb
         val query = artistQuery(track)
         if (item == InsightItem.ARTIST && artist != null && query != null) attempt { artist.renew(query) }
-        if (item == InsightItem.SONG) songWeb?.let { attempt { it.renew(SongWebQuery(track.normalized)) } }
+        if (item ==
+            InsightItem.SONG
+        ) {
+            songWeb?.let { attempt { it.renew(SongWebQuery(track.normalized, roles = track.roles)) } }
+        }
         val subject =
             when (item) {
                 InsightItem.ARTIST -> query?.let { LanguageSubject.Artist(it.name, it.mbid) }

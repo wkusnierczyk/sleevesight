@@ -53,7 +53,7 @@ internal class InsightWriter(
     private val guard: CacheGuard,
     private val sink: RunSink,
     // Who composed the work and who performs it, once the sources are in (#1180): the prompt names them.
-    private val roles: ArtistRoles = ArtistRoles.of(input.track),
+    private val roles: ArtistRoles,
 ) {
     private val settings = input.settings
     private val nowPlaying = input.nowPlaying

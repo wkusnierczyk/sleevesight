@@ -8,6 +8,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.sources.ArtistRoles
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -83,6 +84,7 @@ class TranslationPromptTest {
                         normalized,
                         hindi,
                         allowModel,
+                        roles = ArtistRoles.of(normalized),
                     )
                 assertTrue(InsightPrompt.TRANSLATION_RULE in prompt, kind.key)
                 assertTrue("[W1] (Wikipedia, release, Hindi) " in prompt, kind.key)
