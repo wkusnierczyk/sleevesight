@@ -58,8 +58,8 @@ fun HttpArt.onlyWhen(allowed: () -> Flow<Boolean>): HttpArt =
  * free. The read is given [CONTENT_TIMEOUT]; then, or when the load is cancelled, the open is
  * cancelled through its `CancellationSignal` and the stream closed, which frees the thread where
  * the provider honours either, and the next source is tried (#1042). [reads] bounds the reads in
- * flight and passes over a provider whose read is still stuck: then the URI is skipped like an
- * unreadable one.
+ * flight, in all and per provider, and passes over a provider whose read is still stuck: then the
+ * URI is skipped like an unreadable one, for that track, since a track's art is loaded once.
  */
 class ArtLoader(
     private val resolver: ContentResolver,
@@ -83,6 +83,7 @@ class ArtLoader(
 
     /** [uri]'s bytes, read on [reads] within [CONTENT_TIMEOUT], or null. */
     private suspend fun readContentInTime(uri: String): ByteArray? {
+        // A `content://` URI always names its provider; one that does not shares the key "".
         val authority = uri.toUri().authority.orEmpty()
         if (!reads.tryStart(authority)) {
             Log.i(TAG, "Art not read: too many reads in flight, or the provider has not answered yet")
@@ -108,13 +109,13 @@ class ArtLoader(
                     } finally {
                         read.complete(null)
                         if (!state.compareAndSet(RUNNING, RETURNED)) reads.unmarkStuck(authority)
-                        reads.finish()
+                        reads.finish(authority)
                     }
                 }
                 true
             } catch (e: RejectedExecutionException) {
                 Log.i(TAG, "Art not read: ${e::class.simpleName}")
-                reads.finish()
+                reads.finish(authority)
                 false
             }
         if (!started) return null
