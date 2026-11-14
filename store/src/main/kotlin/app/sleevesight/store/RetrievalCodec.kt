@@ -9,6 +9,7 @@ import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.ArtistRoles
+import app.sleevesight.core.sources.ComposedDate
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.OriginalRecording
 import app.sleevesight.core.sources.Rejection
@@ -60,7 +61,8 @@ internal object RetrievalCodec {
      * MusicBrainz could not be reached, the only one whose row it changes, is never kept anyway.
      * Whether a release date is a January 1 said as its year (#1203, [ReleaseDate.placeholderDay]) is
      * an optional field too, encoded only when true, made a miss the same way (MusicBrainz's
-     * extraction version 15).
+     * extraction version 15). When the music was composed (#1132, [SourceResult.composed]) is an
+     * optional field too, made a miss the same way (MusicBrainz's extraction version 18, Wikipedia's 6).
      */
     const val FORMAT: Int = 7
 
@@ -135,6 +137,7 @@ internal object RetrievalCodec {
                         )
                     },
                 roles = result.roles?.let { RolesJson(it.composers, it.performers, it.classical) },
+                composed = result.composed?.let { ComposedJson(it.from, it.to, it.source.tag, it.url) },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
                 language = result.language,
@@ -192,6 +195,7 @@ internal object RetrievalCodec {
                     },
                 lyrics = stored.lyrics?.let(::lyrics),
                 roles = stored.roles?.let { ArtistRoles(it.composers, it.performers, it.classical) },
+                composed = stored.composed?.date(),
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
                 language = stored.language,
@@ -287,6 +291,8 @@ internal object RetrievalCodec {
         val lyrics: LyricsJson? = null,
         // MusicBrainz's roles of the credited artists (#1180); absent when it told none, or kept before.
         val roles: RolesJson? = null,
+        // When the music was composed (#1132); absent when no source dates it, or kept before.
+        val composed: ComposedJson? = null,
         val trackOnly: Boolean = false,
         // Absent in an entry kept before #905: none.
         val pages: List<String> = emptyList(),
@@ -304,6 +310,18 @@ internal object RetrievalCodec {
         val performers: List<String> = emptyList(),
         val classical: Boolean = false,
     )
+
+    // When the music was composed (#1132, `SourceResult.composed`), its source by its tag.
+    @Serializable
+    private data class ComposedJson(
+        val from: String,
+        val to: String,
+        val source: String,
+        val url: String,
+    ) {
+        fun date(): ComposedDate =
+            ComposedDate(from, to, requireNotNull(SourceId.ofTag(source)) { "Unknown source $source" }, url)
+    }
 
     // A first release (#724): of the recording, or of a cover's original.
     @Serializable
