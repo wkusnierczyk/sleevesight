@@ -5,6 +5,8 @@ package app.sleevesight.sources.musicbrainz
 
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.pipeline.ArtistSplit
+import app.sleevesight.core.pipeline.AuthorsName
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbParentWork
 import app.sleevesight.core.resolution.MbWork
@@ -250,6 +252,38 @@ class MusicBrainzResolutionTest {
             // The adapter keeps the roles with MusicBrainz's result, for a replay.
             val result = MusicBrainzSource().lookup(track, CompletableDeferred(resolution))
             assertEquals(resolution.roles, result.roles)
+        }
+
+    @Test
+    fun `an aria's librettists write its words - Nessun dorma's Authors are Puccini, then Adami and Simoni`() =
+        runTest {
+            // #1274: the aria's work names Puccini its composer and Adami and Simoni its librettists,
+            // with no lyricist (`fixtures/http/musicbrainz-1180/`).
+            val net = ReplayNetClient("musicbrainz-1180")
+            val track =
+                RecordedTracks.normalize(
+                    "Turandot: \"Nessun dorma!\"",
+                    "Giacomo Puccini, Luciano Pavarotti, Zubin Mehta, Los Angeles Philharmonic",
+                )
+            val resolution = RecordingResolver(MusicBrainzClient(net), RecordedTracks.names).resolve(track, 204.seconds)
+            assertEquals(listOf("Giuseppe Adami", "Renato Simoni"), resolution.lyrics.librettists)
+            assertEquals(emptyList(), resolution.lyrics.lyricists)
+            val split = checkNotNull(ArtistSplit.of(track, checkNotNull(resolution.roles), resolution.lyrics))
+            assertEquals(AuthorsName.AUTHORS, split.name)
+            assertEquals(listOf("Giacomo Puccini"), split.composers)
+            assertEquals(listOf("Giuseppe Adami", "Renato Simoni"), split.words)
+            // The work's lines name them beside the composer, the piece by its type, an aria.
+            val result = MusicBrainzSource().lookup(track, CompletableDeferred(resolution))
+            val work = "Turandot: Atto III, scena 1. Aria “Nessun dorma” (Calaf)"
+            assertEquals(
+                listOf(
+                    "The music of “$work” was composed by Giacomo Puccini.",
+                    "The libretto of this aria was written by Giuseppe Adami and Renato Simoni.",
+                ),
+                result.evidence.map { it.text }.filter { "composed by" in it || "libretto" in it },
+            )
+            // The adapter keeps them with MusicBrainz's result, for a replay.
+            assertEquals(resolution.lyrics.librettists, result.lyrics?.librettists)
         }
 
     @Test

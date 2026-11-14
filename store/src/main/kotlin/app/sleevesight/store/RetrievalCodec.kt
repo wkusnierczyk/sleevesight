@@ -67,6 +67,8 @@ internal object RetrievalCodec {
      * an optional field too, encoded only when true, made a miss the same way (MusicBrainz's
      * extraction version 15). When the music was composed (#1132, [SourceResult.composed]) is an
      * optional field too, made a miss the same way (MusicBrainz's extraction version 18, Wikipedia's 6).
+     * The work's librettists (#1274, [WorkLyrics.librettists]) are an optional field too, made a miss
+     * the same way (MusicBrainz's extraction version 19).
      * The genres Wikidata states (#1098, [SourceResult.statedGenres]) are an optional field too, made a
      * miss the same way (Wikipedia's extraction version 8).
      */
@@ -104,17 +106,7 @@ internal object RetrievalCodec {
                     result.rejections.map {
                         RejectionJson(it.subject, it.reason, it.scope.key, it.withoutMusicBrainz)
                     },
-                genres =
-                    result.genres.map {
-                        GenreJson(
-                            it.tag,
-                            it.label,
-                            it.identity,
-                            it.url,
-                            it.artist,
-                            weight = it.weight,
-                        )
-                    },
+                genres = result.genres.map(::GenreJson),
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags, it.votes) },
                 firstReleased = result.firstReleased,
@@ -140,6 +132,7 @@ internal object RetrievalCodec {
                             it.vocalists,
                             it.lyricists,
                             it.composersOnly,
+                            it.librettists,
                         )
                     },
                 roles = result.roles?.let { RolesJson(it.composers, it.performers, it.classical) },
@@ -224,6 +217,7 @@ internal object RetrievalCodec {
             stored.vocalists,
             stored.lyricists,
             stored.composersOnly,
+            stored.librettists,
         )
 
     private fun outcomeKey(outcome: Outcome): String =
@@ -375,6 +369,8 @@ internal object RetrievalCodec {
         // The work's writing credits (#998); an entry kept before them decodes without.
         val lyricists: List<String> = emptyList(),
         val composersOnly: Boolean = false,
+        // The work's librettists (#1274); an entry kept before them decodes without.
+        val librettists: List<String> = emptyList(),
     )
 
     @Serializable
@@ -407,7 +403,11 @@ internal object RetrievalCodec {
         // Kept from before #1020, when each label held its genre family: read and ignored, never
         // written (null, and defaults are not encoded).
         val family: String? = null,
-    )
+    ) {
+        // A label as kept; its level is not: kept results hold the artists' labels only.
+        constructor(label: GenreLabel) :
+            this(label.tag, label.label, label.identity, label.url, label.artist, weight = label.weight)
+    }
 
     @Serializable
     private data class LabelArtistJson(

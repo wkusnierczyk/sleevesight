@@ -77,7 +77,7 @@ internal fun PeopleAfter(
             InsightItem.COMPOSER ->
                 listOf(
                     PeopleGroup(null, split.composers.drop(1)),
-                    PeopleGroup(stringResource(R.string.home_item_words), split.lyricists),
+                    PeopleGroup(stringResource(R.string.home_item_words), split.words),
                 )
             else -> emptyList()
         }.filter { it.names.isNotEmpty() }

@@ -77,7 +77,9 @@ class MusicBrainzSource(
      * and a track with no composer lead whose first artist's search found nothing that fits is
      * searched by the next ones, so every kept result is asked again, once. 18: when the music was
      * composed is kept (`SourceResult.composed`, #1132), released in the same version as 17, whose
-     * upgrade asks every kept result again, so it costs no further request.
+     * upgrade asks every kept result again, so it costs no further request. 19: the work's
+     * librettists are kept (`WorkLyrics.librettists`, #1274), and its lines name them, released in
+     * the same version as 17 too.
      * Without [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart
      * ([WITHOUT_GENRES_VERSION]).
      */
@@ -118,4 +120,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 18
+private const val EXTRACTION_VERSION = 19

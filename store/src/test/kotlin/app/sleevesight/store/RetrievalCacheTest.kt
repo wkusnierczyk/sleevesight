@@ -344,6 +344,21 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `the work's librettists round-trip, and an entry kept before them decodes as before`() {
+        val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
+        val names = listOf("Giuseppe Adami", "Renato Simoni")
+        val libretto = result.copy(lyrics = result.lyrics?.copy(librettists = names))
+        val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(libretto)))
+        assertEquals(names, decoded.lyrics?.librettists)
+        // As kept before #1274: no librettists, the rest of the lyrics read as they were.
+        val text = RetrievalCodec.encode(result)
+        assertFalse("librettists" in text)
+        val old = assertNotNull(RetrievalCodec.decode(text))
+        assertEquals(emptyList(), old.lyrics?.librettists)
+        assertEquals(result.lyrics, old.lyrics)
+    }
+
+    @Test
     fun `the votes on the recording's tags round-trip, and an entry kept before them decodes without`() {
         val result = sample(Outcome.SongArticle, SourceId.MUSICBRAINZ)
         val decoded = assertNotNull(RetrievalCodec.decode(RetrievalCodec.encode(result)))
