@@ -173,7 +173,7 @@ internal fun GenresContent(
     }
     if (shown.unreachable.isNotEmpty()) {
         // One line for every source not reached, so the list does not look complete (#1121).
-        val names = namedTogether(shown.unreachable.map { sourceName(it.source) })
+        val names = namedTogether(shown.notReached.map { sourceName(it) })
         RetryLine(
             stringResource(R.string.home_genres_partial, names),
             names,
@@ -207,7 +207,9 @@ private fun sourcesNamed(sources: List<LabelSource>): String {
  * sources still being asked while the genres are gathered, by name ([looking]); those that could
  * not be reached, on one line with *Retry* ([unreachable], #1121); with every genre source off and no genre, where
  * its link leads ([off]); whether it says none were found ([none]); and whether LRCLIB, asked about
- * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997).
+ * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997). The line
+ * names the sources not reached ([notReached]): a label source's own, or, where the lookup that
+ * brings its labels was not reached, that lookup's (#1098: Wikipedia's, for Wikidata's genres).
  */
 internal data class GenresShown(
     val looking: List<LabelSource> = emptyList(),
@@ -215,6 +217,7 @@ internal data class GenresShown(
     val off: SettingsTarget? = null,
     val none: Boolean = false,
     val libraryUnreachable: Boolean = false,
+    val notReached: List<SourceId> = unreachable.map { it.source },
 ) {
     companion object {
         /**
@@ -256,10 +259,12 @@ internal data class GenresShown(
         ): GenresShown {
             val later = track.laterLabels
             val looking = on.filter { later[it] == LaterLabels.ASKING }
-            val unreachable = on.filter { unreachable(track.sources[it.lookup]) || later[it] == LaterLabels.FAILED }
+            val lookups = on.filter { unreachable(track.sources[it.lookup]) }
+            val unreachable = on.filter { it in lookups || later[it] == LaterLabels.FAILED }
             return GenresShown(
                 looking,
                 unreachable,
+                notReached = unreachable.map { if (it in lookups) it.lookup else it.source }.distinct(),
                 none = empty && looking.isEmpty() && unreachable.isEmpty(),
                 // Said only while an Instrumental is shown (#998's review): not for the composers' hint.
                 libraryUnreachable = track.libraryUnreachable && track.genres.showsInstrumental(),
