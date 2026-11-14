@@ -22,7 +22,8 @@ class LabelSourcesTest {
     @Test
     fun `labels without counts weigh by their place, a genre both sources give the sum`() {
         // Folk: Last.fm's first (1) and MusicBrainz's second of two (0.5); Country: MusicBrainz's
-        // first (1); Singer-Songwriter: Last.fm's second of two (0.5).
+        // first (1), MusicBrainz's alone, so counted at half; Singer-Songwriter: Last.fm's second of
+        // two (0.5), given first at that weight.
         val combined =
             combineLabels(
                 mapOf(
@@ -30,12 +31,12 @@ class LabelSourcesTest {
                     LabelSource.LASTFM to lastFm("folk", "singer-songwriter"),
                 ),
             )
-        assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), combined.map { it.genre.label })
+        assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), combined.map { it.genre.label })
         assertEquals(
             listOf(
                 listOf(LabelCredit(LabelSource.LASTFM, LASTFM_PAGE), LabelCredit(LabelSource.MUSICBRAINZ, MB_PAGE)),
-                listOf(LabelCredit(LabelSource.MUSICBRAINZ, MB_PAGE)),
                 listOf(LabelCredit(LabelSource.LASTFM, LASTFM_PAGE)),
+                listOf(LabelCredit(LabelSource.MUSICBRAINZ, MB_PAGE)),
             ),
             combined.map { it.credits },
         )
@@ -68,7 +69,8 @@ class LabelSourcesTest {
 
     @Test
     fun `at most five labels, the cap after the sources combine, and a dropped label's agreement still counts`() {
-        // Last.fm's five by place: 1, 0.8, 0.6, 0.4, 0.2; MusicBrainz's Soul 1, Blues 0.5.
+        // Last.fm's five by place: 1, 0.8, 0.6, 0.4, 0.2; MusicBrainz's Soul 1, counted at half as
+        // MusicBrainz's alone, and Blues 0.5, which Last.fm's 0.2 lifts to 0.7.
         val combined =
             combineLabels(
                 mapOf(
@@ -76,7 +78,7 @@ class LabelSourcesTest {
                     LabelSource.MUSICBRAINZ to musicBrainz("soul", "blues"),
                 ),
             )
-        assertEquals(listOf("Rock", "Soul", "Pop", "Blues", "Folk"), combined.map { it.genre.label })
+        assertEquals(listOf("Rock", "Pop", "Blues", "Folk", "Soul"), combined.map { it.genre.label })
         assertEquals(
             listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ),
             combined.single { it.genre.label == "Blues" }.credits.map { it.source },
@@ -139,6 +141,59 @@ class LabelSourcesTest {
                 ),
             )
         assertEquals(listOf("Post-Punk", "New Wave", "Gothic Rock", "Rock", "Pop"), combined.map { it.genre.label })
+    }
+
+    @Test
+    fun `a genre only MusicBrainz gives counts at half its weight, a shared one at its full sum`() {
+        // As Coldplay's artist row: MusicBrainz's Pop, 42 of 100 votes, weighs 0.42 but counts at
+        // 0.21, under Last.fm's Indie at 0.3; Rock, given by both, keeps MusicBrainz's full 1.
+        val combined =
+            combineLabels(
+                mapOf(
+                    LabelSource.LASTFM to
+                        counted(
+                            LASTFM_PAGE,
+                            "rock" to 100,
+                            "alternative" to 90,
+                            "britpop" to 80,
+                            "alternative rock" to 70,
+                            "indie" to 30,
+                        ),
+                    LabelSource.MUSICBRAINZ to counted(MB_PAGE, "rock" to 100, "pop" to 42),
+                ),
+            )
+        assertEquals(
+            listOf("Rock", "Alternative", "Britpop", "Alternative Rock", "Indie"),
+            combined.map { it.genre.label },
+        )
+    }
+
+    @Test
+    fun `a recording's two-vote tag only MusicBrainz gives leaves Last fm's fifth in place`() {
+        // As "Spellbound": MusicBrainz's Rock, 2 votes of `FULL_WEIGHT_VOTES` (10), weighs 0.2 and
+        // counts at 0.1, under Last.fm's Goth at 0.15.
+        val recording =
+            MusicBrainzLabels(ArtistTags { error("no artist asked") }, vocabulary)
+                .recordingLabels(RecordingTags("mb-rec", listOf("rock"), mapOf("rock" to 2)))
+        val combined =
+            combineLabels(
+                mapOf(
+                    LabelSource.LASTFM to
+                        counted(
+                            LASTFM_PAGE,
+                            "post-punk" to 100,
+                            "new wave" to 60,
+                            "gothic" to 40,
+                            "gothic rock" to 20,
+                            "goth" to 15,
+                        ),
+                    LabelSource.MUSICBRAINZ to recording,
+                ),
+            )
+        assertEquals(
+            listOf("Post-Punk", "New Wave", "Gothic", "Gothic Rock", "Goth"),
+            combined.map { it.genre.label },
+        )
     }
 
     @Test

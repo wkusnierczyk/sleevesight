@@ -21,19 +21,20 @@ class SearchFactsWeighedGenresTest {
 
     @Test
     fun `a MusicBrainz-only label on the weighed row stays out of the prompt, a shared one spelled as Last fm's`() {
-        // MusicBrainz's Metal and Punk take places Last.fm's Jazz and Soul held before the weighing;
+        // MusicBrainz's Metal and Punk, counted at half as MusicBrainz's alone (0.5), take places
+        // Last.fm's Jazz and Soul held before the weighing;
         // Hip-Hop, given by both, rises, its label as Last.fm, the first source, spells it.
         val genres =
             combineGenres(
                 mapOf(
                     LabelSource.LASTFM to
-                        labels("rock" to 100, "pop" to 90, "folk" to 80, "jazz" to 70, "soul" to 60, "hip-hop" to 15),
+                        labels("rock" to 100, "pop" to 90, "jazz" to 40, "soul" to 30, "hip-hop" to 15),
                     LabelSource.MUSICBRAINZ to labels("hip hop" to 20, "metal" to 20, "punk" to 20),
                 ),
                 listOf("A"),
             )
         assertEquals(
-            listOf("Hip-Hop", "Rock", "Metal", "Punk", "Pop"),
+            listOf("Hip-Hop", "Rock", "Pop", "Metal", "Punk"),
             genres.rows
                 .single()
                 .labels

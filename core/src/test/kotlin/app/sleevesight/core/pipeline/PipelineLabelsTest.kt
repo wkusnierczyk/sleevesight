@@ -113,16 +113,16 @@ class PipelineLabelsTest {
     fun `both sources' labels, weighed together, credited to each source that gave them`() =
         runTest {
             val state = track()
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), state.genres.all.map { it.genre.label })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), state.genres.all.map { it.genre.label })
             assertEquals(
                 listOf(
                     listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ),
-                    listOf(LabelSource.MUSICBRAINZ),
                     listOf(LabelSource.LASTFM),
+                    listOf(LabelSource.MUSICBRAINZ),
                 ),
                 state.genres.all.map { label -> label.credits.map { it.source } },
             )
-            assertEquals(listOf(true, false, true), state.genres.all.map { it.opensCard })
+            assertEquals(listOf(true, true, false), state.genres.all.map { it.opensCard })
         }
 
     @Test
@@ -149,7 +149,7 @@ class PipelineLabelsTest {
             assertEquals(0L, askedAt)
             assertEquals(listOf("Folk", "Singer-Songwriter"), labelsThen)
             assertIs<InsightState.Written>(state.insight)
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), state.genres.all.map { it.genre.label })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), state.genres.all.map { it.genre.label })
             assertEquals(1_000L, testScheduler.currentTime)
         }
 
@@ -159,7 +159,7 @@ class PipelineLabelsTest {
             track(sundown)
             val second = track(carefree)
             assertEquals(listOf(MB_ARTIST), tagRequests)
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), second.genres.all.map { it.genre.label })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), second.genres.all.map { it.genre.label })
         }
 
     @Test
@@ -181,7 +181,7 @@ class PipelineLabelsTest {
                     PipelineTime(timeSource = testTimeSource),
                 ) { settings }.run(sundown, write = false)
             assertEquals(0, resolver.calls)
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), cached.genres.all.map { it.genre.label })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), cached.genres.all.map { it.genre.label })
         }
 
     @Test
@@ -254,7 +254,7 @@ class PipelineLabelsTest {
             advanceTimeBy(10.seconds)
             val state = pipeline.state.value!!
             assertEquals("Carefree Highway", state.normalized.title)
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), state.genres.all.map { it.genre.label })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), state.genres.all.map { it.genre.label })
             assertEquals(1, cancelled)
         }
 
@@ -331,7 +331,7 @@ class PipelineLabelsTest {
         runTest {
             val cache = MemoryCache()
             val filled = track(cache = cache)
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), filled.genres.all.map { it.genre.label })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), filled.genres.all.map { it.genre.label })
             tagRequests.clear()
 
             // Both caches hold labels now: Last.fm's result, with its labels and MusicBrainz's
@@ -402,7 +402,7 @@ class PipelineLabelsTest {
             assertEquals(
                 listOf(
                     GenreLevel.TRACK to listOf("Soft Rock"),
-                    GenreLevel.ARTIST to listOf("Folk", "Country", "Singer-Songwriter"),
+                    GenreLevel.ARTIST to listOf("Folk", "Singer-Songwriter", "Country"),
                     GenreLevel.ALBUM to listOf("Folk Rock"),
                 ),
                 state.genres.rows.map { row -> row.level to row.labels.map { it.genre.label } },
@@ -423,7 +423,7 @@ class PipelineLabelsTest {
                     .map { it.label.genre.label },
             )
             assertEquals(
-                listOf(false, true, false, true, false),
+                listOf(false, true, true, false, false),
                 state.genres.rows
                     .flatMap { it.labels }
                     .map { it.opensCard },
@@ -503,7 +503,7 @@ class PipelineLabelsTest {
             val state = withRelease(FakeReleaseTags(), listOf(accented, lastFm())).run(sundown, write = false)
             val artists = state.genres.rows.filter { it.level == GenreLevel.ARTIST }
             assertEquals(listOf("Gordon Lightfoot"), artists.map { it.artist })
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), artists.single().labels.map { it.genre.label })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), artists.single().labels.map { it.genre.label })
         }
 
     @Test

@@ -93,10 +93,12 @@ data class TrackLabel(
  * MusicBrainz's votes and Last.fm's weight out of 100 alike), or, where the source gave no counts,
  * its place among its source's labels (1 for the first, down by an equal step to the last); a genre
  * several sources give weighs the sum of their weights, so agreement is what lifts it, with no
- * bonus of its own. The [GenreVocabulary.MAX_LABELS] that weigh most are kept, once, after the
- * sources combine; at equal weight, in the order of the sources ([LabelSource], Last.fm's first)
- * and each source's own. A label another source also gave (the same [GenreLabel.identity]) is not
- * shown twice: it credits both.
+ * bonus of its own. A genre only MusicBrainz gives counts at half its weight (`MUSICBRAINZ_ALONE`),
+ * since it can never reach a prompt (D12) and should make room for the other sources'. The
+ * [GenreVocabulary.MAX_LABELS] that weigh most are kept, once, after the sources combine; at equal
+ * weight, in the order of the sources ([LabelSource], Last.fm's first) and each source's own. A
+ * label another source also gave (the same [GenreLabel.identity]) is not shown twice: it credits
+ * both.
  *
  * Last.fm's come first at equal weight because its top tags are weighed over many listeners'
  * tagging, where an artist's MusicBrainz tags are usually a few editors' votes, and because a label
@@ -127,9 +129,17 @@ fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel
     // A stable sort on the weights rounded to [WEIGHT_STEPS]ths, so sums equal but for floating-point
     // rounding (0.1 + 0.2 against 0.3) are equal: at equal weight, the order the labels were first given in.
     return combined
-        .sortedByDescending { (weights.getValue(it.genre.identity) * WEIGHT_STEPS).roundToLong() }
-        .take(GenreVocabulary.MAX_LABELS)
+        .sortedByDescending { label ->
+            val weight = weights.getValue(label.genre.identity)
+            val share = if (label.credits.all { it.source == LabelSource.MUSICBRAINZ }) MUSICBRAINZ_ALONE else 1.0
+            (weight * share * WEIGHT_STEPS).roundToLong()
+        }.take(GenreVocabulary.MAX_LABELS)
 }
+
+// The share of its weight a genre counts at when every credit on the row's label is MusicBrainz's
+// (#1019): such a genre never reaches a prompt (D12), so it makes room for the genres another source
+// gives. A genre MusicBrainz shares with another source keeps MusicBrainz's full weight in its sum.
+private const val MUSICBRAINZ_ALONE: Double = 0.5
 
 // The steps of weight [combineLabels] tells apart: a millionth, far finer than any count's share
 // (Last.fm's 1 of 100, a vote of MusicBrainz's thousands), far coarser than a double's rounding.

@@ -142,12 +142,12 @@ class GenreReasonsTest {
 
     @Test
     fun `a genre only MusicBrainz gives stays out of a prompt when the weighing puts it on a row`() {
-        // #1019 and D12: MusicBrainz's heavily voted Metal and Punk take places on the combined row
-        // that Last.fm's Jazz and Soul held before the sources were weighed together; neither may
-        // reach a prompt, while Hip-Hop, which Last.fm gives too, may.
+        // #1019 and D12: MusicBrainz's heavily voted Metal and Punk, counted at half as MusicBrainz's
+        // alone (0.5), still outweigh Last.fm's Jazz and Soul and take their places on the combined
+        // row; neither may reach a prompt, while Hip-Hop, which Last.fm gives too, may.
         val vocabulary = GenreVocabulary.load(JvmResourceReader)
         val lastFm =
-            listOf("rock" to 100, "pop" to 90, "folk" to 80, "jazz" to 70, "soul" to 60, "hip-hop" to 15)
+            listOf("rock" to 100, "pop" to 90, "jazz" to 40, "soul" to 30, "hip-hop" to 15)
         val musicBrainz = listOf("hip hop" to 20, "metal" to 20, "punk" to 20)
 
         fun labels(tags: List<Pair<String, Int>>) =
@@ -165,7 +165,7 @@ class GenreReasonsTest {
                 listOf("Miles Davis"),
             )
         assertEquals(
-            listOf("hiphop", "rock", "metal", "punk", "pop"),
+            listOf("hiphop", "rock", "pop", "metal", "punk"),
             genres.rows
                 .single()
                 .labels

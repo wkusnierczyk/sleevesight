@@ -176,7 +176,7 @@ class PipelineLaterLabelsTest {
                 state.laterLabels,
             )
             assertEquals(
-                listOf("Folk", "Country", "Singer-Songwriter"),
+                listOf("Folk", "Singer-Songwriter", "Country"),
                 state.genres.rows[1]
                     .labels
                     .map { it.genre.label },
@@ -368,7 +368,7 @@ class PipelineLaterLabelsTest {
             assertTrue(state.genresAssembled)
             // Its own, not merged with those before: the track's tag is gone.
             assertFalse("Soft Rock" in labelsOf(state), "${labelsOf(state)}")
-            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), labelsOf(state))
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), labelsOf(state))
         }
 
     @Test
