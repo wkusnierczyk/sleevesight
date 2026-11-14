@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.ZERO
 
 /**
@@ -240,6 +241,24 @@ class ComposerItemInsightsTest {
                 items.key(InsightItem.SONG, unsplit, before, settings)?.promptVersion,
             )
             assertEquals(ItemPrompt.PARTS_VERSION, items.key(InsightItem.SONG, split, song, settings)?.promptVersion)
+        }
+
+    @Test
+    fun `a composer's line with no about, taken by the name it holds, is named the composer's (#1133)`() =
+        runTest {
+            val provider = FakeProvider { FakeProvider.done("A line [W1].") }
+            val writing =
+                ItemInsights(AiAccess(provider, Secret("k")), MemoryCache(), JvmHasher, NameMatcher(JvmAccentFolder))
+            // Kept before #522: the adapter did not say whom it is about, and its text names Mozart.
+            val older = line(SourceId.WIKIPEDIA, "Wolfgang Amadeus Mozart was an Austrian composer.", Scope.ARTIST)
+            val split = track(K545, "$MOZART, $KHATIA, $ACADEMY", listOf(older, lines[1]))
+            val song = checkNotNull(writing.evidence(InsightItem.SONG, split, settings))
+            assertEquals(true, song.parts)
+            val key = checkNotNull(writing.key(InsightItem.SONG, split, song, settings))
+            writing.write(key, InsightItem.SONG, split, song) { _, _ -> }
+            val prompt = provider.requests.single().prompt
+            assertTrue("(Wikipedia, composer) Wolfgang Amadeus Mozart was an Austrian composer." in prompt, prompt)
+            assertTrue("(Wikipedia, performer) Khatia Buniatishvili is a Georgian-French pianist." in prompt, prompt)
         }
 
     @Test

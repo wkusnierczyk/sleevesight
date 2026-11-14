@@ -38,14 +38,17 @@ object SongParts {
 
     /**
      * [text] with each line that is a heading ([heading]) a paragraph of its own, written as the
-     * heading itself: so a heading the reply wrote straight above its part, with no blank line, is
-     * still one. Itself when no line is.
+     * heading itself, one blank line between paragraphs: so a heading the reply wrote straight above
+     * its part, with no blank line, is still one. Itself when no line is.
      */
     fun separated(text: String): String {
         val lines = text.split('\n')
         if (lines.none { heading(it) != null }) return text
-        return lines
-            .joinToString("\n") { line -> heading(line)?.let { "\n$it\n" } ?: line }
+        val out = lines.flatMap { line -> heading(line)?.let { listOf("", it, "") } ?: listOf(line) }
+        // One blank line between paragraphs, where the reply had one already or none.
+        return out
+            .filterIndexed { i, line -> line.isNotBlank() || i == 0 || out[i - 1].isNotBlank() }
+            .joinToString("\n")
             .trimJs()
     }
 }

@@ -77,23 +77,29 @@ internal fun subjectOf(
  * evidence it is kept with no longer has), and, with [described] (a line of that evidence describes
  * the song), without the plain sentence ([GroundingCheck.ONLY_RELEASE_SENTENCE]), so what is shown and
  * kept reads as written from that evidence: as it came when no sentence goes, or it is `NO_EVIDENCE`;
- * empty when no sentence is left.
+ * empty when no sentence is left. With [headings], the song's in two parts (#1133), a part's heading
+ * goes with the last sentence of its part, so no heading is left over nothing.
  */
 internal fun withoutCiting(
     reply: String,
     ids: Set<String>,
     described: Boolean = false,
+    headings: Boolean = false,
 ): String {
     val paragraphs =
-        (GroundingCheck.check(reply, ids, allowModel = true) as? InsightReply.Written)?.grounded?.paragraphs
+        (GroundingCheck.check(reply, ids, allowModel = true, headings = headings) as? InsightReply.Written)
+            ?.grounded
+            ?.paragraphs
     val goes = { sentence: CheckedSentence ->
         sentence.cites.any { it in ids } ||
             (described && sentence.text.trimJs() == GroundingCheck.ONLY_RELEASE_SENTENCE)
     }
     if (paragraphs == null || paragraphs.flatten().none(goes)) return reply
-    return paragraphs
-        .map { paragraph -> paragraph.filterNot(goes) }
-        .filter { it.isNotEmpty() }
+    val left = paragraphs.map { paragraph -> paragraph.filterNot(goes) }.filter { it.isNotEmpty() }
+    val heading = { paragraph: List<CheckedSentence> -> paragraph.singleOrNull()?.heading == true }
+    // A heading stays only before what is left of its part: not before another heading, nor at the end.
+    return left
+        .filterIndexed { i, paragraph -> !heading(paragraph) || left.getOrNull(i + 1)?.let(heading) == false }
         .joinToString("\n\n") { paragraph ->
             paragraph.drop(1).fold(paragraph.first().text) { text, sentence ->
                 text + (if (sentence.afterLineBreak) "\n" else " ") + sentence.text

@@ -56,7 +56,9 @@ import kotlin.time.Instant
  * release group, did not answer, has [held] too (#1187). [parts] when it is the song's on a track
  * whose roles tell its composer apart from its performers (#1133, [ItemInsights.split]): its insight
  * is written in two parts, the music and this recording (`SongParts`), under a prompt version of its
- * own ([ItemPrompt.PARTS_VERSION]).
+ * own ([ItemPrompt.PARTS_VERSION]); of its [evidence]'s artist-level lines, [composerLines] are the ids
+ * of those about a composer, as the lines for each artist are taken (`ItemInsights.artistLines`: whom
+ * the adapter says a line is about, else the name its text holds), the others about a performer.
  */
 @Suppress("LongParameterList") // The lines, and what each kind of item's evidence says of them.
 class ItemEvidence(
@@ -67,6 +69,7 @@ class ItemEvidence(
     val onlyListings: Boolean = false,
     val held: SourcesHeld? = null,
     val parts: Boolean = false,
+    val composerLines: Set<String> = emptySet(),
 ) {
     /** The sources that could not be reached, which the row names ([SourcesHeld.named]); none without [held]. */
     val unanswered: List<SourceId> get() = held?.named.orEmpty()
@@ -421,13 +424,27 @@ class ItemInsights(
         // With no split, the first credited artist's, as before #1199, and its key as it was.
         val people = split?.let { it.composers + it.performers } ?: listOf(track.normalized.primary)
         val artist = people.flatMap { artistLines(all, track, it) }.mapTo(mutableSetOf()) { it.id }
+        // Which of them are about a composer, for the prompt to name them so (#1133).
+        val composers =
+            split
+                ?.composers
+                .orEmpty()
+                .flatMap { artistLines(all, track, it) }
+                .mapTo(mutableSetOf()) { it.id }
         val set = all.without(hasher) { it.scope == Scope.ARTIST && it.id !in artist }
         // No line at all, not even the release: nothing to write from, and nothing for the plain sentence
         // to be true of; no call, whatever is known of the artist.
         return if (song.isEmpty()) {
             ItemEvidence(song, emptyMap(), webDue = webDue, parts = parts)
         } else {
-            ItemEvidence(set, matching(set.lines, shown), webDue = webDue, onlyListings = true, parts = parts)
+            ItemEvidence(
+                set,
+                matching(set.lines, shown),
+                webDue = webDue,
+                onlyListings = true,
+                parts = parts,
+                composerLines = composers,
+            )
         }
     }
 
@@ -998,7 +1015,7 @@ class ItemInsights(
         now: ItemEvidence,
     ): String {
         val gone = was.evidence.ids.toSet() - now.evidence.ids.toSet()
-        return withoutCiting(text, gone, was.onlyListings && !now.onlyListings)
+        return withoutCiting(text, gone, was.onlyListings && !now.onlyListings, headings = was.parts)
     }
 
     // Whether [read], a reply with no search made, keeps "found nothing" for [item]: a complete one of
@@ -1387,6 +1404,7 @@ class ItemInsights(
                 evidence.onlyListings,
                 track.roles,
                 evidence.parts,
+                evidence.composerLines,
             )
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
         var billed: Usage? = null

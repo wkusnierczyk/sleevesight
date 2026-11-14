@@ -92,8 +92,8 @@ object ItemPrompt {
      * `Primary artist:`. With [parts], the song's on a track whose roles tell its composer apart from
      * its performers (#1133), it asks for two parts under [SongParts.HEADINGS] ([PARTS_TASK],
      * [PARTS_RULE], [PARTS_PLAIN_TEXT_RULE]), the rule on a gap is [GAP_RULE] whatever [onlyListings]
-     * says, and an artist's line is named as the composer's or a performer's by its [roles]
-     * ([PARTS_PEOPLE_RULE]).
+     * says, and an artist's line is named as the composer's when its id is among [composerLines] (as
+     * the app took it for a composer), else as a performer's ([PARTS_PEOPLE_RULE]).
      */
     @Suppress(
         "LongParameterList", // What it is about, the data, the switch, the dates' form, the gap's rule, the roles.
@@ -108,6 +108,7 @@ object ItemPrompt {
         onlyListings: Boolean = false,
         roles: ArtistRoles,
         parts: Boolean = false,
+        composerLines: Set<String> = emptySet(),
     ): String =
         buildString {
             val parted = parts && subject.kind == CardKind.SONG
@@ -139,7 +140,11 @@ object ItemPrompt {
             )
             appendLine("<evidence>")
             if (evidence.isEmpty()) appendLine("(none)")
-            evidence.lines.forEach { appendLine(if (parted) partsLine(it, roles) else InsightPrompt.evidenceLine(it)) }
+            evidence.lines.forEach {
+                appendLine(
+                    if (parted) partsLine(it, composerLines) else InsightPrompt.evidenceLine(it),
+                )
+            }
             appendLine("</evidence>")
             appendLine()
             appendLine("STYLE")
@@ -162,16 +167,15 @@ object ItemPrompt {
     /** The prompt's last line. */
     private const val REPLY: String = "Reply with the insight text only."
 
-    // [line] as the two parts' prompt gives it (#1133): an artist's line named as the composer's or a
-    // performer's, by [roles] (whom its adapter says it is about, `EvidenceLine.about`); any other as
-    // every prompt gives it.
+    // [line] as the two parts' prompt gives it (#1133): an artist's line named as the composer's when
+    // its id is among [composerLines], else as a performer's; any other as every prompt gives it.
     private fun partsLine(
         line: EvidenceLine,
-        roles: ArtistRoles,
+        composerLines: Set<String>,
     ): String {
         val plain = InsightPrompt.evidenceLine(line)
         if (line.scope != Scope.ARTIST) return plain
-        val composer = roles.composers.any { it.trim().equals(line.about?.trim(), ignoreCase = true) }
+        val composer = line.id in composerLines
         val artist = InsightPrompt.scopeLabel(Scope.ARTIST)
         val label = if (composer) COMPOSER_LABEL else PERFORMER_LABEL
         return plain.replaceFirst(", $artist", ", $label")

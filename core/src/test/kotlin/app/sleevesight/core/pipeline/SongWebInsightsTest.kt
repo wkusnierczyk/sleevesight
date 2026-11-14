@@ -21,6 +21,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SongWebLookup
 import app.sleevesight.core.sources.SongWebQuery
@@ -31,6 +32,7 @@ import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.ItemPrompt
 import app.sleevesight.core.synthesis.SentenceStatus
+import app.sleevesight.core.synthesis.SongParts
 import app.sleevesight.core.synthesis.WebPrompt
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -129,18 +131,22 @@ class SongWebInsightsTest {
         web: WebSearcher? = null,
     ) = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, web = web, songWeb = songWeb)
 
-    // Phil's First Tear, with [own] lines about the song and a Wikipedia line about the artist.
+    // Phil's First Tear, with [own] lines about the song and a Wikipedia line about the artist; by
+    // [artists], their [roles] as resolved.
+    @Suppress("LongParameterList") // The lines, and what the track is, each with a default.
     private fun track(
         own: List<EvidenceDraft> = listOf(RELEASE_LINE),
         artist: List<EvidenceDraft> = listOf(ARTIST_LINE),
         inLanguage: InLanguageState? = null,
         others: Map<SourceId, SourceState> = emptyMap(),
         album: String? = "Getaway",
+        artists: String = "Kolonel Djafaar",
+        roles: ArtistRoles? = null,
     ): TrackState {
         val playing =
             NowPlaying(
                 title = "Phil's First Tear",
-                artists = "Kolonel Djafaar",
+                artists = artists,
                 album = album,
                 player = "p",
                 duration = 300.seconds,
@@ -154,7 +160,7 @@ class SongWebInsightsTest {
             nowPlaying = playing,
             normalized = Normalizer(JvmAccentFolder).normalize(playing),
             sources = bySource + others,
-            resolution = Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec"),
+            resolution = Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec", roles = roles),
             evidence = EvidenceSet.of(playerLines(playing, RETRIEVED) + drafts, JvmHasher),
             inLanguage = inLanguage,
         )
@@ -532,6 +538,53 @@ class SongWebInsightsTest {
         }
 
     @Test
+    fun `up to 3 times, a description found, a part whose sentences all go goes with its heading (#1133)`() =
+        runTest {
+            // A split track, its song in two parts: the recording part cites only the performer's line,
+            // which goes once the search finds a description.
+            val split =
+                track(
+                    artist = listOf(COMPOSER_LINE, ARTIST_LINE.copy(about = "Kolonel Djafaar")),
+                    artists = "Mulatu Astatke, Kolonel Djafaar",
+                    roles = ArtistRoles(listOf("Mulatu Astatke"), listOf("Kolonel Djafaar")),
+                )
+            val performer =
+                checkNotNull(split.evidence)
+                    .lines
+                    .single { it.about == "Kolonel Djafaar" }
+                    .id
+            val reply =
+                "${SongParts.MUSIC}\n\nIts horns are heavy [S1].\n\n${SongParts.RECORDING}\n\n" +
+                    "Kolonel Djafaar plays it [$performer]."
+            val items = items(searching(reply), Searches { WebSearchOutcome.Found(listOf(PAGE)) })
+            val upTo = webOn(AiWebSearch.UP_TO)
+            val evidence = checkNotNull(items.evidence(InsightItem.SONG, split, upTo))
+            assertTrue(evidence.parts)
+            val key = checkNotNull(items.key(InsightItem.SONG, split, evidence, upTo))
+            val result = checkNotNull(items.writeSearching(key, InsightItem.SONG, split, upTo, evidence))
+            val left = "${SongParts.MUSIC}\n\nIts horns are heavy [S1]."
+            val fresh = assertIs<InsightState.Written>(result.state)
+            assertEquals(left, fresh.grounded.text)
+            assertEquals(left, cache.cards[result.key])
+            val kept = assertIs<InsightState.Written>(checkNotNull(items.kept(result.key, result.evidence)).state)
+            assertEquals(
+                listOf(SongParts.MUSIC),
+                kept.grounded.paragraphs
+                    .flatten()
+                    .filter { it.heading }
+                    .map { it.text },
+            )
+        }
+
+    @Test
+    fun `withoutCiting drops a heading left over nothing, and keeps one before what is left (#1133)`() {
+        val reply = "${SongParts.MUSIC}\n\nOne [S1].\n\n${SongParts.RECORDING}\n\nTwo [W1]."
+        assertEquals("${SongParts.MUSIC}\n\nOne [S1].", withoutCiting(reply, setOf("W1"), headings = true))
+        assertEquals("${SongParts.RECORDING}\n\nTwo [W1].", withoutCiting(reply, setOf("S1"), headings = true))
+        assertEquals("", withoutCiting(reply, setOf("S1", "W1"), headings = true))
+    }
+
+    @Test
     fun `up to 3 times, a description found, nothing left once they go, the write fails and the pages stay`() =
         runTest {
             val (_, result) = writtenFromDescription("The band plays Afrobeat [${artistId()}].")
@@ -680,6 +733,16 @@ class SongWebInsightsTest {
     private companion object {
         val RELEASE_LINE =
             EvidenceDraft(SourceId.MUSICBRAINZ, Scope.SONG, "It was first released on April 5, 2024.", null, RETRIEVED)
+
+        val COMPOSER_LINE =
+            EvidenceDraft(
+                SourceId.WIKIPEDIA,
+                Scope.ARTIST,
+                "Mulatu Astatke is an Ethiopian musician, the father of Ethio-jazz.",
+                null,
+                RETRIEVED,
+                about = "Mulatu Astatke",
+            )
 
         val ARTIST_LINE =
             EvidenceDraft(

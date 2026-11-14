@@ -160,11 +160,12 @@ class ItemPromptTest {
                 player = "com.spotify.music",
             )
         val normalized = normalizer.normalize(playing)
+        val evidence = EvidenceSet.of(k545Lines, JvmHasher)
         return ItemPrompt.build(
             ItemPrompt.Subject(CardKind.SONG, normalized.title),
             playing,
             normalized,
-            EvidenceSet.of(k545Lines, JvmHasher),
+            evidence,
             allowModel = false,
             onlyListings = true,
             roles =
@@ -174,6 +175,10 @@ class ItemPromptTest {
                     classical = true,
                 ),
             parts = true,
+            composerLines =
+                evidence.lines.filter { it.about == "Wolfgang Amadeus Mozart" }.mapTo(
+                    mutableSetOf(),
+                ) { it.id },
         )
     }
 
