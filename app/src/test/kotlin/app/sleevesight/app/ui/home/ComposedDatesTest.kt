@@ -106,7 +106,8 @@ class ComposedDatesTest {
 
     @Test
     fun `Wikidata dates it when MusicBrainz does not, and MusicBrainz wins when both do`() {
-        val wikidata = ComposedDate("1788", "1788", SourceId.WIKIDATA, "https://www.wikidata.org/wiki/Q1")
+        // A year of its own, so which source is said shows.
+        val wikidata = ComposedDate("1790", "1790", SourceId.WIKIDATA, "https://www.wikidata.org/wiki/Q1")
         val wikipedia: SourceState = done().let { it.copy(result = it.result.copy(composed = wikidata)) }
         val without = resolved(null).let { it.copy(sources = it.sources + (SourceId.WIKIPEDIA to wikipedia)) }
         assertEquals(DateSentence.Composed(wikidata), homeDates(without, k545).last())

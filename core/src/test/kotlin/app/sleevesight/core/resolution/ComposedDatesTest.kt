@@ -50,8 +50,29 @@ class ComposedDatesTest {
         val arranged = work(bach, composer("Ferruccio Busoni", "1897", "1897"))
         val date = ComposedDates.ofWork(arranged, listOf("Johann Sebastian Bach"), names)
         assertEquals("1722" to "1722", date?.let { it.from to it.to })
-        // With no credited composer (a pop song, its writer singing it), every composer relationship counts.
-        assertEquals("1722" to "1897", ComposedDates.ofWork(arranged, emptyList(), names)?.let { it.from to it.to })
+        // With no credited composer, both count, but two people's years far apart are no one time of
+        // composing: nothing is said, so Wikidata may answer.
+        assertNull(ComposedDates.ofWork(arranged, emptyList(), names))
+    }
+
+    @Test
+    fun `co-writers whose dates overlap make one span`() {
+        // A pop song's two writers, with no credited composer (each sings it): 2010 to 2011, and 2011.
+        val song = work(composer("Gotye", "2010", "2011"), composer("Luiz Bonfá", "2011", null))
+        assertEquals("2010" to "2011", ComposedDates.ofWork(song, emptyList(), names)?.let { it.from to it.to })
+    }
+
+    @Test
+    fun `a credited composer spelled otherwise is found by their MusicBrainz id`() {
+        // The player's "Peter Tchaikovsky", MusicBrainz's "Pyotr Ilyich Tchaikovsky", one id.
+        val nutcracker =
+            work(
+                MbArtistRelation("composer", "mb-tchaikovsky", "Pyotr Ilyich Tchaikovsky", emptyList(), "1891", "1892"),
+            )
+        val date = ComposedDates.ofWork(nutcracker, listOf("Peter Tchaikovsky"), names, setOf("mb-tchaikovsky"))
+        assertEquals("1891" to "1892", date?.let { it.from to it.to })
+        // Without the id, the names differ, and nothing is said.
+        assertNull(ComposedDates.ofWork(nutcracker, listOf("Peter Tchaikovsky"), names))
     }
 
     @Test
