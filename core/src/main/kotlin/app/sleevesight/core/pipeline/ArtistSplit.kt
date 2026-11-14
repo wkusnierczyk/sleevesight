@@ -12,9 +12,10 @@ import app.sleevesight.core.sources.WorkLyrics
  *
  * @property composers the credited artists who composed the work, in the track's order; the Composer
  *   panel is about the first ([composer]).
- * @property lyricists who wrote the work's words, apart from its composers: the `lyricist`s of the
- *   work MusicBrainz looks up ([WorkLyrics.lyricists]), by MusicBrainz's names; empty when it names
- *   none, or when that is not known.
+ * @property words who wrote the work's words, apart from its composers: the `lyricist`s, then the
+ *   `librettist`s (#1274), of the work MusicBrainz looks up ([WorkLyrics.lyricists],
+ *   [WorkLyrics.librettists]), by MusicBrainz's names; empty when it names none, or when that is not
+ *   known.
  * @property lead the performer the Artist panel is about ([ArtistRoles.lead]).
  * @property others the other performers, in the track's order: the chips under *Also performing on
  *   this recording*.
@@ -22,7 +23,7 @@ import app.sleevesight.core.sources.WorkLyrics
  */
 data class ArtistSplit(
     val composers: List<String>,
-    val lyricists: List<String>,
+    val words: List<String>,
     val lead: String,
     val others: List<String>,
     val name: AuthorsName,
@@ -30,8 +31,8 @@ data class ArtistSplit(
     /** The composer the Composer panel is about. */
     val composer: String get() = composers.first()
 
-    /** Who wrote the work: its composers, then its lyricists. */
-    val authors: List<String> get() = composers + lyricists
+    /** Who wrote the work: its composers, then who wrote its words. */
+    val authors: List<String> get() = composers + words
 
     /** The performers, the lead first. */
     val performers: List<String> get() = listOf(lead) + others
@@ -41,12 +42,12 @@ data class ArtistSplit(
          * [track]'s split by its [roles], with the writing credits of its work, [lyrics] (null when not
          * known), names compared by [same]; null when the roles tell no composer, or no performer.
          *
-         * The Composer row is *Authors* with more than one author: two composers, or a lyricist apart
-         * from the composer (MusicBrainz's `lyricist`; a `librettist` is not read, so an aria's
-         * composer stays its *Composer*). With one, *Author* when the work's lyricist is the composer
-         * and the work is no classical one ([ArtistRoles.classical], nor a title leading with its
-         * composer: a songwriter's own words); otherwise, the words theirs on a classical work, none,
-         * or not known, *Composer*.
+         * The Composer row is *Authors* with more than one author: two composers, or a lyricist or a
+         * librettist apart from the composer (MusicBrainz's `lyricist` and `librettist`, #1274: an
+         * aria's composer and its librettists). With one, *Author* when the work's lyricist (or
+         * librettist) is the composer and the work is no classical one ([ArtistRoles.classical], nor a
+         * title leading with its composer: a songwriter's own words); otherwise, the words theirs on a
+         * classical work, none, or not known, *Composer*.
          */
         fun of(
             track: NormalizedTrack,
@@ -58,20 +59,17 @@ data class ArtistSplit(
             val performers = roles.performers.filter { it.isNotBlank() && it !in composers }.distinct()
             if (composers.isEmpty() || performers.isEmpty()) return null
             val lead = roles.lead(track).takeIf { it in performers } ?: performers.first()
-            val lyricists =
-                lyrics
-                    ?.lyricists
-                    .orEmpty()
-                    .filter { lyricist -> lyricist.isNotBlank() && composers.none { same(it, lyricist) } }
-                    .distinct()
-            val ownWords = lyrics?.lyricists.orEmpty().any { lyricist -> composers.any { same(it, lyricist) } }
+            // A work's lyricists and librettists alike (#1274); one credited as both is one author.
+            val writers = lyrics?.let { it.lyricists + it.librettists }.orEmpty().filter(String::isNotBlank)
+            val words = writers.filter { writer -> composers.none { same(it, writer) } }.distinct()
+            val ownWords = writers.any { writer -> composers.any { same(it, writer) } }
             val name =
                 when {
-                    composers.size + lyricists.size > 1 -> AuthorsName.AUTHORS
+                    composers.size + words.size > 1 -> AuthorsName.AUTHORS
                     ownWords && !roles.classical && track.composer == null -> AuthorsName.AUTHOR
                     else -> AuthorsName.COMPOSER
                 }
-            return ArtistSplit(composers, lyricists, lead, performers - lead, name)
+            return ArtistSplit(composers, words, lead, performers - lead, name)
         }
     }
 }

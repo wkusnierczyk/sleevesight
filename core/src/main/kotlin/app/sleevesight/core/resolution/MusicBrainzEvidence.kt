@@ -118,6 +118,7 @@ object MusicBrainzEvidence {
         val writers = named(CreditRole.WRITER)
         val composers = named(CreditRole.COMPOSER)
         val lyricists = named(CreditRole.LYRICIST)
+        val librettists = named(CreditRole.LIBRETTIST)
         val lines = mutableListOf<Line>()
         if (traditional) lines += Line(Scope.SONG, "“$title” is a traditional song.", url)
         if (composers.isNotEmpty() && composers == lyricists) {
@@ -131,6 +132,11 @@ object MusicBrainzEvidence {
                 lines +=
                     Line(Scope.SONG, "The lyrics of “$title” were written by ${EvidenceText.list(lyricists)}.", url)
             }
+        }
+        // An opera's or an aria's words (#1274), whoever wrote the music.
+        if (librettists.isNotEmpty()) {
+            lines +=
+                Line(Scope.SONG, "The libretto of “$title” was written by ${EvidenceText.list(librettists)}.", url)
         }
         if (writers.isNotEmpty()) {
             lines +=

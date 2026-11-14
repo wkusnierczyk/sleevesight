@@ -66,6 +66,8 @@ internal object RetrievalCodec {
      * an optional field too, encoded only when true, made a miss the same way (MusicBrainz's
      * extraction version 15). When the music was composed (#1132, [SourceResult.composed]) is an
      * optional field too, made a miss the same way (MusicBrainz's extraction version 18, Wikipedia's 6).
+     * The work's librettists (#1274, [WorkLyrics.librettists]) are an optional field too, made a miss
+     * the same way (MusicBrainz's extraction version 19).
      */
     const val FORMAT: Int = 7
 
@@ -137,6 +139,7 @@ internal object RetrievalCodec {
                             it.vocalists,
                             it.lyricists,
                             it.composersOnly,
+                            it.librettists,
                         )
                     },
                 roles = result.roles?.let { RolesJson(it.composers, it.performers, it.classical) },
@@ -217,6 +220,7 @@ internal object RetrievalCodec {
             stored.vocalists,
             stored.lyricists,
             stored.composersOnly,
+            stored.librettists,
         )
 
     private fun outcomeKey(outcome: Outcome): String =
@@ -357,6 +361,8 @@ internal object RetrievalCodec {
         // The work's writing credits (#998); an entry kept before them decodes without.
         val lyricists: List<String> = emptyList(),
         val composersOnly: Boolean = false,
+        // The work's librettists (#1274); an entry kept before them decodes without.
+        val librettists: List<String> = emptyList(),
     )
 
     @Serializable

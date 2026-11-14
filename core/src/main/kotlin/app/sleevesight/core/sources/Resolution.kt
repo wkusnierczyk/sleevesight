@@ -393,6 +393,10 @@ data class ResolvedWork(
  * @property lyricists the artists MusicBrainz credits with a `lyricist` relationship on the work the
  *   resolution looks up (#998), by MusicBrainz's names, in its order, once each: someone wrote its
  *   words, so a sign the track is sung, as a vocal credit is.
+ * @property librettists the artists MusicBrainz credits with a `librettist` relationship on that work
+ *   (#1274), by MusicBrainz's names, in its order, once each: who wrote its words for the stage, an
+ *   opera's or an aria's, counted with the [lyricists] among the work's authors (`ArtistSplit`) but no
+ *   sign of vocals for the genres, which read the [lyricists] alone.
  * @property composersOnly whether that work credits composers (`composer`) and no one with its words
  *   (no `lyricist`, `librettist` or `writer`, which covers both): a hint the track may be
  *   instrumental (#998), too weak to add Instrumental alone.
@@ -404,6 +408,7 @@ data class WorkLyrics(
     val vocalists: List<String> = emptyList(),
     val lyricists: List<String> = emptyList(),
     val composersOnly: Boolean = false,
+    val librettists: List<String> = emptyList(),
 ) {
     companion object {
         /** Nothing known of the lyrics: links not known, no language, not instrumental. */
@@ -449,6 +454,7 @@ enum class CreditRole {
     WRITER,
     COMPOSER,
     LYRICIST,
+    LIBRETTIST,
     PRODUCER,
     PERFORMER,
 }

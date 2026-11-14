@@ -173,4 +173,21 @@ class RecordingLyricsTest {
             assertEquals(emptyList<String>(), written.lyricists)
             assertFalse(credited().composersOnly)
         }
+
+    @Test
+    fun `the work's librettists, once each, apart from its lyricists`() =
+        runTest {
+            // #1274: an aria's work names its librettists, no lyricist; they write its words too.
+            val composer = MbArtistRelation("composer", "mb-p", "Giacomo Puccini", emptyList())
+            val adami = MbArtistRelation("librettist", "mb-a", "Giuseppe Adami", emptyList())
+            val simoni = MbArtistRelation("librettist", "mb-s", "Renato Simoni", emptyList())
+            val aria = credited(composer, adami, simoni, adami)
+            assertEquals(listOf("Giuseppe Adami", "Renato Simoni"), aria.librettists)
+            // No lyricist, so no sign of vocals for the genres; and no composers alone.
+            assertEquals(emptyList<String>(), aria.lyricists)
+            assertFalse(aria.composersOnly)
+            // A work with no librettist names none.
+            val lyricist = MbArtistRelation("lyricist", "mb-y", "Yurika Hanashima", emptyList())
+            assertEquals(emptyList<String>(), credited(composer, lyricist).librettists)
+        }
 }
