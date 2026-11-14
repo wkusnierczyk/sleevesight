@@ -470,7 +470,7 @@ internal fun ReportOpen(
         reported.track,
         reported.insight,
         handoff,
-        about = reported.item?.kind?.key,
+        about = reported.item?.let { reportedAbout(it, reported.track) },
         onDismiss = onDismiss,
     )
 }
