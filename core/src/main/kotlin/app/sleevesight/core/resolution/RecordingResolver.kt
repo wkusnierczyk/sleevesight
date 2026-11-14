@@ -381,6 +381,7 @@ class RecordingResolver(
                         .singleOrNull()
                         ?.takeIf { composedWork }
                         ?.let { ResolvedWork(it.mbid, it.title) },
+                    type = work.type,
                 ),
             cover = cover,
             earliest = earliest,
@@ -696,6 +697,7 @@ class RecordingResolver(
             mapOf(
                 "composer" to CreditRole.COMPOSER,
                 "lyricist" to CreditRole.LYRICIST,
+                "librettist" to CreditRole.LIBRETTIST,
                 "writer" to CreditRole.WRITER,
             )
 
@@ -902,13 +904,23 @@ private fun composedByLead(
 // the lookup failed), the languages of every work the recording performs, and whether its
 // performance of any of them is marked instrumental; who is credited with vocals on the recording
 // (#996): a `vocal` relationship, with or without an attribute (`lead vocals`, `background vocals`);
-// and the work's writing credits (#998): who wrote its words (`lyricist`), and whether it credits
-// composers alone (no `lyricist`, `librettist` or `writer`, a `writer` covering words and music).
+// and the work's writing credits (#998): who wrote its words (`lyricist`; `librettist`, #1274), and
+// whether it credits composers alone (no `lyricist`, `librettist` or `writer`, a `writer` covering
+// words and music).
 private fun lyricsOf(
     detail: MbRecordingDetail,
     lookup: Lookup<MbWork>?,
 ): WorkLyrics {
     val work = (lookup as? Lookup.Found)?.value
+
+    // The names the work credits with a relationship of [type], in MusicBrainz's order, once each.
+    fun credited(type: String): List<String> =
+        work
+            ?.artistRelations
+            .orEmpty()
+            .filter { it.type == type }
+            .map { it.artistName }
+            .distinct()
     return WorkLyrics(
         links =
             when (lookup) {
@@ -923,17 +935,12 @@ private fun lyricsOf(
                 .filter { it.type == "vocal" }
                 .map { it.artistName }
                 .distinct(),
-        lyricists =
-            work
-                ?.artistRelations
-                .orEmpty()
-                .filter { it.type == "lyricist" }
-                .map { it.artistName }
-                .distinct(),
+        lyricists = credited("lyricist"),
         composersOnly =
             work?.artistRelations.orEmpty().map { it.type }.toSet().let { types ->
                 "composer" in types && types.none { it in WORDS_TYPES }
             },
+        librettists = credited("librettist"),
     )
 }
 

@@ -193,11 +193,16 @@ credited artist, as before: no prefix and no resolution, a pop song, a track cre
 composer alone. The composer's, the artist's and a performer's insights are all artists' cards
 (`CardKind.ARTIST`, keyed by the artist), so the one about an artist is written once and shown
 wherever that artist is the subject. The Composer row is *Composer* for one composer; *Authors* for
-more than one author, a lyricist apart from the composer among them (MusicBrainz's `lyricist` work
-relationship, read for #998: a `librettist` is not read, so *Nessun dorma*'s composer stays its
-*Composer*), the panel then headed *Music* over the composer's insight and *Words* over the
-lyricists' chips; *Author* for one whose own words the work's lyricist relationship gives, on a
-title that does not lead with them (a songwriter, not a classical work). The Artist row is *Artists*
+more than one author, a lyricist or a librettist apart from the composer among them (MusicBrainz's
+`lyricist` work relationship, read for #998, and `librettist`, #1274: *Nessun dorma* is Puccini's
+under *Music*, Giuseppe Adami's and Renato Simoni's under *Words*), the panel then headed *Music*
+over the composer's insight and *Words* over the chips of the lyricists, then the librettists;
+*Author* for one whose own words the work's lyricist (or librettist) relationship gives, on a title
+that does not lead with them (a songwriter, not a classical work). The librettists are no sign of
+vocals for the genres, which read the lyricists alone (#998), and the work's MusicBrainz lines name
+them ("The libretto of this aria was written by …", the piece named by the work's MusicBrainz type
+where a libretto is written for it: aria, cantata, musical, opera, operetta, oratorio or zarzuela;
+else "this piece"). The Artist row is *Artists*
 when other performers are known (*Performer* and *Performers* are the other wording tried,
 `PERFORMER_ROW`). Home's artist lines put the composer on a line of their own under the performers
 ("Composer: Wolfgang Amadeus Mozart"). A web line's artist for the genres a description names

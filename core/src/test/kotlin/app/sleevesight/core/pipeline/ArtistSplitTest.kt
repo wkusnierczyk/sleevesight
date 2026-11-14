@@ -53,6 +53,27 @@ class ArtistSplitTest {
     }
 
     @Test
+    fun `the work's librettists write its words as its lyricists do, after them, the composer's own not counted`() {
+        // #1274: Nessun dorma's work names Puccini its composer and two librettists, no lyricist.
+        val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI, MEHTA, LA_PHIL), classical = true)
+        val libretto = WorkLyrics(librettists = listOf(ADAMI, SIMONI))
+        val split = checkNotNull(ArtistSplit.of(nessun, roles, libretto))
+        assertEquals(AuthorsName.AUTHORS, split.name)
+        assertEquals(listOf(PUCCINI), split.composers)
+        assertEquals(listOf(ADAMI, SIMONI), split.words)
+        assertEquals(listOf(PUCCINI, ADAMI, SIMONI), split.authors)
+        // Lyricists first, then librettists, one credited as both once.
+        val both = WorkLyrics(lyricists = listOf(SIMONI), librettists = listOf(ADAMI, SIMONI))
+        assertEquals(listOf(SIMONI, ADAMI), ArtistSplit.of(nessun, roles, both)?.words)
+        // A composer who wrote their own libretto is no other author: a classical work's Composer, and
+        // a songwriter's Author.
+        val own = WorkLyrics(librettists = listOf("giacomo puccini"))
+        assertEquals(AuthorsName.COMPOSER, ArtistSplit.of(nessun, roles, own)?.name)
+        assertEquals(emptyList(), ArtistSplit.of(nessun, roles, own)?.words)
+        assertEquals(AuthorsName.AUTHOR, ArtistSplit.of(nessun, roles.copy(classical = false), own)?.name)
+    }
+
+    @Test
     fun `one author whose words are their own and no title lead is an Author, else a Composer`() {
         val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI))
         val words = WorkLyrics(lyricists = listOf(PUCCINI))
@@ -66,7 +87,7 @@ class ArtistSplitTest {
         // A classical work whose composer wrote its words, its title not leading with them: the composer.
         val classical = roles.copy(classical = true)
         assertEquals(AuthorsName.COMPOSER, ArtistSplit.of(nessun, classical, words)?.name)
-        // Librettists are not read (Nessun dorma's work names two): the composer alone.
+        // A work crediting no one with its words besides its composer: the composer alone.
         assertEquals(AuthorsName.COMPOSER, ArtistSplit.of(nessun, roles, WorkLyrics(composersOnly = false))?.name)
         assertEquals(AuthorsName.COMPOSER, ArtistSplit.of(nessun, roles, WorkLyrics(composersOnly = true))?.name)
         // The work's credits not known: Composer alone.
@@ -107,5 +128,7 @@ class ArtistSplitTest {
         const val PAVAROTTI = "Luciano Pavarotti"
         const val MEHTA = "Zubin Mehta"
         const val LA_PHIL = "Los Angeles Philharmonic"
+        const val ADAMI = "Giuseppe Adami"
+        const val SIMONI = "Renato Simoni"
     }
 }

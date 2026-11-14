@@ -66,6 +66,32 @@ class MusicBrainzEvidenceTest {
         assertEquals("https://musicbrainz.org/recording/first", lines[2].url)
     }
 
+    @Test
+    fun `a libretto's line names the piece by its work's type where a libretto fits, else a piece`() {
+        // #1274: the title is the playing track's, so the line names the kind of piece instead.
+        fun libretto(type: String?) =
+            MusicBrainzEvidence
+                .lines(
+                    Resolution(
+                        outcome = Outcome.SongArticle,
+                        recordingMbid = "rec",
+                        title = "Nessun dorma",
+                        work = ResolvedWork("work", "Nessun dorma", type = type),
+                        credits =
+                            listOf(
+                                Credit(CreditRole.LIBRETTIST, "Giuseppe Adami", "a"),
+                                Credit(CreditRole.LIBRETTIST, "Renato Simoni", "s"),
+                            ),
+                    ),
+                    at,
+                ).single()
+                .text
+        assertEquals("The libretto of this aria was written by Giuseppe Adami and Renato Simoni.", libretto("Aria"))
+        assertEquals("The libretto of this opera was written by Giuseppe Adami and Renato Simoni.", libretto("Opera"))
+        assertEquals("The libretto of this piece was written by Giuseppe Adami and Renato Simoni.", libretto("Song"))
+        assertEquals("The libretto of this piece was written by Giuseppe Adami and Renato Simoni.", libretto(null))
+    }
+
     // #424: `PromptEvidence.restatesRelease` reads the album back out of the line written here.
     private fun firstLine(
         type: String?,
