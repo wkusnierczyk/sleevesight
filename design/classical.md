@@ -236,8 +236,8 @@ same card key: no prefix and no resolution, a pop song, a track credited to its 
   heading on a line of its own as given; the music part on the work itself (who composed it, when and
   why, what it is, where it sits in the composer's work, how it was received), the recording part on
   this performance (who plays it, when and where it was recorded, its release); one to three sentences
-  each; a part no line supports left out with its heading; a line about another recording of the work
-  in neither part. `PARTS_PLAIN_TEXT_RULE` in place of the plain-text rule (the two headings are the only
+  each (its style line, `PARTS_STYLE`); a part no line supports left out with its heading; a line
+  about another recording of the work in neither part. `PARTS_PLAIN_TEXT_RULE` in place of the plain-text rule (the two headings are the only
   ones), and no "artist" rule. Citations, the evidence-only rule and the grounding check hold for both
   parts as for any insight. Raising the version rewrites, once, each kept song card of such a track
   when it is next asked for; no other card changes key.
@@ -251,10 +251,12 @@ same card key: no prefix and no resolution, a pop song, a track credited to its 
   #1179 already searches by the work part of a title that leads with its composer). New: a composed
   work's part with no Wikidata item of its own is checked by the item of the work it is a part of
   (`ResolvedWork.whole`, the work's `parts` parent when it has only one, given with the work's own lookup;
-  `IdentityCheck.musicBrainzItems`), so K. 545's Andante, which has none, takes its sonata's (Q991701,
-  found by its MusicBrainz work id `a2ad223d`, P435), with *Piano Sonata No. 16 (Mozart)*'s lead and
-  Wikidata's date line ("Piano Sonata No. 16 was created on June 26, 1788."): one more free Wikidata
-  search, only for such a part. Wikipedia's extraction version is 7 for it. No paid search is added.
+  `IdentityCheck.wholeItems`), tried last, after the articles found by name, so a movement's own
+  article (a Bach Air's) still comes before its suite's. K. 545's Andante, which has neither, takes its
+  sonata's (Q991701, found by its MusicBrainz work id `a2ad223d`, P435), with *Piano Sonata No. 16
+  (Mozart)*'s lead and Wikidata's date line ("Piano Sonata No. 16 was created on June 26, 1788."): one
+  more free Wikidata search, only for such a part with nothing else confirmed. The search in the
+  track's language reads only the items MusicBrainz links, as before. Wikipedia's extraction version is 7 for it. No paid search is added.
 - **When the song's own lines only list it** (`SongListings`), the song's evidence on such a track takes
   the composers' artist-level lines for the music and the performers' for this recording (before, the
   first credited artist's, the composer's alone), each named in the prompt as a `composer` or a

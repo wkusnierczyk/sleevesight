@@ -39,6 +39,7 @@ import app.sleevesight.core.sources.ResolvedArtist
  * read: their labels are not asked for, and an accepted item holds none, so its evidence names no
  * genre ([WikidataEvidence]). The check itself never reads them.
  */
+@Suppress("TooManyFunctions") // The check of each kind of item, and the lookups it reads them by.
 class IdentityCheck(
     private val wikidata: WikidataLookup,
     private val names: NameMatcher,
@@ -81,23 +82,33 @@ class IdentityCheck(
         data object Unreachable : Verdict
     }
 
-    /**
-     * The Wikidata items MusicBrainz links to the recording or its work: its URL links, else the work's
-     * P435, else, for a composed work's part with none (`ResolvedWork.whole`, #1133), the whole work's
-     * P435 (K. 545's Andante has no item; its sonata, Q991701, has, with the sonata's article): one
-     * more search, only then. A failed search is a failure, as before.
-     */
+    /** The Wikidata items MusicBrainz links to the recording or its work: its URL links, else the work's P435. */
     suspend fun musicBrainzItems(resolution: Resolution): Lookup<List<String>> {
         val work = resolution.work
-        val whole = work?.whole
         return when {
             resolution.wikidataIds.isNotEmpty() -> Lookup.Found(resolution.wikidataIds)
             work == null -> Lookup.Found(emptyList())
-            else -> {
-                val own = wikidata.itemsWithStatement(Wd.MUSICBRAINZ_WORK, work.mbid)
-                val none = own is Lookup.NotFound || (own as? Lookup.Found)?.value?.isEmpty() == true
-                if (none && whole != null) wikidata.itemsWithStatement(Wd.MUSICBRAINZ_WORK, whole.mbid) else own
-            }
+            else -> wikidata.itemsWithStatement(Wd.MUSICBRAINZ_WORK, work.mbid)
+        }
+    }
+
+    /**
+     * The items of the whole work a composed work's part belongs to (`ResolvedWork.whole`, #1133), by
+     * its P435, when MusicBrainz links the part to none ([linked], [musicBrainzItems]'s answer, found
+     * empty): K. 545's Andante has no item; its sonata, Q991701, has, with the sonata's article. One
+     * more search, only then; none otherwise. A song's candidates take them last, after the articles
+     * found by name, so a movement's own article (a Bach Air's) is not passed over for its suite's.
+     */
+    suspend fun wholeItems(
+        resolution: Resolution,
+        linked: Lookup<List<String>>,
+    ): Lookup<List<String>> {
+        val whole = resolution.work?.whole
+        val none = linked is Lookup.NotFound || (linked as? Lookup.Found)?.value?.isEmpty() == true
+        return if (whole != null && none) {
+            wikidata.itemsWithStatement(Wd.MUSICBRAINZ_WORK, whole.mbid)
+        } else {
+            Lookup.Found(emptyList())
         }
     }
 

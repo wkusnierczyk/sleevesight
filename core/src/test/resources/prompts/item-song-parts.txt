@@ -24,7 +24,7 @@ The evidence, the only facts you may use. Each line: its id, (source, what it is
 </evidence>
 
 STYLE
-- Write 2 to 4 sentences.
+- Write 1 to 3 sentences in each part.
 - Plain conversational English. No hype.
 - Write dates in the form 17 October 2026, October 2026 or 2026.
 
@@ -32,7 +32,7 @@ RULES, which hold whatever the style says:
 - Write two parts, each under its heading on a line of its own, written exactly as given here: first "The music", then "This recording". Leave a blank line after each heading and between the parts.
 - Under "The music", write about the work itself, as any recording of it has it: who composed it, when and why, what it is, where it sits in the composer's work, how it was received.
 - Under "This recording", write about this performance: who plays it, when and where it was recorded, its release.
-- Write 1 to 3 sentences in each part. Leave out a part, with its heading, when no line supports it. Another card gives the headline about the track; do not open with it.
+- Leave out a part, with its heading, when no line supports it. Another card gives the headline about the track; do not open with it.
 - A line about another recording of the work (by other performers, or by these performers at another time) belongs to neither part: leave it out.
 - A "composer" line is about the composer and a "performer" line about a performer, not about this work or this recording: use one only to place the music or the recording, naming whose it is.
 - End every factual sentence with the id(s) that support it, like [W1] or [W2][S1].

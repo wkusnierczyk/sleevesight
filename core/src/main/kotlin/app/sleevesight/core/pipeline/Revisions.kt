@@ -6,6 +6,7 @@ import app.sleevesight.core.synthesis.CheckedSentence
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.SelfRevision
+import app.sleevesight.core.synthesis.SongParts
 import app.sleevesight.core.text.trimJs
 
 // A reply that revises itself where a card would show it (#798, `SelfRevision`), read the same way for
@@ -96,10 +97,9 @@ internal fun withoutCiting(
     }
     if (paragraphs == null || paragraphs.flatten().none(goes)) return reply
     val left = paragraphs.map { paragraph -> paragraph.filterNot(goes) }.filter { it.isNotEmpty() }
-    val heading = { paragraph: List<CheckedSentence> -> paragraph.singleOrNull()?.heading == true }
     // A heading stays only before what is left of its part: not before another heading, nor at the end.
-    return left
-        .filterIndexed { i, paragraph -> !heading(paragraph) || left.getOrNull(i + 1)?.let(heading) == false }
+    return SongParts
+        .withoutBare(left) { paragraph -> paragraph.singleOrNull()?.heading == true }
         .joinToString("\n\n") { paragraph ->
             paragraph.drop(1).fold(paragraph.first().text) { text, sentence ->
                 text + (if (sentence.afterLineBreak) "\n" else " ") + sentence.text

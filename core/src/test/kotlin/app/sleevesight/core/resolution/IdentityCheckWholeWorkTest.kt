@@ -9,9 +9,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The items MusicBrainz links to a composed work's part with none of its own (#1133,
- * [IdentityCheck.musicBrainzItems]): K. 545's Andante (`9727cab0`) has no Wikidata item; its sonata
- * (`a2ad223d`) has Q991701, as Wikidata answered `haswbstatement:P435` for each (2026-11-14).
+ * The whole work's items for a composed work's part MusicBrainz links to none (#1133,
+ * [IdentityCheck.wholeItems], apart from [IdentityCheck.musicBrainzItems]): K. 545's Andante
+ * (`9727cab0`) has no Wikidata item; its sonata (`a2ad223d`) has Q991701, as Wikidata answered
+ * `haswbstatement:P435` for each (2026-11-14).
  */
 class IdentityCheckWholeWorkTest {
     private class FakeWikidata(
@@ -43,11 +44,19 @@ class IdentityCheckWholeWorkTest {
 
     private fun check(wikidata: FakeWikidata) = IdentityCheck(wikidata, NameMatcher(JvmAccentFolder))
 
+    // What the check makes of [resolution]: the items MusicBrainz links, then the whole's.
+    private suspend fun IdentityCheck.both(resolution: Resolution): Pair<Lookup<List<String>>, Lookup<List<String>>> {
+        val linked = musicBrainzItems(resolution)
+        return linked to wholeItems(resolution, linked)
+    }
+
     @Test
-    fun `a part with no item of its own is checked by the whole work's item`() =
+    fun `a part with no item of its own has the whole work's item apart, its own lookup as before`() =
         runTest {
             val wikidata = FakeWikidata(mapOf(SONATA to Lookup.Found(listOf("Q991701"))))
-            assertEquals(Lookup.Found(listOf("Q991701")), check(wikidata).musicBrainzItems(resolved))
+            val (linked, whole) = check(wikidata).both(resolved)
+            assertEquals(Lookup.Found(emptyList()), linked)
+            assertEquals(Lookup.Found(listOf("Q991701")), whole)
             assertEquals(listOf("P435=$ANDANTE", "P435=$SONATA"), wikidata.asked)
         }
 
@@ -58,7 +67,9 @@ class IdentityCheckWholeWorkTest {
                 FakeWikidata(
                     mapOf(ANDANTE to Lookup.Found(listOf("Q1")), SONATA to Lookup.Found(listOf("Q991701"))),
                 )
-            assertEquals(Lookup.Found(listOf("Q1")), check(wikidata).musicBrainzItems(resolved))
+            val (linked, whole) = check(wikidata).both(resolved)
+            assertEquals(Lookup.Found(listOf("Q1")), linked)
+            assertEquals(Lookup.Found(emptyList()), whole)
             assertEquals(listOf("P435=$ANDANTE"), wikidata.asked)
         }
 
@@ -67,7 +78,9 @@ class IdentityCheckWholeWorkTest {
         runTest {
             val failed = Lookup.Failed("Offline")
             val wikidata = FakeWikidata(mapOf(ANDANTE to failed, SONATA to Lookup.Found(listOf("Q991701"))))
-            assertEquals(failed, check(wikidata).musicBrainzItems(resolved))
+            val (linked, whole) = check(wikidata).both(resolved)
+            assertEquals(failed, linked)
+            assertEquals(Lookup.Found(emptyList()), whole)
             assertEquals(listOf("P435=$ANDANTE"), wikidata.asked)
         }
 
@@ -75,8 +88,8 @@ class IdentityCheckWholeWorkTest {
     fun `a work with no whole asks for its own item only, as before`() =
         runTest {
             val wikidata = FakeWikidata(mapOf(SONATA to Lookup.Found(listOf("Q991701"))))
-            val alone = resolved.copy(work = andante.copy(whole = null))
-            assertEquals(Lookup.Found(emptyList()), check(wikidata).musicBrainzItems(alone))
+            val (_, whole) = check(wikidata).both(resolved.copy(work = andante.copy(whole = null)))
+            assertEquals(Lookup.Found(emptyList()), whole)
             assertEquals(listOf("P435=$ANDANTE"), wikidata.asked)
         }
 

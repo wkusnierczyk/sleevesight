@@ -83,6 +83,13 @@ object ItemPrompt {
         "- Write 2 to 4 sentences.\n- Plain conversational English. No hype."
 
     /**
+     * The built-in style of the song's insight in two parts (#1133), in place of [BUILT_IN_STYLE]: its
+     * length per part.
+     */
+    const val PARTS_STYLE: String =
+        "- Write 1 to 3 sentences in each part.\n- Plain conversational English. No hype."
+
+    /**
      * The prompt for [subject], beside [nowPlaying], normalized as [normalized], written from
      * [evidence]. With [allowModel] (the *Model's own knowledge* switch), the model may add one
      * sentence of its own, cited `[AI]`. Its dates in [dates]' form ([InsightPrompt.dateRule]). With
@@ -148,16 +155,11 @@ object ItemPrompt {
             appendLine("</evidence>")
             appendLine()
             appendLine("STYLE")
-            appendLine(BUILT_IN_STYLE)
+            appendLine(if (parted) PARTS_STYLE else BUILT_IN_STYLE)
             appendLine(InsightPrompt.dateRule(dates))
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
-            if (parted) {
-                appendLine(PARTS_RULE)
-                if (evidence.lines.any { it.scope == Scope.ARTIST }) appendLine(PARTS_PEOPLE_RULE)
-            } else {
-                appendLine(subjectRule(subject.kind))
-            }
+            subjectRules(subject.kind, parted, evidence).forEach(::appendLine)
             if (subject.kind == CardKind.ALBUM && subject.performers.isNotEmpty()) appendLine(ALBUM_RECORDING_RULE)
             appendLine(contract(allowModel, onlyListings && !parted, parted))
             appendLine()
@@ -166,6 +168,19 @@ object ItemPrompt {
 
     /** The prompt's last line. */
     private const val REPLY: String = "Reply with the insight text only."
+
+    // The rules of [kind]'s own: the song's in two parts' ([parted], #1133), with the one on the
+    // people's lines when [evidence] holds any; else [subjectRule].
+    private fun subjectRules(
+        kind: CardKind,
+        parted: Boolean,
+        evidence: EvidenceSet,
+    ): List<String> =
+        when {
+            !parted -> listOf(subjectRule(kind))
+            evidence.lines.any { it.scope == Scope.ARTIST } -> listOf(PARTS_RULE, PARTS_PEOPLE_RULE)
+            else -> listOf(PARTS_RULE)
+        }
 
     // [line] as the two parts' prompt gives it (#1133): an artist's line named as the composer's when
     // its id is among [composerLines], else as a performer's; any other as every prompt gives it.
@@ -210,8 +225,8 @@ object ItemPrompt {
             "composed it, when and why, what it is, where it sits in the composer's work, how it was received.\n" +
             "- Under \"${SongParts.RECORDING}\", write about this performance: who plays it, when and where it " +
             "was recorded, its release.\n" +
-            "- Write 1 to 3 sentences in each part. Leave out a part, with its heading, when no line supports " +
-            "it. Another card gives the headline about the track; do not open with it.\n" +
+            "- Leave out a part, with its heading, when no line supports it. Another card gives the headline " +
+            "about the track; do not open with it.\n" +
             "- A line about another recording of the work (by other performers, or by these performers at " +
             "another time) belongs to neither part: leave it out."
 

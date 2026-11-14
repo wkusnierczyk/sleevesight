@@ -17,6 +17,9 @@ class SongPartsTest {
         for (line in listOf("**The music:**", "**The music**:", "__The music__:", "# **The music**", "## The music")) {
             assertEquals(SongParts.MUSIC, SongParts.heading(line), line)
         }
+        for (line in listOf("The music.", "The music —", "The music –", "**The music** -", "The music:  ")) {
+            assertEquals(SongParts.MUSIC, SongParts.heading(line), line)
+        }
         for (line in listOf("__This recording:__", "### This recording:", "*This recording*:")) {
             assertEquals(SongParts.RECORDING, SongParts.heading(line), line)
         }
@@ -57,6 +60,28 @@ class SongPartsTest {
                 .heading,
         )
         assertEquals(0, grounded.counts.uncited)
+    }
+
+    @Test
+    fun `a heading with nothing of its part after it is left out, the model's or what a note left`() {
+        val ids = setOf("W1")
+
+        fun headings(reply: String) =
+            (GroundingCheck.check(reply, ids, false, notes = true, headings = true) as InsightReply.Written)
+                .grounded
+                .paragraphs
+                .flatten()
+                .filter { it.heading }
+                .map { it.text }
+        // At the end, and before the next heading.
+        assertEquals(listOf(SongParts.MUSIC), headings("The music\n\nOne [W1].\n\nThis recording"))
+        assertEquals(listOf(SongParts.RECORDING), headings("The music\n\nThis recording\n\nTwo [W1]."))
+        assertEquals(
+            "${SongParts.MUSIC}\n\nOne [W1].",
+            SongParts.separated("The music\nOne [W1].\n\n**This recording:**"),
+        )
+        assertEquals(listOf(0, 1, 2, 3), SongParts.withoutBare(listOf(0, 1, 2, 3, 4)) { it % 2 == 0 })
+        assertEquals(listOf(2, 1, 2, 3), SongParts.withoutBare(listOf(0, 2, 1, 2, 3)) { it % 2 == 0 })
     }
 
     @Test

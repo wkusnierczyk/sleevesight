@@ -22,14 +22,14 @@ object SongParts {
 
     /**
      * The heading [line] is, as written: [MUSIC] or [RECORDING] whatever its case, perhaps with a
-     * Markdown heading's `#`s before it, emphasis marks (`*`, `_`) around it or a colon after it, in
-     * any order (`**The music:**`, `**The music**:`, `## __This recording__`), which the prompt asks
-     * for none of; null for any other line.
+     * Markdown heading's `#`s before it, emphasis marks (`*`, `_`) around it, or a colon, a stop or a
+     * dash after it, in any order (`**The music:**`, `**The music**:`, `## __This recording__`, `The
+     * music —`), which the prompt asks for none of; null for any other line.
      */
     fun heading(line: String): String? {
         var bare = line.trimJs()
         while (true) {
-            val next = bare.trimStart('#', '*', '_').trimEnd('*', '_', ':').trimJs()
+            val next = bare.trimStart('#', '*', '_').trimEnd { it in TRAILING }.trimJs()
             if (next == bare) break
             bare = next
         }
@@ -38,17 +38,38 @@ object SongParts {
 
     /**
      * [text] with each line that is a heading ([heading]) a paragraph of its own, written as the
-     * heading itself, one blank line between paragraphs: so a heading the reply wrote straight above
-     * its part, with no blank line, is still one. Itself when no line is.
+     * heading itself, one blank line between paragraphs, and a heading with nothing of its part after it
+     * left out ([withoutBare]): so a heading the reply wrote straight above its part, with no blank
+     * line, is still one, and none stands over nothing. Itself when no line is a heading.
      */
     fun separated(text: String): String {
         val lines = text.split('\n')
         if (lines.none { heading(it) != null }) return text
-        val out = lines.flatMap { line -> heading(line)?.let { listOf("", it, "") } ?: listOf(line) }
-        // One blank line between paragraphs, where the reply had one already or none.
-        return out
-            .filterIndexed { i, line -> line.isNotBlank() || i == 0 || out[i - 1].isNotBlank() }
-            .joinToString("\n")
-            .trimJs()
+        val paragraphs =
+            lines
+                .joinToString("\n") { line -> heading(line)?.let { "\n\n$it\n\n" } ?: line }
+                .split(BLANK_LINE)
+                .map { it.trimJs() }
+                .filter { it.isNotEmpty() }
+        return withoutBare(paragraphs) { heading(it) != null }.joinToString("\n\n")
     }
+
+    /**
+     * [paragraphs] without each heading ([isHeading]) that nothing of its part follows: another
+     * heading next, or the end. What the grounding check reads ([separated]) and what is left once
+     * sentences citing lines gone are taken out (`withoutCiting`) both keep no heading over nothing.
+     */
+    fun <T> withoutBare(
+        paragraphs: List<T>,
+        isHeading: (T) -> Boolean,
+    ): List<T> =
+        paragraphs.filterIndexed { i, paragraph ->
+            !isHeading(paragraph) || paragraphs.getOrNull(i + 1)?.let(isHeading) == false
+        }
+
+    // What may follow a heading the prompt does not ask for: emphasis, a colon, a stop, a dash.
+    private const val TRAILING = "*_:.\u2014\u2013-"
+
+    // A blank line, perhaps with spaces on it, between two paragraphs.
+    private val BLANK_LINE = Regex("\n[ \t]*\n")
 }
