@@ -13,6 +13,13 @@ class SongPartsTest {
         assertEquals(SongParts.MUSIC, SongParts.heading("## The Music:"))
         assertEquals(SongParts.RECORDING, SongParts.heading("**This recording**"))
         assertNull(SongParts.heading("The music was composed in 1788 [W1]."))
+        // The decorations in any order: the colon inside the emphasis or after it, `__` or `#`s.
+        for (line in listOf("**The music:**", "**The music**:", "__The music__:", "# **The music**", "## The music")) {
+            assertEquals(SongParts.MUSIC, SongParts.heading(line), line)
+        }
+        for (line in listOf("__This recording:__", "### This recording:", "*This recording*:")) {
+            assertEquals(SongParts.RECORDING, SongParts.heading(line), line)
+        }
         assertNull(SongParts.heading("Music"))
     }
 
@@ -29,6 +36,27 @@ class SongPartsTest {
         assertEquals(2, headings.size)
         assertTrue(headings.all { it.status == SentenceStatus.HEDGE && it.cites.isEmpty() })
         assertEquals(GroundingCounts(ok = 2, model = 0, hedge = 0, uncited = 0, unknown = 0), grounded.counts)
+    }
+
+    @Test
+    fun `a heading with its colon after the emphasis is a heading, not a dimmed sentence`() {
+        val reply = "**The music**:\nComposed in 1788 [W1]."
+        val grounded =
+            (GroundingCheck.check(reply, setOf("W1"), false, headings = true) as InsightReply.Written).grounded
+        assertEquals(
+            SongParts.MUSIC,
+            grounded.paragraphs
+                .first()
+                .single()
+                .text,
+        )
+        assertTrue(
+            grounded.paragraphs
+                .first()
+                .single()
+                .heading,
+        )
+        assertEquals(0, grounded.counts.uncited)
     }
 
     @Test

@@ -250,7 +250,7 @@ same card key: no prefix and no resolution, a pop song, a track credited to its 
   and Wikidata's lines of the song's item the identity check accepted, the track's web lines, which
   #1179 already searches by the work part of a title that leads with its composer). New: a composed
   work's part with no Wikidata item of its own is checked by the item of the work it is a part of
-  (`ResolvedWork.whole`, the work's first `parts` parent, given with the work's own lookup;
+  (`ResolvedWork.whole`, the work's `parts` parent when it has only one, given with the work's own lookup;
   `IdentityCheck.musicBrainzItems`), so K. 545's Andante, which has none, takes its sonata's (Q991701,
   found by its MusicBrainz work id `a2ad223d`, P435), with *Piano Sonata No. 16 (Mozart)*'s lead and
   Wikidata's date line ("Piano Sonata No. 16 was created on June 26, 1788."): one more free Wikidata

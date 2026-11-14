@@ -376,8 +376,10 @@ private fun Shown(
                     modelAllowed = context.settings.isEnabled(SourceId.MODEL),
                     offers = InsightOffers(),
                 )
-            // The song's part headings show as such while it streams too (#1133).
-            UncheckedParagraphs(item == InsightItem.SONG, state.partial, prose, onCite, label)
+            // The song's part headings show as such while it streams too (#1133), as once written: only
+            // for the song's in two parts.
+            val parts = item == InsightItem.SONG && shown.evidence.parts
+            UncheckedParagraphs(parts, state.partial, prose, onCite, label)
             WritingItem(item) { shown.key?.let(context.notes::stop) }
         }
 

@@ -22,19 +22,17 @@ object SongParts {
 
     /**
      * The heading [line] is, as written: [MUSIC] or [RECORDING] whatever its case, perhaps with a
-     * Markdown heading's `#`s, emphasis marks around it or a colon after it, which the prompt asks
+     * Markdown heading's `#`s before it, emphasis marks (`*`, `_`) around it or a colon after it, in
+     * any order (`**The music:**`, `**The music**:`, `## __This recording__`), which the prompt asks
      * for none of; null for any other line.
      */
     fun heading(line: String): String? {
-        val bare =
-            line
-                .trimJs()
-                .trimStart('#')
-                .trimJs()
-                .trim('*', '_')
-                .trimJs()
-                .removeSuffix(":")
-                .trimJs()
+        var bare = line.trimJs()
+        while (true) {
+            val next = bare.trimStart('#', '*', '_').trimEnd('*', '_', ':').trimJs()
+            if (next == bare) break
+            bare = next
+        }
         return HEADINGS.firstOrNull { it.equals(bare, ignoreCase = true) }
     }
 

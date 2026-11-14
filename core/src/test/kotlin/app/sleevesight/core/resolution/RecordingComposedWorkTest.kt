@@ -98,6 +98,17 @@ class RecordingComposedWorkTest {
         }
 
     @Test
+    fun `a part of two works keeps no whole, in either order, as nothing tells which is its own (#1133)`() =
+        runTest {
+            val sonata = MbParentWork("sonata", "Sonata for Piano no. 16", "Sonata")
+            val collection = MbParentWork("sonatas", "Piano Sonatas", null)
+            for (parents in listOf(listOf(sonata, collection), listOf(collection, sonata))) {
+                val resolution = resolve(musicBrainz(work(parents = parents)), track("Andante", "Pianist"))
+                assertNull(resolution.work?.whole, "$parents")
+            }
+        }
+
+    @Test
     fun `a song's work keeps no whole, though it is a part of one (#1133)`() =
         runTest {
             val parent = MbParentWork("opera", "A Rock Opera", "Opera")

@@ -17,6 +17,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -103,6 +104,50 @@ class AppGenreLibraryTest {
             advanceUntilIdle()
             assertEquals(PanelLibrary.Answered(LibraryLyrics.NONE), notes.libraryLyrics(track).first())
             assertEquals(2, library.asked.size)
+        }
+
+    @Test
+    fun `two performances under one composer, title, album and length each hold their own answer (#1133)`() =
+        runTest {
+            // LRCLIB has neither under the composer; the first performer's recording has lyrics, the
+            // second's is marked instrumental.
+            val byArtist =
+                object : LyricsLibrary {
+                    override suspend fun lookUp(query: LibraryQuery): Lookup<LibraryLyrics> =
+                        when (query.artist) {
+                            "Performer A" -> Lookup.Found(LibraryLyrics.LYRICS)
+                            "Performer B" -> Lookup.Found(LibraryLyrics.INSTRUMENTAL)
+                            else -> Lookup.NotFound
+                        }
+                }
+            val made =
+                MutableStateFlow<PipelineParts?>(
+                    PipelineParts(
+                        normalizer = Normalizer(JvmAccentFolder),
+                        adapters = emptyList(),
+                        resolver = TrackResolver { _, _ -> Resolution.NONE },
+                        hasher = JvmHasher,
+                        cache = CardCache(clock = clock),
+                        lyricsLibrary = byArtist,
+                    ),
+                )
+
+            fun performance(performer: String) =
+                HomeFixtures
+                    .track(HomeFixtures.sundown.copy(artists = "Composer, $performer"))
+                    .copy(
+                        resolution =
+                            Resolution(recordingMbid = "r", roles = ArtistRoles(listOf("Composer"), listOf(performer))),
+                    )
+            val notes = AppGenreNotes(definitions, made, settings, this, clock = clock)
+            val first = performance("Performer A")
+            val second = performance("Performer B")
+            notes.libraryLyrics(first).first()
+            advanceUntilIdle()
+            notes.libraryLyrics(second).first()
+            advanceUntilIdle()
+            assertEquals(PanelLibrary.Answered(LibraryLyrics.LYRICS), notes.libraryLyrics(first).first())
+            assertEquals(PanelLibrary.Answered(LibraryLyrics.INSTRUMENTAL), notes.libraryLyrics(second).first())
         }
 
     @Test

@@ -371,13 +371,14 @@ class RecordingResolver(
                 .toSet()
         return withRecording.copy(
             // A composed work's part with the work it is a part of (#1133), whose Wikidata item the
-            // identity check looks for when the part has none.
+            // identity check looks for when the part has none: only when it is a part of one work,
+            // since nothing tells which of several is its own.
             work =
                 ResolvedWork(
                     work.mbid,
                     work.title,
                     work.parents
-                        .firstOrNull()
+                        .singleOrNull()
                         ?.takeIf { composedWork }
                         ?.let { ResolvedWork(it.mbid, it.title) },
                 ),
