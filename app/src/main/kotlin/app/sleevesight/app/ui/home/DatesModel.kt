@@ -10,6 +10,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.sources.ComposedDate
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.PlaceholderDay
 import app.sleevesight.core.sources.ReleaseDate
@@ -144,6 +145,15 @@ internal sealed interface DateSentence {
         val title: String?,
         val kind: ReleaseKind?,
     ) : DateSentence
+
+    /**
+     * "The music was composed in {year}.", or "… between {year} and {year}." over several (#1132): when
+     * the track's music was composed, as [date] says, with its source on a line under it ("From
+     * MusicBrainz", a link to the page that says so).
+     */
+    data class Composed(
+        val date: ComposedDate,
+    ) : DateSentence
 }
 
 /**
@@ -192,7 +202,9 @@ internal sealed interface EditionPart {
  * has no release group, its title has the album's key) and the album's sentence says its date (else
  * the date would be lost, #1058: then said with its own date and title), "this single" or "this EP"
  * when the album is one; and, for a cover, the song's original recording, with the release it
- * first came out on when known. Empty when no date is known: the panel then says why ([NoDates]).
+ * first came out on when known; then, after them, when the music was composed ([DateSentence.Composed],
+ * #1132), as MusicBrainz, else Wikidata, dates it, only when every year of it is before the earliest
+ * year they say. Empty when no date is known: the panel then says why ([NoDates]).
  * The album's sentence says "originally" only of its release group's first release, played as it
  * is: of a later edition, or of one under another title, it says the group's first release and the
  * edition's ([DateSentence.Edition], #1099), as MusicBrainz's lookup of the group gives them
@@ -234,6 +246,7 @@ internal fun homeDates(
         sentences +=
             DateSentence.Original(cover.date, cover.artistCredit, release?.title, ReleaseKind.of(release?.type))
     }
+    composedSentence(track, sentences)?.let { sentences += it }
     return sentences
 }
 
@@ -650,7 +663,7 @@ internal fun firstReleaseOf(track: TrackState?): FirstRelease? =
     keptMusicBrainz(track)?.firstRelease ?: track?.resolution?.firstRelease
 
 // MusicBrainz's result for [track], as the run gave it or the retrieval cache kept it.
-private fun keptMusicBrainz(track: TrackState?): SourceResult? =
+internal fun keptMusicBrainz(track: TrackState?): SourceResult? =
     (track?.sources?.get(SourceId.MUSICBRAINZ) as? SourceState.Done)?.result
 
 // Release dates compared at the precision both have (#1116): `1987` is `1987-09-07`'s day as far as
