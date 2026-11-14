@@ -20,8 +20,8 @@ import app.sleevesight.app.ui.theme.TextPart
 
 /**
  * Under a row's sources (#1205): "From:" and the citation of each of [lines], the pages the AI's
- * genres rest on, spaces between, each a link to its line in *Sources* ([onCite]), as the *Described*
- * row's are ([citation]). Its row reads it ([citedRow]).
+ * genres rest on, spaces between, each a link to its line in *Sources* ([onCite]), as the *Bio*
+ * row's are ([citation], [describedParts]). Its row reads it ([citedRow]).
  */
 @Composable
 internal fun FromPages(

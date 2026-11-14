@@ -69,8 +69,8 @@ internal fun GenresSearch(
         val asked = weighed.track
         if (answer is SearchAnswer.Genres && asked != null) {
             AiGenres(asked, answer.genres, notes.notes, search, model)
-            // From the web (#801): the pages that give them, under the chips.
-            for (source in answer.sources) FromSite(source)
+            // From the web (#801): the pages that give them, under the chips, on one line (#1204).
+            FromSites(answer.sources)
         }
     }
     // One LRCLIB line at most: the panel's own, unless *Genres* says it already.

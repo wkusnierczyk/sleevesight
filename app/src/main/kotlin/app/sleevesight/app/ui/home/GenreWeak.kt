@@ -28,7 +28,7 @@ import app.sleevesight.core.pipeline.TrackState
  * sentence in an insight (#819), at the regular weight; while [selected], in italics, dimmed on the
  * selected fill: the chip's text colour at [WEAK_SELECTED] over it. A screen reader reads it "Country,
  * weak evidence", or, for a genre an artist's description names ([spoken], #1000: "Instrumental,
- * from the artist’s description"), that, then "weak evidence".
+ * from the artist’s bio"), that, then "weak evidence".
  */
 @Composable
 internal fun WeakName(
