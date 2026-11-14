@@ -150,7 +150,8 @@ internal object ExaLanguageQuery {
      * when written in a script other than Latin, else Wikidata's label in the language), each
      * credited artist likewise (the composer its title leads with and the artists it names among them,
      * #1195), and the work it is from, when the player named one, as Wikidata names it in the
-     * language; each as the track has it where neither does.
+     * language; each as the track has it where neither does. Its primary artist is the lead performer
+     * ([LanguageQuery.roles], #1180), named likewise: the song's search in the language names them.
      */
     fun nativeTrack(
         query: LanguageQuery,
@@ -170,7 +171,8 @@ internal object ExaLanguageQuery {
         return track.copy(
             title = native(track.title, items.song?.label),
             artists = track.artists.map(::artist),
-            primary = artist(track.primary),
+            // The lead performer (#1180): the song's search in the language names them, not a composer.
+            primary = artist(query.roles.lead(track)),
             from = track.from?.let { from -> native(from, items.comes.firstOrNull()?.label) },
             composer = track.composer?.let { it.copy(name = artist(it.name)) },
             titleArtists = track.titleArtists.map(::artist),

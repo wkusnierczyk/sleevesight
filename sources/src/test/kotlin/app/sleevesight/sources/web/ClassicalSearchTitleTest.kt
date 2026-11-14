@@ -296,17 +296,18 @@ class ClassicalSearchTitleTest {
     }
 
     @Test
-    fun `Wikipedia's song titles leave out the composer's lead`() {
+    fun `Wikipedia's song titles leave out the composer's lead, and name the first performer`() {
+        // #1180: the artist in `Title (Artist song)` is the lead performer, not the composer.
         val title = "Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante"
         assertEquals(
-            listOf("$title (Wolfgang Amadeus Mozart song)", "$title (song)", title),
+            listOf("$title (Khatia Buniatishvili song)", "$title (song)", title),
             WikipediaSource.songTitles(k545).take(3),
         )
         assertTrue(WikipediaSource.songTitles(k545).none { it.startsWith("Mozart") })
     }
 
     @Test
-    fun `the song's own search leaves out the composer's lead`() =
+    fun `the song's own search leaves out the composer's lead, and names the first performer`() =
         runTest {
             val net = ReplayNetClient.ok("""{"results":[]}""")
             ExaSongSearch(net, Secret("k"), JvmAccentFolder, { LanguageItems.NONE }, clock).search(SongWebQuery(k545))
@@ -320,13 +321,13 @@ class ClassicalSearchTitleTest {
                     ).jsonObject
             assertEquals(
                 "\"Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante\" " +
-                    "Wolfgang Amadeus Mozart review interview",
+                    "Khatia Buniatishvili review interview",
                 sent["query"]?.jsonPrimitive?.content,
             )
         }
 
     @Test
-    fun `the song's search in the track's language leaves out the composer's lead`() =
+    fun `the song's search in the track's language leaves out the composer's lead, and names the first performer`() =
         runTest {
             val portuguese = Languages.ofCode("pt")!!
             val net = ReplayNetClient.ok("""{"results":[]}""")
@@ -342,11 +343,11 @@ class ClassicalSearchTitleTest {
                     ).jsonObject
             val title = "Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante"
             assertEquals(
-                "\"$title\" Wolfgang Amadeus Mozart, ${portuguese.song}",
+                "\"$title\" Khatia Buniatishvili, ${portuguese.song}",
                 sent["query"]?.jsonPrimitive?.content,
             )
             assertEquals(
-                "$title Wolfgang Amadeus Mozart",
+                "$title Khatia Buniatishvili",
                 sent["contents"]
                     ?.jsonObject
                     ?.get("highlights")

@@ -51,7 +51,10 @@ data class LibraryQuery(
          * ([removedVersion]): "Song - Off Vocal Version" would be asked for as "Song", whose vocal
          * mix, of the same album and length, LRCLIB would give. By the whole title, a composer's lead
          * included (`NormalizedTrack.searchTitle` leaves it out, #1179): LRCLIB keeps the names the
-         * players give, and has Buniatishvili's K. 545 as `Mozart: Piano Sonata No. 16 …` only.
+         * players give, and has Buniatishvili's K. 545 as `Mozart: Piano Sonata No. 16 …` only. By the
+         * first credited artist, a composer credited first among them, not the lead performer (#1180):
+         * for the same reason, LRCLIB files a track under the artist the player names (it has
+         * *Nessun dorma* under Giacomo Puccini as often as under Luciano Pavarotti, checked 2026-11-14).
          */
         fun of(
             track: NormalizedTrack,

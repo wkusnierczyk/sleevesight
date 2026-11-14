@@ -14,6 +14,7 @@ import app.sleevesight.core.resolution.WikidataEvidence
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -495,7 +496,10 @@ class WikipediaSource(
          * `Title (song)`, `Title`; for the title as given, in Wikipedia's casing (small words in
          * lowercase), and without a leading `The`. Wikipedia's redirects cover most other spellings.
          * The title as searched ([NormalizedTrack.searchTitle], #1179): without a composer's lead,
-         * which no article's title has.
+         * which no article's title has. The artist is the lead performer ([ArtistRoles.lead], #1180),
+         * as the title tells it ([ArtistRoles.of]): the titles are asked for before the resolution
+         * lands, beside the artists' pages, so a composer MusicBrainz alone tells (no lead in the title)
+         * still names them, as before.
          */
         fun songTitles(track: NormalizedTrack): List<String> {
             val title = track.searchTitle.trim()
@@ -506,7 +510,7 @@ class WikipediaSource(
                     wikiCase(title),
                     wikiCase(title.removePrefix("The ").removePrefix("the ")),
                 ).distinct()
-            val artist = track.primary.trim()
+            val artist = ArtistRoles.of(track).lead(track).trim()
             return bases
                 .flatMap { base ->
                     listOfNotNull(artist.takeIf { it.isNotEmpty() }?.let { "$base ($it song)" }, "$base (song)", base)

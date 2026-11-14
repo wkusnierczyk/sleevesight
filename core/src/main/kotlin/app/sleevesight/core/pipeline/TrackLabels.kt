@@ -206,9 +206,10 @@ internal class TrackLabels(
                     asks(LabelSource.LASTFM)
             }
         if (fromLastFm != null && track.primary.isNotBlank()) {
-            // By the whole title, a composer's lead included (not `searchTitle`, #1179): Last.fm files
-            // a track under the names the player scrobbled, and has tags for `Mozart: Piano Sonata
-            // No. 16 …` by Wolfgang Amadeus Mozart, none for the title without the lead.
+            // By the whole title, a composer's lead included (not `searchTitle`, #1179), and by the first
+            // credited artist, a composer among them (not the lead performer, #1180): Last.fm files a
+            // track under the names the player scrobbled, and has tags for `Mozart: Piano Sonata No. 16 …`
+            // by Wolfgang Amadeus Mozart, none for the title without the lead.
             asks += Later(LabelSource.LASTFM) { fromLastFm.trackLookup(track.primary, track.title) }
             current.nowPlaying.album
                 ?.trim()

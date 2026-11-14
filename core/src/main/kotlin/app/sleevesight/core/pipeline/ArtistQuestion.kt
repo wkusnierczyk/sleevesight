@@ -85,7 +85,7 @@ internal class ArtistQuestion(
 
     // The artist's prompt from [evidence].
     private fun prompt(evidence: EvidenceSet): String =
-        ItemPrompt.build(subject, track.nowPlaying, track.normalized, evidence, allowModel, dates)
+        ItemPrompt.build(subject, track.nowPlaying, track.normalized, evidence, allowModel, dates, roles = track.roles)
 
     // Of [pages], the lines of those that name the artist and give one ([line]), at most [PAGES_PER_SEARCH].
     private fun about(pages: List<WebPage>): List<EvidenceDraft> =

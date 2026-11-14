@@ -7,6 +7,7 @@ import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
@@ -40,7 +41,10 @@ import kotlin.time.TimeMark
  * found unavailable (#540, [PipelineParts.modelUnavailable]), nothing is written, but the card kept
  * under the service and model selected, else another's, still shows, with nothing offered.
  */
-@Suppress("TooManyFunctions") // Each step of the insight: the card kept, the call, its reply, its check.
+@Suppress(
+    "TooManyFunctions", // Each step of the insight: the card kept, the call, its reply, its check.
+    "LongParameterList", // The run's parts, its track and evidence, where it reports, and the artists' roles.
+)
 internal class InsightWriter(
     private val parts: PipelineParts,
     private val time: PipelineTime,
@@ -48,6 +52,8 @@ internal class InsightWriter(
     private val evidence: EvidenceSet,
     private val guard: CacheGuard,
     private val sink: RunSink,
+    // Who composed the work and who performs it, once the sources are in (#1180): the prompt names them.
+    private val roles: ArtistRoles = ArtistRoles.of(input.track),
 ) {
     private val settings = input.settings
     private val nowPlaying = input.nowPlaying
@@ -244,7 +250,7 @@ internal class InsightWriter(
         val given = if (whole) evidence else PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once)
         val sent = Prompted(evidence, given)
         val effort = settings.effort(ai.provider.id)
-        val prompt = InsightPrompt.user(nowPlaying, track, sent.evidence)
+        val prompt = InsightPrompt.user(nowPlaying, track, sent.evidence, roles)
         val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort, system = system)
         val text = StringBuilder()
         var frozen = false

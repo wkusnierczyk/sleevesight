@@ -223,7 +223,7 @@ internal class TrackRun(
                         control.ended(RunStep.LABELS)
                     }
                 }
-                InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(control)
+                InsightWriter(parts, time, input, evidence, guard, this@TrackRun, state.value.roles).write(control)
             }
             return state.value
         } catch (e: CancellationException) {

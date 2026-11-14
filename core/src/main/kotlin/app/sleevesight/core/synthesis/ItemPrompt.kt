@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.text.DateForm
 
 /**
@@ -75,9 +76,13 @@ object ItemPrompt {
      * [evidence]. With [allowModel] (the *Model's own knowledge* switch), the model may add one
      * sentence of its own, cited `[AI]`. Its dates in [dates]' form ([InsightPrompt.dateRule]). With
      * [onlyListings], the song's when its own lines only list it (#958), the rule on a gap is
-     * [ONLY_LISTINGS_RULE].
+     * [ONLY_LISTINGS_RULE]. The `<track>` block names the artists by their [roles] (#1180,
+     * [InsightPrompt.roleLines]): a composer as `Composer:`, beside the `Performers:`, in place of
+     * `Primary artist:`.
      */
-    @Suppress("LongParameterList") // What it is about, the data, the switch, the dates' form, and the gap's rule.
+    @Suppress(
+        "LongParameterList", // What it is about, the data, the switch, the dates' form, the gap's rule, the roles.
+    )
     fun build(
         subject: Subject,
         nowPlaying: NowPlaying,
@@ -86,6 +91,7 @@ object ItemPrompt {
         allowModel: Boolean,
         dates: DateForm = DateForm.APP,
         onlyListings: Boolean = false,
+        roles: ArtistRoles = ArtistRoles.of(normalized),
     ): String =
         buildString {
             appendLine(task(subject.kind))
@@ -100,7 +106,7 @@ object ItemPrompt {
             appendLine("Title: ${InsightPrompt.oneLine(nowPlaying.title)}")
             appendLine("Artists: ${InsightPrompt.oneLine(nowPlaying.artists)}")
             nowPlaying.album?.let { appendLine("Release: ${InsightPrompt.oneLine(it)}") }
-            appendLine("Primary artist: ${InsightPrompt.oneLine(normalized.primary)}")
+            InsightPrompt.roleLines(normalized, roles).forEach(::appendLine)
             appendLine("</track>")
             appendLine()
             appendLine("<subject>")
