@@ -449,7 +449,7 @@ private fun GenreChip(
     ) {
         val label = placed.label.genre.label
         val model = placed.label.aiModel?.takeIf { placed.label.aiAdded }
-        // A genre the artist's description names (#1000), read "Instrumental, from the artist’s description".
+        // A genre the artist's description names (#1000), read "Instrumental, from the artist’s bio".
         val spoken = if (placed.label.describedIn != null) stringResource(R.string.genre_described, label) else label
         CompositionLocalProvider(LocalContentColor provides content) {
             if (placed.weak && model != null) {
