@@ -112,7 +112,7 @@
     <string name="genre_described_named">Named in the artist’s bio: “%1$s”</string>
     <!-- In its place for Instrumental only the artist's description gives (#1000, #998's artist
          hint), shown as a weak genre: %1$s is the line's sentence, as above. -->
-    <string name="genre_weak_hint">The artist’s description calls them instrumental, but no source says so of this track: “%1$s”</string>
+    <string name="genre_weak_hint">The artist’s bio calls them instrumental, but no source says so of this track: “%1$s”</string>
     <!-- Under Instrumental's definition while the check of the track's vocals runs (#998), after the
          small turning record, in the panel's quiet note style. -->
     <string name="genre_vocals_checking">Checking whether this track has vocals…</string>
