@@ -543,7 +543,7 @@ class AppGenreNotes private constructor(
                                 library,
                                 made.cache,
                                 events,
-                            ).ask(track.normalized, track.nowPlaying)
+                            ).ask(track.normalized, track.nowPlaying, roles = track.roles)
                     ) {
                         is LibraryAnswer.Known -> {
                             events(PipelineEvent.LibraryAnswered(key, answer.lyrics, answer.cached))

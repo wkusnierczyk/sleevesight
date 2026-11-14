@@ -14,6 +14,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.sources.ArtistRoles
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -116,35 +117,63 @@ sealed interface LibraryAnswer {
  * whole query ([LibraryQuery]: artist, title, album, length in seconds), so a replay asks nothing: a
  * match's answer, lyrics or instrumental, and no match too, as no answer ([LibraryLyrics.NONE]). A
  * failure is not kept. Asked only for a track [LibraryQuery.of] gives a query for; a cache that fails
- * is told to [emit] and missed.
+ * is told to [emit] and missed. With the track's roles, when the first query finds nothing and the
+ * roles tell a composer apart, it is asked again by the lead performer ([LibraryQuery.byLead], #1133),
+ * that answer kept under its own query: one more free request, on such a track only.
  */
 class LibraryLookup(
     private val library: LyricsLibrary,
     private val cache: PipelineCache,
     private val emit: (PipelineEvent) -> Unit = {},
 ) {
-    /** The answer kept for [track] as [nowPlaying] plays it, if any; asks nothing. */
+    /**
+     * The answer kept for [track] as [nowPlaying] plays it, if any; asks nothing. With [roles], no
+     * match kept for the first query reads the one kept for the lead performer's ([LibraryQuery.byLead],
+     * #1133), and is none while that is not kept.
+     */
     suspend fun kept(
         track: NormalizedTrack,
         nowPlaying: NowPlaying,
-    ): LibraryLyrics? =
-        LibraryQuery.of(track, nowPlaying)?.let { query ->
-            guarded(track, "read ${SourceId.LRCLIB.tag}") { libraryLyrics(query) }
-        }
+        roles: ArtistRoles? = null,
+    ): LibraryLyrics? {
+        val first = LibraryQuery.of(track, nowPlaying)?.let { keptFor(track, it) }
+        val again = LibraryQuery.byLead(track, nowPlaying, roles)
+        return if (first == LibraryLyrics.NONE && again != null) keptFor(track, again) else first
+    }
 
     /**
      * The answer for [track] as [nowPlaying] plays it: the one kept, unless [fresh] (a look again,
-     * #617), else LRCLIB's, kept; null when it cannot be asked ([LibraryQuery.of]).
+     * #617), else LRCLIB's, kept; null when it cannot be asked ([LibraryQuery.of]). With [roles], no
+     * match for the first query is asked again by the lead performer ([LibraryQuery.byLead], #1133),
+     * whose answer, or failure, it then is.
      */
     suspend fun ask(
         track: NormalizedTrack,
         nowPlaying: NowPlaying,
         fresh: Boolean = false,
+        roles: ArtistRoles? = null,
     ): LibraryAnswer? {
         val query = LibraryQuery.of(track, nowPlaying) ?: return null
-        val kept = if (fresh) null else guarded(track, "read ${SourceId.LRCLIB.tag}") { libraryLyrics(query) }
+        val first = answer(track, query, fresh)
+        val again = LibraryQuery.byLead(track, nowPlaying, roles)
+        val none = first is LibraryAnswer.Known && first.lyrics == LibraryLyrics.NONE
+        return if (none && again != null) answer(track, again, fresh) else first
+    }
+
+    // [query]'s answer: the one kept, unless [fresh], else LRCLIB's, kept.
+    private suspend fun answer(
+        track: NormalizedTrack,
+        query: LibraryQuery,
+        fresh: Boolean,
+    ): LibraryAnswer {
+        val kept = if (fresh) null else keptFor(track, query)
         return kept?.let { LibraryAnswer.Known(it, cached = true) } ?: asked(track, query)
     }
+
+    private suspend fun keptFor(
+        track: NormalizedTrack,
+        query: LibraryQuery,
+    ): LibraryLyrics? = guarded(track, "read ${SourceId.LRCLIB.tag}") { libraryLyrics(query) }
 
     // LRCLIB's answer for [query], kept; a 404 kept as no answer, a failure not kept.
     private suspend fun asked(
@@ -217,10 +246,13 @@ internal class LibrarySign(
     /** Whether [genres] show LRCLIB as not reached: it [failed], and they still call for it. */
     fun unreachable(genres: TrackGenres): Boolean = failed && genres.wantsLibrary()
 
-    /** The answer kept for the track, if any, before the genres are assembled; asks nothing. */
-    suspend fun readKept() {
+    /**
+     * The answer kept for the track, if any, before the genres are assembled; asks nothing. By its
+     * [roles], for the lead performer's query too (#1133, [LibraryLookup.kept]).
+     */
+    suspend fun readKept(roles: ArtistRoles? = null) {
         if (fresh || lookup == null) return
-        lookup.kept(track, nowPlaying)?.let { kept ->
+        lookup.kept(track, nowPlaying, roles)?.let { kept ->
             answer = kept
             failed = false
             emit(PipelineEvent.LibraryAnswered(track.lookupKey, kept, cached = true))
@@ -228,18 +260,22 @@ internal class LibrarySign(
     }
 
     /**
-     * Asks LRCLIB when [genres] call for it and the run may ([asks]); true when its answer, or its
-     * failure, changed what the run shows.
+     * Asks LRCLIB when [genres] call for it and the run may ([asks]), again by the lead performer by
+     * the track's [roles] (#1133, [LibraryLookup.ask]); true when its answer, or its failure, changed
+     * what the run shows.
      */
     @Suppress("RedundantSuspendModifier") // Detekt does not see `LibraryLookup.ask` as suspending; it is.
-    suspend fun ask(genres: TrackGenres): Boolean {
+    suspend fun ask(
+        genres: TrackGenres,
+        roles: ArtistRoles? = null,
+    ): Boolean {
         val asked = lookup?.takeIf { asks && answer == null }
         return when {
             // Genres that no longer call for LRCLIB (a *Retry* brought MusicBrainz's mark or its lyrics
             // links) leave a failure kept from before with nothing to ask: no longer shown, nor retryable.
             !genres.wantsLibrary() -> failed.also { failed = false }
             asked == null -> false
-            else -> landed(asked.ask(track, nowPlaying, fresh))
+            else -> landed(asked.ask(track, nowPlaying, fresh, roles))
         }
     }
 
