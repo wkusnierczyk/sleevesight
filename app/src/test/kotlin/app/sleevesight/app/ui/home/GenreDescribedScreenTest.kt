@@ -59,8 +59,8 @@ import kotlin.time.Instant
 
 /**
  * The genres an artist's description names, on Home (#1000): their chips after the tags', read "…,
- * from the artist’s description"; a *Described* row after the artist's tags, its sources the
- * description and its citations; under such a genre's definition where it is named, quoted and
+ * from the artist’s bio"; a *Bio* row after the artist's tags (#1066), its sources the bio and
+ * its citations, spaces between; under such a genre's definition where it is named, quoted and
  * cited, a link to the line; Instrumental from it weak, with the artist's hint's line in place of
  * that (#998); dropped with lyrics found.
  */
@@ -220,7 +220,7 @@ class GenreDescribedScreenTest {
             val instrumental = GENRE_PREFIX + "described:$ISLANDMAN:instrumental"
             // Weak, and read as from the artist's description.
             val spoken = text(R.string.genre_weak, text(R.string.genre_described, "Instrumental"))
-            assertEquals("Instrumental, from the artist’s description, weak evidence", spoken)
+            assertEquals("Instrumental, from the artist’s bio, weak evidence", spoken)
             assertEquals(spoken, description(instrumental))
             tap(instrumental)
             // The hint's line in place of "Named in…", its citation a link to the line in *Sources*.
@@ -233,14 +233,14 @@ class GenreDescribedScreenTest {
             }
             assertEquals(listOf("S8"), cited)
             compose.onNodeWithTag(GENRE_WHY_TAG).fetchSemanticsNode()
-            // Its own row after the artist's, read "Described, Instrumental, selected": the row's name
-            // says where it is from. Its sources, the description and the citation.
+            // Its own row after the artist's, read "Bio, Instrumental, selected": the row's name
+            // says where it is from. Its sources, the bio and the citation.
             assertEquals("Artist, Ambient, Electronic, House", compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading())
             assertEquals(
-                "Described, Instrumental, selected",
+                "Bio, Instrumental, selected",
                 compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").reading(),
             )
-            assertEquals("Described, islandman’s description · S8", textOf(GENRE_SOURCES_ROW_PREFIX + "1"))
+            assertEquals("Bio, islandman’s bio S8", textOf(GENRE_SOURCES_ROW_PREFIX + "1"))
             compose.onNodeWithTag(GENRE_SOURCES_ROW_PREFIX + "1").performFirstLinkClick {
                 (it.item as? LinkAnnotation.Clickable)?.tag == GENRE_CITE_PREFIX + "S8"
             }
@@ -262,7 +262,7 @@ class GenreDescribedScreenTest {
                 text(R.string.genre_described_named, "They also play jazz.") + " L1",
                 textOf(GENRE_DESCRIBED_TAG),
             )
-            val named = "Named in the artist’s description: “They also play jazz.” L1"
+            val named = "Named in the artist’s bio: “They also play jazz.” L1"
             assertEquals(named, textOf(GENRE_DESCRIBED_TAG))
             assertEquals(0, compose.onAllNodesWithTag(GENRE_WEAK_TAG).fetchSemanticsNodes().size)
             // *Why is this …?* after it.
@@ -295,14 +295,14 @@ class GenreDescribedScreenTest {
             assertEquals(
                 listOf(
                     "Artist 1, Rock",
-                    "Described 1, Blues",
+                    "Bio 1, Blues",
                     "Artist 2, Pop",
-                    "Described 2, Soul",
+                    "Bio 2, Soul",
                 ),
                 (0..3).map { compose.onNodeWithTag(GENRES_ROW_PREFIX + it).reading()?.replace(", selected", "") },
             )
-            assertEquals("Described 1, $ann’s description · L1", textOf(GENRE_SOURCES_ROW_PREFIX + "1"))
-            assertEquals("Described 2, $bob’s description · L2", textOf(GENRE_SOURCES_ROW_PREFIX + "3"))
+            assertEquals("Bio 1, $ann’s bio L1", textOf(GENRE_SOURCES_ROW_PREFIX + "1"))
+            assertEquals("Bio 2, $bob’s bio L2", textOf(GENRE_SOURCES_ROW_PREFIX + "3"))
         }
     }
 

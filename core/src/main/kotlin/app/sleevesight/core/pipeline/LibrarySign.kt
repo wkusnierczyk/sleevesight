@@ -72,7 +72,7 @@ fun TrackGenres.withLibrary(answer: LibraryLyrics?): TrackGenres {
  * it wins), or the recording marked instrumental by MusicBrainz, which LRCLIB is not asked about:
  * itself then, and with no [instrumental]. Applied twice, the same. The run applies it
  * ([TrackLabels]), whose genres hold only the tags' rows: an Instrumental an artist's description
- * names (#1000), which only the panel adds, does not stop it, and then sits on the *Described* row
+ * names (#1000), which only the panel adds, does not stop it, and then sits on the *Bio* row
  * beside the mark's on the *Track* row, its chip the mark's (another level's genre stays on a
  * described row; a tag's chip wins).
  */

@@ -75,7 +75,7 @@ internal fun reasonedOn(
 
 /**
  * Under the definition of a genre the artist's description names ([where], #1000), before *Why is
- * this …?*, in the panel's quiet note style: "Named in the artist’s description: “{quote}”", the
+ * this …?*, in the panel's quiet note style: "Named in the artist’s bio: “{quote}”" (#1066), the
  * citation of its line after it, a link to the line in *Sources* ([onCite]). Nothing for a genre
  * no description gives, or for Instrumental the artist's hint leaves weak ([why]), whose own line
  * says it ([WeakEvidenceNote]).
@@ -127,16 +127,16 @@ internal fun citation(
     onCite: (String) -> Unit,
 ): TextPart.Action = TextPart.Action(line, GENRE_CITE_PREFIX + line) { onCite(line) }
 
-// A described row's sources (#1000): whose description it is, then the citation of each of its lines,
-// once, in the order its genres cite them, " · " between, each a link to the line in *Sources* ([onCite]).
+// A *Bio* row's sources (#1000, #1066): whose bio it is ("Adele’s bio"), then the citation of each of
+// its lines, once, in the order its genres cite them, spaces between, as [fromParts]' are, each a link
+// to the line in *Sources* ([onCite]): "Adele’s bio W6".
 @Composable
 internal fun describedParts(
     row: GenreRow,
     onCite: (String) -> Unit,
 ): List<TextPart> {
-    val whose = TextPart.Words(stringResource(R.string.home_genre_description_of, row.artist.orEmpty()))
-    val lines = row.labels.mapNotNull { it.describedIn?.line }.distinct()
-    return lines.fold(listOf<TextPart>(whose)) { parts, line -> parts + TextPart.Words(" · ") + citation(line, onCite) }
+    val whose = stringResource(R.string.home_genre_description_of, row.artist.orEmpty())
+    return fromParts(whose, row.labels.mapNotNull { it.describedIn?.line }.distinct(), onCite)
 }
 
 // How a line's artist is matched to the credit, as the item insights match them.
