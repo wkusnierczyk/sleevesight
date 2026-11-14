@@ -126,6 +126,13 @@
     <string name="home_tracklist_ambiguous">MusicBrainz reports several albums of this name for this artist. Sleevesight could not decide which one this is.</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
+    <!-- Under the title, on a track whose roles tell the composer apart from the performers (#1199):
+         the performers on one line, then on a line of its own this label, quieter, and the composer
+         (or every author), as the row before the artist's names them: "Composer: Wolfgang Amadeus
+         Mozart". -->
+    <string name="home_key_composer">Composer:</string>
+    <string name="home_key_author">Author:</string>
+    <string name="home_key_authors">Authors:</string>
     <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
     <string name="home_album_year">%1$s, %2$s</string>
 
@@ -447,6 +454,26 @@
     <string name="home_item_song">Song</string>
     <string name="home_item_artist">Artist</string>
     <string name="home_item_album">Album</string>
+    <!-- On a track whose roles tell the composer apart from the performers (#1199), the row before
+         the artist's, about the composer: Composer for one composer whose work has no words or
+         words of their own; Author for one who is not a classical composer; Authors for more than
+         one, the music and the words by different people. -->
+    <string name="home_item_composer">Composer</string>
+    <string name="home_item_author">Author</string>
+    <string name="home_item_authors">Authors</string>
+    <!-- On such a track, the artist's row, about the lead performer: Artists when other performers
+         are known, their chips in its panel. Performer and Performers are the other wording tried
+         for it (the switch PERFORMER_ROW in ItemFolds.kt). -->
+    <string name="home_item_artists">Artists</string>
+    <string name="home_item_performer">Performer</string>
+    <string name="home_item_performers">Performers</string>
+    <!-- In the artist's panel on such a track (#1199), above the chips of the other performers, each
+         opening its own insight in place. -->
+    <string name="home_item_also_performing">Also performing on this recording</string>
+    <!-- In the Authors panel (#1199): above the composer's insight, and above the chips of who wrote
+         the words, each opening its own insight in place. -->
+    <string name="home_item_music">Music</string>
+    <string name="home_item_words">Words</string>
     <!-- The version a song's title names after the title and the Song row leaves out (#1160), on a
          line of its own under the song's name in its panel's heading and on its page, read with the
          heading: "Song, Material Girl, Version: 2024 Remaster"; %1$s: the version, "2024 Remaster". -->
@@ -457,6 +484,11 @@
     <string name="home_item_show_song">show the song’s insight</string>
     <string name="home_item_show_artist">show the artist’s insight</string>
     <string name="home_item_show_album">show the album’s insight</string>
+    <string name="home_item_show_composer">show the composer’s insight</string>
+    <string name="home_item_show_author">show the author’s insight</string>
+    <string name="home_item_show_authors">show the authors’ insight</string>
+    <!-- A chip of another performer or an author (#1199), which opens that artist's insight in place. -->
+    <string name="home_item_show_named">show this artist’s insight</string>
     <!-- A row of the song, the artist or the album as a screen reader reads it while its insight is
          written with its panel or page closed (#948): "Song, Paper Boats, uses AI, writing"; %1$s:
          the row as read otherwise, "Song, Paper Boats, uses AI". -->
@@ -467,6 +499,8 @@
     <string name="home_item_no_evidence_song">The sources give nothing to write the song’s insight from.</string>
     <string name="home_item_no_evidence_artist">The sources give nothing to write the artist’s insight from.</string>
     <string name="home_item_no_evidence_album">The sources give nothing to write the album’s insight from.</string>
+    <string name="home_item_no_evidence_composer">The sources give nothing to write the composer’s insight from.</string>
+    <string name="home_item_no_evidence_named">The sources give nothing to write this artist’s insight from.</string>
     <!-- An item whose call failed, beside its Retry; %1$s: why. -->
     <string name="home_item_failed">The insight could not be written: %1$s.</string>
     <!-- The insight. -->

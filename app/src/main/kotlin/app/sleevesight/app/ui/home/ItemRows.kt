@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -25,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -32,6 +35,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.SpinningRecord
 import app.sleevesight.app.ui.theme.Panel
@@ -42,6 +46,7 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Layout
+import kotlin.math.roundToInt
 
 // The song's, the artist's and the album's insights under *Key insights* (#522): a row each, under
 // the key insight and before *Sources*, its button opening a panel in the row's place under
@@ -105,7 +110,7 @@ internal fun ItemRows(
         inside.retainAll(open)
         if (handBack != null) handoff.moveTo(buttonOf(handBack))
     }
-    val kinds = rows.map { itemKind(it.item) }
+    val kinds = rows.map { itemKind(it.item, it) }
     // The mark on every button while insights are written (#948): what each opens is AI-written.
     val ai = context.settings.writeInsights
     // The widest kind sets every button's width, whichever rows are open, so nothing moves on opening.
@@ -213,15 +218,17 @@ private fun ItemRowLine(
     button: Modifier,
     onClick: () -> Unit,
 ) {
-    val action = stringResource(if (look.pages) R.string.home_page_open else itemShowAction(row.item))
+    val action = stringResource(if (look.pages) R.string.home_page_open else row.action)
     val named = "$kind, ${row.name}"
     val marked = if (look.ai) stringResource(R.string.home_uses_ai, named) else named
     val described = if (look.writing) stringResource(R.string.home_item_writing, marked) else marked
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    // The button as tall as it is drawn, at the font size now: the name's first line is centred on it.
+    var tall by remember { mutableIntStateOf(0) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         PanelChip(
             kind,
             itemRowTag(row.item),
-            modifier = button,
+            modifier = button.onSizeChanged { tall = it.height },
             action = action,
             collapsed = false,
             description = described,
@@ -230,19 +237,22 @@ private fun ItemRowLine(
             onClick = onClick,
         )
         Spacer(Modifier.width(COLUMN_GAP))
+        val height = with(LocalDensity.current) { tall.toDp() }
         if (look.writing) {
-            SpinningRecord()
+            Box(Modifier.heightIn(min = height), contentAlignment = Alignment.Center) { SpinningRecord() }
             Spacer(Modifier.width(RECORD_GAP))
         }
-        NameText(row.name, whole, onName, Modifier.weight(1f), itemNameTag(row.item))
+        NameText(row.name, whole, onName, Modifier.weight(1f), itemNameTag(row.item), height)
     }
 }
 
 // A row's [name], tagged [tag] (its cell `<tag>:cell`): on one line clipped with an ellipsis, or [whole], wrapped; a
 // tap ([onTap]) on one clipped shows it whole, on one whole clips it again, on one that fits does
 // nothing. The tap is taken across the name's whole cell, at least 48 dp tall as its button's target
-// is, not on the text's line alone. For touch only: its button reads the whole name, so a screen
-// reader and a keyboard pass it by.
+// is, and as its button ([button], as drawn), not on the text's line alone. Its first line is centred
+// on the button (#1199), so a name shown whole on several lines starts level with it. For touch only:
+// its button reads the whole name, so a screen reader and a keyboard pass it by.
+@Suppress("LongParameterList") // The name, how it shows, its tap, and where it lines up.
 @Composable
 private fun NameText(
     name: String,
@@ -250,26 +260,33 @@ private fun NameText(
     onTap: () -> Unit,
     modifier: Modifier,
     tag: String,
+    button: Dp,
 ) {
-    // Whether the name, clipped, did not fit, as last laid out.
+    // Whether the name, clipped, did not fit, as last laid out; its first line's height.
     var clipped by remember(name) { mutableStateOf(false) }
+    var line by remember { mutableIntStateOf(0) }
     val tap by rememberUpdatedState { if (whole || clipped) onTap() }
+    val cell = max(NAME_CELL, button)
+    val above = with(LocalDensity.current) { ((cell.roundToPx() - line) / 2).coerceAtLeast(0).toDp() }
     // No semantics on the cell, and none read from the name: no stop of its own.
     Box(
         modifier
             .testTag("$tag:cell")
-            .heightIn(min = NAME_CELL)
+            .heightIn(min = cell)
             .pointerInput(Unit) { detectTapGestures { tap() } },
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.TopStart,
     ) {
         Text(
             name,
-            Modifier.testTag(tag).clearAndSetSemantics {},
+            Modifier.padding(top = above).testTag(tag).clearAndSetSemantics {},
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = if (whole) Int.MAX_VALUE else 1,
             overflow = if (whole) TextOverflow.Clip else TextOverflow.Ellipsis,
-            onTextLayout = { if (!whole) clipped = it.hasVisualOverflow },
+            onTextLayout = {
+                if (!whole) clipped = it.hasVisualOverflow
+                line = (it.getLineBottom(0) - it.getLineTop(0)).roundToInt()
+            },
         )
     }
 }
@@ -316,7 +333,8 @@ internal fun HomeItems(
             sourcesLines(actions.itemNotes, shown.track, actions.genreNotes, actions.aiSearches).evidence,
             onReport,
         )
-    val rows = itemRows(header, actions.normalize(header))
+    val normalized = actions.normalize(header)
+    val rows = itemRows(header, normalized, remember(shown.track, normalized) { splitOf(shown.track, normalized) })
     ItemRows(rows, pages, folds, context) { item -> actions.openPage(HomePage.Item(item.name)) }
 }
 
@@ -328,16 +346,16 @@ const val ITEM_WRITING_TAG: String = "item:writing"
 const val ITEM_FAILED_TAG: String = "item:failed"
 
 /** The test tag of [item]'s row's button, the row's one stop for a screen reader. */
-fun itemRowTag(item: InsightItem): String = "item-row:${item.kind.key}"
+fun itemRowTag(item: InsightItem): String = "item-row:${item.key}"
 
 /** The test tag of [item]'s name in its row. */
-fun itemNameTag(item: InsightItem): String = "item-name:${item.kind.key}"
+fun itemNameTag(item: InsightItem): String = "item-name:${item.key}"
 
 /** The test tag of [item]'s panel, as [Panel] makes it, with `:heading`, `:subtitle` and `:close`. */
-fun itemPanelTag(item: InsightItem): String = "item-panel:${item.kind.key}"
+fun itemPanelTag(item: InsightItem): String = "item-panel:${item.key}"
 
 /** The test tag of [item]'s *Write insight*. */
-fun itemWriteTag(item: InsightItem): String = "item-write:${item.kind.key}"
+fun itemWriteTag(item: InsightItem): String = "item-write:${item.key}"
 
 /** The test tag of [item]'s *Read aloud*. */
-fun itemReadAloudTag(item: InsightItem): String = "item-read-aloud:${item.kind.key}"
+fun itemReadAloudTag(item: InsightItem): String = "item-read-aloud:${item.key}"
