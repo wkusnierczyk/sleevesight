@@ -88,19 +88,21 @@ internal fun PeopleAfter(
     val handoff = rememberFocusHandoff()
     val chips = remember { mutableMapOf<String, FocusRequester>() }
     val chipOf = { name: String -> chips.getOrPut(name) { FocusRequester() } }
-    val close = remember { FocusRequester() }
+    // Each artist's *Close* its own: a panel switched for another's is not the one the focus goes to.
+    val closes = remember { mutableMapOf<String, FocusRequester>() }
+    val closeOf = { name: String -> closes.getOrPut(name) { FocusRequester() } }
     val ai = context.settings.writeInsights
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         groups.forEach { group ->
             group.heading?.let { PeopleHeading(it) }
             PeopleChips(group.names, ai, { Modifier.handoffTarget(handoff, chipOf(it)) }) { name ->
                 open = if (open == name) null else name
-                if (open != null) handoff.moveTo(close) else handoff.moveTo(chipOf(name))
+                if (open != null) handoff.moveTo(closeOf(name)) else handoff.moveTo(chipOf(name))
             }
         }
         open?.let { name ->
             key(name) {
-                NamedArtist(name, context, Modifier.handoffTarget(handoff, close)) {
+                NamedArtist(name, context, Modifier.handoffTarget(handoff, closeOf(name))) {
                     open = null
                     handoff.moveTo(chipOf(name))
                 }
