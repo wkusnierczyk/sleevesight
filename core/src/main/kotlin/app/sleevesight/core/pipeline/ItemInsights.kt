@@ -290,17 +290,20 @@ class ItemInsights(
         }
 
     // The artist [item]'s insight on [track] is about ([artistOf]): by its MusicBrainz id when the
-    // resolution names it, else by its name. The primary artist, which the resolution may name
-    // otherwise, takes the first artist it names (#522); another artist only its own (#1199).
+    // resolution names it, else by its name. The artist's row with no split, about the primary artist,
+    // which the resolution may name otherwise, takes the first artist it names (#522); the composer's,
+    // the artist's once split, and a named artist's only their own (#1199): a replay's kept artists
+    // leave out those with no id, so the first may be a performer.
     private fun artistEntity(
         item: InsightItem,
         track: TrackState,
     ): CardEntity.Artist? {
         val subject = artistOf(item, track) ?: return null
         val resolved = resolvedArtists(track)
+        val primary = item == InsightItem.ARTIST && split(track) == null
         val artist =
             resolved.firstOrNull { names.sameName(it.name, subject) }
-                ?: resolved.firstOrNull()?.takeIf { subject == track.normalized.primary }
+                ?: resolved.firstOrNull()?.takeIf { primary }
         return artist?.let(CardEntity.Artist::of) ?: CardEntity.Artist(subject, null)
     }
 

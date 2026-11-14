@@ -11,10 +11,17 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.ArtistRoles
+import app.sleevesight.core.sources.ArtistWebLookup
+import app.sleevesight.core.sources.ArtistWebQuery
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.sources.WebPage
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -115,6 +122,83 @@ class ComposerItemInsightsTest {
                 items.key(InsightItem.ARTIST, alone, artist, settings),
                 items.key(InsightItem.COMPOSER, k545, composer, settings),
             )
+        }
+
+    // As the app's artist web lookup: what was asked for, a search finding nothing.
+    private class Asked : ArtistWebLookup {
+        val queries = mutableListOf<ArtistWebQuery>()
+
+        override suspend fun kept(artist: ArtistWebQuery): List<EvidenceDraft>? = null.also { queries += artist }
+
+        override suspend fun search(
+            artist: ArtistWebQuery,
+            sent: () -> Unit,
+            keeping: (List<EvidenceDraft>) -> Unit,
+            mayPay: () -> Boolean,
+        ): List<EvidenceDraft> = emptyList<EvidenceDraft>().also { queries += artist }
+
+        override suspend fun keep(
+            artist: ArtistWebQuery,
+            lines: List<EvidenceDraft>,
+        ) = Unit
+
+        override suspend fun renew(artist: ArtistWebQuery) = Unit
+
+        override fun pageLine(
+            artist: ArtistWebQuery,
+            page: WebPage,
+        ): String? = null
+    }
+
+    @Test
+    fun `a replay keys the composer with no id as its first play did, not as the first artist with one`() =
+        runTest {
+            val web = Asked()
+            val searching =
+                ItemInsights(
+                    AiAccess(FakeProvider { FakeProvider.done("A line [W1].") }, Secret("k")),
+                    MemoryCache(),
+                    JvmHasher,
+                    NameMatcher(JvmAccentFolder),
+                    artistWeb = web,
+                )
+            val webOn =
+                Settings(
+                    aiProvider = ProviderId.ANTHROPIC,
+                    enabledSources = Settings().enabledSources + SourceSwitch.WEB,
+                    webEngines = setOf(WebEngine.EXA),
+                    aiWebSearch = AiWebSearch.ONCE,
+                )
+            val roles = ArtistRoles(listOf(MOZART), listOf(KHATIA, ACADEMY), classical = true)
+            // Mozart has no MusicBrainz id: the replay's kept artists leave him out.
+            val artists =
+                listOf(
+                    ResolvedArtist(MOZART, null),
+                    ResolvedArtist(KHATIA, "mb-khatia"),
+                    ResolvedArtist(ACADEMY, "mb-asmf"),
+                )
+            val base = track(K545, "$MOZART, $KHATIA, $ACADEMY", emptyList())
+            val fresh = base.copy(resolution = Resolution(recordingMbid = "r", artists = artists, roles = roles))
+            val kept =
+                SourceResult(Outcome.SongArticle, emptyList(), ZERO, labelArtists = artists.drop(1), roles = roles)
+            val replay = base.copy(sources = base.sources + (SourceId.MUSICBRAINZ to SourceState.Done(kept, true)))
+            for (item in listOf(InsightItem.COMPOSER, InsightItem.ARTIST, InsightItem.named(ACADEMY))) {
+                assertEquals(searching.entity(item, fresh), searching.entity(item, replay), "$item")
+                val first = checkNotNull(searching.evidence(item, fresh, webOn))
+                val again = checkNotNull(searching.evidence(item, replay, webOn))
+                assertEquals(
+                    searching.key(item, fresh, first, webOn),
+                    searching.key(item, replay, again, webOn),
+                    "$item",
+                )
+            }
+            assertEquals(CardEntity.Artist(MOZART, null), searching.entity(InsightItem.COMPOSER, replay))
+            assertEquals(CardEntity.Artist(KHATIA, "mb-khatia"), searching.entity(InsightItem.ARTIST, replay))
+            // Each web lookup by its own artist, on the replay as on the first play.
+            val mozart = ArtistWebQuery(MOZART, null)
+            val khatia = ArtistWebQuery(KHATIA, "mb-khatia")
+            val academy = ArtistWebQuery(ACADEMY, "mb-asmf")
+            assertEquals(listOf(mozart, mozart, khatia, khatia, academy, academy), web.queries)
         }
 
     @Test
