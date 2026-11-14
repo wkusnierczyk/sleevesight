@@ -5,6 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -56,6 +60,8 @@ class ItemPeopleScreenTest {
                     ),
             )
 
+    private fun state(said: String) = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, said)
+
     private fun close(name: String) = itemPanelTag(InsightItem.named(name)) + ":close"
 
     @Test
@@ -77,9 +83,17 @@ class ItemPeopleScreenTest {
             compose.waitForIdle()
             compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).performScrollTo().performClick()
             compose.waitForIdle()
+            // Nothing about the other performers is written before their chip's tap.
+            assertEquals(emptyList<InsightItem>(), notes.writes.filter { it.artist != null })
+            compose.onNodeWithTag(itemChipTag(MEHTA)).assert(state("collapsed"))
             compose.onNodeWithTag(itemChipTag(MEHTA)).performScrollTo().performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(close(MEHTA)).assertIsFocused()
+            // Open, the chip says so, and its tap would hide it.
+            compose.onNodeWithTag(itemChipTag(MEHTA)).assert(state("expanded"))
+            compose
+                .onNodeWithTag(itemChipTag(MEHTA))
+                .assert(SemanticsMatcher("hides") { it.config[SemanticsActions.OnClick].label == HIDE })
             // Another chip while one is open: its panel in the other's place, the focus on its *Close*.
             compose.onNodeWithTag(itemChipTag(LA_PHIL)).performScrollTo().performClick()
             compose.waitForIdle()
@@ -102,5 +116,6 @@ class ItemPeopleScreenTest {
         const val PAVAROTTI = "Luciano Pavarotti"
         const val MEHTA = "Zubin Mehta"
         const val LA_PHIL = "Los Angeles Philharmonic"
+        const val HIDE = "hide this artist’s insight"
     }
 }

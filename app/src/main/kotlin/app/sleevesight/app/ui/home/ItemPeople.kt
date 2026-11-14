@@ -95,7 +95,7 @@ internal fun PeopleAfter(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         groups.forEach { group ->
             group.heading?.let { PeopleHeading(it) }
-            PeopleChips(group.names, ai, { Modifier.handoffTarget(handoff, chipOf(it)) }) { name ->
+            PeopleChips(group.names, open, ai, { Modifier.handoffTarget(handoff, chipOf(it)) }) { name ->
                 open = if (open == name) null else name
                 if (open != null) handoff.moveTo(closeOf(name)) else handoff.moveTo(chipOf(name))
             }
@@ -130,16 +130,19 @@ private fun PeopleHeading(text: String) {
 
 // A chip for each of [names], drawn as the rows' buttons are ([PanelChip]), with the **AI** mark
 // ([ai]); as wide as its name, the mark included, and no wider than the panel, wrapping inside;
-// "Academy of St. Martin in the Fields, uses AI. Button. Double-tap to show this artist's insight".
+// "Academy of St. Martin in the Fields, uses AI. Collapsed. Button. Double-tap to show this artist's
+// insight"; while its insight is open ([open]), expanded, "Double-tap to hide this artist's insight".
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PeopleChips(
     names: List<String>,
+    open: String?,
     ai: Boolean,
     focus: (String) -> Modifier,
     onTap: (String) -> Unit,
 ) {
-    val action = stringResource(R.string.home_item_show_named)
+    val show = stringResource(R.string.home_item_show_named)
+    val hide = stringResource(R.string.home_item_hide_named)
     BoxWithConstraints {
         val most = maxWidth
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -149,11 +152,12 @@ private fun PeopleChips(
                     name,
                     itemChipTag(name),
                     modifier = focus(name),
-                    action = action,
-                    collapsed = false,
+                    action = if (open == name) hide else show,
+                    collapsed = open != name,
                     description = if (ai) stringResource(R.string.home_uses_ai, name) else name,
                     width = width,
                     ai = ai,
+                    expanded = open == name,
                 ) { onTap(name) }
             }
         }
@@ -170,7 +174,8 @@ private fun NamedArtist(
     onClose: () -> Unit,
 ) {
     val item = InsightItem.named(name)
-    var due by remember { mutableStateOf(true) }
+    // Taken once, not asked again after a rotation or a restore with the chip open.
+    var due by rememberSaveable(name) { mutableStateOf(true) }
     val opening = if (due) OpeningWrite(due = true) { due = false } else OpeningWrite.NONE
     Panel(AnnotatedString(name), itemPanelTag(item), onClose = onClose, closeModifier = closeModifier) {
         ItemContent(item, context, tapped = true, opening = opening)
