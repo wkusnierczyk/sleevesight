@@ -1,6 +1,7 @@
 package app.sleevesight.sources.musicbrainz
 
 import app.sleevesight.core.genres.ArtistTags
+import app.sleevesight.core.genres.CountedTag
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbArtist
 import app.sleevesight.core.resolution.MbArtistRelation
@@ -293,12 +294,19 @@ class MusicBrainzClient(
      * The artist's tags, most voted first (ties by name, so the order is the same for the same
      * answer), those with no net vote up left out ([tags]). Only the tags are read, not the artist.
      */
-    override suspend fun artistTags(mbid: String): Lookup<List<String>> {
+    override suspend fun artistTags(mbid: String): Lookup<List<String>> =
+        when (val found = countedArtistTags(mbid)) {
+            is Lookup.Found -> Lookup.Found(found.value.map { it.name })
+            Lookup.NotFound -> Lookup.NotFound
+            is Lookup.Failed -> found
+        }
+
+    override suspend fun countedArtistTags(mbid: String): Lookup<List<CountedTag>> {
         val request = NetRequest("$BASE/artist/$mbid", query = mapOf("inc" to "tags", "fmt" to "json"))
         return net.lookup(request) { response ->
             val json = parseObject(response.body)
             json.required("id")
-            tags(json).map { it.first }
+            tags(json).map { (name, count) -> CountedTag(name, count) }
         }
     }
 

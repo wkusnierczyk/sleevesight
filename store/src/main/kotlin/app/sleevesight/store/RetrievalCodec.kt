@@ -54,6 +54,9 @@ internal object RetrievalCodec {
      * fields too, made a miss the same way (MusicBrainz's extraction version 11).
      * A label no longer keeps its genre family either (#1020): an entry kept before it is read with
      * the field ignored (`GenreJson.family`), no miss, since the family changed nothing shown.
+     * A label's weight at its source (#1019) is an optional field too, made a miss the same way
+     * (Last.fm's extraction version 6), and whether it was past its source's cap (#996) is read and
+     * ignored (`GenreJson.beyondCap`).
      * Whether a rejection was only for want of what MusicBrainz resolves (#1069,
      * [Rejection.withoutMusicBrainz]) is an optional field too, encoded only when true: an entry kept
      * before it decodes without it, no miss, and its rejections read as before. A result made while
@@ -104,7 +107,7 @@ internal object RetrievalCodec {
                             it.identity,
                             it.url,
                             it.artist,
-                            it.beyondCap,
+                            weight = it.weight,
                         )
                     },
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
@@ -170,7 +173,7 @@ internal object RetrievalCodec {
                             it.url,
                             GenreLevel.ARTIST,
                             it.artist,
-                            beyondCap = it.beyondCap,
+                            weight = it.weight,
                         )
                     },
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
@@ -357,7 +360,11 @@ internal object RetrievalCodec {
         val identity: String,
         val url: String? = null,
         val artist: String? = null,
-        // A label past the cap (#996), on no row; one kept before it decodes without.
+        // The label's weight at its source (#1019); one kept before it decodes without, and is a miss
+        // by Last.fm's extraction version (6), whose artists' labels are the only ones kept here.
+        val weight: Double? = null,
+        // Kept from #996 to #1019, a label past its source's cap, on no row: read and ignored, never
+        // written. Labels are no longer capped before the sources combine.
         val beyondCap: Boolean = false,
         // Kept from before #1020, when each label held its genre family: read and ignored, never
         // written (null, and defaults are not encoded).

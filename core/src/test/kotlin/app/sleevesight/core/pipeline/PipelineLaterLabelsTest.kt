@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.genres.CountedTag
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
@@ -175,7 +176,7 @@ class PipelineLaterLabelsTest {
                 state.laterLabels,
             )
             assertEquals(
-                listOf("Folk", "Singer-Songwriter", "Country"),
+                listOf("Folk", "Country", "Singer-Songwriter"),
                 state.genres.rows[1]
                     .labels
                     .map { it.genre.label },
@@ -367,7 +368,7 @@ class PipelineLaterLabelsTest {
             assertTrue(state.genresAssembled)
             // Its own, not merged with those before: the track's tag is gone.
             assertFalse("Soft Rock" in labelsOf(state), "${labelsOf(state)}")
-            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), labelsOf(state))
+            assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), labelsOf(state))
         }
 
     @Test
@@ -439,10 +440,11 @@ class PipelineLaterLabelsTest {
             var releaseAsks = 0
             val counted =
                 object : ReleaseTags by releaseTags {
-                    override suspend fun trackTags(
+                    // The counted request is the one `LastFmLabels` makes (#1019).
+                    override suspend fun countedTrackTags(
                         artist: String,
                         title: String,
-                    ): Lookup<List<String>> = releaseTags.trackTags(artist, title).also { releaseAsks++ }
+                    ): Lookup<List<CountedTag>> = releaseTags.countedTrackTags(artist, title).also { releaseAsks++ }
                 }
             val mb = musicBrainz()
             val lf = lastFm()

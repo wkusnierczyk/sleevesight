@@ -1,6 +1,7 @@
 package app.sleevesight.sources.lastfm
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.genres.CountedTag
 import app.sleevesight.core.genres.ReleaseTags
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.net.NetClient
@@ -24,12 +25,29 @@ class LastFmTags(
     override suspend fun trackTags(
         artist: String,
         title: String,
-    ): Lookup<List<String>> = call("track.gettoptags", artist, "track" to title)
+    ): Lookup<List<String>> = names(countedTrackTags(artist, title))
 
     override suspend fun albumTags(
         artist: String,
         album: String,
-    ): Lookup<List<String>> = call("album.gettoptags", artist, "album" to album)
+    ): Lookup<List<String>> = names(countedAlbumTags(artist, album))
+
+    override suspend fun countedTrackTags(
+        artist: String,
+        title: String,
+    ): Lookup<List<CountedTag>> = call("track.gettoptags", artist, "track" to title)
+
+    override suspend fun countedAlbumTags(
+        artist: String,
+        album: String,
+    ): Lookup<List<CountedTag>> = call("album.gettoptags", artist, "album" to album)
+
+    private fun names(found: Lookup<List<CountedTag>>): Lookup<List<String>> =
+        when (found) {
+            is Lookup.Found -> Lookup.Found(found.value.map { it.name })
+            Lookup.NotFound -> Lookup.NotFound
+            is Lookup.Failed -> found
+        }
 
     override fun trackPage(
         artist: String,
@@ -45,11 +63,13 @@ class LastFmTags(
         method: String,
         artist: String,
         named: Pair<String, String>,
-    ): Lookup<List<String>> =
+    ): Lookup<List<CountedTag>> =
         when (val found = net.lastFmLookup(apiKey, method, artist, named, LastFmJson::topTags)) {
             is Lookup.Found ->
                 Lookup.Found(
-                    found.value.filter { it.count >= LastFmAdapter.MIN_TAG_COUNT }.map { it.name },
+                    found.value
+                        .filter { it.count >= LastFmAdapter.MIN_TAG_COUNT }
+                        .map { CountedTag(it.name, it.count) },
                 )
             Lookup.NotFound -> Lookup.NotFound
             is Lookup.Failed -> found

@@ -13,8 +13,16 @@ class LabelSourcesTest {
 
     private fun musicBrainz(vararg tags: String) = vocabulary.labelsFor(tags.toList(), MB_PAGE)
 
+    // A source's tags with their counts, uncapped, as the label sources give them (#1019).
+    private fun counted(
+        page: String,
+        vararg tags: Pair<String, Int>,
+    ) = vocabulary.sourceLabels(tags.map { (name, count) -> CountedTag(name, count) }, page, GenreLevel.ARTIST)
+
     @Test
-    fun `Last fm's labels come first, then MusicBrainz's not already given`() {
+    fun `labels without counts weigh by their place, a genre both sources give the sum`() {
+        // Folk: Last.fm's first (1) and MusicBrainz's second of two (0.5); Country: MusicBrainz's
+        // first (1); Singer-Songwriter: Last.fm's second of two (0.5).
         val combined =
             combineLabels(
                 mapOf(
@@ -22,12 +30,12 @@ class LabelSourcesTest {
                     LabelSource.LASTFM to lastFm("folk", "singer-songwriter"),
                 ),
             )
-        assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), combined.map { it.genre.label })
+        assertEquals(listOf("Folk", "Country", "Singer-Songwriter"), combined.map { it.genre.label })
         assertEquals(
             listOf(
                 listOf(LabelCredit(LabelSource.LASTFM, LASTFM_PAGE), LabelCredit(LabelSource.MUSICBRAINZ, MB_PAGE)),
-                listOf(LabelCredit(LabelSource.LASTFM, LASTFM_PAGE)),
                 listOf(LabelCredit(LabelSource.MUSICBRAINZ, MB_PAGE)),
+                listOf(LabelCredit(LabelSource.LASTFM, LASTFM_PAGE)),
             ),
             combined.map { it.credits },
         )
@@ -59,7 +67,8 @@ class LabelSourcesTest {
     }
 
     @Test
-    fun `at most five labels, and a full list still credits MusicBrainz where it agrees`() {
+    fun `at most five labels, the cap after the sources combine, and a dropped label's agreement still counts`() {
+        // Last.fm's five by place: 1, 0.8, 0.6, 0.4, 0.2; MusicBrainz's Soul 1, Blues 0.5.
         val combined =
             combineLabels(
                 mapOf(
@@ -67,11 +76,66 @@ class LabelSourcesTest {
                     LabelSource.MUSICBRAINZ to musicBrainz("soul", "blues"),
                 ),
             )
-        assertEquals(listOf("Rock", "Pop", "Folk", "Jazz", "Blues"), combined.map { it.genre.label })
+        assertEquals(listOf("Rock", "Soul", "Pop", "Blues", "Folk"), combined.map { it.genre.label })
         assertEquals(
             listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ),
-            combined.last().credits.map { it.source },
+            combined.single { it.genre.label == "Blues" }.credits.map { it.source },
         )
+    }
+
+    @Test
+    fun `counts weigh each tag against its source's top tag, and agreement lifts a genre`() {
+        // Last.fm: Indie Rock 1, Indie 0.6; MusicBrainz: Pop Rock 1 (20 of 20 votes), Indie 0.5.
+        // Indie, given by both, weighs 1.1; at equal weight Last.fm's comes first.
+        val combined =
+            combineLabels(
+                mapOf(
+                    LabelSource.MUSICBRAINZ to counted(MB_PAGE, "pop rock" to 20, "indie" to 10),
+                    LabelSource.LASTFM to counted(LASTFM_PAGE, "indie rock" to 100, "indie" to 60),
+                ),
+            )
+        assertEquals(listOf("Indie", "Indie Rock", "Pop Rock"), combined.map { it.genre.label })
+    }
+
+    @Test
+    fun `a MusicBrainz tag of fewer votes than its full count weighs its share of them`() {
+        // A recording's one-vote tags weigh 0.2 each, under Last.fm's tags of 40 and up.
+        val recording =
+            MusicBrainzLabels(ArtistTags { error("no artist asked") }, vocabulary)
+                .recordingLabels(RecordingTags("mb-rec", listOf("rock", "pop"), mapOf("rock" to 1, "pop" to 1)))
+        assertEquals(listOf(0.2, 0.2), recording.map { it.weight })
+        val combined =
+            combineLabels(
+                mapOf(
+                    LabelSource.MUSICBRAINZ to recording,
+                    LabelSource.LASTFM to
+                        counted(LASTFM_PAGE, "post-punk" to 100, "new wave" to 60, "gothic rock" to 40),
+                ),
+            )
+        assertEquals(listOf("Post-Punk", "New Wave", "Gothic Rock", "Rock", "Pop"), combined.map { it.genre.label })
+    }
+
+    @Test
+    fun `a source's sixth tag that another source agrees on takes a place on the row`() {
+        // Before #1019 each source's labels were capped at five in its own order, so Last.fm's
+        // sixth, Blues, never reached the row whatever MusicBrainz said.
+        val combined =
+            combineLabels(
+                mapOf(
+                    LabelSource.LASTFM to
+                        counted(
+                            LASTFM_PAGE,
+                            "rock" to 100,
+                            "pop" to 90,
+                            "folk" to 80,
+                            "jazz" to 70,
+                            "soul" to 60,
+                            "blues" to 50,
+                        ),
+                    LabelSource.MUSICBRAINZ to counted(MB_PAGE, "blues" to 4),
+                ),
+            )
+        assertEquals(listOf("Blues", "Rock", "Pop", "Folk", "Jazz"), combined.map { it.genre.label })
     }
 
     @Test

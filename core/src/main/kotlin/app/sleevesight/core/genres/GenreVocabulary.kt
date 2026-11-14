@@ -88,51 +88,75 @@ class GenreVocabulary(
 
     /**
      * The genre labels for [tags], in their order (the source's, most applied first), at most
-     * [MAX_LABELS]: each tag lowercased and trimmed, kept if it is in the vocabulary, once per
+     * [MAX_LABELS] while [capped]: each tag lowercased and trimmed, kept if it is in the vocabulary, once per
      * [identity]: two spellings of one genre (`hip-hop` and `hip hop`, `r&b` and `rnb`) give one
      * label, the first. As the simulator's `genresFrom`, except for that. [url] is the page the tags
      * are from (the track's, artist's or album's, at the source), for the label's credit; null when
      * there is none. [level] is what the tags were given to, and [artist] the credited artist they
      * describe, for an artist's ([GenreLabel.artist]). [votes] are the tags' votes, by tag, where the
      * source counts them (MusicBrainz's recording tags, #799), for each label's [GenreLabel.votes].
-     * The genres of [keepBeyondCap] (identities) past the cap follow, [GenreLabel.beyondCap], so that
-     * what the tags include is known though no row shows them (#996: an artist's Instrumental).
+     * [counts] are the tags' counts at the source, by tag, where it gives them (#1019: MusicBrainz's
+     * votes, Last.fm's weight out of 100), all of them, those outside the vocabulary too: each
+     * label's [GenreLabel.weight] is its tag's count over the most any tag has, or over [fullCount]
+     * where that is more, so a source's top tag counted by few weighs less than 1. With [capped] false
+     * every label of the tags is given, for a label source's, whose cap [combineLabels] applies once
+     * the sources' labels are weighed together.
      */
-    @Suppress("LongParameterList") // The tags, where they are from and what of, their votes, what passes the cap.
+    @Suppress("LongParameterList") // The tags, where they are from and what of, their votes and counts, the cap.
     fun labelsFor(
         tags: List<String>,
         url: String? = null,
         level: GenreLevel = GenreLevel.ARTIST,
         artist: String? = null,
         votes: Map<String, Int> = emptyMap(),
-        keepBeyondCap: Set<String> = emptySet(),
+        counts: Map<String, Int> = emptyMap(),
+        capped: Boolean = true,
+        fullCount: Int = 1,
     ): List<GenreLabel> {
         val seen = mutableSetOf<String>()
         val votesOf = votes.mapKeys { key(it.key) }
-        return tags
-            .asSequence()
-            .map(::key)
-            .filter { it in known }
-            .map { tag -> tag to (synonymOf[tag] ?: spelling(tag)) }
-            .filter { (_, identity) -> seen.add(identity) }
-            .withIndex()
-            .filter { (at, found) -> at < MAX_LABELS || found.second in keepBeyondCap }
-            .map { (at, found) ->
-                val (tag, identity) = found
-                val label = labelOverrides[tag] ?: titleCase(tag)
-                GenreLabel(
-                    tag,
-                    label,
-                    identity,
-                    url,
-                    level,
-                    artist,
-                    votesOf[tag],
-                    beyondCap =
-                        at >= MAX_LABELS,
-                )
-            }.toList()
+        val countOf = counts.mapKeys { key(it.key) }
+        val top =
+            countOf.values
+                .maxOrNull()
+                ?.takeIf { it > 0 }
+                ?.coerceAtLeast(fullCount)
+        val labels =
+            tags
+                .asSequence()
+                .map(::key)
+                .filter { it in known }
+                .map { tag -> tag to (synonymOf[tag] ?: spelling(tag)) }
+                .filter { (_, identity) -> seen.add(identity) }
+                .map { (tag, identity) ->
+                    val label = labelOverrides[tag] ?: titleCase(tag)
+                    val weight = top?.let { most -> countOf[tag]?.let { it.toDouble() / most } }
+                    GenreLabel(tag, label, identity, url, level, artist, votesOf[tag], weight)
+                }
+        return (if (capped) labels.take(MAX_LABELS) else labels).toList()
     }
+
+    /**
+     * As [labelsFor] for a label source's [tags] with their counts ([CountedTag]), uncapped: every
+     * label, each with its [GenreLabel.weight], for [combineLabels] to weigh and cap (#1019); see
+     * [labelsFor] for [fullCount].
+     */
+    fun sourceLabels(
+        tags: List<CountedTag>,
+        url: String?,
+        level: GenreLevel,
+        artist: String? = null,
+        fullCount: Int = 1,
+    ): List<GenreLabel> =
+        labelsFor(
+            tags.map { it.name },
+            url,
+            level,
+            artist,
+            counts = tags.mapNotNull { tag -> tag.count?.let { tag.name to it } }.toMap(),
+            capped = false,
+            fullCount = fullCount,
+        )
 
     // The tags of each spelling (letters and digits, case aside), in the vocabulary's order, for
     // [namedIn]; and the most words a tag has.
@@ -192,7 +216,7 @@ class GenreVocabulary(
         /** The vocabulary's path among `:core`'s resources. */
         const val RESOURCE: String = "sleevesight/genre-vocabulary.json"
 
-        /** The most labels a track shows, as in the simulator. */
+        /** The most labels a row of a track's genres shows, as in the simulator ([combineLabels]). */
         const val MAX_LABELS: Int = 5
 
         private val json = Json { ignoreUnknownKeys = false }
@@ -242,9 +266,12 @@ class GenreVocabulary(
  *   recording tags (#799), by which a track's label is backed among the chips rather than weak
  *   ([TrackGenres.chips], #875). Null where it does not: Last.fm's counts are weights out of 100, not
  *   votes, and an artist's MusicBrainz tags are kept without theirs.
- * @property beyondCap a tag past the [GenreVocabulary.MAX_LABELS] the source's labels show, kept only
- *   so the track knows its artist's tags include it ([GenreVocabulary.labelsFor]'s `keepBeyondCap`,
- *   #996: Instrumental, for a featured artist); on no row ([combineGenres]).
+ * @property weight its tag's count at the source over the most any of the page's tags has, so 1 for
+ *   the top tag, unless that is counted by fewer than its source's full count
+ *   ([MusicBrainzLabels.FULL_WEIGHT_VOTES]), over which it is taken instead (#1019): MusicBrainz's
+ *   votes, Last.fm's weight out of 100 ([GenreVocabulary.labelsFor]'s `counts`), by which
+ *   [combineLabels] weighs the sources' labels together. Null where the source gave no counts
+ *   (Last.fm's five tags of `artist.getInfo`, a fake's tags): weighed by its place.
  */
 data class GenreLabel(
     val tag: String,
@@ -254,7 +281,17 @@ data class GenreLabel(
     val level: GenreLevel = GenreLevel.ARTIST,
     val artist: String? = null,
     val votes: Int? = null,
-    val beyondCap: Boolean = false,
+    val weight: Double? = null,
+)
+
+/**
+ * A tag as a label source gives it (#1019): its [name], and its [count] where the source gives one
+ * (MusicBrainz's net votes, Last.fm's weight out of 100 for its top tag), null where it gives none.
+ */
+@Serializable
+data class CountedTag(
+    val name: String,
+    val count: Int? = null,
 )
 
 @Serializable

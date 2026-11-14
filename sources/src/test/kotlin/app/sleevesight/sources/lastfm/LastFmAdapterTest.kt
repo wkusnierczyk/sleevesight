@@ -680,9 +680,10 @@ class LastFmAdapterTest {
         // Raised when the verification became structural (#75): results cached under 1 are missed;
         // and when the lines without genres lost the tags (#545): those cached under 2 + 1000 are;
         // and when the counts and lists were marked aggregate (#617): those cached under 3 are; and when
-        // MusicBrainz resolved more tracks, whose ids verify a page (#1129): those cached under 4 are.
-        assertEquals(5, adapter().extractionVersion)
-        assertEquals(5 + WITHOUT_GENRES_VERSION, adapter(genres = false).extractionVersion)
+        // MusicBrainz resolved more tracks, whose ids verify a page (#1129): those cached under 4 are; and
+        // when an artist's labels became all its tags, weighed (#1019): those cached under 5 are.
+        assertEquals(6, adapter().extractionVersion)
+        assertEquals(6 + WITHOUT_GENRES_VERSION, adapter(genres = false).extractionVersion)
         assertEquals(setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ), adapter().consults)
     }
 
