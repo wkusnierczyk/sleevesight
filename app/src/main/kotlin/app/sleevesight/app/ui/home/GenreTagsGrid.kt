@@ -54,12 +54,12 @@ import app.sleevesight.core.pipeline.TrackState
  * credited artists *Artist 1*, *Artist 2*, … by their place in the credit, rather than their names),
  * its tags as chips on the right, in the order of *Genres*' chips ([inChipOrder], #1159), [genre]
  * marked wherever it shows ([Cell]); after an artist's row, the genres their description names,
- * *Described* (#1000; *Described 1*, *Described 2*, … as their artist's row is numbered;
+ * *Bio* (#1000, #1066; *Bio 1*, *Bio 2*, … as their artist's row is numbered;
  * `TrackGenres.table`); then "Tag sources", a heading, and the same rows, each with the sources
  * that gave any of its tags, each named and linked to the row's page there ([sourceParts]), an
- * artist's name on its own line above them with several artists; a *Described* row with whose
- * description it is and the citations of its lines, each a link that opens its line in *Sources*
- * ([onCite]); under the sources of the row the AI's genres from the web joined, "From:" and the
+ * artist's name on its own line above them with several artists; a *Bio* row with whose bio it is
+ * and the citations of its lines, spaces between ("Adele’s bio W6"), each a link that opens its
+ * line in *Sources* ([onCite]); under the sources of the row the AI's genres from the web joined, "From:" and the
  * citations of the pages they rest on, as [lines] (*Sources*' own) number them ([FromPages], #1205);
  * then, in the right column, once, when MusicBrainz gave any tag, its credit and its licence, linked
  * (D12).
@@ -144,7 +144,7 @@ internal fun TagsGrid(
  * [selected] words it ("Rock, selected"), all one item: "Track, Pop, Rock, selected". A tag the AI's
  * genre list added (#762) reads with the model's name, as [added] words it ("Blues, from Claude
  * Haiku 5.5"). A genre an artist's description names (#1000) reads as [described] words it
- * ("Instrumental, from the artist’s description").
+ * ("Instrumental, from the artist’s bio").
  */
 @Suppress("LongParameterList") // The row and its name, the genre marked, and each way a tag is worded.
 internal fun tagsReading(
@@ -160,7 +160,7 @@ internal fun tagsReading(
             row.labels.map { label ->
                 val named =
                     label.aiModel?.takeIf { label.aiAdded }?.let { added.format(label.genre.label, it) }
-                        // On a *Described* row, its name says it already.
+                        // On a *Bio* row, its name says it already.
                         ?: label.describedIn?.takeIf { !row.described }?.let { described.format(label.genre.label) }
                 (named ?: label.genre.label).let { if (label.genre.identity == genre) selected.format(it) else it }
             }
@@ -169,7 +169,7 @@ internal fun tagsReading(
 // Each row's name: *Track*, *Album*, *Artist*, or with [several] credited artists *Artist 1*, *Artist
 // 2*, … by the artist's place in [credit], as the rows name it, whether or not the artists before it
 // have tags; one the credit does not name takes the next number past it. An artist's described row
-// (#1000) is *Described*, or *Described 1*, … numbered as the artist's row.
+// (#1000) is *Bio* (#1066), or *Bio 1*, … numbered as the artist's row.
 @Composable
 private fun rowNames(
     rows: List<GenreRow>,

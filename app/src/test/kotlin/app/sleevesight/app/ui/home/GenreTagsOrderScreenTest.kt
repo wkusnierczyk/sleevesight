@@ -32,7 +32,7 @@ import org.robolectric.annotation.Config
  * sources' order (*Thriller*'s track row: Pop, Dance, Contemporary R&B, Disco, Dance-Pop) shows and
  * reads them as the chips are sorted, alphabetically, on every row; and as the chips group them, not
  * merely by name: a genre the AI's genre list added after the sources' tags, a source's genre on a
- * *Described* row before the genres only a description names.
+ * *Bio* row before the genres only a description names.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -157,7 +157,7 @@ class GenreTagsOrderScreenTest {
                 compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").reading(),
             )
             assertEquals(listOf("Disco", "Boogie"), drawn(described))
-            assertEquals("Described, Disco, Boogie", compose.onNodeWithTag(GENRES_ROW_PREFIX + "2").reading())
+            assertEquals("Bio, Disco, Boogie", compose.onNodeWithTag(GENRES_ROW_PREFIX + "2").reading())
         }
 
     @Test
