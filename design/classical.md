@@ -202,9 +202,10 @@ that does not lead with them (a songwriter, not a classical work). The librettis
 vocals for the genres, which read the lyricists alone (#998), and the work's MusicBrainz lines name
 them ("The libretto of this aria was written by …", the piece named by the work's MusicBrainz type
 where a libretto is written for it: aria, cantata, musical, opera, operetta, oratorio or zarzuela;
-else "this piece"). The Artist row is *Artists*
-when other performers are known (*Performer* and *Performers* are the other wording tried,
-`PERFORMER_ROW`). Home's artist lines put the composer on a line of their own under the performers
+else "this piece"). The Artist row is then
+*Performer*, singular even when other performers are known (#1276): its insight is the lead
+performer's, the others its chips; where nothing tells the roles apart, it stays *Artist*. Home's
+artist lines put the composer on a line of their own under the performers
 ("Composer: Wolfgang Amadeus Mozart"). A web line's artist for the genres a description names
 (`DescribedGenres`) is the Artist panel's subject, the lead performer, whose web search found it;
 the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about

@@ -88,15 +88,38 @@ class ItemRowsTest {
         val libretto = composer(WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni")))
         assertEquals("Giacomo Puccini, Giuseppe Adami, Renato Simoni", libretto.name)
         assertEquals(R.string.home_item_authors, libretto.kind)
-        // The artist's row: the lead performer, Artists with another performer known, or Performers.
         val rows = itemRows(header, normalized, ArtistSplit.of(normalized, roles, null))
-        val artist = rows.single { it.item == InsightItem.ARTIST }
-        assertEquals("Luciano Pavarotti" to R.string.home_item_artists, artist.name to artist.kind)
-        val performers = itemRows(header, normalized, ArtistSplit.of(normalized, roles, null), performerRow = true)
-        assertEquals(R.string.home_item_performers, performers.single { it.item == InsightItem.ARTIST }.kind)
         assertEquals(
             listOf(InsightItem.SONG, InsightItem.COMPOSER, InsightItem.ARTIST, InsightItem.ALBUM),
             rows.map { it.item },
         )
+    }
+
+    @Test
+    fun theArtistRowIsPerformerSingularWhenTheComposerIsToldApart() {
+        // #1276: Performer, by the lead performer, with other performers known or not.
+        val header = sundown.copy(title = "Nessun Dorma", artists = "Giacomo Puccini, Luciano Pavarotti, Zubin Mehta")
+        val normalized = normalizer.normalize(header)
+
+        fun artist(performers: List<String>) =
+            itemRows(
+                header,
+                normalized,
+                ArtistSplit.of(normalized, ArtistRoles(listOf("Giacomo Puccini"), performers), null),
+            ).single { it.item == InsightItem.ARTIST }
+        for (performers in listOf(listOf("Luciano Pavarotti", "Zubin Mehta"), listOf("Luciano Pavarotti"))) {
+            val row = artist(performers)
+            assertEquals("Luciano Pavarotti", row.name)
+            assertEquals(R.string.home_item_performer to R.string.home_item_show_performer, row.kind to row.action)
+        }
+    }
+
+    @Test
+    fun theArtistRowIsArtistWhenNothingTellsTheComposerApart() {
+        // #1276: no split, one Artist row as before, whatever the track credits.
+        val header = sundown.copy(title = "Somebody That I Used To Know", artists = "Gotye, Kimbra")
+        val row = itemRows(header, normalizer.normalize(header)).single { it.item == InsightItem.ARTIST }
+        assertEquals("Gotye", row.name)
+        assertEquals(R.string.home_item_artist to R.string.home_item_show_artist, row.kind to row.action)
     }
 }

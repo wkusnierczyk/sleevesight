@@ -146,7 +146,7 @@ class SongPartsPicturesTest {
         val track = track(situation)
         val normalized = normalizer.normalize(situation.playing)
         val split = splitOf(track, normalized)
-        val rows = itemRows(situation.playing, normalized, split, false)
+        val rows = itemRows(situation.playing, normalized, split)
         val notes = notes(situation)
         val memory = ItemFoldMemory()
         val theme = if (dark) "dark" else "light"
