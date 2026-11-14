@@ -106,9 +106,11 @@ class MusicBrainzLabels(
          * often one contributor's one or two votes each (*rock, pop, alternative rock* on a folk
          * song, #799), where Last.fm's weights are over many listeners' tagging: weighed against
          * their own top tag alone, each would weigh as much as Last.fm's top tag and push out its
-         * better backed ones (Siouxsie and the Banshees' "Spellbound", measured for #1019).
+         * better backed ones (Siouxsie and the Banshees' "Spellbound", measured for #1019). Ten,
+         * not five: a weak genre only MusicBrainz gives can never reach a prompt (D12), so it is of
+         * little use, and makes room for the other sources' genres.
          */
-        const val FULL_WEIGHT_VOTES: Int = 5
+        const val FULL_WEIGHT_VOTES: Int = 10
 
         /** As long as MusicBrainz's retrieval lifetime (D9): tags change no faster than its other data. */
         val DEFAULT_LIFETIME: Duration = 30.days

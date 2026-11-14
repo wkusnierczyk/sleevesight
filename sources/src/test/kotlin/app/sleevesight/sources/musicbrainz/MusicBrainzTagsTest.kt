@@ -54,8 +54,8 @@ class MusicBrainzTagsTest {
             )
             val labels = MusicBrainzLabels(MusicBrainzClient(ReplayNetClient.ok(ARTIST)), vocabulary)
             val found = labels.labels(listOf(ResolvedArtist("Gordon Lightfoot", "mb-a")))
-            // Folk's 7 votes against its own 7, Country's 2 against them.
-            assertEquals(listOf(1.0, 2.0 / 7), found.map { it.weight })
+            // Folk's 7 votes and Country's 2, each a share of `FULL_WEIGHT_VOTES` (10).
+            assertEquals(listOf(0.7, 0.2), found.map { it.weight })
         }
 
     @Test

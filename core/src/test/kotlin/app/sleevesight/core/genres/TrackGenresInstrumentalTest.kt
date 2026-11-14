@@ -64,7 +64,7 @@ class TrackGenresInstrumentalTest {
         val rock = recording("rock" to 1).map { it.copy(level = GenreLevel.ARTIST, artist = ARTIST) }
         val five = artist(ARTIST, "instrumental", "jazz", "blues", "soul", "funk")
         val full = genres(five, rock, singing = Singing(lyrics = true))
-        // MusicBrainz's Rock, of one vote, weighs a fifth (#1019): last.
+        // MusicBrainz's Rock, of one vote, weighs a tenth (#1019): last.
         assertEquals(
             listOf("jazz", "blues", "soul", "funk", "rock"),
             full.rows
@@ -191,9 +191,9 @@ class TrackGenresInstrumentalTest {
                 .labels.size,
         )
         val found = shown.withLyricsFound()
-        // MusicBrainz's Rock, of two votes, weighs 0.4, more than Last.fm's fourth (#1019).
+        // MusicBrainz's Rock, of two votes, weighs 0.2, less than Last.fm's fourth (#1019).
         assertEquals(
-            listOf("jazz", "soul", "funk", "rock", "country"),
+            listOf("jazz", "soul", "funk", "country", "rock"),
             found.rows
                 .single()
                 .labels
