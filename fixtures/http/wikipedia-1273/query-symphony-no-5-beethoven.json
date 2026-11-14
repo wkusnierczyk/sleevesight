@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 33687194,
+    "ns": 0,
+    "title": "Symphony No. 5 (Beethoven)",
+    "extract": "The Symphony No. 5 in C minor, Op. 67 (occasionally known as the Fate Symphony, German: Schicksalssinfonie), is a symphony composed by Ludwig van Beethoven between 1804 and 1808. It is one of the best-known of all symphonies and one of the most frequently played. First performed in Vienna in 1808, the work achieved its strong critical reputation not long afterward; E. T. A. Hoffmann described it as \"one of the most important works of the time\". \nThe 5th Symphony has 4 movements. It begins with a distinctive 4-note \"short-short-short-long\" motif, often characterized as \"fate knocking at the door\", the Schicksals-Motiv (fate motif). Sometimes this motif is remembered as \"da-da-da-dum\" or \"da da da DUM\".\n\n",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|Musical composition by Ludwig van Beethoven}}\n{{Use dmy dates|date=November 2021}}\n{{Infobox musical composition\n| name                = Symphony No. 5\n| image               = Beethoven-Deckblatt.png\n| image_upright       = 1.1\n| caption             = Cover of the symphony, with the dedication to Prince [[Joseph Franz von Lobkowitz|J. F. M. Lobkowitz]] and [[Andrey Razumovsky|Count Rasumovsky]]\n| composer            = [[Ludwig van Beethoven]]\n| key                 = [[C minor]]\n| opus                = 67\n| dedication          = {{plainlist|\n* J. F. M. Lobkowitz\n* Andreas Razumovsky|A. Rasumovsky}}\n| composed            = {{start date|1804}}–1808\n| duration            = 30–40 minutes\n| movements           = 4\n| scoring             = Orchestra\n| premiere_date       = [[Beethoven concert of 22 December 1808|22 December 1808]]\n| premiere_conductor  = Ludwig van Beethoven\n| premiere_location   = [[Theater an der Wien]], Vienna\n}}\nThe '''Symphony No. 5''' in [[C minor]], [[opus number|Op.]] 67 (occasionally known as the '''''Fate Symphony''''', {{langx|de|Schicksalssinfonie|link=no}}), is a [[symphony]] composed by [[Ludwig van Beethoven]] between 1804 and 1808. It is one of the best-known of all symphonies and one of the most frequently played.<ref name=\"Schauffler\">{{cite book |author-link= Robert Haven Schauffler |last= Schauffler |first= Robert Haven |title= Beethoven: The Man Who Freed Music |publisher= Doubleday, Doran, & Company |location= Garden City, New York |year= 1933 |page= 211}}</ref> First performed in Vienna in 1808, the work achieved its strong critical reputation not long afterward; [[E. T. A. Hoffmann]] described it as \"one of the most important works of the time\". \n\nThe 5th Symphony has 4 [[Movement (music)|movements]]. It begins with a distinctive 4-note \"short-short-short-long\" [[Motif (music)|motif]], often characterized as \"[[fate]] knocking at the door\", the {{lang|de|Schicksals-Motiv}} ([[#Fate motif|fate motif]]). Sometimes this motif is remembered as \"da-da-da-dum\"<ref>{{Cite web |title=How Beethoven’s iconic ‘da-da-da-dum’ motif was almost lost in a forgotten piano piece |url=https://www.classicfm.com/composers/beethoven/fifth-symphony-origins-forgotten-piano-fantasia/ |access-date=2026-05-30 |website=Classic FM |language=en}}</ref> or \"da da da DUM\".<ref>{{Cite web |date=2025-04-26 |title=The 15 greatest openings in classical music |url=https://www.classical-music.com/articles/15-greatest-openings-classical-music |access-date=2026-05-30 |website=Classical Music |language=en}}</ref>\n\n:<score>{\\clef treble \\key c \\minor \\tempo \"Allegro con brio\" 2=108 \\time 2/4 {r8 g'\\ff[ g' g'] | ees'2\\fermata | r8 f'[ f' f'] | d'2~ | d'\\fermata | } }</score><br />[[File:Beet5mov1bars1to5.ogg]]"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

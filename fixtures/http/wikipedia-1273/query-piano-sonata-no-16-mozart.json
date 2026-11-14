@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 200328,
+    "ns": 0,
+    "title": "Piano Sonata No. 16 (Mozart)",
+    "extract": "The Piano Sonata No. 16 in C major, K. 545, by Wolfgang Amadeus Mozart was described by Mozart in his own thematic catalogue as \"a little piano sonata for beginners\" (Eine kleine klavier Sonate für anfänger). It is commonly known by the nickname Sonata facile or Sonata semplice.\nMozart added the work to his catalogue on June 26, 1788, the same date as his Symphony No. 39. The exact circumstances of the work's composition are unknown. Although the piece is well known today, it was not published in Mozart's lifetime and first appeared in print in 1805. A typical performance takes about 11 minutes.\n\n",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1788 composition by W. A. Mozart}}\n{{Infobox musical composition\n| name                = Piano Sonata No. 16\n| subtitle            = ''Sonata facile''\n| composer            = [[Wolfgang Amadeus Mozart|W. A. Mozart]]\n| image               = Mozart 545.jpg\n| image_upright       = \n| alt                 = \n| caption             = First two bars from Mozart's own catalogue works\n| other_name          = ''Sonata semplice''\n| key                 = [[C major]]\n| catalogue           = [[Köchel catalogue|K.]] 545\n| style               = [[Classical period (music)|Classical period]]\n| composed            = {{start date|1788}}\n| dedication          = \n| published           = 1805\n| movements           = Three (Allegro, Andante, Rondo)\n| scoring             = \n}}\nThe '''Piano Sonata No. 16''' in [[C major]], [[Köchel catalogue|K.]] 545, by [[Wolfgang Amadeus Mozart]] was described by Mozart in his own thematic catalogue as \"a little piano sonata for beginners\" ({{lang|de|Eine kleine klavier Sonate für anfänger}}). It is commonly known by the nickname '''''Sonata facile''''' or '''''Sonata semplice'''''.<ref name=facile>{{cite web\n |url         = http://www.mozartforum.com/Lore/article.php?id=499\n |title       = K545 \"Sonate facile pour le pianoforte\" in C\n |access-date = 25 May 2007\n |last        = Pajot\n |first       = Dennis\n |work        = mozartforum.com\n |url-status  = dead\n |archive-url  = https://web.archive.org/web/20070929102649/http://www.mozartforum.com/Lore/article.php?id=499\n |archive-date = 29 September 2007\n}}</ref>\n\nMozart added the work to his catalogue on June 26, 1788, the same date as his [[Symphony No. 39 (Mozart)|Symphony No.&nbsp;39]]. The exact circumstances of the work's composition are unknown. Although the piece is well known today, it was not published in Mozart's lifetime and first appeared in print in 1805. A typical performance takes about 11 minutes."
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

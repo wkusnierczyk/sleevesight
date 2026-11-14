@@ -6,7 +6,18 @@
     "pageid": 6209420,
     "ns": 0,
     "title": "New York Groove",
-    "extract": "\"New York Groove\" is a song written by the English musician and producer Russ Ballard. The song was originally recorded by the glam rock band Hello in 1975 and was later covered by Ace Frehley, lead guitarist of American rock band Kiss for his 1978 solo album. Frehley's version is arguably the best known, especially in the United States."
+    "extract": "\"New York Groove\" is a song written by the English musician and producer Russ Ballard. The song was originally recorded by the glam rock band Hello in 1975 and was later covered by Ace Frehley, lead guitarist of American rock band Kiss for his 1978 solo album. Frehley's version is arguably the best known, especially in the United States.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1978 single by Ace Frehley}}\n{{EngvarB|date=October 2022}}\n{{Use dmy dates|date=October 2022}}\n{{More citations needed|date=March 2015}}\n{{Infobox song\n| name        = New York Groove\n| cover       =\n| alt         =\n| type        = single\n| artist      = [[Hello (band)|Hello]]\n| album       = [[Keeps Us Off the Streets]]\n| B-side      = Little Miss Mystery\n| released    = 1975\n| recorded    = \n| studio      = \n| venue       =\n| genre       = [[Glam rock]]\n| length      = 3:01\n| label       = [[Bell Records|Bell]]\n| writer      = [[Russ Ballard]]\n| producer    = [[Mike Leander]]\n| prev_title  = [[Bend Me, Shape Me]]\n| prev_year   = 1975\n| next_title  = Star Studded Sham\n| next_year   = 1976\n}}\n\n{{Infobox song\n| name        = New York Groove\n| cover       = New York Groove single.jpg\n| alt         =\n| type        = single\n| artist      = [[Ace Frehley]]/[[Kiss (band)|Kiss]]\n| album       = [[Ace Frehley (album)|Ace Frehley]]\n| B-side      = Snow Blind\n| released    = September 1978\n| recorded    = \n| studio      = Plaza Sound, New York City\n| venue       =\n| genre       = [[Glam rock]]\n| length      = 3:01\n| label       = [[Casablanca Records|Casablanca]]\n| writer      = [[Russ Ballard]]\n| producer    = \n* [[Eddie Kramer]]\n* Ace Frehley\n| prev_title  = Radioactive\n| prev_title2 = See You in Your Dreams\n| prev_year   = 1978\n| title       =\n| title2      = Snow Blind\n| next_title  = Don't You Let Me Down\n| next_year   = 1978\n}}\n\n\"'''New York Groove'''\" is a song written by the English musician and producer [[Russ Ballard]]. The song was originally recorded by the [[glam rock]] band [[Hello (band)|Hello]] in 1975 and was later covered by [[Ace Frehley]], lead guitarist of American rock band [[Kiss (band)|Kiss]] for his [[Ace Frehley (album)|1978 solo album]]. Frehley's version is arguably the best known, especially in the United States."
+       }
+      }
+     }
+    ]
    }
   ]
  }

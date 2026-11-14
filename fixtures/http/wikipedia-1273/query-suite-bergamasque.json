@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 1058580,
+    "ns": 0,
+    "title": "Suite bergamasque",
+    "extract": "Suite bergamasque (L. 75) (French pronunciation: [sɥit bɛʁɡamask]) is a piano suite by Claude Debussy. He began composing it around 1890, at the age of 28, but significantly revised it just before its 1905 publication. The popularity of the third movement, Clair de lune, has made it one of the composer's most famous works for piano, as well as one of the most famous musical pieces of all time.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Use dmy dates|date=October 2023}}\n{{Short description|Piano composition by Claude Debussy}}\n{{Title language|fr}}\n{{Redirect|Clair de Lune|the poem that inspired it|Clair de Lune (poem)|other uses}}\n{{Infobox musical composition\n| name                = Suite bergamasque\n| type                = \n| composer            = [[Claude Debussy]]\n| image               = Claude Debussy by Atelier Nadar.jpg\n| alt                 = \n| caption             = [[Claude Debussy]] c. 1900 by [[Atelier Nadar]]\n| translation         = \n| native_name_lang    = French\n| catalogue           = [[List of compositions by Claude Debussy|L.]] 75\n| composed            = 1890–1905\n| published           = 1905 by E. Fromont\n| movements           = 4\n| scoring             = \n}}\n\n'''''Suite bergamasque''''' ([[List of compositions by Claude Debussy by Lesure number|L.]] 75) ({{IPA|fr|sɥit bɛʁɡamask}}) is a piano [[suite (music)|suite]] by [[Claude Debussy]]. He began composing it around 1890, at the age of 28, but significantly revised it just before its 1905 publication.<ref name=\"Roberts\">{{cite book|first=Paul|last=Roberts|title=Images: The Piano Music of Claude Debussy|location=Portland, Oregon|year=1996}}</ref> The popularity of the third movement, '''''Clair de lune''''', has made it one of the composer's most famous works for piano, as well as one of the most famous musical pieces of all time.<ref name=\":2\">Guo, Shulin. ''[https://kuscholarworks.ku.edu/handle/1808/29585 A Study of Claude Debussy's Suite Bergamasque: Prelude, Menuet, Clair de Lune and Passepied]''. Diss. University of Kansas, 2019. Web. 19 May 2020.</ref>"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

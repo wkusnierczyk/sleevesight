@@ -6,7 +6,18 @@
     "pageid": 3075246,
     "ns": 0,
     "title": "Fisherman's Blues (song)",
-    "extract": "\"Fisherman's Blues\" is a song from folk rock band The Waterboys, which was released in 1988 as the lead single from their fourth studio album of the same name. It was written by Mike Scott and Steve Wickham, and produced by Scott. The song reached number 3 on the US Billboard Modern Rock Tracks chart, number 13 in Ireland and number 32 in the UK.\nThe single was reissued in the UK on 27 May 1991 to promote the compilation album The Best of The Waterboys 81–90. The reissue reached number 17 in Ireland and number 75 in the UK."
+    "extract": "\"Fisherman's Blues\" is a song from folk rock band The Waterboys, which was released in 1988 as the lead single from their fourth studio album of the same name. It was written by Mike Scott and Steve Wickham, and produced by Scott. The song reached number 3 on the US Billboard Modern Rock Tracks chart, number 13 in Ireland and number 32 in the UK.\nThe single was reissued in the UK on 27 May 1991 to promote the compilation album The Best of The Waterboys 81–90. The reissue reached number 17 in Ireland and number 75 in the UK.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Infobox song\n| name       = Fisherman's Blues\n| cover      = The Waterboys Fisherman's Blues 1988 Single Cover.jpg\n| alt        =\n| type       = single\n| artist     = [[The Waterboys]]\n| album      = [[Fisherman's Blues]]\n| B-side     = [[Lost Highway (Leon Payne song)|Lost Highway]]\n| released   = December 1988 (US)<br />January 1989 (UK)<ref>{{cite web|url=http://www.mikescottwaterboys.com/waterboys-discs.php?pagetype=1 |title=The Waterboys |website=Mike Scott Waterboys |access-date=2019-01-30}}</ref>\n| recorded   =\n| studio     =\n| venue      =\n| genre      =\n| length     = 4:23\n| label      = [[Ensign Records|Ensign]], [[Chrysalis Records|Chrysalis]]\n| writer     = * [[Mike Scott (Scottish musician)|Mike Scott]]\n* [[Steve Wickham]]\n| producer   = Mike Scott\n| prev_title = Medicine Bow\n| prev_year  = 1986\n| next_title = [[And a Bang on the Ear]]\n| next_year  = 1989\n}}\n\"'''Fisherman's Blues'''\" is a song from folk rock band [[The Waterboys]], which was released in 1988 as the lead single from their fourth studio album of the [[Fisherman's Blues|same name]]. It was written by [[Mike Scott (Scottish musician)|Mike Scott]] and [[Steve Wickham]], and produced by Scott. The song reached number 3 on the US ''Billboard'' [[Modern Rock Tracks]] chart,<ref name=\"billboard1\">{{cite magazine |url=https://www.billboard.com/artist/the-waterboys/chart-history/mrt/ |title=The Waterboys Fisherman's Blues Chart History |magazine=Billboard |access-date=2019-01-30}}</ref> number 13 in Ireland and number 32 in the UK.<ref name=\"irishcharts1\">{{cite web |url=https://www.irma.ie/search/%2A |website=The Irish Charts |access-date=2019-01-30|title=The Irish Charts - All there is to know }}</ref><ref name=\"officialcharts1\">{{cite web|url=https://www.officialcharts.com/artist/20418/waterboys/ |title=WATERBOYS &#124; full Official Chart History |website=Official Charts |date=30 April 1983 |access-date=2019-01-30}}</ref>\n\nThe single was reissued in the UK on 27 May 1991 to promote the compilation album ''[[The Best of The Waterboys 81–90]]''.<ref>{{cite magazine |date=25 May 1991 |title=News: Waterboys re-release 'Fisherman's Blues' |magazine=[[Melody Maker]] |page=3}}</ref> The reissue reached number 17 in Ireland and number 75 in the UK.<ref name=\"irishcharts1\"/><ref name=\"officialcharts1\"/>"
+       }
+      }
+     }
+    ]
    }
   ]
  }

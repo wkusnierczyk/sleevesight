@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 3967854,
+    "ns": 0,
+    "title": "Pavane (Fauré)",
+    "extract": "The Pavane in F♯ minor, Op. 50, is a short work by the French composer Gabriel Fauré written in 1887.  It was originally a piano piece, but is better known in Fauré's version for orchestra and optional chorus. It was first performed in Paris in 1888, becoming one of the composer's most popular works. \n\n",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{short description|1887 composition by Gabriel Fauré}}\n[[File:Gabriel Fauré in 1887.jpg|thumb|upright|Fauré in 1887]]\nThe '''Pavane''' in F{{music|sharp}} minor, [[opus number|Op.]] 50, is a short work by the French composer [[Gabriel Fauré]] written in [[1887 in music|1887]].  It was originally a piano piece, but is better known in Fauré's version for orchestra and optional chorus. It was first performed in Paris in 1888, becoming one of the composer's most popular works."
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -6,8 +6,9 @@ import app.sleevesight.core.text.DateWhen
 
 /**
  * When a track's music was composed (#1132, [ComposedDate]), from what the sources' answers hold
- * already: no request of its own. MusicBrainz first ([ofWork]), Wikidata when MusicBrainz dates none
- * ([ofItem]); the order is Home's *Dates*' to keep.
+ * already: no request of its own. MusicBrainz first ([ofWork]), then the infobox of the song's
+ * Wikipedia article ([ofInfobox], #1273), then the song's Wikidata item ([ofItem]); the order is Home's
+ * *Dates*' to keep, and Wikipedia's adapter's between its two.
  */
 object ComposedDates {
     /**
@@ -73,6 +74,24 @@ object ComposedDates {
             .mapNotNull { DateWhen.of(it.removePrefix("+").substringBefore('T'))?.year }
             .minOrNull()
             ?.let { year -> ComposedDate(year, year, SourceId.WIKIDATA, Wd.url(item.id)) }
+
+    /**
+     * When the song's Wikipedia article says it was composed (#1273): the years its infobox gives in
+     * `composed`, else `year` ([InfoboxDate]), from [wikitext], the article's opening section; [url]
+     * the article's address. Null when its infobox dates none, or it has no infobox.
+     *
+     * Before the item's inception ([ofItem]) where both date it: of 20 well-known works sampled
+     * (2026-11-14), the infobox gave a span where the item gave one year inside it (Beethoven's Fifth,
+     * 1804 to 1808 beside 1807; *Suite bergamasque*, 1890 to 1905 beside 1905), and no other year
+     * than the item's where both gave one.
+     */
+    fun ofInfobox(
+        wikitext: String,
+        url: String,
+    ): ComposedDate? =
+        InfoboxDate.years(wikitext)?.let { (from, to) ->
+            ComposedDate(from.toString(), to.toString(), SourceId.WIKIPEDIA, url)
+        }
 
     // A work's relationship naming who composed it.
     private const val COMPOSER_RELATION = "composer"

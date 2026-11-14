@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 337605,
+    "ns": 0,
+    "title": "Pachelbel's Canon",
+    "extract": "Pachelbel's Canon (also known as Canon in D, P 37) is an accompanied canon by German Baroque composer Johann Pachelbel (1653–1706). The canon was originally scored for three violins and basso continuo and paired with a gigue, known as Canon and Gigue for 3 violins and basso continuo. Both movements are in the key of D major. The piece is constructed as a true canon at the unison in three parts, with a fourth part as a ground bass throughout. Neither the date nor the circumstances of its composition are known (suggested dates range from 1680 to 1706), and the oldest surviving manuscript copy of the piece dates from 1838 to 1842.\nLike his other works, Pachelbel's Canon went out of style, and remained in obscurity for centuries. A 1968 arrangement and recording of it by the Jean-François Paillard chamber orchestra gained popularity over the next decade, and in the 1970s the piece began to be recorded by many ensembles, while elements of the piece, especially its chord progression, were used in a variety of pop songs. By the early 1980s its presence as background music was deemed inescapable. The composition is famously used in weddings and funeral ceremonies in the western world.\n\n",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{short description|Musical composition by Pachelbel}}\n{{Use dmy dates|date=June 2024}}\n[[File:Pachelbel's Canon - Mus.MS 16481-8 Page 1.jpg|thumb|upright=1.35|First page of manuscript Mus. 16481-8 at [[Berlin State Library]]—oldest surviving copy of Pachelbel's \"Canon and Gigue in D major\"]]\n{{listen\n | type        = music\n | filename    = Kevin MacLeod - Canon in D Major.ogg\n | title       = Canon in D Major\n | description = Arrangement for violins, harps and bass by [[Kevin MacLeod]], 2006\n}}\n\n'''Pachelbel's Canon''' (also known as '''Canon in D, P 37''') is an [[canon (music)|accompanied canon]] by German [[Baroque music|Baroque]] composer [[Johann Pachelbel]] (1653–1706). The canon was originally scored for three [[violin]]s and [[basso continuo]] and paired with a [[gigue]], known as ''Canon and Gigue for 3 violins and basso continuo''. Both [[movement (music)|movements]] are in the [[key (music)|key]] of [[D major]]. The piece is constructed as a true canon at the unison in three parts, with a fourth part as a [[Ostinato#Ground_bass|ground bass]] throughout. Neither the date nor the circumstances of its composition are known (suggested dates range from 1680 to 1706), and the oldest surviving manuscript copy of the piece dates from 1838 to 1842.<ref>{{RISM|455034292}} Pachelbel, Johann (1653–1706): Canon and Gigue in D major</ref>\n\nLike his other works, Pachelbel's Canon went out of style, and remained in obscurity for centuries. A 1968 arrangement and recording of it by the [[Jean-François Paillard]] chamber orchestra gained popularity over the next decade, and in the 1970s the piece began to be recorded by many ensembles, while elements of the piece, especially its [[chord progression]], were used in a [[List of variations on Pachelbel's Canon|variety of pop songs]]. By the early 1980s its presence as background music was deemed inescapable.<ref name=\"prisoners\" /> The composition is famously used in weddings and funeral ceremonies in the western world.{{sfn|Levine|2019}}<ref name=\"co-op funeral care\">{{cite web |url=http://www.co-operativefuneralcare.co.uk/about-us/our-news/funeral-survey-charts-the-demise-of-popular-hymns/|title=Funeral survey charts the demise of popular hymns|date=24 October 2012|access-date=28 December 2016|publisher=Co-Operative Funeralcare}}</ref>"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

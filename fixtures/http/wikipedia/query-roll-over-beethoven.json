@@ -6,7 +6,18 @@
     "pageid": 2253753,
     "ns": 0,
     "title": "Roll Over Beethoven",
-    "extract": "\"Roll Over Beethoven\" is a 1956 song written by Chuck Berry, originally released on Chess Records, with \"Drifting Heart\" as the B-side. The lyrics of the song mention rock and roll and the desire for rhythm and blues to be as respected as  classical music. The song has been covered by many other artists, including the Rolling Stones and the Beatles (both in 1963). Rolling Stone magazine ranked it number 97 on its 2004 list of the \"500 Greatest Songs of All Time\".\n\n"
+    "extract": "\"Roll Over Beethoven\" is a 1956 song written by Chuck Berry, originally released on Chess Records, with \"Drifting Heart\" as the B-side. The lyrics of the song mention rock and roll and the desire for rhythm and blues to be as respected as  classical music. The song has been covered by many other artists, including the Rolling Stones and the Beatles (both in 1963). Rolling Stone magazine ranked it number 97 on its 2004 list of the \"500 Greatest Songs of All Time\".\n\n",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|Original song written and composed by Chuck Berry}}\n{{About||the television series|Roll Over Beethoven (TV series)}}\n\n{{Use mdy dates|date=May 2012}}\n{{Infobox song\n| name       = Roll Over Beethoven\n| cover      = File:Roll Over Beethoven Chuck Berry.png\n| alt        =\n| caption    = A-side label of US single\n| type       = single\n| artist     = [[Chuck Berry]]\n| album      = \n| B-side     = Drifting Heart\n| released   = {{Start date|1956|05}}\n| recorded   = April 19, 1956<ref>{{cite web |title=The Chuck Berry Database Details For Recording Session: 19. 4. 1956|url=https://www.crlf.de/ChuckBerry/cbdb/session/8-1956-04-19%2000:00:00.html |website=A Collector's Guide to the Music of Chuck Berry |publisher=Dietmar Rudolph |access-date=25 November 2022}}</ref>\n| studio     = [[Universal Recording Corp.]] (Chicago)<ref>{{cite web |title=The Chuck Berry Database Details For Recording Session: 19. 4. 1956|url=https://www.crlf.de/ChuckBerry/cbdb/session/8-1956-04-19%2000:00:00.html |website=A Collector's Guide to the Music of Chuck Berry |publisher=Dietmar Rudolph |access-date=25 November 2022}}</ref>\n| venue      =\n| genre      = [[Rock and roll]]\n| length     = {{Duration|m=2|s=23}}\n| label      = [[Chess Records|Chess]] <small>#1626</small>\n| writer     = [[Chuck Berry]]\n| producer   = [[Leonard Chess]], [[Phil Chess]]\n| prev_title = [[No Money Down (Chuck Berry song)|No Money Down]]\n| prev_year  = 1955\n| next_title = [[Too Much Monkey Business]]\n| next_year  = 1956\n}}\n\n\"'''Roll Over Beethoven'''\" is a 1956 song written by [[Chuck Berry]], originally released on [[Chess Records]], with \"Drifting Heart\" as the [[A-side and B-side|B-side]]. The lyrics of the song mention [[rock and roll]] and the desire for [[rhythm and blues]] to be as respected as  [[classical music]]. The song has been covered by many other artists, including the [[Rolling Stones]] and [[the Beatles]] (both in 1963). ''[[Rolling Stone]]'' magazine ranked it number 97 on its 2004 list of the [[Rolling Stone's 500 Greatest Songs of All Time|\"500 Greatest Songs of All Time\"]].<ref>{{cite magazine |url=https://www.rollingstone.com/music/lists/the-500-greatest-songs-of-all-time-20110407/chuck-berry-roll-over-beethoven-19691231 |title=500 Greatest Songs of All Time: Chuck Berry, 'Roll over Beethoven' &#124; Rolling Stone &#124; Lists |magazine=[[Rolling Stone]] |access-date=2011-06-17 |url-status=dead |archive-url=https://web.archive.org/web/20110604173020/http://www.rollingstone.com/music/lists/the-500-greatest-songs-of-all-time-20110407/chuck-berry-roll-over-beethoven-19691231 |archive-date=June 4, 2011 |df=mdy }}</ref>"
+       }
+      }
+     }
+    ]
    }
   ]
  }

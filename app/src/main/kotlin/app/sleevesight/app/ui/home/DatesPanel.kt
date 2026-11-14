@@ -79,14 +79,14 @@ private fun AiDatesPanel(sentences: List<Pair<DateSentence, String?>>) {
 
 /**
  * The panel's content: each of [sentences] on its own, a release's title in italics; under when the
- * music was composed, its source, "From {source}" (#1132, [FromSource]).
+ * music was composed, its source, "From {source}" (#1132, #1273, [FromSource]).
  */
 @Composable
 internal fun DatesPanel(sentences: List<DateSentence>) {
     for (sentence in sentences) {
         Text(dateText(sentence), style = MaterialTheme.typography.bodyLarge)
         if (sentence is DateSentence.Composed) {
-            FromSource(sourceName(sentence.date.source), sentence.date.url, DATES_FROM_TAG)
+            FromSource(composedSourceName(sentence.date.source), sentence.date.url, DATES_FROM_TAG)
         }
     }
 }

@@ -1,0 +1,30 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Ellens dritter Gesang",
+    "to": "Ave Maria (Schubert)"
+   }
+  ],
+  "pages": [
+   {
+    "pageid": 1458817,
+    "ns": 0,
+    "title": "Ave Maria (Schubert)",
+    "extract": "\"Ellens dritter Gesang\" (\"Ellens Gesang III\", D. 839, Op. 52, No. 6, 1825, English: \"Ellen's Third Song\"), is a work composed by Franz Schubert in 1825. It is part of a setting of seven songs from Walter Scott's 1810 popular narrative poem The Lady of the Lake, in which the character Ellen Douglas sings a prayer addressed to the Virgin Mary.\nBeyond the song as originally composed by Schubert, it is also performed as \"Ave Maria\", the Latin name of the prayer Hail Mary. \"Ave Maria\" is presented in musically simplified arrangements and with various lyrics that commonly differ from the original context of the poem. It was arranged in three versions for piano by Franz Liszt.\n\n",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1825 composition by Franz Schubert}}\n{{CSS image crop |Image=Schubert Ave Maria.jpg|thumb|1843-51 manuscript |bSize=400 |cWidth=350 |cHeight=420 |oTop=25 |oLeft=40 |Description = Manuscript of \"Ellens Dritter Gesang\" from 1843 - 1851. }}\n{{Use dmy dates|date=February 2026}}\n[[File:Franz Schubert c1827.jpg|thumb|upright|Portrait of Franz Schubert by [[Franz Eybl]] (1827)]]\n[[File:Sir Henry Raeburn - Portrait of Sir Walter Scott.jpg|thumb|upright|Walter Scott]]\n\"'''{{Lang|de|Ellens dritter Gesang|italic=no}}'''\" (\"'''{{Lang|de|Ellens Gesang III|italic=no}}'''\", [[Otto Erich Deutsch|D]]. 839, [[Opus number|Op]]. 52, No. 6, 1825, {{Langx|en|\"Ellen's Third Song\"}}), is a work composed by [[Franz Schubert]] in 1825. It is part of a setting of seven songs from [[Walter Scott]]'s 1810 popular narrative poem ''[[The Lady of the Lake (poem)|The Lady of the Lake]]'', in which the character Ellen Douglas sings a prayer addressed to the [[Virgin Mary]].\n\nBeyond the song as originally composed by Schubert, it is also performed as \"'''Ave Maria'''\", the Latin name of the prayer [[Hail Mary]]. \"Ave Maria\" is presented in musically simplified arrangements and with various lyrics that commonly differ from the original context of the poem.{{Citation needed|date=May 2026}} It was [[Arrangement|arranged]] in [[Transcriptions by Franz Liszt#Franz Schubert|three versions]] for piano by [[Franz Liszt]].<ref>{{cite web|url=http://www.interlude.hk/front/liszt-ave-maria/|title=Liszt and the Ave Maria : Interlude.hk|website=Interlude.hk|date=8 December 2015|access-date=27 July 2018}}</ref>"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

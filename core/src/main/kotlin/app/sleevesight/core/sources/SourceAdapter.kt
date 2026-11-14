@@ -127,8 +127,9 @@ val SourceAdapter.tag: String get() = id.tag
  * as its first play did; null where the resolution told none (the title's composer lead decides).
  *
  * [composed] is when the track's music was composed (#1132, [ComposedDate]): on MusicBrainz's result,
- * as the resolution dates it (`Resolution.composed`), and on Wikipedia's, as the song's Wikidata item
- * the identity check accepted dates it (its inception, P571); kept the same way, for Home's *Dates*.
+ * as the resolution dates it (`Resolution.composed`), and on Wikipedia's, as the infobox of the song's
+ * article dates it (#1273), else the song's Wikidata item the identity check accepted (its inception,
+ * P571); kept the same way, for Home's *Dates*.
  * Null where neither dates it, and on every other source's result.
  *
  * [provisional] marks a result that a failed request of the verification left unverified, where a

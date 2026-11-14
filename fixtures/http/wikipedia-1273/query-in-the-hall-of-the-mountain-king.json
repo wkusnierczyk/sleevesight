@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 748312,
+    "ns": 0,
+    "title": "In the Hall of the Mountain King",
+    "extract": "\"In the Hall of the Mountain King\" (Norwegian: \"I Dovregubbens hall\", lit. 'In the hall of the old man of Dovre') is a piece of orchestral music composed by Edvard Grieg in 1875 as incidental music for the sixth scene of act 2 in Henrik Ibsen's 1867 play Peer Gynt. It was originally part of Opus 23 but was later extracted as the final piece of Peer Gynt, Suite No. 1, Op. 46. Its easily recognizable theme has helped it attain iconic status in popular culture, where it has been arranged by many artists (see Grieg's music in popular culture).\nThe English translation of the name is not literal. Dovre is a mountainous region in Norway, and gubbe translates into \"(old) man\" or \"husband\". Gubbe is used along with its female counterpart kjerring to differentiate male and female trolls, trollgubbe and trollkjerring. In the play, Dovregubben is a troll king that Peer Gynt invents in a fantasy.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{short description|Orchestral piece by Edvard Grieg}}\n{{About|the orchestral piece}}\n[[File:(Edvard Grieg portrait) (3469853267).jpg|thumb|[[Edvard Grieg]] ca. 1870]]\n\"'''In the Hall of the Mountain King'''\" ({{langx|no|\"I Dovregubbens hall\"||In the hall of the old man of [[Dovrefjell|Dovre]]|link=no|italic=no}}) is a piece of orchestral music composed by [[Edvard Grieg]] in 1875 as [[incidental music]] for the sixth scene of act 2 in [[Henrik Ibsen]]'s 1867 play ''[[Peer Gynt]]''. It was originally part of [[Peer Gynt (Grieg)|Opus 23]] but was later extracted as the final piece of [[Peer Gynt, Suite No. 1|''Peer Gynt'', Suite No. 1]], Op. 46. Its easily recognizable [[Theme (music)|theme]] has helped it attain iconic status in popular culture,<ref>{{Cite web |date=2022-10-28 |title=What's That Quirky, Spooky Music I Always Hear In Movies? {{!}} How to Classical |url=https://www.wqxr.org/story/quirky-spooky-music-movies-in-the-hall-of-the-mountain-king/ |website= wqxr.org |publisher= [[WQXR-FM|WQXR]] |language=en |access-date=2024-08-22}}</ref> where it has been [[Arrangement|arranged]] by many artists (see [[Edvard Grieg's music in popular culture|Grieg's music in popular culture]]).\n\nThe English translation of the name is not literal. [[Dovrefjell#Name|Dovre]] is a mountainous region in Norway, and {{lang|no|gubbe}} translates into \"(old) man\" or \"husband\". {{lang|no|Gubbe}} is used along with its female counterpart {{lang|no|kjerring}} to differentiate male and female [[troll]]s, {{lang|no|trollgubbe}} and {{lang|no|trollkjerring}}. In the play, Dovregubben is a troll king that Peer Gynt invents in a fantasy."
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

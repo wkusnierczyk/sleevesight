@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 758128,
+    "ns": 0,
+    "title": "Spiegel im Spiegel",
+    "extract": "Spiegel im Spiegel (German for 'mirror(s) in the mirror') is a composition by Arvo Pärt written in 1978, just before his departure from Estonia. The piece is in the tintinnabular style, in which a melodic voice (operating over diatonic scales) and a tintinnabular voice (operating within a triad on the tonic) accompany each other. The piece is about ten minutes long.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1978 musical composition by Arvo Pärt}}\n{{Italic title}}\n{{Infobox musical composition\n| name              = ''{{lang|de|Spiegel im Spiegel}}''\n| type              = [[Chamber music]]\n| composer          = [[Arvo Pärt]]\n| image             = Arvo Pärt.jpg\n| image_upright     = \n| caption           = [[Arvo Pärt]] in 2008\n| key               = [[F major]]\n| catalogue         = \n| form              = \n| composed          = {{Start date|1978}}\n| dedication        = \n| performed         = \n| published         = \n| scoring           = {{hlist | violin or other melody instrument | piano }}\n}}\n'''''{{lang|de|Spiegel im Spiegel}}''''' ({{langnf|de||mirror(s) in the mirror}}) is a composition by [[Arvo Pärt]] written in 1978, just before his departure from Estonia. The piece is in the [[tintinnabular]] style, in which a melodic voice (operating over [[diatonic scales]]) and a tintinnabular voice (operating within a [[triad (music)|triad]] on the [[tonic (music)|tonic]]) accompany each other. The piece is about ten minutes long."
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

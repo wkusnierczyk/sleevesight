@@ -98,7 +98,9 @@ that is no classical form is not composed, but for `Song` with that lead or as p
 (a Lied of *Winterreise*). The composer's `begin` is read
 into `MbArtistRelation.begin`, and its `end` into `MbArtistRelation.end`: *Dates* says when the music was
 composed from them (#1132, `ComposedDates.ofWork`, `Resolution.composed`; `design.md`, *Key data*), else from
-the inception (P571) of the song's Wikidata item the Wikipedia identity check accepted (`ComposedDates.ofItem`).
+the infobox of that item's English Wikipedia article (`composed`, else `year`; #1273, `ComposedDates.ofInfobox`,
+read from the lead request the adapter makes anyway), else from the inception (P571) of the song's Wikidata item
+the Wikipedia identity check accepted (`ComposedDates.ofItem`).
 
 ## 2. Telling the composer from the performers
 
