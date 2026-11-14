@@ -10,6 +10,7 @@ import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.CountedTag
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
@@ -18,6 +19,7 @@ import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.genres.combineGenres
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -136,6 +138,44 @@ class GenreReasonsTest {
         assertNull(reasons.key(track, "jazz", settings.copy(writeInsights = false)))
         assertNull(reasons.key(track.copy(evidence = null), "jazz", settings))
         assertNull(reasons.key(track, "rock", settings.copy(aiProvider = null)))
+    }
+
+    @Test
+    fun `a genre only MusicBrainz gives stays out of a prompt when the weighing puts it on a row`() {
+        // #1019 and D12: MusicBrainz's heavily voted Metal and Punk, counted at half as MusicBrainz's
+        // alone (0.5), still outweigh Last.fm's Jazz and Soul and take their places on the combined
+        // row; neither may reach a prompt, while Hip-Hop, which Last.fm gives too, may.
+        val vocabulary = GenreVocabulary.load(JvmResourceReader)
+        val lastFm =
+            listOf("rock" to 100, "pop" to 90, "jazz" to 40, "soul" to 30, "hip-hop" to 15)
+        val musicBrainz = listOf("hip hop" to 20, "metal" to 20, "punk" to 20)
+
+        fun labels(tags: List<Pair<String, Int>>) =
+            vocabulary.sourceLabels(
+                tags.map { (name, count) ->
+                    CountedTag(name, count)
+                },
+                null,
+                GenreLevel.ARTIST,
+                "Miles Davis",
+            )
+        val genres =
+            combineGenres(
+                mapOf(LabelSource.LASTFM to labels(lastFm), LabelSource.MUSICBRAINZ to labels(musicBrainz)),
+                listOf("Miles Davis"),
+            )
+        assertEquals(
+            listOf("hiphop", "rock", "pop", "metal", "punk"),
+            genres.rows
+                .single()
+                .labels
+                .map { it.genre.identity },
+        )
+        val weighed = track.copy(genres = genres)
+        assertNull(reasons.key(weighed, "metal", settings))
+        assertNull(reasons.key(weighed, "punk", settings))
+        assertNotNull(reasons.key(weighed, "hiphop", settings))
+        assertNotNull(reasons.key(weighed, "rock", settings))
     }
 
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)

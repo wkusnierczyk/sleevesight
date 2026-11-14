@@ -1,6 +1,7 @@
 package app.sleevesight.core.genres
 
 import app.sleevesight.core.model.SourceId
+import kotlin.math.roundToLong
 
 /**
  * A source whose tags can become genre labels (D12, #84): which of them give labels is a user
@@ -87,31 +88,69 @@ data class TrackLabel(
 
 /**
  * How the labels of several sources combine (#84), on one row of a track's genres ([combineGenres],
- * #439): every source's labels, Last.fm's first, each in
- * its source's order, at most [GenreVocabulary.MAX_LABELS]. A label another source already gave
- * (the same [GenreLabel.identity]) is not shown twice: it credits both, also when the cap has left
- * no room for a new one.
+ * #439), weighed together before the cap (#1019): every label of every source, each weighing its
+ * [GenreLabel.weight] (its tag's count over the page's top tag's, so each source's top tag weighs 1,
+ * MusicBrainz's votes and Last.fm's weight out of 100 alike), or, where the source gave no counts,
+ * its place among its source's labels (1 for the first, down by an equal step to the last); a genre
+ * several sources give weighs the sum of their weights, so agreement is what lifts it, with no
+ * bonus of its own. A genre only MusicBrainz gives counts at half its weight (`MUSICBRAINZ_ALONE`),
+ * since it can never reach a prompt (D12) and should make room for the other sources'. The
+ * [GenreVocabulary.MAX_LABELS] that weigh most are kept, once, after the sources combine; at equal
+ * weight, in the order of the sources ([LabelSource], Last.fm's first) and each source's own. A
+ * label another source also gave (the same [GenreLabel.identity]) is not shown twice: it credits
+ * both.
  *
- * Last.fm's come first because its top tags are weighed over many listeners' tagging, where an
- * artist's MusicBrainz tags are usually a few editors' votes, and because a label only MusicBrainz
- * gives opens no genre card ([TrackLabel.opensCard]), so the cap keeps Last.fm's. MusicBrainz's then
- * fill the room left: at the Phase 0.5 gate they gave labels to 3 of the 30 tracks Last.fm left
- * without, and to 29 of 78 alone (design, *D12*). [bySource] holds the labels of the sources switched on; the
- * order it is given in does not matter.
+ * Last.fm's come first at equal weight because its top tags are weighed over many listeners'
+ * tagging, where an artist's MusicBrainz tags are usually a few editors' votes, and because a label
+ * only MusicBrainz gives opens no genre card ([TrackLabel.opensCard]). Before #1019 each source's
+ * labels were capped at five in its own order and Last.fm's filled the row first, so a genre both
+ * sources gave weighed no more than one only a single source gave. [bySource] holds the labels of
+ * the sources switched on; the order it is given in does not matter.
  */
 fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel> {
     val combined = mutableListOf<TrackLabel>()
-    val labelled = LabelSource.entries.flatMap { source -> bySource[source].orEmpty().map { source to it } }
-    for ((source, label) in labelled) {
-        val at = combined.indexOfFirst { it.genre.identity == label.identity }
-        val credit = LabelCredit(source, label.url)
-        when {
-            at < 0 -> if (combined.size < GenreVocabulary.MAX_LABELS) combined += TrackLabel(label, listOf(credit))
-            combined[at].credits.none { it.source == source } -> combined[at] = combined[at].credited(credit, label)
+    val weights = mutableMapOf<String, Double>()
+    for (source in LabelSource.entries) {
+        val labels = bySource[source].orEmpty()
+        labels.forEachIndexed { at, label ->
+            val identity = label.identity
+            val i = combined.indexOfFirst { it.genre.identity == identity }
+            val credit = LabelCredit(source, label.url)
+            val weight = label.weight ?: placeWeight(at, labels.size)
+            when {
+                i < 0 -> combined += TrackLabel(label, listOf(credit))
+                combined[i].credits.none { it.source == source } -> combined[i] = combined[i].credited(credit, label)
+                // The same source's genre twice on one row: weighed once, as its first.
+                else -> return@forEachIndexed
+            }
+            weights[identity] = weights.getOrDefault(identity, 0.0) + weight
         }
     }
+    // A stable sort on the weights rounded to [WEIGHT_STEPS]ths, so sums equal but for floating-point
+    // rounding (0.1 + 0.2 against 0.3) are equal: at equal weight, the order the labels were first given in.
     return combined
+        .sortedByDescending { label ->
+            val weight = weights.getValue(label.genre.identity)
+            val share = if (label.credits.all { it.source == LabelSource.MUSICBRAINZ }) MUSICBRAINZ_ALONE else 1.0
+            (weight * share * WEIGHT_STEPS).roundToLong()
+        }.take(GenreVocabulary.MAX_LABELS)
 }
+
+// The share of its weight a genre counts at when every credit on the row's label is MusicBrainz's
+// (#1019): such a genre never reaches a prompt (D12), so it makes room for the genres another source
+// gives. A genre MusicBrainz shares with another source keeps MusicBrainz's full weight in its sum.
+private const val MUSICBRAINZ_ALONE: Double = 0.5
+
+// The steps of weight [combineLabels] tells apart: a millionth, far finer than any count's share
+// (Last.fm's 1 of 100, a vote of MusicBrainz's thousands), far coarser than a double's rounding.
+private const val WEIGHT_STEPS: Double = 1_000_000.0
+
+// The weight of a label its source gave no count for: by its place, 1 for the first of [size] and
+// down by an equal step, so the last of five weighs 0.2.
+private fun placeWeight(
+    at: Int,
+    size: Int,
+): Double = (size - at).toDouble() / size
 
 private fun TrackLabel.credited(
     credit: LabelCredit,

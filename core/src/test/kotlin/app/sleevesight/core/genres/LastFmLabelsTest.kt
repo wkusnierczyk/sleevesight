@@ -62,6 +62,28 @@ class LastFmLabelsTest {
         }
 
     @Test
+    fun `an album's labels weigh by the counted tags' weights, kept with them in the artist cache`() =
+        runTest {
+            // #1019: the weights out of 100 reach `GenreLabel.weight`, and survive the album cache.
+            val counted =
+                object : ReleaseTags by tags {
+                    override suspend fun countedAlbumTags(
+                        artist: String,
+                        album: String,
+                    ): Lookup<List<CountedTag>> =
+                        Lookup
+                            .Found(listOf(CountedTag("folk rock", 100), CountedTag("1974", 60), CountedTag("folk", 50)))
+                            .also { asked += "album $album" }
+                }
+            val kept = MemoryArtistResults()
+            val fresh = LastFmLabels(counted, vocabulary, artists = kept).albumLabels("Gordon Lightfoot", "Sundown")
+            assertEquals(listOf(1.0, 0.5), fresh.map { it.weight })
+            val stored = LastFmLabels(counted, vocabulary, artists = kept).albumLabels("Gordon Lightfoot", "Sundown")
+            assertEquals(listOf(1.0, 0.5), stored.map { it.weight })
+            assertEquals(listOf("album Sundown"), asked)
+        }
+
+    @Test
     fun `an album's tags are kept, in the artist cache when there is one, a failure is not`() =
         runTest {
             album = Lookup.Failed("Offline")

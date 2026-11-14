@@ -25,6 +25,19 @@ class GenreVocabularyTest {
     }
 
     @Test
+    fun `each label weighs its tag's count over the top tag's, and a source's labels come uncapped`() {
+        // The top tag, British, is no genre: the genres weigh against it all the same (#1019).
+        val tags = listOf("british", "rock", "indie", "pop", "folk", "jazz", "blues", "soul")
+        val counts = tags.withIndex().associate { (at, tag) -> tag to 80 - 10 * at }
+        val labels = vocabulary.labelsFor(tags, counts = counts, capped = false)
+        assertEquals(listOf("rock", "indie", "pop", "folk", "jazz", "blues", "soul"), labels.map { it.tag })
+        assertEquals(listOf(0.875, 0.75, 0.625, 0.5, 0.375, 0.25, 0.125), labels.map { it.weight })
+        // Capped, as before, and without counts, no weight.
+        assertEquals(GenreVocabulary.MAX_LABELS, vocabulary.labelsFor(tags, counts = counts).size)
+        assertTrue(vocabulary.labelsFor(tags).all { it.weight == null })
+    }
+
+    @Test
     fun `labels are title case, with the vocabulary's overrides`() {
         assertEquals(
             listOf("R&B", "UK Garage", "Post-Punk", "Chanson Francaise"),

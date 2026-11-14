@@ -63,6 +63,58 @@ class MusicBrainzLabelsTest {
         }
 
     @Test
+    fun `an artist's tags weigh by their votes, from a fresh lookup and from the artist cache`() =
+        runTest {
+            // #1019: Rock's 2 votes and Pop's 1, each a share of `FULL_WEIGHT_VOTES` (10).
+            var asks = 0
+            val counted =
+                object : ArtistTags {
+                    override suspend fun artistTags(mbid: String): Lookup<List<String>> = error("names only")
+
+                    override suspend fun countedArtistTags(mbid: String): Lookup<List<CountedTag>> =
+                        Lookup.Found(listOf(CountedTag("rock", 2), CountedTag("pop", 1))).also { asks++ }
+                }
+            val kept = MemoryArtistResults()
+            val fresh = MusicBrainzLabels(counted, vocabulary, artists = kept).labels(artists("mb-a"))
+            assertEquals(listOf(0.2, 0.1), fresh.map { it.weight })
+            val stored = MusicBrainzLabels(counted, vocabulary, artists = kept).labels(artists("mb-a"))
+            assertEquals(listOf(0.2, 0.1), stored.map { it.weight })
+            assertEquals(1, asks)
+        }
+
+    @Test
+    fun `a tag of six votes, MusicBrainz's alone, weighs 0 6, not in full`() {
+        // #1019: under `FULL_WEIGHT_VOTES` (10), a recording's top tag of six votes weighs 0.6; at
+        // five votes for full weight it weighed 1, as much as Last.fm's top tag.
+        val found =
+            labels().recordingLabels(
+                RecordingTags(
+                    "mb-rec",
+                    listOf("metal", "rock"),
+                    mapOf(
+                        "metal" to 6,
+                        "rock" to 3,
+                    ),
+                ),
+            )
+        assertEquals(listOf(0.6, 0.3), found.map { it.weight })
+        val combined =
+            combineLabels(
+                mapOf(
+                    LabelSource.MUSICBRAINZ to found,
+                    LabelSource.LASTFM to
+                        vocabulary.sourceLabels(
+                            listOf(CountedTag("jazz", 100), CountedTag("soul", 70)),
+                            null,
+                            GenreLevel.TRACK,
+                        ),
+                ),
+            )
+        // Last.fm's Soul, at 0.7, comes before MusicBrainz's Metal.
+        assertEquals(listOf("Jazz", "Soul", "Metal", "Rock"), combined.map { it.genre.label })
+    }
+
+    @Test
     fun `the recording's tags give the track's labels, linking the recording's page`() {
         val found = labels().recordingLabels(RecordingTags("mb-rec", listOf("rock", "seen live", "folk")))
         assertEquals(listOf("Rock", "Folk"), found.map { it.label })

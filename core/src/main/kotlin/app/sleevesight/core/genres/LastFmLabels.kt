@@ -12,6 +12,9 @@ import kotlin.time.Duration.Companion.days
  * Last.fm's top tags for a track and for an album (`track.getTopTags`, `album.getTopTags`), each
  * by the artist's name and the track's or album's, those weighted too low left out, most applied
  * first: `LastFmTags` in `:sources`, on the user's key; a fake in tests. Null page: none to link.
+ * [countedTrackTags] and [countedAlbumTags] give them with their weights out of 100 (#1019), which a
+ * fake that gives only the names gives none of; they are what [LastFmLabels] asks, so a wrapper that
+ * counts or changes the requests overrides them, not the names' alone.
  */
 interface ReleaseTags {
     suspend fun trackTags(
@@ -23,6 +26,18 @@ interface ReleaseTags {
         artist: String,
         album: String,
     ): Lookup<List<String>>
+
+    /** As [trackTags], each tag with its weight out of 100 (#1019); by default with none known. */
+    suspend fun countedTrackTags(
+        artist: String,
+        title: String,
+    ): Lookup<List<CountedTag>> = trackTags(artist, title).uncounted()
+
+    /** As [albumTags], each tag with its weight out of 100 (#1019); by default with none known. */
+    suspend fun countedAlbumTags(
+        artist: String,
+        album: String,
+    ): Lookup<List<CountedTag>> = albumTags(artist, album).uncounted()
 
     /** The track's page on Last.fm, which a label from its tags links. */
     fun trackPage(
@@ -61,7 +76,7 @@ class LastFmLabels(
     capacity: Int = DEFAULT_CAPACITY,
     artists: ArtistResults = ArtistResults.None,
 ) {
-    private val albums = KeptTags(ALBUM_PART, artists, clock, lifetime, capacity)
+    private val albums = KeptTags(ALBUM_PART, CountedTag.serializer(), artists, clock, lifetime, capacity)
 
     /** The labels from the tags of [title] by [artist]; none when the request failed. */
     suspend fun trackLabels(
@@ -74,10 +89,10 @@ class LastFmLabels(
         artist: String,
         title: String,
     ): LabelLookup {
-        val answer = tags.trackTags(artist, title)
+        val answer = tags.countedTrackTags(artist, title)
         val found = (answer as? Lookup.Found)?.value.orEmpty()
         return LabelLookup(
-            vocabulary.labelsFor(found, tags.trackPage(artist, title), GenreLevel.TRACK),
+            vocabulary.sourceLabels(found, tags.trackPage(artist, title), GenreLevel.TRACK),
             failed = answer is Lookup.Failed,
         )
     }
@@ -93,9 +108,9 @@ class LastFmLabels(
         artist: String,
         album: String,
     ): LabelLookup {
-        val found = albums.tagsOf(albumKey(fold(artist), fold(album))) { tags.albumTags(artist, album) }
+        val found = albums.tagsOf(albumKey(fold(artist), fold(album))) { tags.countedAlbumTags(artist, album) }
         return LabelLookup(
-            vocabulary.labelsFor(found.orEmpty(), tags.albumPage(artist, album), GenreLevel.ALBUM),
+            vocabulary.sourceLabels(found.orEmpty(), tags.albumPage(artist, album), GenreLevel.ALBUM),
             failed = found == null,
         )
     }
@@ -109,9 +124,11 @@ class LastFmLabels(
 
         /**
          * An album's Last.fm tags in the artist cache, by [albumKey]: a JSON array of the tags, most
-         * applied first, as [ReleaseTags] gave them, going through the vocabulary when read.
+         * applied first, each with its weight, as [ReleaseTags.countedAlbumTags] gave them, going
+         * through the vocabulary when read. Its extraction is 2: 1 kept the names alone, without the
+         * weights their labels are weighed by (#1019), so an album kept before is asked again.
          */
-        val ALBUM_PART: ArtistPart = ArtistPart("lastfm.album.tags", 1, 1, setOf(SourceId.LASTFM))
+        val ALBUM_PART: ArtistPart = ArtistPart("lastfm.album.tags", 2, 1, setOf(SourceId.LASTFM))
 
         /** The artist's name and the album's, each folded, as a track's lookup key joins its parts. */
         internal fun albumKey(

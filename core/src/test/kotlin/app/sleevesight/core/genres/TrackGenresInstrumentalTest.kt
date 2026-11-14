@@ -64,6 +64,7 @@ class TrackGenresInstrumentalTest {
         val rock = recording("rock" to 1).map { it.copy(level = GenreLevel.ARTIST, artist = ARTIST) }
         val five = artist(ARTIST, "instrumental", "jazz", "blues", "soul", "funk")
         val full = genres(five, rock, singing = Singing(lyrics = true))
+        // MusicBrainz's Rock, of one vote, weighs a tenth (#1019): last.
         assertEquals(
             listOf("jazz", "blues", "soul", "funk", "rock"),
             full.rows
@@ -156,9 +157,17 @@ class TrackGenresInstrumentalTest {
 
     @Test
     fun `a featured artist's Instrumental beyond their row's cap still counts as theirs`() {
-        // B's Last.fm tags fill B's row; MusicBrainz's Instrumental for B is left out of it.
+        // B's Last.fm tags fill B's row; MusicBrainz's Instrumental for B, one vote against Jazz's ten,
+        // weighs too little to enter it (#1019).
         val lastFm = artist(ARTIST, "instrumental") + artist(FEATURED, "jazz", "blues", "soul", "funk", "rock")
-        val both = genres(lastFm, artist(FEATURED, "instrumental"), artists = listOf(ARTIST, FEATURED))
+        val musicBrainz =
+            vocabulary.sourceLabels(
+                listOf(CountedTag("jazz", 10), CountedTag("instrumental", 1)),
+                null,
+                GenreLevel.ARTIST,
+                FEATURED,
+            )
+        val both = genres(lastFm, musicBrainz, artists = listOf(ARTIST, FEATURED))
         assertTrue(
             both.rows
                 .single { it.artist == FEATURED }
@@ -182,6 +191,7 @@ class TrackGenresInstrumentalTest {
                 .labels.size,
         )
         val found = shown.withLyricsFound()
+        // MusicBrainz's Rock, of two votes, weighs 0.2, less than Last.fm's fourth (#1019).
         assertEquals(
             listOf("jazz", "soul", "funk", "country", "rock"),
             found.rows
@@ -231,24 +241,21 @@ class TrackGenresInstrumentalTest {
 
     @Test
     fun `an artist's Instrumental past their own five tags still counts as theirs`() {
-        // One source: B's sixth genre is Instrumental, kept past the cap as the sources keep it.
+        // One source: B's sixth genre is Instrumental, uncapped as the sources give their labels
+        // (#1019), and weighing least, so the row's cap leaves it off.
         val sixth =
-            vocabulary.labelsFor(
-                listOf("jazz", "blues", "soul", "funk", "rock", "instrumental"),
+            vocabulary.sourceLabels(
+                listOf("jazz", "blues", "soul", "funk", "rock", "instrumental").map { CountedTag(it) },
+                url = null,
                 level = GenreLevel.ARTIST,
                 artist = FEATURED,
-                keepBeyondCap = setOf(TrackGenres.INSTRUMENTAL),
             )
-        assertEquals(listOf(false, false, false, false, false, true), sixth.map { it.beyondCap })
+        assertEquals(6, sixth.size)
         val one = genres(artist(ARTIST, "instrumental") + sixth, artists = listOf(ARTIST, FEATURED))
         // On no row, but B's tags include it: A's Instrumental is not weak.
-        assertEquals(
-            5,
-            one.rows
-                .single { it.artist == FEATURED }
-                .labels.size,
-        )
-        assertTrue(one.all.none { it.genre.beyondCap })
+        val featuredRow = one.rows.single { it.artist == FEATURED }
+        assertEquals(5, featuredRow.labels.size)
+        assertTrue(featuredRow.labels.none { it.genre.identity == TrackGenres.INSTRUMENTAL })
         assertNull(one.weakEvidence("instrumental"))
         // Without it kept, B is taken for a featured artist without it.
         val capped = artist(FEATURED, "jazz", "blues", "soul", "funk", "rock", "instrumental")

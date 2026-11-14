@@ -110,7 +110,7 @@ class PipelineLabelsTest {
     ): TrackState = pipeline(provider, cache).run(nowPlaying, write = true)
 
     @Test
-    fun `both sources' labels, Last fm's first, credited to each source that gave them`() =
+    fun `both sources' labels, weighed together, credited to each source that gave them`() =
         runTest {
             val state = track()
             assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), state.genres.all.map { it.genre.label })

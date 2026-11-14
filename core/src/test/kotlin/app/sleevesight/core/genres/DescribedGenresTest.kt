@@ -417,14 +417,21 @@ class DescribedGenresTest {
                 .single()
                 .identities(),
         )
-        // The artist's five Last.fm tags with Instrumental leave no room for MusicBrainz's Soul; with
-        // lyrics found, Soul takes it, and leaves the described row.
+        // The artist's five Last.fm tags with Instrumental leave no room for MusicBrainz's Soul, its
+        // tag of one vote against Punk's ten (#1019); with lyrics found, Soul takes it, and leaves the
+        // described row.
         val soul = describedGenres(vocabulary, listOf(line("S2", "A soul band.")), listOf(ANN))
         val full =
             combineGenres(
                 mapOf(
                     LabelSource.LASTFM to artist(ANN, "instrumental", "rock", "pop", "punk", "metal"),
-                    LabelSource.MUSICBRAINZ to artist(ANN, "soul"),
+                    LabelSource.MUSICBRAINZ to
+                        vocabulary.sourceLabels(
+                            listOf(CountedTag("punk", 10), CountedTag("soul", 1)),
+                            null,
+                            GenreLevel.ARTIST,
+                            ANN,
+                        ),
                 ),
                 listOf(ANN),
             ).withDescribed(soul)

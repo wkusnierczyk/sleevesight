@@ -5,6 +5,7 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import kotlinx.serialization.builtins.serializer
 import kotlin.time.Clock
 import kotlin.time.Duration
 
@@ -60,7 +61,7 @@ class GenreDefinitions(
     capacity: Int = DEFAULT_CAPACITY,
     kept: ArtistResults = ArtistResults.None,
 ) {
-    private val kept = KeptTags(PART, kept, clock, lifetime, capacity)
+    private val kept = KeptTags(PART, String.serializer(), kept, clock, lifetime, capacity)
 
     /**
      * The definition of the genre [identity] stands for ([GenreLabel.identity]), kept or looked up:

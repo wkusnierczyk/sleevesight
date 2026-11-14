@@ -1,6 +1,7 @@
 package app.sleevesight.sources.musicbrainz
 
 import app.sleevesight.core.genres.ArtistTags
+import app.sleevesight.core.genres.CountedTag
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
@@ -36,6 +37,26 @@ import kotlin.test.assertTrue
  */
 class MusicBrainzTagsTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
+
+    @Test
+    fun `the counted tags carry each tag's net votes, for the labels' weights`() =
+        runTest {
+            // #1019: the votes reach `GenreLabel.weight` through `countedArtistTags`.
+            val tags = MusicBrainzClient(ReplayNetClient.ok(ARTIST)).countedArtistTags("mb-a")
+            assertEquals(
+                listOf(
+                    CountedTag("folk", 7),
+                    CountedTag("canadian", 2),
+                    CountedTag("country", 2),
+                    CountedTag("seen live", 1),
+                ),
+                assertIs<Lookup.Found<List<CountedTag>>>(tags).value,
+            )
+            val labels = MusicBrainzLabels(MusicBrainzClient(ReplayNetClient.ok(ARTIST)), vocabulary)
+            val found = labels.labels(listOf(ResolvedArtist("Gordon Lightfoot", "mb-a")))
+            // Folk's 7 votes and Country's 2, each a share of `FULL_WEIGHT_VOTES` (10).
+            assertEquals(listOf(0.7, 0.2), found.map { it.weight })
+        }
 
     @Test
     fun `the tags are asked for on the artist and read most voted first, ties by name, without those voted down`() =

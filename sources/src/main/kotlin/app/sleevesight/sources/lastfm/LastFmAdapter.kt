@@ -3,9 +3,9 @@ package app.sleevesight.sources.lastfm
 import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.CountedTag
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
-import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -212,13 +212,12 @@ class LastFmAdapter(
                 val match = judgement.match
                 val genres =
                     if (match.shows && this.genres) {
-                        vocabulary.labelsFor(
+                        // Uncapped, each weighed by its weight: the row's cap comes after the sources combine (#1019).
+                        vocabulary.sourceLabels(
                             genreTags(artist, fetched.topTags),
                             artist.url,
                             GenreLevel.ARTIST,
                             credited,
-                            // An Instrumental past the cap too, for a featured artist's (#996).
-                            keepBeyondCap = setOf(TrackGenres.INSTRUMENTAL),
                         )
                     } else {
                         emptyList()
@@ -245,13 +244,17 @@ class LastFmAdapter(
             }
         }
 
-    /** The top tags above [MIN_TAG_COUNT], or the five tags of `artist.getInfo` when they did not arrive. */
+    /**
+     * The top tags above [MIN_TAG_COUNT], with their weights (#1019), or the five tags of
+     * `artist.getInfo`, which have none, when they did not arrive.
+     */
     private fun genreTags(
         artist: LastFmArtist,
         topTags: LastFmAnswer<List<LastFmTag>>?,
-    ): List<String> {
+    ): List<CountedTag> {
         val tags = (topTags as? LastFmAnswer.Found)?.value
-        return tags?.filter { it.count >= MIN_TAG_COUNT }?.map { it.name } ?: artist.tags
+        return tags?.filter { it.count >= MIN_TAG_COUNT }?.map { CountedTag(it.name, it.count) }
+            ?: artist.tags.map { CountedTag(it) }
     }
 
     /** One artist's lines: the bio's sentences, and the aggregates every artist of the name adds to. */
@@ -310,15 +313,18 @@ class LastFmAdapter(
          * version without genres before it, holds that line and must not be served. 4: the lines of
          * counts and lists are marked `aggregate` (#617), which results kept before lack, so *Look
          * again* would take a count that changed in them for something new. An artist's
-         * Instrumental past the labels' cap (`GenreLabel.beyondCap`, #996) is an optional field,
+         * Instrumental past the labels' cap (`GenreLabel.beyondCap`, #996, until 6) was an optional field,
          * not raised for: a result kept before it decodes without, so until it expires a featured
          * artist with Instrumental as a sixth tag may be taken for one without it, rather than every
          * kept result asking Last.fm again. 5: a classical track filed under its composer resolves
          * on MusicBrainz (#1129), and a page is
          * verified against the artists' ids it resolves, so a result kept against the earlier miss
-         * is made again ([ANSWERS_VERSION], Last.fm's own answers, stays).
+         * is made again ([ANSWERS_VERSION], Last.fm's own answers, stays). 6: an artist's labels are
+         * all its tags in the vocabulary, each with its weight (`GenreLabel.weight`, #1019), no
+         * longer its first five, so a result kept before, capped and unweighed, is made again from
+         * the answers kept ([ANSWERS_VERSION] stays: they hold the weights).
          */
-        const val EXTRACTION_VERSION: Int = 5
+        const val EXTRACTION_VERSION: Int = 6
 
         /**
          * The extraction version of what the artist cache keeps ([ARTIST_PART],

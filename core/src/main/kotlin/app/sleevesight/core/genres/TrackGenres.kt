@@ -656,11 +656,8 @@ fun combineGenres(
             bySource
         }
     val labels = given.values.flatten()
-    // A label past its source's cap is on no row; it tells only what the artist's tags include.
-    val shown = given.mapValues { (_, labels) -> labels.filter { !it.beyondCap } }
     val named =
-        shown.values
-            .flatten()
+        labels
             .filter { it.level == GenreLevel.ARTIST }
             .map { it.artist }
             .distinct()
@@ -671,7 +668,7 @@ fun combineGenres(
         keys.mapNotNull { (level, artist) ->
             val combined =
                 combineLabels(
-                    shown.mapValues { (_, labels) ->
+                    given.mapValues { (_, labels) ->
                         labels.filter { it.level == level && (level != GenreLevel.ARTIST || it.artist == artist) }
                     },
                 )
