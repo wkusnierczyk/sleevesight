@@ -152,8 +152,9 @@ class GenreReasonsTest {
         // On the list: path A, the reason's own key.
         val reason = assertIs<ReasonPath.Reason>(reasons.path(only, "jazz", knowing, lists, setOf("jazz")))
         assertEquals("jazz", reason.key.subject)
-        // Not on it: no call.
-        assertEquals(ReasonPath.NotListed, reasons.path(only, "jazz", knowing, lists, setOf("blues")))
+        // Not on it: no reason, but the ask (#1117), by a key of its own.
+        val ask = assertIs<ReasonPath.NotListed>(reasons.path(only, "jazz", knowing, lists, setOf("blues")))
+        assertEquals("jazz" + GenreReasons.ASK, ask.key.subject)
         // Given by another source too: path A, whatever the list.
         val both = track(credits = listOf(LabelSource.MUSICBRAINZ, LabelSource.LASTFM))
         assertIs<ReasonPath.Reason>(reasons.path(both, "jazz", knowing, lists, listed = null))

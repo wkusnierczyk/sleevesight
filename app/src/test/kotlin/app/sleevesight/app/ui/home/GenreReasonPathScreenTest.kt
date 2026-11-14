@@ -6,7 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -190,30 +189,58 @@ class GenreReasonPathScreenTest {
         show(notes) {
             disabled(notes)
             compose.onNodeWithText("AI could not find an explanation.").assertExists()
-            assertEquals(0, compose.onAllNodesWithText(NOT_LISTED, substring = true).fetchSemanticsNodes().size)
+            assertEquals(0, compose.onAllNodesWithText(ONLY_MUSICBRAINZ).fetchSemanticsNodes().size)
             assertEquals(0, count(GENRE_REASON_TAG))
         }
     }
 
     @Test
-    fun aGenreTheAiListLacksSaysSoOnceTappedWithSeeWhyLinkingTheDocs() {
-        val notes = Notes(GenreReason.Unavailable(Unavailability.NOT_LISTED))
+    fun aGenreTheAiListLacksOffersIsThisEnabledWithTheQuietLineUnderIt() {
+        val notes = Notes(GenreReason.Ask)
         show(notes) {
-            disabled(notes)
-            val line = "$NOT_LISTED See why."
-            compose.onNodeWithText(line).assertExists()
-            assertEquals(0, compose.onAllNodesWithText("AI could not find an explanation.").fetchSemanticsNodes().size)
-            assertEquals(0, count(GENRE_REASON_TAG))
-            // *See why.* is a link, read as one, to the docs' *Genre labels*.
-            val text =
-                compose
-                    .onNodeWithText(line, useUnmergedTree = true)
-                    .fetchSemanticsNode()
-                    .config[SemanticsProperties.Text]
-                    .single()
-            val links = text.getLinkAnnotations(0, text.length)
-            assertEquals(listOf(DOCS), links.map { (it.item as LinkAnnotation.Url).url })
-            assertEquals("See why.", text.substring(links.single().start, links.single().end))
+            // *Is this rock?*, enabled, in *Why is this …?*'s place; a tap asks.
+            compose.onNodeWithTag(GENRE_ASK_TAG).assertExists()
+            compose.onNodeWithTag(GENRE_WHY_TAG).assertIsEnabled()
+            compose.onNodeWithText("Is this rock?", substring = true, useUnmergedTree = true).assertExists()
+            assertEquals(0, compose.onAllNodesWithText("Why is this rock?", true, true).fetchSemanticsNodes().size)
+            compose.onNodeWithText(ONLY_MUSICBRAINZ).assertExists()
+            val button = compose.onNodeWithTag(GENRE_WHY_TAG, useUnmergedTree = true).fetchSemanticsNode()
+            val line = compose.onNodeWithText(ONLY_MUSICBRAINZ).fetchSemanticsNode()
+            assertEquals(true, line.boundsInRoot.top >= button.boundsInRoot.bottom)
+            compose.onNodeWithTag(GENRE_WHY_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(1, notes.taps)
+        }
+    }
+
+    @Test
+    fun theAsksAnswerShowsUnderItsQuestionCreditedToItsModel() {
+        val grounded = (GroundingCheck.check(REASON, HomeFixtures.evidence, false) as InsightReply.Written).grounded
+        show(Notes(GenreReason.Shown(InsightState.Written(grounded, false), MODEL, asks = true))) {
+            compose.onNodeWithTag(GENRE_REASON_TAG).performScrollTo()
+            compose.onNodeWithText("Is this rock?").assertExists()
+            compose.onNodeWithText("by $MODEL").assertExists()
+            assertEquals(0, compose.onAllNodesWithText(ONLY_MUSICBRAINZ).fetchSemanticsNodes().size)
+            assertEquals(0, count(GENRE_WHY_TAG))
+        }
+    }
+
+    @Test
+    fun aFailedAskSaysWhyWithRetry() {
+        val failed = Notes(GenreReason.Shown(InsightState.Failed("offline"), MODEL, asks = true))
+        show(failed) {
+            compose.onNodeWithTag(GENRE_WHY_FAILED_TAG).assertExists()
+            compose.onNodeWithText("The explanation could not be written", substring = true).assertExists()
+        }
+    }
+
+    @Test
+    fun anAskNothingBearsOnSaysSoUnderItsQuestionDisabled() {
+        val none = Notes(GenreReason.Shown(InsightState.NoEvidence, MODEL, asks = true))
+        show(none) {
+            disabled(none)
+            compose.onNodeWithText("Is this rock?", substring = true, useUnmergedTree = true).assertExists()
+            compose.onNodeWithText("AI could not find an explanation.").assertExists()
         }
     }
 
@@ -230,7 +257,7 @@ class GenreReasonPathScreenTest {
                 ): Flow<GenreReason> =
                     flowOf(
                         if (track.nowPlaying.play == 1L) {
-                            GenreReason.Unavailable(Unavailability.NOT_LISTED)
+                            GenreReason.Ask
                         } else {
                             GenreReason.Offered
                         },
@@ -253,12 +280,12 @@ class GenreReasonPathScreenTest {
             }
             compose.onNodeWithTag(ROCK_CHIP).unfold()
             compose.waitForIdle()
-            compose.onNodeWithTag(GENRE_WHY_TAG).assertIsNotEnabled()
+            compose.onNodeWithText(ONLY_MUSICBRAINZ).assertExists()
             // Only the play changes: the page, and the chip open on it, stay.
             shown.value = first.copy(nowPlaying = first.nowPlaying.copy(play = 2))
             compose.waitForIdle()
             compose.onNodeWithTag(GENRE_WHY_TAG).assertIsEnabled()
-            assertEquals(0, compose.onAllNodesWithText(NOT_LISTED, substring = true).fetchSemanticsNodes().size)
+            assertEquals(0, compose.onAllNodesWithText(ONLY_MUSICBRAINZ).fetchSemanticsNodes().size)
         }
     }
 
@@ -363,12 +390,9 @@ class GenreReasonPathScreenTest {
         const val MODEL = "Claude Haiku 5.5"
         const val REASON = "It was recorded in 1973 [MB1]."
 
-        /** The line for a genre the AI's list lacks (#1059), before its link. */
-        const val NOT_LISTED =
-            "The AI service doesn’t list rock among this song’s genres. Only MusicBrainz does, and " +
-                "Sleevesight could not use that annotation."
-
-        const val DOCS = "https://sleevesight.app/docs/tutorials/usage/#genre-labels"
+        /** The line under *Is this …?* for a genre the AI's list leaves out (#1117). */
+        const val ONLY_MUSICBRAINZ =
+            "Only MusicBrainz gives this genre; your AI service’s list for this song leaves it out."
         const val ROCK_CHIP = GENRE_PREFIX + "track:rock"
         const val BLUES_CHIP = GENRE_PREFIX + "track:blues"
     }

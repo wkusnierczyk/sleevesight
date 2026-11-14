@@ -20,7 +20,8 @@ import kotlin.time.Instant
  * a line of web evidence numbered after the track's own (`S6`, `S7` after `S1` to `S5`,
  * [EvidenceSet.with]), which the reason cites as it cites the others. *Once* searches [query] (the
  * title, the artists and the genre's label, a genre a source other than MusicBrainz gives or the AI's
- * list named, never one only MusicBrainz's tags give: D12) and gives its pages in the evidence;
+ * list named, or, for the ask ([asks], #1117, *Is this …?*), one only MusicBrainz's tags give that the
+ * list leaves out, its name alone) and gives its pages in the evidence;
  * *Up to 3 times* gives the model the search tool ([GenreReasonPrompt.withSearch]), each search's
  * pages as evidence lines ([toolResult]). [evidence] is then what the reply is checked against: the
  * track's and every page numbered, as the prompt gave them. Each prompt is the reason's user message
@@ -37,12 +38,14 @@ internal class ReasonQuestion(
     private val at: Instant,
     // The form the reason writes its dates in (`InsightPrompt.dateRule`).
     private val dates: DateForm = DateForm.APP,
+    // The ask's (#1117, *Is this …?*): whether the track is of the genre, which may be answered either way.
+    private val asks: Boolean = false,
 ) : WebQuestion {
     // The pages numbered so far, in their order, by address.
     private val numbered = LinkedHashMap<String, WebPage>()
 
     override val system: String
-        get() = GenreReasonPrompt.system(allowModel, dates)
+        get() = GenreReasonPrompt.system(allowModel, dates, asks)
 
     override val knowledge: String
         get() = GenreReasonPrompt.user(track.nowPlaying, track.normalized, base, label)
@@ -65,7 +68,7 @@ internal class ReasonQuestion(
 
     override fun agent(limit: Int): String = knowledge
 
-    override fun agentSystem(limit: Int): String = GenreReasonPrompt.withSearch(system, limit, allowModel)
+    override fun agentSystem(limit: Int): String = GenreReasonPrompt.withSearch(system, limit, allowModel, asks)
 
     override fun toolResult(pages: List<WebPage>): String {
         val before = numbered.size

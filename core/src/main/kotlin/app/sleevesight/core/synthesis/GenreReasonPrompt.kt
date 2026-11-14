@@ -26,7 +26,10 @@ import app.sleevesight.core.text.DateForm
  * model's knowledge, with no cap on its `[AI]` sentences, and `NO_EVIDENCE` only when neither
  * explains the label. The genre
  * is a vocabulary label (`GenreVocabulary`) that a source other than MusicBrainz gives: MusicBrainz's
- * tags never reach a prompt (D12). The reply goes through the same grounding check
+ * tags never reach a prompt (D12). The one exception is the ask (#1117, *Is this …?*, [system] with
+ * `asks`): for a genre only MusicBrainz's tags give that the AI's genre list leaves out, a tap asks
+ * whether the track is of it, the genre's name alone in `<genre>`, nothing else of the tags, and the
+ * reply may say it does not fit ([ASK_RULE]). The reply goes through the same grounding check
  * ([GroundingCheck]).
  *
  * The evidence is the track's whole evidence, artist lines included: the artists' other work is part
@@ -67,6 +70,13 @@ object GenreReasonPrompt {
      * Nor for the rule on dates ([InsightPrompt.dateRule], #957), as `InsightPrompt.VERSION` was not.
      */
     const val VERSION: Int = 6
+
+    /**
+     * The version of the ask's template (#1117, *Is this …?*: [system] with `asks`), part of its cache
+     * key in [VERSION]'s place: raised when the ask's contract changes, so answers written from the
+     * old prompt are not reused.
+     */
+    const val ASK_VERSION: Int = 1
 
     /**
      * The built-in style: shorter than the insight's, since it answers one question. The system
@@ -132,6 +142,26 @@ object GenreReasonPrompt {
             GroundingCheck.NO_EVIDENCE
 
     /**
+     * The ask's rule in [LABEL_RULE]'s place (#1117, *Is this …?*, for a genre only MusicBrainz's tags
+     * give and the AI's genre list leaves out): the question may be answered either way, so the reply
+     * says whether the track fits the genre, in part, or not, and why; `NO_EVIDENCE` only when nothing
+     * it can cite bears on it. The app reads no such reply as a dispute (`GenreDispute`).
+     */
+    const val ASK_RULE: String =
+        "- Say plainly whether the track fits the genre, in part, or not, and why. If nothing you can cite bears " +
+            "on it, reply with exactly: ${GroundingCheck.NO_EVIDENCE}"
+
+    /** [ASK_RULE] with the model's own knowledge on, as [MODEL_LABEL_RULE] is [LABEL_RULE]'s. */
+    const val MODEL_ASK_RULE: String =
+        "- Say plainly whether the track fits the genre, in part, or not, and why. If neither the evidence nor " +
+            "your own knowledge bears on it, reply with exactly: ${GroundingCheck.NO_EVIDENCE}"
+
+    /** [MODEL_EVIDENCE_RULE] for the ask (#1117): the knowledge where the evidence does not answer it. */
+    const val ASK_MODEL_EVIDENCE_RULE: String =
+        "- Use the evidence first. Use your own knowledge only where the evidence does not answer the question, " +
+            "and never against it."
+
+    /**
      * The rule on the evidence with the model's own knowledge on (version 5, #695), in place of the
      * insight's "Use only the evidence" ([InsightPrompt.EVIDENCE_RULE]): the evidence first, so an
      * answer the sources explain cites them, which is what lets it stand (`GenreReasons.write`).
@@ -170,14 +200,17 @@ object GenreReasonPrompt {
      * The system prompt: the role, the data guard, the style, the rules and the reply line, the same
      * for every genre and track. With [allowModel] (the *Model's own knowledge* switch), the reason
      * may also come from the model's own knowledge where the evidence does not explain the label,
-     * its sentences cited `[AI]` (#695). Its dates in [dates]' form ([InsightPrompt.dateRule]).
+     * its sentences cited `[AI]` (#695). Its dates in [dates]' form ([InsightPrompt.dateRule]). With
+     * [asks] (#1117, *Is this …?*), the ask's: whether the track is of the genre, which the reply may
+     * answer either way ([ASK_RULE]), in place of why it carries the label.
      */
     fun system(
         allowModel: Boolean,
         dates: DateForm = DateForm.APP,
+        asks: Boolean = false,
     ): String =
         buildString {
-            appendLine(role(allowModel))
+            appendLine(if (asks) askRole(allowModel) else role(allowModel))
             appendLine()
             appendLine(DATA_GUARD)
             appendLine()
@@ -186,7 +219,7 @@ object GenreReasonPrompt {
             appendLine(InsightPrompt.dateRule(dates))
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
-            appendLine(contract(allowModel))
+            appendLine(contract(allowModel, asks))
             appendLine()
             append(REPLY)
         }
@@ -217,6 +250,17 @@ object GenreReasonPrompt {
             "sound, era, scene, or the artists' other work) fits the genre."
 
     /**
+     * The ask's role (#1117): the listener asks whether the track is of the genre, and the reply says
+     * whether, and how far, it fits, and why. It says nothing of where the genre came from: the
+     * question names the genre alone.
+     */
+    private fun askRole(allowModel: Boolean): String =
+        "You answer a question about a genre on a music app's now-playing screen. Someone is listening to this " +
+            "track right now and asks whether it is of the genre in the <genre> block. Tell them whether, and how " +
+            "far, it fits, and why: what ${if (allowModel) "about the track" else "in the evidence"} (its " +
+            "instruments, sound, era, scene, or the artists' other work) fits the genre or sets it apart from it."
+
+    /**
      * The data guard (version 6, #767): the insight's ([InsightPrompt.DATA_GUARD]) with the genre's
      * block. The genre comes from the app's genre list or a source, fenced all the same: it is
      * flattened as every field is ([InsightPrompt.oneLine]).
@@ -244,21 +288,23 @@ object GenreReasonPrompt {
      * In the system prompt since version 6 (#767), so every turn of the tool loop sends it. Until
      * then it named the first page's id (`[S6]` after `S1` to `S5`), which depends on the track's
      * evidence; it now says the numbering goes on from the evidence's web lines, so the system
-     * prompt is the same for every track.
+     * prompt is the same for every track. With [asks] (#1117), the ask's: to answer the question.
      */
     fun withSearch(
         system: String,
         limit: Int,
         allowModel: Boolean = false,
+        asks: Boolean = false,
     ): String =
         system.removeSuffix(REPLY) +
-            "If the evidence is not enough to explain the label, search the web with the " +
+            "If the evidence is not enough to ${if (asks) "answer the question" else "explain the label"}, " +
+            "search the web with the " +
             "${WebPrompt.TOOL_NAME} tool, at most $limit times" +
             (if (allowModel) ", before you use your own knowledge. " else ". ") +
             "Each search's pages come back as more evidence lines, in the same format, numbered on after " +
             "the evidence's web lines (from [${SourceId.WEB.tag}1] if it has none): cite them as the other " +
             "lines, and use only what they say. Reply ${GroundingCheck.NO_EVIDENCE} only if what the searches " +
-            "find does not explain it either.\n\n" + REPLY
+            "find does not ${if (asks) "answer it" else "explain it"} either.\n\n" + REPLY
 
     /**
      * The reason's rules: the label's own first, then the insight's that fit a reason
@@ -269,20 +315,28 @@ object GenreReasonPrompt {
      * [InsightPrompt.NOTHING_TO_TELL_RULE]), in the insight's order. With [allowModel] (version 5,
      * #695), the reason's own rules on the evidence, the model's knowledge, a gap and `NO_EVIDENCE`
      * in place of the insight's ([MODEL_EVIDENCE_RULE], [MODEL_RULE], [MODEL_GAP_RULE],
-     * [MODEL_LABEL_RULE]), and the first rule reworded to match.
+     * [MODEL_LABEL_RULE]), and the first rule reworded to match. With [asks] (#1117), the ask's: the
+     * first rule on a question, [ASK_RULE] or [MODEL_ASK_RULE] for the label's, and
+     * [ASK_MODEL_EVIDENCE_RULE] for [MODEL_EVIDENCE_RULE].
      */
-    fun contract(allowModel: Boolean): String =
+    fun contract(
+        allowModel: Boolean,
+        asks: Boolean = false,
+    ): String =
         listOfNotNull(
-            if (allowModel) {
-                "- The genre is a label, not a fact: explain it from the evidence and, where the evidence does not, " +
-                    "from your own knowledge."
-            } else {
-                "- The genre is a label, not a fact: explain it only from the evidence."
-            },
+            first(allowModel, asks),
             ABOUT_THE_MUSIC_RULE,
-            if (allowModel) MODEL_LABEL_RULE else LABEL_RULE,
+            when {
+                asks -> if (allowModel) MODEL_ASK_RULE else ASK_RULE
+                allowModel -> MODEL_LABEL_RULE
+                else -> LABEL_RULE
+            },
             InsightPrompt.CITATION_RULE,
-            if (allowModel) MODEL_EVIDENCE_RULE else InsightPrompt.EVIDENCE_RULE,
+            when {
+                !allowModel -> InsightPrompt.EVIDENCE_RULE
+                asks -> ASK_MODEL_EVIDENCE_RULE
+                else -> MODEL_EVIDENCE_RULE
+            },
             InsightPrompt.TRANSLATION_RULE,
             InsightPrompt.LENGTH_RULE,
             COUNTS_RULE,
@@ -297,4 +351,18 @@ object GenreReasonPrompt {
             InsightPrompt.PLAIN_TEXT_RULE,
             if (allowModel) null else InsightPrompt.NO_EVIDENCE_RULE,
         ).joinToString("\n")
+
+    // The contract's first rule: the genre a label to explain, or with [asks] (#1117) a question to
+    // answer; from the evidence, and with [allowModel] the model's knowledge where it does not.
+    private fun first(
+        allowModel: Boolean,
+        asks: Boolean,
+    ): String {
+        val what = if (asks) "a question, not a fact: answer it" else "a label, not a fact: explain it"
+        return if (allowModel) {
+            "- The genre is $what from the evidence and, where the evidence does not, from your own knowledge."
+        } else {
+            "- The genre is $what only from the evidence."
+        }
+    }
 }

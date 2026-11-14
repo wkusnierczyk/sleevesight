@@ -52,10 +52,12 @@ import app.sleevesight.core.synthesis.SearchKind
  * genre only MusicBrainz gives, then the reason), "Looking for an explanation…" in the button's
  * place; the reason under it is credited "by {model}". Disabled, with why under it ([ReasonUnavailable]):
  * with no AI service ready, a link to *Settings → AI services*; for a genre only MusicBrainz gives,
- * when the AI's genre list cannot run, what to switch on, linked; once tapped, for one the list does
- * not have, that the AI service doesn’t list it, with *See why.* linking the docs (#1059); when
+ * when the AI's genre list cannot run, what to switch on, linked; when
  * nothing the reason was asked with explains it, "AI could not find an explanation.", and what was
- * off that could have, linked (#695). A reason that
+ * off that could have, linked (#695). For a genre only MusicBrainz gives that the AI's list leaves
+ * out, once its button is tapped on this play (#1059), *Is this …?*, enabled, with why under it
+ * ([AskBlock], #1117), whose tap asks whether the track is of the genre; its answer shows as a
+ * reason does, under *Is this …?*. A reason that
  * cites no source, only the model's own knowledge, says so under the question; one from web pages
  * is credited "by {model}, with web search" (#695). A reason still being written reads its `[AI]`
  * as the settings allow it ([PanelNotes.modelAllowed]). A written reason has *Read aloud* (#325,
@@ -98,7 +100,9 @@ internal fun GenreAbout(
             .firstOrNull { it.genre.identity == genre }
             ?.genre ?: return
     val said = inSentence(named.label)
-    val question = stringResource(R.string.genre_why, said)
+    // *Is this …?* for the ask (#1117), before its tap and as its answer's heading.
+    val asks = reason == GenreReason.Ask || (reason as? GenreReason.Shown)?.asks == true
+    val question = stringResource(if (asks) R.string.genre_ask else R.string.genre_why, said)
     // The check of the track's vocals (#998), for Instrumental: its line under the weak genre's.
     val vocals = vocalsOf(track, notes).takeIf { genre == TrackGenres.INSTRUMENTAL }
     GenreDefinitionNote(named, notes, search, afterRetry)
@@ -116,7 +120,8 @@ internal fun GenreAbout(
     when (val shown = reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question, onClick = explain)
-        is GenreReason.Unavailable -> ReasonUnavailable(question, said, shown.why, openSettingsAt)
+        GenreReason.Ask -> AskBlock(question, onClick = explain)
+        is GenreReason.Unavailable -> ReasonUnavailable(question, shown.why, openSettingsAt)
         is GenreReason.Shown -> {
             val readAloud =
                 readAloudControl(reader, Reading.genreReason(genre)) {

@@ -103,6 +103,9 @@ internal class CountingProvider(
     /** The model each request asked for, in order. */
     val models = mutableListOf<String>()
 
+    /** The system prompt of each request, in order. */
+    val systems = mutableListOf<String?>()
+
     /** The requests whose prompt names [title]. */
     fun requestsFor(title: String): Int = prompts.count { title in it }
 
@@ -125,6 +128,7 @@ internal class CountingProvider(
             requests++
             prompts += request.prompt
             models += request.model
+            systems += request.system
             failure?.let { throw it }
             error?.let {
                 emit(CompletionEvent.Error(it))

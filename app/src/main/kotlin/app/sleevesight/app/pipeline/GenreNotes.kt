@@ -76,6 +76,14 @@ sealed interface GenreReason {
     ) : GenreReason
 
     /**
+     * For a genre only MusicBrainz gives that the AI's genre list leaves out (#1117, [ReasonPath.NotListed]),
+     * once its *Why is this …?* is tapped on this play of the track (#1059): *Is this …?*, enabled,
+     * with why it is asked so under it; a tap asks whether the track is of the genre, a paid call,
+     * never asked by itself (*Ask AI automatically* included).
+     */
+    data object Ask : GenreReason
+
+    /**
      * Asked for, or kept from before: [state] is [InsightState.Writing] (with no text yet, while the
      * AI's genre list or the reason is looked for), [InsightState.Written], [InsightState.NoEvidence],
      * or [InsightState.Failed] (the list's call, or the reason's), beside which it is offered again.
@@ -86,12 +94,14 @@ sealed interface GenreReason {
      * with Exa web search off too), in the order the panel names them, which the panel offers to
      * switch on under "AI could not find an explanation." ([InsightState.NoEvidence]); empty with both
      * on (*AI web search* used but with no search engine to run it included), and for every other state.
+     * [asks] for the answer to *Is this …?* ([Ask], #1117), shown under that question.
      */
     data class Shown(
         val state: InsightState,
         val model: String? = null,
         val keptAt: Instant? = null,
         val couldHelp: List<GenreListMode> = emptyList(),
+        val asks: Boolean = false,
     ) : GenreReason
 }
 
@@ -105,13 +115,6 @@ enum class Unavailability {
      * "No AI service enabled.", and what to switch on (`GenreLists.MODES`).
      */
     CANNOT_LIST,
-
-    /**
-     * Only MusicBrainz gives the genre, and the AI's list does not have it ([ReasonPath.NotListed]),
-     * once its *Why is this …?* is tapped on this play of the track (#1059): "The AI service doesn’t
-     * list {genre} among this song’s genres. …", with *See why.* linking the docs' *Genre labels*.
-     */
-    NOT_LISTED,
 }
 
 /**
@@ -279,8 +282,10 @@ interface GenreNotes : DefinitionFeed {
  * AI service, synthesis cache and hasher, [GenreReasons]) under the [settings] as last read; for a
  * genre only MusicBrainz gives, the AI's genre list for the track asked first ([GenreLists], #762),
  * read against [vocabulary], and the reason written when the genre is on it, the models named as the
- * AI settings name them ([modelName]); when it is not, the tap answers so with no call, and the
- * answer stays for the rest of the track's play, a genre not tapped saying nothing of the list (#1059).
+ * AI settings name them ([modelName]); when it is not, the tap offers *Is this …?* with no call
+ * ([GenreReason.Ask], #1117), which stays for the rest of the track's play, a genre not tapped saying
+ * nothing of the list (#1059), and whose own tap asks whether the track is of the genre, written and
+ * kept as a reason is.
  *
  * A reason is kept with the track, as its insight is: in memory, by its card's key, so it shows
  * again with no call when the panel is closed and opened, another genre is opened in between, or a
@@ -833,6 +838,7 @@ class AppGenreNotes private constructor(
             .onEach { path ->
                 when (path) {
                     is ReasonPath.Reason -> look(path.key, track, genre)
+                    is ReasonPath.NotListed -> look(path.key, track, genre)
                     is ReasonPath.Listing -> lookList(path.key, track)
                     else -> Unit
                 }
@@ -875,13 +881,8 @@ class AppGenreNotes private constructor(
                 GenreReason.Unavailable(Unavailability.CANNOT_LIST)
             }
 
-            // Said only once its button is tapped on this play (#1059): before, offered as any other.
-            ReasonPath.NotListed -> {
-                if ((heldKey(track) to genre) in now.tapped) {
-                    GenreReason.Unavailable(Unavailability.NOT_LISTED)
-                } else {
-                    GenreReason.Offered
-                }
+            is ReasonPath.NotListed -> {
+                askShown(path.key, track, genre, now)
             }
 
             is ReasonPath.Listing -> {
@@ -894,16 +895,45 @@ class AppGenreNotes private constructor(
                 when {
                     entry == null -> GenreReason.Offered
                     expired(entry.writtenAt, now.lifetime) -> GenreReason.Offered.also { drop(path.key) }
-                    else ->
-                        GenreReason.Shown(
-                            entry.state,
-                            modelName(path.key.model),
-                            keptAt(entry, track, now.play),
-                            couldHelp(now.settings).takeIf { entry.state == InsightState.NoEvidence }.orEmpty(),
-                        )
+                    else -> written(path.key, entry, track, now)
                 }
             }
         }
+
+    // The ask (#1117) by [key] for [track]'s [genre]: its answer where one is shown; else *Is this …?*
+    // once the genre's button is tapped on this play (#1059), and before, offered as any other.
+    private fun askShown(
+        key: CardKey,
+        track: TrackState,
+        genre: String,
+        now: Shown,
+    ): GenreReason {
+        val entry = now.reasons[key]
+        val held = entry?.takeIf { !expired(it.writtenAt, now.lifetime) }
+        return when {
+            held != null -> written(key, held, track, now, asks = true)
+            else -> {
+                entry?.let { drop(key) }
+                if ((heldKey(track) to genre) in now.tapped) GenreReason.Ask else GenreReason.Offered
+            }
+        }
+    }
+
+    // [key]'s reason, or with [asks] its ask's answer (#1117), shown from [entry], as [now] has it.
+    private fun written(
+        key: CardKey,
+        entry: Entry<InsightState>,
+        track: TrackState,
+        now: Shown,
+        asks: Boolean = false,
+    ): GenreReason.Shown =
+        GenreReason.Shown(
+            entry.state,
+            modelName(key.model),
+            keptAt(entry, track, now.play),
+            couldHelp(now.settings).takeIf { entry.state == InsightState.NoEvidence }.orEmpty(),
+            asks,
+        )
 
     // What could explain a reason that is switched off in [settings] (#695): *AI service knowledge*,
     // and *AI web search* as *Settings* shows it (`aiWebSearchUsed`): *Off*, set so or with Exa web
@@ -1066,13 +1096,17 @@ class AppGenreNotes private constructor(
         genre: String,
     ): Start? {
         val path = path(made, now, lists.value, track, genre)
+        val tap = heldKey(track) to genre
+        // The ask (#1117) once *Is this …?* shows: tapped on this play already, or its answer shown (a
+        // failure's *Retry*); else this tap shows it, with no call.
+        val asks = (path as? ReasonPath.NotListed)?.let { tap in tapped.value || it.key in shown.value } == true
         if (path is ReasonPath.Listing || path is ReasonPath.NotListed) {
-            tapped.update { (it + (heldKey(track) to genre)).toList().takeLast(KEPT).toSet() }
+            tapped.update { (it + tap).toList().takeLast(KEPT).toSet() }
         }
         return when (path) {
             // Not shown, shown as failed, or past *Keep history for*; and not under way (nor claimed by
             // the list that showed, [follow]).
-            is ReasonPath.Reason -> path.key.takeIf { open(it) && claim(it) }?.let { Start.Reason(it, mark()) }
+            is ReasonPath.Reason -> started(path.key)
 
             // The genre waits on it; asked, unless known or under way.
             is ReasonPath.Listing -> {
@@ -1080,10 +1114,17 @@ class AppGenreNotes private constructor(
                 path.key.takeIf { openList(it) && claim(it) }?.let { Start.Listing(it, mark()) }
             }
 
-            // The list known without it (#1059): its answer, recorded above, at once; no call.
+            // The list known without it (#1059): *Is this …?*, recorded above, at once, with no call; its
+            // own tap asks (#1117), as a reason is asked.
+            is ReasonPath.NotListed -> if (asks) started(path.key) else null
+
             else -> null
         }
     }
+
+    // [key]'s reason, or ask (#1117), started, marked: when not shown, shown as failed, or past *Keep
+    // history for*, and not under way; null otherwise. Under [lock].
+    private fun started(key: CardKey): Start? = key.takeIf { open(it) && claim(it) }?.let { Start.Reason(it, mark()) }
 
     /** For tests: runs between a tap's step under the lock and the work it starts ([explainNow]). */
     @Volatile

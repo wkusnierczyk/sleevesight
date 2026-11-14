@@ -266,6 +266,28 @@ class GenreReasonPromptTest {
     }
 
     @Test
+    fun `the ask's prompt asks whether the track fits, which may be answered either way (#1117)`() {
+        for (allowModel in listOf(false, true)) {
+            val ask = GenreReasonPrompt.system(allowModel, asks = true)
+            assertTrue("asks whether it is of the genre in the <genre> block" in ask)
+            assertTrue((if (allowModel) GenreReasonPrompt.MODEL_ASK_RULE else GenreReasonPrompt.ASK_RULE) in ask)
+            // Not the reason's rule that forbids saying the track is not of the genre.
+            assertFalse("Never say or suggest that the track is not of this genre" in ask)
+            assertTrue("- The genre is a question, not a fact: answer it" in ask)
+            assertEquals(allowModel, GenreReasonPrompt.ASK_MODEL_EVIDENCE_RULE in ask)
+            // The reason's own prompt is as it was.
+            val reason = GenreReasonPrompt.system(allowModel)
+            assertEquals(reason, GenreReasonPrompt.system(allowModel, asks = false))
+            assertTrue((if (allowModel) GenreReasonPrompt.MODEL_LABEL_RULE else GenreReasonPrompt.LABEL_RULE) in reason)
+            // With web search, to answer the question.
+            val searching = GenreReasonPrompt.withSearch(ask, limit = 3, allowModel, asks = true)
+            assertTrue("If the evidence is not enough to answer the question, search the web" in searching)
+            assertTrue("does not answer it either." in searching)
+            assertTrue(searching.endsWith(GenreReasonPrompt.REPLY))
+        }
+    }
+
+    @Test
     fun `it is the same for the same input`() {
         assertEquals(prompt(), prompt())
     }

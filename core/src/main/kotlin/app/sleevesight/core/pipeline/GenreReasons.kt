@@ -38,8 +38,14 @@ sealed interface ReasonPath {
     /** Only MusicBrainz gives the genre, and the AI's genre list cannot run ([GenreLists.mode] none). */
     data object CannotList : ReasonPath
 
-    /** Only MusicBrainz gives the genre, and the AI's genre list, known, does not have it: no call. */
-    data object NotListed : ReasonPath
+    /**
+     * Only MusicBrainz gives the genre, and the AI's genre list, known, does not have it: no reason,
+     * but the ask (#1117, *Is this …?*), whether the track is of the genre, asked only on its own tap,
+     * by [key] ([GenreReasons.askKey]).
+     */
+    data class NotListed(
+        val key: CardKey,
+    ) : ReasonPath
 
     /** Path B: only MusicBrainz gives the genre, and the AI's genre list, not known yet, is asked first, by [key]. */
     data class Listing(
@@ -70,7 +76,9 @@ sealed interface ReasonPath {
  * *Show insights* off, with no AI service ready, before the evidence is in, or for a genre only
  * MusicBrainz's tags give (D12: they never reach a prompt) and the AI's genre list does not have:
  * for such a genre the list is asked first, naming no genre ([GenreLists], #762), and a genre on it
- * is written as any other. What a tap does, and what the
+ * is written as any other; one the list leaves out may be asked about on a tap (#1117, *Is this …?*,
+ * [askKey]): whether the track is of it, the genre's name alone reaching the prompt, the answer
+ * written as a reason is and allowed to say it does not fit. What a tap does, and what the
  * panel says where it does nothing, is [path].
  *
  * A cache that throws is a miss, and a write that fails keeps nothing; neither stops the reason.
@@ -100,19 +108,45 @@ class GenreReasons(
         listed: Set<String>? = null,
     ): CardKey? {
         val access = ready(track, settings)?.takeIf { prompted(track, genre) || listed?.contains(genre) == true }
-        val model = access?.let { settings.model(it.provider.id) }
+        return access?.let { keyOf(it, track, genre, settings, asks = false) }
+    }
+
+    /**
+     * The key of the ask about [genre] for [track] under [settings] (#1117, *Is this …?*): whether the
+     * track is of a genre only MusicBrainz's tags give that the AI's genre list leaves out, written as
+     * a reason is ([write]), from the ask's prompt (`GenreReasonPrompt.system` with `asks`), and kept
+     * apart from any reason of the genre: its subject carries [ASK] after the genre, before the web
+     * part, and its prompt version is `GenreReasonPrompt.ASK_VERSION`. Null where no AI service is
+     * ready or the evidence is not in; [path] gives it only for such a genre.
+     */
+    fun askKey(
+        track: TrackState,
+        genre: String,
+        settings: Settings,
+    ): CardKey? = ready(track, settings)?.let { keyOf(it, track, genre, settings, asks = true) }
+
+    // [key]'s or [askKey]'s key ([asks]), with [access] ready.
+    private fun keyOf(
+        access: AiAccess,
+        track: TrackState,
+        genre: String,
+        settings: Settings,
+        asks: Boolean,
+    ): CardKey? {
+        val model = settings.model(access.provider.id)
         val evidence = track.evidence
-        if (access == null || model == null || evidence == null) return null
+        if (model == null || evidence == null) return null
         // With *AI web search* used (#801), a key of its own: a reason from the web is kept apart
         // from one from the evidence alone, which stays under the key without the web part
         // ([found]); the keys from before stay as they were.
         val fromWeb = WebQuestions(access, web).used(settings.aiWebSearchUsed) != AiWebSearch.OFF
-        val subject = if (fromWeb) genre + WEB else genre
+        val asked = if (asks) genre + ASK else genre
+        val subject = if (fromWeb) asked + WEB else asked
         return CardKey(
             kind = CardKind.GENRE,
             entity = CardEntity.Track(track.normalized, track.nowPlaying.duration, subject),
             evidenceFingerprint = evidence.fingerprint,
-            promptVersion = GenreReasonPrompt.VERSION,
+            promptVersion = if (asks) GenreReasonPrompt.ASK_VERSION else GenreReasonPrompt.VERSION,
             styleHash = styleHash(hasher),
             provider = access.provider.id,
             model = model,
@@ -133,7 +167,7 @@ class GenreReasons(
      *   or one on the AI's list;
      * - path B ([ReasonPath.Listing]): for a genre only MusicBrainz gives, the AI's list first, while
      *   it is not known and it can run; [ReasonPath.CannotList] when it cannot ([GenreLists.mode]);
-     *   once known without the genre, [ReasonPath.NotListed], and no call.
+     *   once known without the genre, [ReasonPath.NotListed]: no reason, but the ask (#1117, [askKey]).
      */
     fun path(
         track: TrackState,
@@ -147,7 +181,7 @@ class GenreReasons(
             !offered(track, settings) || track.genres.everyLabel.none { it.genre.identity == genre } -> ReasonPath.None
             key != null -> ReasonPath.Reason(key)
             ready(track, settings) == null -> ReasonPath.NoService
-            listed != null -> ReasonPath.NotListed
+            listed != null -> askKey(track, genre, settings)?.let(ReasonPath::NotListed) ?: ReasonPath.None
             else -> lists.key(track, settings)?.let(ReasonPath::Listing) ?: ReasonPath.CannotList
         }
     }
@@ -309,7 +343,7 @@ class GenreReasons(
                 prompt,
                 CompletionRequest.maxTokensFor(key.effort),
                 key.effort,
-                system = GenreReasonPrompt.system(key.modelKnowledge, dates()),
+                system = GenreReasonPrompt.system(key.modelKnowledge, dates(), asks(key)),
             )
         counted(QuestionCost.CALL)
         val shows: (String) -> Boolean =
@@ -340,7 +374,7 @@ class GenreReasons(
         show: (InsightState, Instant) -> Unit,
     ): InsightState {
         val access = checkNotNull(ai)
-        val question = ReasonQuestion(track, label, evidence, key.modelKnowledge, hasher, now(), dates())
+        val question = ReasonQuestion(track, label, evidence, key.modelKnowledge, hasher, now(), dates(), asks(key))
         show(InsightState.Writing(""), now())
         val base = CompletionRequest(key.model, "", CompletionRequest.maxTokensFor(key.effort), key.effort)
         val reply = WebQuestions(access, web).ask(question, asking.search, asking.limit, base, counted)
@@ -478,6 +512,9 @@ class GenreReasons(
     // [key] without its web part (#801): the key of a reason from the evidence alone.
     private fun alone(key: CardKey): CardKey = key.about(key.subject?.removeSuffix(WEB))
 
+    // Whether [key] is the ask's (#1117, [askKey]).
+    private fun asks(key: CardKey): Boolean = alone(key).subject?.endsWith(ASK) == true
+
     // The clock's time, in whole milliseconds, as the cache keeps it.
     private fun now(): Instant = Instant.fromEpochMilliseconds(clock.now().toEpochMilliseconds())
 
@@ -507,9 +544,10 @@ class GenreReasons(
             }
 
             // A reply that says the track is not the genre explains nothing (#853), kept or new; read
-            // as shown, without a draft the model withdrew.
+            // as shown, without a draft the model withdrew. Not for the ask (#1117), whose answer may
+            // say so.
             is InsightReply.Written -> {
-                if (GenreDispute.disputes(reply.grounded.text, forms(key, track), names(track))) {
+                if (!asks(key) && GenreDispute.disputes(reply.grounded.text, forms(key, track), names(track))) {
                     InsightState.NoEvidence
                 } else {
                     val by = WrittenBy(key.promptVersion, key.provider, key.model, key.effort)
@@ -525,7 +563,7 @@ class GenreReasons(
         key: CardKey,
         track: TrackState,
     ): Set<String> {
-        val genre = alone(key).subject ?: return emptySet()
+        val genre = alone(key).subject?.removeSuffix(ASK) ?: return emptySet()
         val label =
             track.genres.everyLabel
                 .firstOrNull { it.genre.identity == genre }
@@ -584,6 +622,12 @@ class GenreReasons(
 
         /** What a reason's key that may search the web (#801) has after the genre, in its subject. */
         const val WEB: String = "\nweb"
+
+        /**
+         * What the ask's key (#1117, [askKey]) has after the genre, in its subject, before [WEB]: the
+         * ask is kept apart from a reason of the same genre.
+         */
+        const val ASK: String = "\nask"
 
         /** Why a reason failed when the model declined. */
         const val DECLINED: String = ReplyFailures.DECLINED

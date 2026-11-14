@@ -156,18 +156,26 @@ class AppGenreListsTest {
         }
 
     @Test
-    fun `a genre the AI's list does not have says so, with no further call (#762)`() =
+    fun `a genre the AI's list does not have offers the ask, which only its own tap asks (#762, #1117)`() =
         runTest {
             knowing()
-            provider.reply = { """{"genres": ["Jazz"]}""" }
+            provider.reply = { n -> if (n == 1) """{"genres": ["Jazz"]}""" else "Its loud guitars fit punk [MB1]." }
             val notes = notes()
             val track = mixed()
             notes.explain(track, "punk")
             advanceUntilIdle()
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "punk").first())
+            // The list only: *Is this punk?* offered, nothing asked of it yet.
+            assertEquals(GenreReason.Ask, notes.reason(track, "punk").first())
+            assertEquals(1, provider.requests)
+            // Its tap asks, once.
+            notes.explain(track, "punk")
             notes.explain(track, "punk")
             advanceUntilIdle()
-            assertEquals(1, provider.requests)
+            assertEquals(2, provider.requests)
+            val shown = notes.reason(track, "punk").first() as GenreReason.Shown
+            assertTrue(shown.asks)
+            assertTrue(shown.state is InsightState.Written)
+            assertTrue("<genre>\nPunk\n</genre>" in provider.prompts[1])
             // Rock, which Last.fm gives, is offered as before.
             assertEquals(GenreReason.Offered, notes.reason(track, "rock").first())
         }
@@ -399,7 +407,7 @@ class AppGenreListsTest {
     }
 
     @Test
-    fun `a genre the AI's list lacks is offered until its tap, which answers at once with no call (#1059)`() =
+    fun `a genre the AI's list lacks is offered until its tap, which offers the ask with no call (#1059, #1117)`() =
         runTest {
             knowing()
             provider.reply = { n -> if (n == 1) PUNK_ONLY else "Its loud guitars are punk [MB1]." }
@@ -412,7 +420,7 @@ class AppGenreListsTest {
             assertEquals(GenreReason.Offered, notes.reason(track, "blues").first())
             notes.explain(track, "blues")
             advanceUntilIdle()
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(GenreReason.Ask, notes.reason(track, "blues").first())
             assertEquals(2, provider.requests)
             // Folk, which the list lacks too, is still offered: only a tap says it.
             assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
@@ -430,7 +438,7 @@ class AppGenreListsTest {
             runCurrent()
             assertEquals(GenreReason.Shown(InsightState.Writing("")), notes.reason(track, "blues").first())
             advanceUntilIdle()
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(GenreReason.Ask, notes.reason(track, "blues").first())
             // The list only: no reason asked for blues, and folk, not tapped, offered.
             assertEquals(1, provider.requests)
             assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
@@ -445,7 +453,7 @@ class AppGenreListsTest {
             val track = onlyMusicBrainz()
             notes.explain(track, "blues")
             advanceUntilIdle()
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(GenreReason.Ask, notes.reason(track, "blues").first())
             // The next play: offered again, the list kept, nothing asked.
             val again = onlyMusicBrainz(play = 2)
             assertEquals(GenreReason.Offered, notes.reason(again, "blues").first())
@@ -475,9 +483,9 @@ class AppGenreListsTest {
             notes.explain(second, "blues")
             advanceUntilIdle()
             assertEquals(1, provider.requests)
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(first, "folk").first())
+            assertEquals(GenreReason.Ask, notes.reason(first, "folk").first())
             assertEquals(GenreReason.Offered, notes.reason(first, "blues").first())
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(second, "blues").first())
+            assertEquals(GenreReason.Ask, notes.reason(second, "blues").first())
             assertEquals(GenreReason.Offered, notes.reason(second, "folk").first())
         }
 
@@ -495,7 +503,7 @@ class AppGenreListsTest {
             notes.beforeLaunch = { testScheduler.advanceUntilIdle() }
             notes.explain(track, "blues")
             advanceUntilIdle()
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(GenreReason.Ask, notes.reason(track, "blues").first())
             assertEquals(GenreReason.Offered, notes.reason(track, "folk").first())
             assertEquals(2, provider.requests)
         }
@@ -516,7 +524,7 @@ class AppGenreListsTest {
             advanceUntilIdle()
             assertTrue((notes.reason(track, "punk").first() as GenreReason.Shown).state is InsightState.Written)
             assertEquals(2, provider.requests)
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "folk").first())
+            assertEquals(GenreReason.Ask, notes.reason(track, "folk").first())
         }
 
     @Test
@@ -583,7 +591,7 @@ class AppGenreListsTest {
             notes.explain(track, "blues")
             advanceUntilIdle()
             assertEquals(2, provider.requests)
-            assertEquals(GenreReason.Unavailable(Unavailability.NOT_LISTED), notes.reason(track, "blues").first())
+            assertEquals(GenreReason.Ask, notes.reason(track, "blues").first())
         }
 
     // [cache], counting the reads and writes of cards.

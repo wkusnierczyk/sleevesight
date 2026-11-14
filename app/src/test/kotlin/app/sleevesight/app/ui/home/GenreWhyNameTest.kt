@@ -1,53 +1,42 @@
 package app.sleevesight.app.ui.home
 
 import androidx.activity.compose.setContent
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
-import app.sleevesight.app.pipeline.Unavailability
-import app.sleevesight.app.ui.GENRE_LABELS_DOCS_URL
-import org.junit.Assert.assertEquals
+import app.sleevesight.app.R
+import app.sleevesight.app.SleevesightApplication
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * A genre the AI's list lacks (#1059), its name holding what reads as a placeholder (#1091): the name
- * shows as written, and *See why.* stays the line's one link.
+ * *Is this …?* for a genre the AI's list leaves out (#1117), its name holding what reads as a
+ * placeholder (#1091): the name shows as written, formatted in once as the question's argument.
  */
 @RunWith(RobolectricTestRunner::class)
 class GenreWhyNameTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
+    private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
+
     private fun assertShownAsWritten(genre: String) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
-                it.setContent {
-                    ReasonUnavailable("Why is this $genre?", genre, Unavailability.NOT_LISTED, openSettingsAt = {})
-                }
+                it.setContent { AskBlock(app.getString(R.string.genre_ask, genre), onClick = {}) }
             }
-            val line =
-                "The AI service doesn’t list $genre among this song’s genres. Only MusicBrainz does, and " +
-                    "Sleevesight could not use that annotation. See why."
-            val text =
-                compose
-                    .onNodeWithText(line, useUnmergedTree = true)
-                    .fetchSemanticsNode()
-                    .config[SemanticsProperties.Text]
-                    .single()
-            val links = text.getLinkAnnotations(0, text.length)
-            assertEquals(listOf(GENRE_LABELS_DOCS_URL), links.map { (it.item as LinkAnnotation.Url).url })
-            assertEquals("See why.", text.substring(links.single().start, links.single().end))
+            compose.onNodeWithText("Is this $genre?", substring = true, useUnmergedTree = true).assertExists()
+            val line = "Only MusicBrainz gives this genre; your AI service’s list for this song leaves it out."
+            compose.onNodeWithText(line).assertExists()
         }
     }
 
     @Test
-    fun aNameHoldingThePlaceholderOfTheLinkShowsAsTextNotASecondLink() = assertShownAsWritten("rock %1\$s")
+    fun aNameHoldingAPlaceholderShowsAsText() = assertShownAsWritten("rock %1\$s")
 
     @Test
     fun aNameHoldingAPlaceholderTooLargeToReadShowsAsTextRatherThanFail() = assertShownAsWritten("rock %99999999999\$s")
