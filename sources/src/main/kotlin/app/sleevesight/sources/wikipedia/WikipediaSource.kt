@@ -128,33 +128,11 @@ class WikipediaSource(
             // Every credited artist's article is looked up, and its finding, found or not, is about
             // the artist (#420): only a track with no artist to look up is about the track alone.
             trackOnly = credits.isEmpty(),
-            statedGenres = statedGenres(findings.song, credits.zip(parts)),
+            // The genres the song's item and each artist's state (#1098), for genre labels.
+            statedGenres =
+                findings.songGenres() +
+                    credits.zip(parts).flatMap { (artist, part) -> part.accepted?.of(artist.name).orEmpty() },
         )
-    }
-
-    // The genres the song's item and each artist's state (#1098), for genre labels: the track's own
-    // song's at the track's level, not an original's, whose genres may not be the cover's.
-    private fun statedGenres(
-        song: Verdict.Accepted?,
-        artists: List<Pair<ResolvedArtist, ArtistFinding>>,
-    ): List<StatedGenre> {
-        val own =
-            song?.takeIf { it.scope == Scope.SONG }?.let { accepted ->
-                WikidataEvidence.genres(accepted).map {
-                    StatedGenre(it, GenreLevel.TRACK, null, Wd.url(accepted.item.id))
-                }
-            }
-        val theirs =
-            artists.flatMap { (artist, part) ->
-                val stated = part.accepted
-                val item = stated?.item
-                if (stated == null || item == null) {
-                    emptyList()
-                } else {
-                    stated.genres.map { StatedGenre(it, GenreLevel.ARTIST, artist.name, item) }
-                }
-            }
-        return own.orEmpty() + theirs
     }
 
     private class Findings {
@@ -172,6 +150,17 @@ class WikipediaSource(
                 unreachable -> Outcome.Unreachable
                 else -> Outcome.None
             }
+
+        // The genres the track's own song's item states (#1098), at the track's level: not an
+        // original's, whose genres may not be the cover's.
+        fun songGenres(): List<StatedGenre> =
+            song
+                ?.takeIf { it.scope == Scope.SONG }
+                ?.let { accepted ->
+                    WikidataEvidence.genres(accepted).map {
+                        StatedGenre(it, GenreLevel.TRACK, null, Wd.url(accepted.item.id))
+                    }
+                }.orEmpty()
     }
 
     /**
@@ -198,7 +187,11 @@ class WikipediaSource(
     private class ItemGenres(
         val item: String?,
         val genres: List<String>,
-    )
+    ) {
+        /** The genres as [artist]'s, as the track credits them; none without the item's page. */
+        fun of(artist: String): List<StatedGenre> =
+            item?.let { page -> genres.map { StatedGenre(it, GenreLevel.ARTIST, artist, page) } }.orEmpty()
+    }
 
     /** One artist's identity check: its verdict, if any item was checked, and whether a lookup failed. */
     private class ArtistVerdict(
@@ -326,15 +319,19 @@ class WikipediaSource(
     )
 
     // The first confirmed song candidate; the rejections only when none is confirmed, since the
-    // other candidates were alternatives for the same song, not further subjects.
+    // other candidates were alternatives for the same song, not further subjects. The items MusicBrainz
+    // links first, then the articles found by name, then, with none confirmed, the items of the whole
+    // work a composed work's part belongs to (#1133, [IdentityCheck.wholeItems]), asked for only then:
+    // a movement's own article comes before its suite's.
     private suspend fun song(
         track: NormalizedTrack,
         resolution: Resolution,
         pages: Map<String, WpPage?>,
         findings: Findings,
     ): Verdict.Accepted? {
+        val found = check.musicBrainzItems(resolution)
         val linked =
-            when (val found = check.musicBrainzItems(resolution)) {
+            when (found) {
                 is Lookup.Found -> found.value
                 else -> emptyList<String>().also { findings.unreachable = true }
             }
@@ -345,6 +342,38 @@ class WikipediaSource(
                     named.mapNotNull { page -> page.item?.let { Candidate(it, Route.NAME, page.title) } }
             ).distinctBy { it.item }
         val rejections = mutableListOf<Rejection>()
+        val accepted =
+            confirmed(candidates, track, resolution, rejections, findings)
+                ?: confirmed(whole(resolution, found, candidates, findings), track, resolution, rejections, findings)
+        if (accepted == null) findings.rejections += rejections
+        return accepted
+    }
+
+    // The items of the whole work [resolution]'s work is a part of ([IdentityCheck.wholeItems]), when
+    // MusicBrainz links it to none ([linked]), as candidates, but those already [tried].
+    private suspend fun whole(
+        resolution: Resolution,
+        linked: Lookup<List<String>>,
+        tried: List<Candidate>,
+        findings: Findings,
+    ): List<Candidate> {
+        val items =
+            when (val found = check.wholeItems(resolution, linked)) {
+                is Lookup.Found -> found.value
+                else -> emptyList<String>().also { findings.unreachable = true }
+            }
+        val seen = tried.mapTo(mutableSetOf()) { it.item }
+        return items.filter { it !in seen }.distinct().map { Candidate(it, Route.MUSICBRAINZ, null) }
+    }
+
+    // The first of [candidates] the check confirms; the others' rejections added to [rejections].
+    private suspend fun confirmed(
+        candidates: List<Candidate>,
+        track: NormalizedTrack,
+        resolution: Resolution,
+        rejections: MutableList<Rejection>,
+        findings: Findings,
+    ): Verdict.Accepted? {
         for (candidate in candidates) {
             when (val verdict = check.song(candidate.item, track, resolution, candidate.route)) {
                 is Verdict.Accepted -> return verdict
@@ -359,7 +388,6 @@ class WikipediaSource(
                 is Verdict.Unreachable -> findings.unreachable = true
             }
         }
-        findings.rejections += rejections
         return null
     }
 
@@ -467,11 +495,14 @@ class WikipediaSource(
          * a day in that year (#1203), so a result kept against the recording chosen before is looked
          * up again; [ARTIST_PART] stays. 6: the song's item gives when the music was composed
          * (`SourceResult.composed`, #1132), so a song's result kept without it is looked up again;
-         * [ARTIST_PART] stays. 7: the song's and the artists' items give the genres they state
+         * [ARTIST_PART] stays. 7: a composed work's part with no Wikidata item of its own, and no
+         * article found by name, is checked by the whole work's item (`IdentityCheck.wholeItems`,
+         * #1133: K. 545's Andante by its sonata's), so a song's result kept without it is looked up
+         * again; [ARTIST_PART] stays. 8: the song's and the artists' items give the genres they state
          * (`SourceResult.statedGenres`, #1098), so a result kept without them is looked up again;
          * [ARTIST_PART] goes with it ([ARTIST_PART_VERSION] 4).
          */
-        const val EXTRACTION_VERSION: Int = 7
+        const val EXTRACTION_VERSION: Int = 8
 
         private val json = Json { encodeDefaults = false }
 

@@ -1,7 +1,13 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.text.APP_DATE_RULE
 import app.sleevesight.core.text.US_DATES
@@ -11,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /** The song's, the artist's and the album's prompt (#522): stored, so a change to it is a reviewed diff. */
 class ItemPromptTest {
@@ -95,6 +102,107 @@ class ItemPromptTest {
                 allowModel = true,
                 roles = ArtistRoles.of(normalized),
             ),
+        )
+    }
+
+    private val at = Instant.parse("2026-11-14T12:00:00Z")
+    private val sonata = "https://en.wikipedia.org/wiki/Piano_Sonata_No._16_(Mozart)"
+    private val k545Lines =
+        listOf(
+            EvidenceDraft(
+                SourceId.WIKIPEDIA,
+                Scope.SONG,
+                "The Piano Sonata No. 16 in C major, K. 545, by Wolfgang Amadeus Mozart was described by " +
+                    "Mozart in his own thematic catalogue as \"a little piano sonata for beginners\".",
+                sonata,
+                at,
+            ),
+            EvidenceDraft(
+                SourceId.WIKIDATA,
+                Scope.SONG,
+                "Piano Sonata No. 16 was created on June 26, 1788.",
+                "https://www.wikidata.org/wiki/Q991701",
+                at,
+            ),
+            EvidenceDraft(
+                SourceId.PLAYER,
+                Scope.RELEASE,
+                "This recording is on the release \"Mozart: Piano Concertos Nos. 20 & 23\" (2024).",
+                null,
+                at,
+            ),
+            EvidenceDraft(
+                SourceId.WIKIPEDIA,
+                Scope.ARTIST,
+                "Wolfgang Amadeus Mozart was a prolific and influential composer of the Classical period.",
+                null,
+                at,
+                about = "Wolfgang Amadeus Mozart",
+            ),
+            EvidenceDraft(
+                SourceId.WIKIPEDIA,
+                Scope.ARTIST,
+                "Khatia Buniatishvili is a Georgian-French concert pianist.",
+                null,
+                at,
+                about = "Khatia Buniatishvili",
+            ),
+        )
+
+    // K. 545 by Buniatishvili (#1133), its roles telling Mozart apart: the sonata's lines, the release,
+    // and, as when its own lines only list it, the composer's and the lead performer's.
+    private fun k545(): String {
+        val playing =
+            NowPlaying(
+                title = "Mozart: Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante",
+                artists = "Wolfgang Amadeus Mozart, Khatia Buniatishvili, Academy of St. Martin in the Fields",
+                album = "Mozart: Piano Concertos Nos. 20 & 23",
+                player = "com.spotify.music",
+            )
+        val normalized = normalizer.normalize(playing)
+        val evidence = EvidenceSet.of(k545Lines, JvmHasher)
+        return ItemPrompt.build(
+            ItemPrompt.Subject(CardKind.SONG, normalized.title),
+            playing,
+            normalized,
+            evidence,
+            allowModel = false,
+            onlyListings = true,
+            roles =
+                ArtistRoles(
+                    listOf("Wolfgang Amadeus Mozart"),
+                    listOf("Khatia Buniatishvili", "Academy of St. Martin in the Fields"),
+                    classical = true,
+                ),
+            parts = true,
+            composerLines =
+                evidence.lines.filter { it.about == "Wolfgang Amadeus Mozart" }.mapTo(
+                    mutableSetOf(),
+                ) { it.id },
+        )
+    }
+
+    @Test
+    fun `the song's in two parts, its people's lines named by their roles (#1133)`() {
+        assertEquals(3, ItemPrompt.PARTS_VERSION)
+        assertEquals(stored("item-song-parts.txt"), k545())
+    }
+
+    @Test
+    fun `the two parts are the song's only, and ask for the rule on a gap whatever the listings say`() {
+        val parts = ItemPrompt.contract(allowModel = false, parts = true)
+        assertTrue(ItemPrompt.PARTS_PLAIN_TEXT_RULE in parts)
+        assertFalse(InsightPrompt.PLAIN_TEXT_RULE in parts)
+        assertTrue(ItemPrompt.GAP_RULE in k545())
+        assertFalse(ItemPrompt.ONLY_LISTINGS_RULE in k545())
+        // Asked of the artist's, the parts change nothing.
+        val playing = FixtureEvidence.nowPlaying(41)
+        val normalized = normalizer.normalize(playing)
+        val artist = ItemPrompt.Subject(CardKind.ARTIST, normalized.primary)
+        val roles = ArtistRoles.of(normalized)
+        assertEquals(
+            ItemPrompt.build(artist, playing, normalized, FixtureEvidence.of(41), true, roles = roles),
+            ItemPrompt.build(artist, playing, normalized, FixtureEvidence.of(41), true, roles = roles, parts = true),
         )
     }
 

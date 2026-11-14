@@ -342,7 +342,8 @@ class RecordingResolver(
         // A performance of a composed work is no cover of its earliest recording by someone else, nor
         // is ours the earliest for predating it (#1178): with no such recording, MusicBrainz's cover mark
         // alone decides, and no recording is named.
-        val original = originalOf(work, ours).takeUnless { composed(names, track, recording, work, ours) }
+        val composedWork = composed(names, track, recording, work, ours)
+        val original = originalOf(work, ours).takeUnless { composedWork }
         // Someone else's recording counts as earlier only when it predates every dated one of ours.
         val predates = original != null && ourEarliest != null && isEarlier(original.date, ourEarliest)
         // From dates, a cover only when all our artists' recordings of the work are dated, since an
@@ -369,7 +370,18 @@ class RecordingResolver(
                 .mapNotNull { it.mbid }
                 .toSet()
         return withRecording.copy(
-            work = ResolvedWork(work.mbid, work.title),
+            // A composed work's part with the work it is a part of (#1133), whose Wikidata item the
+            // identity check looks for when the part has none: only when it is a part of one work,
+            // since nothing tells which of several is its own.
+            work =
+                ResolvedWork(
+                    work.mbid,
+                    work.title,
+                    work.parents
+                        .singleOrNull()
+                        ?.takeIf { composedWork }
+                        ?.let { ResolvedWork(it.mbid, it.title) },
+                ),
             cover = cover,
             earliest = earliest,
             original = original?.takeIf { named },

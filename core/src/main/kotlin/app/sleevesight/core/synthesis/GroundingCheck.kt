@@ -35,13 +35,16 @@ enum class SentenceStatus {
  * `G1` as `S1`, [citationId]), and its [status]; [afterLineBreak]
  * when a line break, not only spaces, came before it in its paragraph (#574), so a card shows a
  * list's items and a heading on their own lines, as the reply wrote them. Never true of a
- * paragraph's first sentence.
+ * paragraph's first sentence. [heading] when it is one of the song's part headings ([SongParts],
+ * #1133), a paragraph of its own, [SentenceStatus.HEDGE] (uncited on purpose, never dimmed) and
+ * counted in none of the [GroundingCounts].
  */
 data class CheckedSentence(
     val text: String,
     val cites: List<String>,
     val status: SentenceStatus,
     val afterLineBreak: Boolean = false,
+    val heading: Boolean = false,
 )
 
 /** The count of sentences in each [SentenceStatus], for the log and the card's footer. */
@@ -75,7 +78,13 @@ data class GroundedText(
     val withdrawn: String? = null,
 ) {
     val counts: GroundingCounts by lazy {
-        val all = paragraphs.flatten().groupingBy { it.status }.eachCount()
+        // A part's heading (#1133) is no claim, and no sentence of the counts.
+        val all =
+            paragraphs
+                .flatten()
+                .filterNot { it.heading }
+                .groupingBy { it.status }
+                .eachCount()
         GroundingCounts(
             ok = all[SentenceStatus.OK] ?: 0,
             model = all[SentenceStatus.MODEL] ?: 0,
@@ -177,16 +186,18 @@ object GroundingCheck {
      * model's own evidence at its end is taken out only with [notes] ([MetaNote]). A sentence that
      * cites only lines that exist is checked for support by their words ([supported]), with the
      * words of what the card is about, [subject] (the track's title, artists and album), allowed
-     * besides.
+     * besides. With [headings], the song's part headings are read as such ([SongParts], #1133).
      */
+    @Suppress("LongParameterList") // The reply, its lines, the switch, and how much of it is read.
     fun check(
         reply: String,
         evidence: EvidenceSet,
         allowModel: Boolean,
         notes: Boolean = false,
         subject: Collection<String> = emptyList(),
+        headings: Boolean = false,
     ): InsightReply =
-        when (val checked = check(reply, evidence.ids.toSet(), allowModel, notes)) {
+        when (val checked = check(reply, evidence.ids.toSet(), allowModel, notes, headings)) {
             InsightReply.NoEvidence -> checked
             is InsightReply.Written -> InsightReply.Written(supported(checked.grounded, evidence, subject))
         }
@@ -225,27 +236,36 @@ object GroundingCheck {
      * Checks [reply] against the evidence [ids]; `[AI]` is allowed only when [allowModel]. With
      * [notes], for an insight's reply, a note on the model's own evidence or work at its end is
      * taken out ([MetaNote], #1207); not for a reply whose subject may be the evidence itself (why a
-     * genre is or is not given, an explanation, a search's answer).
+     * genre is or is not given, an explanation, a search's answer). With [headings], for the song's
+     * insight written in two parts (#1133), a line that is one of [SongParts.HEADINGS] is a paragraph
+     * of its own, one sentence marked [CheckedSentence.heading], written as the heading itself.
      */
     fun check(
         reply: String,
         ids: Set<String>,
         allowModel: Boolean,
         notes: Boolean = false,
+        headings: Boolean = false,
     ): InsightReply {
         val whole = reply.trimJs()
         if (isNoEvidence(whole)) return InsightReply.NoEvidence
         val correction = SelfCorrection.of(whole)
         val corrected = correction?.kept ?: whole
         val note = if (notes) MetaNote.of(corrected) else null
-        val text = note?.kept ?: corrected
+        val kept = note?.kept ?: corrected
+        val text = if (headings) SongParts.separated(kept) else kept
         val withdrawn = listOfNotNull(correction?.withdrawn, note?.withdrawn).joinToString("\n\n").ifEmpty { null }
         val paragraphs =
             text
                 .split(PARAGRAPH_BREAK)
                 .map { paragraph ->
-                    sentencesOf(paragraph).map { (sentence, afterLineBreak) ->
-                        classify(sentence, ids, allowModel).copy(afterLineBreak = afterLineBreak)
+                    val heading = if (headings) SongParts.heading(paragraph) else null
+                    if (heading != null) {
+                        listOf(CheckedSentence(heading, emptyList(), SentenceStatus.HEDGE, heading = true))
+                    } else {
+                        sentencesOf(paragraph).map { (sentence, afterLineBreak) ->
+                            classify(sentence, ids, allowModel).copy(afterLineBreak = afterLineBreak)
+                        }
                     }
                 }.filter { it.isNotEmpty() }
         return InsightReply.Written(GroundedText(text, paragraphs, allowModel, withdrawn))

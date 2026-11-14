@@ -376,7 +376,10 @@ private fun Shown(
                     modelAllowed = context.settings.isEnabled(SourceId.MODEL),
                     offers = InsightOffers(),
                 )
-            for (paragraph in paragraphsOf(state.partial)) UncheckedProse(paragraph, prose, onCite, label = label)
+            // The song's part headings show as such while it streams too (#1133), as once written: only
+            // for the song's in two parts.
+            val parts = item == InsightItem.SONG && shown.evidence.parts
+            UncheckedParagraphs(parts, state.partial, prose, onCite, label)
             WritingItem(item) { shown.key?.let(context.notes::stop) }
         }
 
@@ -389,9 +392,8 @@ private fun Shown(
                     }
                 }
             }
-            for (paragraph in state.grounded.paragraphs) {
-                CheckedProse(paragraph, state.grounded, shown.evidence.evidence, onCite, label = label)
-            }
+            // The song's insight in two parts (#1133): each part under its heading.
+            CheckedParagraphs(state.grounded, shown.evidence.evidence, onCite, label)
             WrittenFooter(item, shown, state, track, context, label)
         }
 
