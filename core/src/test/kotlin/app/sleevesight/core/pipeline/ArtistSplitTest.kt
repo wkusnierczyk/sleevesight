@@ -63,6 +63,9 @@ class ArtistSplitTest {
             AuthorsName.COMPOSER,
             ArtistSplit.of(k545, k545Roles, WorkLyrics(lyricists = listOf(MOZART)))?.name,
         )
+        // A classical work whose composer wrote its words, its title not leading with them: the composer.
+        val classical = roles.copy(classical = true)
+        assertEquals(AuthorsName.COMPOSER, ArtistSplit.of(nessun, classical, words)?.name)
         // Librettists are not read (Nessun dorma's work names two): the composer alone.
         assertEquals(AuthorsName.COMPOSER, ArtistSplit.of(nessun, roles, WorkLyrics(composersOnly = false))?.name)
         assertEquals(AuthorsName.COMPOSER, ArtistSplit.of(nessun, roles, WorkLyrics(composersOnly = true))?.name)
@@ -71,6 +74,19 @@ class ArtistSplitTest {
         // Two composers are two authors.
         val two = ArtistRoles(listOf(PUCCINI, MEHTA), listOf(PAVAROTTI))
         assertEquals(AuthorsName.AUTHORS, ArtistSplit.of(nessun, two, null)?.name)
+    }
+
+    @Test
+    fun `an arranger the title names is no performer`() {
+        val chaconne =
+            track(
+                "Bach: Partita No. 2 in D Minor, BWV 1004: V. Chaconne (Arr. Busoni)",
+                "Johann Sebastian Bach, Ferruccio Busoni, Hélène Grimaud",
+            )
+        val split = checkNotNull(ArtistSplit.of(chaconne, ArtistRoles.of(chaconne), null))
+        assertEquals(listOf("Johann Sebastian Bach"), split.composers)
+        assertEquals(listOf("Hélène Grimaud"), split.performers)
+        assertEquals(AuthorsName.COMPOSER, split.name)
     }
 
     @Test

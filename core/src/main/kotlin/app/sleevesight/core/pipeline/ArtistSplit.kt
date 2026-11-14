@@ -44,8 +44,9 @@ data class ArtistSplit(
          * The Composer row is *Authors* with more than one author: two composers, or a lyricist apart
          * from the composer (MusicBrainz's `lyricist`; a `librettist` is not read, so an aria's
          * composer stays its *Composer*). With one, *Author* when the work's lyricist is the composer
-         * and the title does not lead with them (a songwriter's own words: no classical work);
-         * otherwise, the words theirs on a classical title, none, or not known, *Composer*.
+         * and the work is no classical one ([ArtistRoles.classical], nor a title leading with its
+         * composer: a songwriter's own words); otherwise, the words theirs on a classical work, none,
+         * or not known, *Composer*.
          */
         fun of(
             track: NormalizedTrack,
@@ -67,7 +68,7 @@ data class ArtistSplit(
             val name =
                 when {
                     composers.size + lyricists.size > 1 -> AuthorsName.AUTHORS
-                    ownWords && track.composer == null -> AuthorsName.AUTHOR
+                    ownWords && !roles.classical && track.composer == null -> AuthorsName.AUTHOR
                     else -> AuthorsName.COMPOSER
                 }
             return ArtistSplit(composers, lyricists, lead, performers - lead, name)

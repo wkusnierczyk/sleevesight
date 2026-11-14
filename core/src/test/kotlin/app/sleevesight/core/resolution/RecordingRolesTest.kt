@@ -75,7 +75,9 @@ class RecordingRolesTest {
                 )
             val resolution = resolve(musicBrainz, aria, 204)
             assertEquals("tenor", resolution.recordingMbid)
-            assertEquals(ArtistRoles(listOf(puccini), listOf(pavarotti, mehta, orchestra)), resolution.roles)
+            // An aria, a classical work (#1199).
+            val roles = ArtistRoles(listOf(puccini), listOf(pavarotti, mehta, orchestra), classical = true)
+            assertEquals(roles, resolution.roles)
             assertEquals(pavarotti, ArtistRoles.of(aria, resolution.roles).lead(aria))
         }
 
@@ -117,7 +119,7 @@ class RecordingRolesTest {
                     200,
                     "2024",
                 ).copy(credits = listOf(credit("Pianist"), credit("Orchestra")))
-            val title = ArtistRoles(listOf(mozart), listOf("Pianist", "Orchestra"))
+            val title = ArtistRoles(listOf(mozart), listOf("Pianist", "Orchestra"), classical = true)
             // No work linked; the work's lookup failed; a work with no composer relationship.
             val cases =
                 listOf(
@@ -162,7 +164,10 @@ class RecordingRolesTest {
             val ours = recording("p", "Etude", "Pianist", 200, "2000")
             val arranged =
                 FakeMusicBrainz(Lookup.Found(listOf(ours)), mapOf("p" to detail(ours)), mapOf("w" to work("Arranger")))
-            assertEquals(ArtistRoles(listOf("Franz Liszt"), listOf("Pianist")), resolve(arranged, liszt).roles)
+            assertEquals(
+                ArtistRoles(listOf("Franz Liszt"), listOf("Pianist"), classical = true),
+                resolve(arranged, liszt).roles,
+            )
         }
 
     @Test
@@ -229,7 +234,7 @@ class RecordingRolesTest {
                     mapOf("both" to detail(both, listOf(relation("instrument", "Pianist")))),
                     mapOf("w" to work(mozart, type = "Sonata")),
                 )
-            assertEquals(ArtistRoles(listOf(mozart), listOf("Pianist")), resolve(sonata, k545).roles)
+            assertEquals(ArtistRoles(listOf(mozart), listOf("Pianist"), classical = true), resolve(sonata, k545).roles)
             // With no lead in the title: *Nessun dorma* credited to Puccini and the tenor on MusicBrainz.
             val credited =
                 tenor.copy(mbid = "credited", credits = listOf(credit(puccini), credit(pavarotti)))
@@ -246,7 +251,7 @@ class RecordingRolesTest {
                     mapOf("w" to work(puccini)),
                 )
             assertEquals(
-                ArtistRoles(listOf(puccini), listOf(pavarotti, mehta, orchestra)),
+                ArtistRoles(listOf(puccini), listOf(pavarotti, mehta, orchestra), classical = true),
                 resolve(composerCredited, aria, 204).roles,
             )
         }

@@ -255,8 +255,8 @@ private fun Progress(
  * edition's ([albumLineYear], #1116: "Material Girl (2024 Remaster)"). When the recording first came out is
  * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place.
  *
- * With [split], the roles telling the composer apart (#1199), the credited artists but the composers
- * on one line, then the composer, or every author, on a line of its own, after a quieter label
+ * With [split], the roles telling the composer apart (#1199), the performers on one line (an arranger
+ * the title names is in the title), then the composer, or every author, on a line of its own, after a quieter label
  * ("Composer: Wolfgang Amadeus Mozart"), as the row before the artist's names them.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -277,7 +277,7 @@ internal fun KeyData(
             listOfNotNull(normalized.from?.let { stringResource(R.string.home_title_from, it) }, normalized.variant)
         if (about.isNotEmpty()) Small(about.joinToString(" · "))
         val credited = normalized.artists.ifEmpty { listOf(header.artists).filter(String::isNotBlank) }
-        val artists = split?.let { credited.filter { it !in split.composers } } ?: credited
+        val artists = split?.performers ?: credited
         FlowRow {
             artists.forEachIndexed { i, artist ->
                 Text(if (i < artists.lastIndex) "$artist, " else artist, style = MaterialTheme.typography.bodyLarge)

@@ -135,10 +135,15 @@ data class Resolution(
  * @property performers the other credited artists, but an artist the title names beside its composer
  *   (an arranger in `(Arr. Busoni)`) whom the recording does not credit; empty when no one else is
  *   credited.
+ * @property classical whether the work is a composed one (#1199): of a classical form, as the roles
+ *   read it (the work's type, or with none its parent's, `RecordingResolver.COMPOSED_FORMS`; a `Song`
+ *   of a song cycle), or, told by the title alone, one whose title leads with its composer. What the
+ *   Composer row is called reads it (`ArtistSplit`).
  */
 data class ArtistRoles(
     val composers: List<String>,
     val performers: List<String>,
+    val classical: Boolean = false,
 ) {
     /** The first performer, else [track]'s first credited artist ([NormalizedTrack.primary]). */
     fun lead(track: NormalizedTrack): String = performers.firstOrNull { it.isNotBlank() } ?: track.primary
@@ -161,7 +166,7 @@ data class ArtistRoles(
             return when {
                 told != null -> told
                 composer == null -> ArtistRoles(emptyList(), track.artists)
-                else -> ArtistRoles(listOf(composer), track.performers.takeIf { composer !in it }.orEmpty())
+                else -> ArtistRoles(listOf(composer), track.performers.takeIf { composer !in it }.orEmpty(), true)
             }
         }
     }
