@@ -41,15 +41,13 @@ object ComposedDates {
      * publication (P577): K. 545, composed in 1788, was first published in 1805, and a song's
      * publication is the release *Dates* already says.
      */
-    fun ofItem(item: WdEntity): ComposedDate? {
-        val year =
-            item
-                .values(Wd.INCEPTION)
-                .filter { it.startsWith("+") }
-                .mapNotNull { DateWhen.of(it.removePrefix("+").substringBefore('T'))?.year }
-                .minOrNull() ?: return null
-        return ComposedDate(year, year, SourceId.WIKIDATA, Wd.url(item.id))
-    }
+    fun ofItem(item: WdEntity): ComposedDate? =
+        item
+            .values(Wd.INCEPTION)
+            .filter { it.startsWith("+") }
+            .mapNotNull { DateWhen.of(it.removePrefix("+").substringBefore('T'))?.year }
+            .minOrNull()
+            ?.let { year -> ComposedDate(year, year, SourceId.WIKIDATA, Wd.url(item.id)) }
 
     // A work's relationship naming who composed it.
     private const val COMPOSER_RELATION = "composer"
