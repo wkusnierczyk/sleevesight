@@ -103,4 +103,43 @@ class InfoboxDateTest {
         )
         assertNull(ComposedDates.ofInfobox(article("period = Romantic"), url))
     }
+
+    @Test
+    fun `year is read only from an infobox where it is the year of composition`() {
+        // A song's, a single's or an album's `year` is a release's, and `composed` there is no composition's.
+        for (template in listOf("Infobox song", "Infobox single", "Infobox album")) {
+            assertNull(InfoboxDate.years("{{$template\n| name = Song\n| year = 1987\n}}"), template)
+            assertNull(InfoboxDate.years("{{$template\n| composed = 1987\n}}"), template)
+        }
+        // Barber's Adagio for Strings, as sampled: `Infobox musical composition`'s `year`.
+        assertEquals(1936 to 1936, InfoboxDate.years("{{Infobox musical composition\n| year = {{Start date|1936}}\n}}"))
+        // Bach's Cello Suites, as sampled: `Infobox Bach composition`'s `composed`, but not its `year`.
+        assertEquals(1717 to 1723, InfoboxDate.years("{{Infobox Bach composition\n| composed = 1717–23\n}}"))
+        assertNull(InfoboxDate.years("{{Infobox Bach composition\n| year = 1720\n}}"))
+    }
+
+    @Test
+    fun `a circa template over two years is a span, checked as one`() {
+        assertEquals(1800 to 1810, years("composed = {{circa|1800|1810}}"))
+        assertNull(years("composed = {{circa|1810|1800}}"))
+        assertNull(years("composed = {{circa|1700|1800}}"))
+        assertNull(years("composed = {{circa|1700|1710|1720}}"))
+    }
+
+    @Test
+    fun `an infobox in a comment is not the article's`() {
+        val wikitext =
+            "<!--{{Infobox musical composition|composed=1999}}-->\n" +
+                "{{Infobox musical composition\n| composed = 1801\n}}"
+        assertEquals(1801 to 1801, InfoboxDate.years(wikitext))
+    }
+
+    @Test
+    fun `a reference's own pipes make no fields`() {
+        val wikitext = "{{Infobox musical composition|premiere=1938<ref>Author|year=1990|title=Title</ref>}}"
+        assertNull(InfoboxDate.years(wikitext))
+        val dated = "{{Infobox musical composition|composed=1936<ref>Author|composed=1990</ref>|year=1990}}"
+        assertEquals(1936 to 1936, InfoboxDate.years(dated))
+        assertEquals(1936 to 1936, InfoboxDate.years("{{Infobox musical composition|composed=1936<ref name=\"a\" />}}"))
+    }
 }

@@ -2,7 +2,10 @@ package app.sleevesight.core.resolution
 
 /**
  * When a work's Wikipedia article says it was composed (#1273): the years its infobox gives in the
- * field `composed`, else `year`, from the wikitext of the article's opening section. Only a date's
+ * field `composed`, else `year`, from the wikitext of the article's opening section; `composed` only
+ * from a composition's infobox ([COMPOSITION_INFOBOXES]), and `year` only from one where it is the
+ * year of composition ([YEAR_INFOBOXES]), never from a song's, a single's or an album's, where it is a
+ * release's. Only a date's
  * shapes are read: a year (`1801`), a span of years with an en dash or a hyphen (`1890–1905`, or
  * `1717–23`, its end shortened), either one after `c.` or `circa`, and the templates that write them
  * (`{{start date|1804}}`, `{{circa|1720}}`, `{{ndash}}`), with comments, references and footnote
@@ -15,17 +18,23 @@ package app.sleevesight.core.resolution
 internal object InfoboxDate {
     /** The years [wikitext]'s first infobox dates the composing, from and to; null when it dates none. */
     fun years(wikitext: String): Pair<Int, Int>? {
-        val fields = fields(wikitext) ?: return null
-        return FIELDS.firstNotNullOfOrNull { name -> fields[name]?.let(::span) }
+        val infobox = infobox(wikitext) ?: return null
+        return fieldsOf(infobox.name).firstNotNullOfOrNull { field -> infobox.fields[field]?.let(::span) }
     }
 
     /**
-     * The named fields of [wikitext]'s first infobox (a template whose name begins `Infobox`), by
-     * their names in lowercase, each value trimmed, comments dropped; null when there is none, or it
-     * is not closed.
+     * [wikitext]'s first infobox (a template whose name begins `Infobox`, outside comments): its name,
+     * and its named fields by their names in lowercase, each value trimmed, comments and references
+     * dropped; null when there is none, or it is not closed.
      */
-    fun fields(wikitext: String): Map<String, String>? =
-        infoboxStart(wikitext)?.let { start -> FieldReader(wikitext).read(start) }
+    fun infobox(wikitext: String): Infobox? = infoboxStart(wikitext)?.let { start -> FieldReader(wikitext).read(start) }
+
+    // The fields that date the composing in the infobox named [name], in order.
+    private fun fieldsOf(name: String): List<String> =
+        listOfNotNull(
+            COMPOSED.takeIf { name in YEAR_INFOBOXES || COMPOSITION_INFOBOXES.any { it in name } },
+            YEAR.takeIf { name in YEAR_INFOBOXES },
+        )
 
     /** The years [value], a field's, dates: from and to, the same for one year; null for anything else. */
     fun span(value: String): Pair<Int, Int>? = plain(value)?.let(::shape)
@@ -72,18 +81,13 @@ internal object InfoboxDate {
     // other template.
     private fun template(inner: String): String? {
         val parts = inner.split('|')
-        val name =
-            parts
-                .first()
-                .replace('_', ' ')
-                .lowercase()
-                .split(' ')
-                .filter { it.isNotEmpty() }
-                .joinToString(" ")
-        val first = parts.drop(1).firstOrNull { '=' !in it }?.trim()
+        val name = templateName(parts.first())
+        val positional = parts.drop(1).filter { '=' !in it }.map { it.trim() }
+        val first = positional.firstOrNull()
         return when (name) {
             in DATE_TEMPLATES -> first?.takeIf { it.isNotEmpty() && it.all(::isDigit) }
-            in CIRCA_TEMPLATES -> first?.let { "c. $it" }
+            // `{{circa|1800|1810}}` is a span, read as one with the same checks; more years, none.
+            in CIRCA_TEMPLATES -> positional.takeIf { it.size in 1..2 }?.joinToString(" – ") { "c. $it" }
             in DASH_TEMPLATES -> " – "
             in SPACE_TEMPLATES -> " "
             in NOTE_TEMPLATES -> ""
@@ -100,8 +104,17 @@ internal object InfoboxDate {
         return to?.takeIf { it >= from && it - from <= LONGEST_SPAN }?.let { from to it }
     }
 
-    // The fields read, in order: `composed` (Infobox musical composition's), else `year`.
-    private val FIELDS = listOf("composed", "year")
+    private const val COMPOSED = "composed"
+    private const val YEAR = "year"
+
+    // The infoboxes whose `composed` is when the music was: a composition's (`Infobox musical composition`,
+    // `Infobox Bach composition`, …), and a hymn's.
+    private val COMPOSITION_INFOBOXES = listOf("composition", "infobox hymn")
+
+    // The infoboxes whose `year` is the year of composition (Barber's *Adagio for Strings* gives it so), and
+    // their names' redirects; in `Infobox song`, `Infobox single` or `Infobox album`, it is a release's.
+    private val YEAR_INFOBOXES =
+        setOf("infobox musical composition", "infobox classical composition", "infobox composition")
 
     private val DATE_TEMPLATES = setOf("start date", "start date and age", "end date", "end date and age")
     private val CIRCA_TEMPLATES = setOf("circa", "c.", "c", "ca", "ca.")
@@ -118,6 +131,12 @@ internal object InfoboxDate {
     private const val LONGEST_SPAN = 60
 }
 
+/** An infobox: its template's [name] ([templateName]), and its named [fields]. */
+internal data class Infobox(
+    val name: String,
+    val fields: Map<String, String>,
+)
+
 /**
  * The fields of the infobox in [text], read from just after its `{{`: split at each `|` of the infobox's
  * own (not one inside a nested template or a link), comments dropped, up to the `}}` that closes it.
@@ -132,20 +151,19 @@ private class FieldReader(
     private var templates = 1
     private var links = 0
 
-    // The fields, from [start]; null when the infobox, or a comment in it, is not closed.
-    fun read(start: Int): Map<String, String>? {
+    // The infobox, from [start]; null when it, or a comment in it, is not closed.
+    fun read(start: Int): Infobox? {
         var i = start
         while (i in text.indices && templates > 0) i = step(i)
-        return if (templates == 0) named(parts) else null
+        return if (templates == 0) Infobox(templateName(parts.first()), named(parts)) else null
     }
 
-    // Reads the piece at [i]: the index after it, or -1 for a comment not closed.
+    // Reads the piece at [i]: the index after it, or -1 for a comment not closed. A reference is skipped
+    // whole, so its own `|`, `{{` or `}}` never split or close a field.
     private fun step(i: Int): Int =
         when {
-            text.startsWith(COMMENT_OPEN, i) ->
-                text
-                    .indexOf(COMMENT_CLOSE, i + COMMENT_OPEN.length)
-                    .let { if (it < 0) -1 else it + COMMENT_CLOSE.length }
+            text.startsWith(COMMENT_OPEN, i) -> commentEnd(text, i)
+            isReference(text, i) -> referenceEnd(text, i)
             text.startsWith(TEMPLATE_OPEN, i) -> {
                 templates++
                 part.append(TEMPLATE_OPEN)
@@ -239,18 +257,48 @@ private class Scan(
     }
 }
 
-// Just after the `{{` of [wikitext]'s first template named `Infobox…`, in any case; null for none.
+// Just after the `{{` of [wikitext]'s first template named `Infobox…`, in any case, outside comments
+// (an infobox commented out is not the article's); null for none.
 private fun infoboxStart(wikitext: String): Int? {
-    var from = 0
-    while (true) {
-        val at = wikitext.indexOf(TEMPLATE_OPEN, from)
-        if (at < 0) return null
-        var name = at + 2
-        while (name < wikitext.length && wikitext[name].isWhitespace()) name++
-        if (wikitext.regionMatches(name, INFOBOX, 0, INFOBOX.length, ignoreCase = true)) return at + 2
-        from = at + 2
+    var i = 0
+    var found: Int? = null
+    while (found == null && i in wikitext.indices) {
+        when {
+            wikitext.startsWith(COMMENT_OPEN, i) -> i = commentEnd(wikitext, i)
+            wikitext.startsWith(TEMPLATE_OPEN, i) -> {
+                var name = i + 2
+                while (name < wikitext.length && wikitext[name].isWhitespace()) name++
+                if (wikitext.regionMatches(name, INFOBOX, 0, INFOBOX.length, ignoreCase = true)) found = i + 2
+                i += 2
+            }
+            else -> i++
+        }
     }
+    return found
 }
+
+// The index just after the comment at [at] in [text]; -1 when it is not closed.
+private fun commentEnd(
+    text: String,
+    at: Int,
+): Int = text.indexOf(COMMENT_CLOSE, at + COMMENT_OPEN.length).let { if (it < 0) -1 else it + COMMENT_CLOSE.length }
+
+// A template's name as compared: in lowercase, `_` as a space, spaces single and trimmed.
+private fun templateName(raw: String): String =
+    raw
+        .replace('_', ' ')
+        .lowercase()
+        .split(' ', '\n', '\t')
+        .filter { it.isNotEmpty() }
+        .joinToString(" ")
+
+// Whether a reference opens at [i] in [text]: `<ref>` or `<ref …`, not `<references />`.
+private fun isReference(
+    text: String,
+    i: Int,
+): Boolean =
+    text.startsWith(REFERENCE_OPEN, i, ignoreCase = true) &&
+        text.getOrNull(i + REFERENCE_OPEN.length).let { it == '>' || it == '/' || it?.isWhitespace() == true }
 
 // A template's fields given by name (`name = value`), the last of a name kept, as MediaWiki does; its
 // name (the first part) and fields given by position left out.
@@ -265,9 +313,12 @@ private fun withoutReferences(value: String): String {
     val out = StringBuilder()
     var i = 0
     while (i < value.length) {
-        val at = value.indexOf(REFERENCE_OPEN, i, ignoreCase = true).let { if (it < 0) value.length else it }
-        out.append(value, i, at)
-        i = if (at == value.length) at else referenceEnd(value, at)
+        if (isReference(value, i)) {
+            i = referenceEnd(value, i)
+        } else {
+            out.append(value[i])
+            i++
+        }
     }
     return out.toString()
 }
