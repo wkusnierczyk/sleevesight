@@ -2,6 +2,7 @@ package app.sleevesight.core.sources
 
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.text.DateWhen
 
@@ -71,6 +72,9 @@ import app.sleevesight.core.text.DateWhen
  *   once resolved (#1180, [ArtistRoles]): set only when the recording's work was looked up and names
  *   at least one composer; null otherwise (no recording, no work, a work lookup that failed, or no
  *   composer relationship), where the title's composer lead decides ([ArtistRoles.of]).
+ * @property composed when the music was composed, as the work's composer relationship dates it (#1132,
+ *   [ComposedDate]): null when the recording's work was not looked up, or MusicBrainz dates no
+ *   composition of it.
  * @property failure why MusicBrainz could not be asked, when [outcome] is [Outcome.Unreachable]:
  *   the failed lookup's kind as the client names it (`RateLimited`, `Offline`, `Server`,
  *   `status 400`, …), never a URL or a value; for the diagnostics only (#191). Null otherwise.
@@ -101,6 +105,7 @@ data class Resolution(
     val recordingTagVotes: Map<String, Int> = emptyMap(),
     val lyrics: WorkLyrics = WorkLyrics.NONE,
     val roles: ArtistRoles? = null,
+    val composed: ComposedDate? = null,
     val failure: String? = null,
     val provisional: Boolean = false,
 ) {
@@ -166,6 +171,23 @@ data class ArtistRoles(
         }
     }
 }
+
+/**
+ * When a track's music was composed (#1132), for Home's *Dates*: the years [from] to [to] (one year when
+ * they are the same: `1788` for K. 545; `1921` to `1924` for Puccini's *Turandot*), and where it says
+ * so, [source] and its page ([url]). Years only, as *Dates* says them: a composition takes time, and a
+ * month or a day a source gives marks where it began or a catalogue's entry, not when the music was.
+ *
+ * @property source [SourceId.MUSICBRAINZ] for the dates of the composer relationship of the recording's
+ *   work ([url] the work's page), [SourceId.WIKIDATA] for the inception (P571) of the song's item the
+ *   identity check accepted ([url] the item's page).
+ */
+data class ComposedDate(
+    val from: String,
+    val to: String,
+    val source: SourceId,
+    val url: String,
+)
 
 /** A credited artist as the track names it, and its MusicBrainz artist id when resolved. */
 data class ResolvedArtist(

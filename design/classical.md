@@ -96,7 +96,9 @@ two narrowings: the composer signal counts only when the title leads with that c
 signal A), since a songwriter credited on a pop track would pass it too; and a type of the work's own
 that is no classical form is not composed, but for `Song` with that lead or as part of a `Song-cycle`
 (a Lied of *Winterreise*). The composer's `begin` is read
-into `MbArtistRelation.begin`, not yet used.
+into `MbArtistRelation.begin`, and its `end` into `MbArtistRelation.end`: *Dates* says when the music was
+composed from them (#1132, `ComposedDates.ofWork`, `Resolution.composed`; `design.md`, *Key data*), else from
+the inception (P571) of the song's Wikidata item the Wikipedia identity check accepted (`ComposedDates.ofItem`).
 
 ## 2. Telling the composer from the performers
 
