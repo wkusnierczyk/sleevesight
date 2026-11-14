@@ -196,6 +196,14 @@ interface ItemNotes {
     fun songEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
 
     /**
+     * The lines gathered for the other artists' insights on [track] (#1199: the composer's, and those a
+     * performer's or an author's chip opened), as they come, each line said to be about its artist
+     * ([app.sleevesight.core.evidence.EvidenceLine.about]): what *Sources* lists beside the track's, so
+     * their citations open there, and the genres a page about them names are theirs.
+     */
+    fun othersEvidence(track: TrackState): Flow<List<EvidenceSet>> = flowOf(emptyList())
+
+    /**
      * The lines the song's, the artist's and the album's evidence gathered for [track] holds beyond the
      * track's own (#1131, `ItemLines.beyond`), the album's marked, as they come: what *Sources* lists
      * after the track's lines, and what *Key insights* takes once the track's own found nothing to
@@ -797,7 +805,7 @@ class AppItemNotes(
     // album's, the artist's, the other artists' (#1199), then the song's.
     override fun foundLines(track: TrackState): Flow<ItemLines?> =
         combine(
-            combine(albumEvidence(track), artistEvidence(track), othersLines(track), ::Triple),
+            combine(albumEvidence(track), artistEvidence(track), othersEvidence(track), ::Triple),
             songEvidence(track),
             parts,
             settings,
@@ -810,7 +818,7 @@ class AppItemNotes(
     // performer's or an author's chip opened), each item's last, for what it is about now (its entity);
     // every line said to be about that artist ([EvidenceLine.about]), so the genres a web page about them
     // names are theirs, not the lead performer's, whom the artist's own web lines are taken to be about.
-    private fun othersLines(track: TrackState): Flow<List<EvidenceSet>> =
+    override fun othersEvidence(track: TrackState): Flow<List<EvidenceSet>> =
         combine(gathered, parts) { kept, made ->
             val insights = made?.let(::insightsOf) ?: return@combine emptyList()
             kept.entries

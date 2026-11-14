@@ -60,6 +60,11 @@ internal class FakeItemNotes : ItemNotes {
 
     override fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = artist
 
+    // The composer's and the chips' lines, once gathered (#1199).
+    val others = MutableStateFlow<List<EvidenceSet>>(emptyList())
+
+    override fun othersEvidence(track: TrackState): Flow<List<EvidenceSet>> = others
+
     override fun write(
         track: TrackState,
         item: InsightItem,
