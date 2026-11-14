@@ -102,11 +102,12 @@ class WikipediaSourceTest {
         }
 
     @Test
-    fun `the kept part's version stays at 3 while the track results' moved to 5`() {
+    fun `the kept part's version stays at 3 while the track results' moved to 6`() {
         // #1129 and #1203 changed what a track resolves to, which a track's result is checked against; an
-        // artist's article, reached by the artist's id, is not, so the artist cache is kept.
+        // artist's article, reached by the artist's id, is not, so the artist cache is kept; nor does the
+        // song's composition date (#1132), which a track's result holds.
         assertEquals(3, WikipediaSource.ARTIST_PART.extraction)
-        assertEquals(5, adapter.extractionVersion)
+        assertEquals(6, adapter.extractionVersion)
     }
 
     @Test

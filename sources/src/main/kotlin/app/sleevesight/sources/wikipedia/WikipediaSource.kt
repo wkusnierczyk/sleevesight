@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.resolution.ComposedDates
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.IdentityCheck.Route
 import app.sleevesight.core.resolution.IdentityCheck.Verdict
@@ -117,6 +118,9 @@ class WikipediaSource(
             evidence,
             start.elapsedNow(),
             rejections = findings.rejections,
+            // When the music was composed, as the song's item says (#1132): its own song's, or for a
+            // cover the original's, whose music it is.
+            composed = findings.song?.let { ComposedDates.ofItem(it.item) },
             freshUntil = parts.mapNotNull { it.freshUntil }.minOrNull(),
             // Every credited artist's article is looked up, and its finding, found or not, is about
             // the artist (#420): only a track with no artist to look up is about the track alone.
@@ -401,9 +405,11 @@ class WikipediaSource(
          * up again; [ARTIST_PART] stays
          * ([ARTIST_PART_VERSION]). 5: a recording dated by its year alone no longer beats one dated to
          * a day in that year (#1203), so a result kept against the recording chosen before is looked
-         * up again; [ARTIST_PART] stays.
+         * up again; [ARTIST_PART] stays. 6: the song's item gives when the music was composed
+         * (`SourceResult.composed`, #1132), so a song's result kept without it is looked up again;
+         * [ARTIST_PART] stays.
          */
-        const val EXTRACTION_VERSION: Int = 5
+        const val EXTRACTION_VERSION: Int = 6
 
         private val json = Json { encodeDefaults = false }
 
