@@ -84,6 +84,10 @@ class ItemRowsTest {
         val authors = composer(WorkLyrics(lyricists = listOf("Giuseppe Adami", "Renato Simoni")))
         assertEquals("Giacomo Puccini, Giuseppe Adami, Renato Simoni", authors.name)
         assertEquals(R.string.home_item_authors to R.string.home_item_show_authors, authors.kind to authors.action)
+        // An aria's librettists (#1274) are authors as its lyricists are.
+        val libretto = composer(WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni")))
+        assertEquals("Giacomo Puccini, Giuseppe Adami, Renato Simoni", libretto.name)
+        assertEquals(R.string.home_item_authors, libretto.kind)
         // The artist's row: the lead performer, Artists with another performer known, or Performers.
         val rows = itemRows(header, normalized, ArtistSplit.of(normalized, roles, null))
         val artist = rows.single { it.item == InsightItem.ARTIST }
