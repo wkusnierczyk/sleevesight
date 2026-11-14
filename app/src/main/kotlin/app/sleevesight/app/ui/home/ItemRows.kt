@@ -4,10 +4,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -16,26 +13,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.SpinningRecord
 import app.sleevesight.app.ui.theme.Panel
@@ -45,8 +40,9 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.settings.Layout
+import kotlin.math.max
 import kotlin.math.roundToInt
+import app.sleevesight.core.settings.Layout as LayoutSetting
 
 // The song's, the artist's and the album's insights under *Key insights* (#522): a row each, under
 // the key insight and before *Sources*, its button opening a panel in the row's place under
@@ -222,72 +218,85 @@ private fun ItemRowLine(
     val named = "$kind, ${row.name}"
     val marked = if (look.ai) stringResource(R.string.home_uses_ai, named) else named
     val described = if (look.writing) stringResource(R.string.home_item_writing, marked) else marked
-    // The button as tall as it is drawn, at the font size now: the name's first line is centred on it.
-    var tall by remember { mutableIntStateOf(0) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        PanelChip(
-            kind,
-            itemRowTag(row.item),
-            modifier = button.onSizeChanged { tall = it.height },
-            action = action,
-            collapsed = false,
-            description = described,
-            width = look.width,
-            ai = look.ai,
-            onClick = onClick,
-        )
-        Spacer(Modifier.width(COLUMN_GAP))
-        val height = with(LocalDensity.current) { tall.toDp() }
-        if (look.writing) {
-            Box(Modifier.heightIn(min = height), contentAlignment = Alignment.Center) { SpinningRecord() }
-            Spacer(Modifier.width(RECORD_GAP))
+    // One pass: the button measured first, the name's cell as tall as it at least, its first line
+    // centred on it (#1199), with no frame drawn before the heights are known.
+    Layout(
+        content = {
+            PanelChip(
+                kind,
+                itemRowTag(row.item),
+                modifier = button,
+                action = action,
+                collapsed = false,
+                description = described,
+                width = look.width,
+                ai = look.ai,
+                onClick = onClick,
+            )
+            if (look.writing) SpinningRecord()
+            NameText(row.name, whole, onName, itemNameTag(row.item))
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val chip = measurables.first().measure(loose)
+        val record = measurables.takeIf { look.writing }?.get(1)?.measure(loose)
+        val start = chip.width + COLUMN_GAP.roundToPx() + (record?.let { it.width + RECORD_GAP.roundToPx() } ?: 0)
+        val width = (constraints.maxWidth - start).coerceAtLeast(0)
+        val least = max(NAME_CELL.roundToPx(), chip.height)
+        val cell = measurables.last().measure(Constraints(width, width, least, Constraints.Infinity))
+        layout(constraints.maxWidth, max(chip.height, cell.height)) {
+            chip.place(0, 0)
+            record?.place(chip.width + COLUMN_GAP.roundToPx(), (chip.height - record.height) / 2)
+            cell.place(start, 0)
         }
-        NameText(row.name, whole, onName, Modifier.weight(1f), itemNameTag(row.item), height)
     }
 }
 
 // A row's [name], tagged [tag] (its cell `<tag>:cell`): on one line clipped with an ellipsis, or [whole], wrapped; a
 // tap ([onTap]) on one clipped shows it whole, on one whole clips it again, on one that fits does
 // nothing. The tap is taken across the name's whole cell, at least 48 dp tall as its button's target
-// is, and as its button ([button], as drawn), not on the text's line alone. Its first line is centred
-// on the button (#1199), so a name shown whole on several lines starts level with it. For touch only:
-// its button reads the whole name, so a screen reader and a keyboard pass it by.
-@Suppress("LongParameterList") // The name, how it shows, its tap, and where it lines up.
+// is, and as its button (the least height its row gives it), not on the text's line alone. Its first
+// line is centred on that height (#1199), in the same pass as the text is measured, so a name shown
+// whole on several lines starts level with its button. For touch only: its button reads the whole
+// name, so a screen reader and a keyboard pass it by.
 @Composable
 private fun NameText(
     name: String,
     whole: Boolean,
     onTap: () -> Unit,
-    modifier: Modifier,
     tag: String,
-    button: Dp,
 ) {
-    // Whether the name, clipped, did not fit, as last laid out; its first line's height.
+    // Whether the name, clipped, did not fit, as last laid out.
     var clipped by remember(name) { mutableStateOf(false) }
-    var line by remember { mutableIntStateOf(0) }
     val tap by rememberUpdatedState { if (whole || clipped) onTap() }
-    val cell = max(NAME_CELL, button)
-    val above = with(LocalDensity.current) { ((cell.roundToPx() - line) / 2).coerceAtLeast(0).toDp() }
+    // Set as the name is measured, read as its cell is: no state, so no second pass.
+    val lines = remember { arrayOfNulls<TextLayoutResult>(1) }
     // No semantics on the cell, and none read from the name: no stop of its own.
-    Box(
-        modifier
-            .testTag("$tag:cell")
-            .heightIn(min = cell)
-            .pointerInput(Unit) { detectTapGestures { tap() } },
-        contentAlignment = Alignment.TopStart,
-    ) {
-        Text(
-            name,
-            Modifier.padding(top = above).testTag(tag).clearAndSetSemantics {},
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = if (whole) Int.MAX_VALUE else 1,
-            overflow = if (whole) TextOverflow.Clip else TextOverflow.Ellipsis,
-            onTextLayout = {
-                if (!whole) clipped = it.hasVisualOverflow
-                line = (it.getLineBottom(0) - it.getLineTop(0)).roundToInt()
-            },
-        )
+    Layout(
+        content = {
+            Text(
+                name,
+                Modifier.testTag(tag).clearAndSetSemantics {},
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = if (whole) Int.MAX_VALUE else 1,
+                overflow = if (whole) TextOverflow.Clip else TextOverflow.Ellipsis,
+                onTextLayout = {
+                    lines[0] = it
+                    if (!whole) clipped = it.hasVisualOverflow
+                },
+            )
+        },
+        modifier =
+            Modifier
+                .testTag("$tag:cell")
+                .pointerInput(Unit) { detectTapGestures { tap() } },
+    ) { measurables, constraints ->
+        val text = measurables.single().measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val first = lines[0]?.let { (it.getLineBottom(0) - it.getLineTop(0)).roundToInt() } ?: text.height
+        val top = ((constraints.minHeight - first) / 2).coerceAtLeast(0)
+        layout(constraints.maxWidth, max(constraints.minHeight, top + text.height)) { text.place(0, top) }
     }
 }
 
@@ -321,7 +330,7 @@ internal fun HomeItems(
     onReport: (TrackState, InsightState.Written, InsightItem) -> Unit,
 ) {
     val settings = state.settings ?: return
-    val pages = settings.layout == Layout.SEPARATE_PAGES
+    val pages = settings.layout == LayoutSetting.SEPARATE_PAGES
     val folds = itemFolds(memory, shown.playing, settings.itemsOnNewTrack)
     val context =
         itemContext(
