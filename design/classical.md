@@ -10,7 +10,7 @@ artist as *the* artist (`NormalizedTrack.primary`, `Normalizer.kt:76`), so for c
 searches, filters, keys and prompts by the composer, while the recording and the pages about it name
 the performers. This note maps where that happens, how to tell the roles apart, what the Artist panel
 should be about, and a set of tracks to check the fixes against. Already filed: #1129 (MusicBrainz
-search), #1130 (album), #1131 (Key insights), #1132 (Dates: when composed), #1133 (Song: the music).
+search), #1130 (album), #1131 (Key insights), #1132 (Dates: when composed), #1133 (Song: the music), section 5).
 Line numbers are those of `dev-0.6.4` at `227d7fef`, before #1129's PR (#1176), which adds
 `NormalizedTrack.composer` and `searchTitle` (`ComposerPrefix`).
 
@@ -222,6 +222,48 @@ same day.
 
 A non-classical control stays in the existing fixtures: a pop title with a colon that names no
 credited artist (#1176's `Star Wars: Main Title` case).
+
+## 5. The Song insight: the music and this recording
+
+**Done so in #1133** (the D-Classical mock-up's pick, 2026-11-14): where the roles tell a composer
+apart from at least one performer (`ArtistSplit`, the same condition as the Composer row), the song's
+insight is one insight in two parts, headed *The music* and *This recording* (`SongParts`), one call
+and one credit line. Every other track's is written as before, in one part with no heading, under the
+same card key: no prefix and no resolution, a pop song, a track credited to its composer alone.
+
+- **Prompt** (`ItemPrompt.build` with `parts`, `ItemPrompt.PARTS_VERSION` 3 in the song card's key): its
+  own task line (`PARTS_TASK`) and, in place of the song's subject rule, `PARTS_RULE`: two parts, each
+  heading on a line of its own as given; the music part on the work itself (who composed it, when and
+  why, what it is, where it sits in the composer's work, how it was received), the recording part on
+  this performance (who plays it, when and where it was recorded, its release); one to three sentences
+  each; a part no line supports left out with its heading; a line about another recording of the work
+  in neither part. `PARTS_PLAIN_TEXT_RULE` in place of the plain-text rule (the two headings are the only
+  ones), and no "artist" rule. Citations, the evidence-only rule and the grounding check hold for both
+  parts as for any insight. Raising the version rewrites, once, each kept song card of such a track
+  when it is next asked for; no other card changes key.
+- **Reading the reply**: the grounding check, given `headings` for a card under `PARTS_VERSION`, reads a
+  line that is one of the two headings (its case aside, perhaps with a Markdown `#`, emphasis or a
+  colon) as a paragraph of its own, one sentence marked `CheckedSentence.heading`, uncited on purpose,
+  never dimmed and counted in none of the counts; Home shows it bold, read as a heading
+  (`SongPartHeading`), while it streams too.
+- **Evidence for the music**: the song's own lines, as before (the work's MusicBrainz lines, Wikipedia's
+  and Wikidata's lines of the song's item the identity check accepted, the track's web lines, which
+  #1179 already searches by the work part of a title that leads with its composer). New: a composed
+  work's part with no Wikidata item of its own is checked by the item of the work it is a part of
+  (`ResolvedWork.whole`, the work's first `parts` parent, given with the work's own lookup;
+  `IdentityCheck.musicBrainzItems`), so K. 545's Andante, which has none, takes its sonata's (Q991701,
+  found by its MusicBrainz work id `a2ad223d`, P435), with *Piano Sonata No. 16 (Mozart)*'s lead and
+  Wikidata's date line ("Piano Sonata No. 16 was created on June 26, 1788."): one more free Wikidata
+  search, only for such a part. Wikipedia's extraction version is 7 for it. No paid search is added.
+- **When the song's own lines only list it** (`SongListings`), the song's evidence on such a track takes
+  the composers' artist-level lines for the music and the performers' for this recording (before, the
+  first credited artist's, the composer's alone), each named in the prompt as a `composer` or a
+  `performer` line (`PARTS_PEOPLE_RULE`), never a claim about the work or the recording; and the rule
+  on a gap is the usual one, not the fixed release sentence of #958.
+- **LRCLIB** is asked by the first credited artist as before and, when that finds nothing and the roles
+  tell a composer apart, again by the lead performer (`LibraryQuery.byLead`), each answer kept under its
+  own query: one more free request, on such a track only (*Nessun dorma* is filed under Puccini and
+  Pavarotti alike).
 
 ## Filed from this spike
 
