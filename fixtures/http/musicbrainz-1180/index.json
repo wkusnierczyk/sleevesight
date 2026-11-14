@@ -1,6 +1,26 @@
 [
  {
   "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/38e73992-38de-43b1-ba07-420c9e2e9cc1",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels+tags",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-38e73992-38de-43b1-ba07-420c9e2e9cc1.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/d0289c4f-19bd-4ce5-b798-b2fb7a1f7c6c",
+  "query": {
+   "fmt": "json",
+   "inc": "artist-credits+work-rels+artist-rels+url-rels+tags"
+  },
+  "status": 200,
+  "file": "recording-d0289c4f-19bd-4ce5-b798-b2fb7a1f7c6c.json"
+ },
+ {
+  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Turandot: \\\"Nessun dorma!\\\"\" AND artist:\"Giacomo Puccini\"",
@@ -20,16 +40,6 @@
   },
   "status": 200,
   "file": "recording-turandot-nessun-dorma-and-artist-luciano-pavarotti.json"
- },
- {
-  "method": "GET",
-  "url": "https://musicbrainz.org/ws/2/recording/38e73992-38de-43b1-ba07-420c9e2e9cc1",
-  "query": {
-   "inc": "artist-credits+work-rels+artist-rels+url-rels+tags",
-   "fmt": "json"
-  },
-  "status": 200,
-  "file": "recording-38e73992-38de-43b1-ba07-420c9e2e9cc1.json"
  },
  {
   "method": "GET",

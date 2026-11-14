@@ -41,15 +41,17 @@ class RecordingRolesTest {
         emptyList(),
     )
 
-    private fun work(vararg composers: String) =
-        MbWork(
-            mbid = "w",
-            title = "Nessun dorma",
-            artistRelations = composers.map { MbArtistRelation("composer", "mbid-$it", it, emptyList()) },
-            wikidataIds = emptyList(),
-            performances = emptyList(),
-            type = "Aria",
-        )
+    private fun work(
+        vararg composers: String,
+        type: String? = "Aria",
+    ) = MbWork(
+        mbid = "w",
+        title = "Nessun dorma",
+        artistRelations = composers.map { MbArtistRelation("composer", "mbid-$it", it, emptyList()) },
+        wikidataIds = emptyList(),
+        performances = emptyList(),
+        type = type,
+    )
 
     private fun relation(
         type: String,
@@ -90,7 +92,13 @@ class RecordingRolesTest {
                     "1990",
                 ).copy(credits = listOf(credit("Writer"), credit("Guest")))
             val musicBrainz =
-                FakeMusicBrainz(Lookup.Found(listOf(both)), mapOf("both" to detail(both)), mapOf("w" to work("Writer")))
+                FakeMusicBrainz(
+                    Lookup.Found(listOf(both)),
+                    mapOf("both" to detail(both)),
+                    mapOf(
+                        "w" to work("Writer", type = "Song"),
+                    ),
+                )
             val roles = resolve(musicBrainz, song).roles
             assertEquals(ArtistRoles(emptyList(), listOf("Writer", "Guest")), roles)
             assertEquals("Writer", ArtistRoles.of(song, roles).lead(song))
@@ -144,7 +152,7 @@ class RecordingRolesTest {
                     Lookup.Found(listOf(withGuest)),
                     mapOf("g" to detail(withGuest)),
                     mapOf(
-                        "w" to work("Band"),
+                        "w" to work("Band", type = "Song"),
                     ),
                 )
             assertEquals(ArtistRoles(emptyList(), listOf("Band", "Guest")), resolve(bandWrote, band).roles)
@@ -198,5 +206,86 @@ class RecordingRolesTest {
                 FakeMusicBrainz(Lookup.Found(emptyList())).apply { searchesBy[pavarotti] = Lookup.Failed("Timeout") }
             assertEquals(Outcome.Unreachable, resolve(musicBrainz, aria, 204).outcome)
             assertEquals(listOf(nessunDorma to puccini, nessunDorma to pavarotti), musicBrainz.searched)
+        }
+
+    @Test
+    fun `a classical work's composer the recording credits, with no performer relationship, is the composer`() =
+        runTest {
+            // MusicBrainz often credits the composer on a classical recording (a release imported from a
+            // streaming service's artists): only a performer relationship shows that they play.
+            val mozart = "Wolfgang Amadeus Mozart"
+            val k545 = track("Mozart: Andante", "$mozart, Pianist")
+            val both =
+                recording(
+                    "both",
+                    "Andante",
+                    mozart,
+                    200,
+                    "2024",
+                ).copy(credits = listOf(credit(mozart), credit("Pianist")))
+            val sonata =
+                FakeMusicBrainz(
+                    Lookup.Found(listOf(both)),
+                    mapOf("both" to detail(both, listOf(relation("instrument", "Pianist")))),
+                    mapOf("w" to work(mozart, type = "Sonata")),
+                )
+            assertEquals(ArtistRoles(listOf(mozart), listOf("Pianist")), resolve(sonata, k545).roles)
+            // With no lead in the title: *Nessun dorma* credited to Puccini and the tenor on MusicBrainz.
+            val credited =
+                tenor.copy(mbid = "credited", credits = listOf(credit(puccini), credit(pavarotti)))
+            val composerCredited =
+                FakeMusicBrainz(
+                    Lookup.Found(listOf(credited)),
+                    mapOf(
+                        "credited" to
+                            detail(
+                                credited,
+                                listOf(relation("conductor", mehta), relation("performing orchestra", orchestra)),
+                            ),
+                    ),
+                    mapOf("w" to work(puccini)),
+                )
+            assertEquals(
+                ArtistRoles(listOf(puccini), listOf(pavarotti, mehta, orchestra)),
+                resolve(composerCredited, aria, 204).roles,
+            )
+        }
+
+    @Test
+    fun `after a later artist's search, the recording crediting the most of the track's artists is chosen`() =
+        runTest {
+            // The tenor's 1980 recording credited to him alone is earlier, but the 1994 one credits the
+            // conductor and the orchestra the player credits too.
+            val alone = tenor.copy(mbid = "alone", firstReleaseDate = "1980", releases = emptyList())
+            val all = tenor.copy(credits = listOf(credit(pavarotti), credit(mehta), credit(orchestra)))
+            val musicBrainz =
+                FakeMusicBrainz(Lookup.Found(emptyList()), mapOf("tenor" to detail(all)), mapOf("w" to work(puccini)))
+                    .apply { searchesBy[pavarotti] = Lookup.Found(listOf(alone, all)) }
+            assertEquals("tenor", resolve(musicBrainz, aria, 204).recordingMbid)
+        }
+
+    @Test
+    fun `after a later artist's search, of recordings crediting the soloist alone, the one naming the others plays`() =
+        runTest {
+            // MusicBrainz credits both to the tenor alone; only the 1994 one's relationships name the
+            // conductor and the orchestra the player credits.
+            val alone = tenor.copy(mbid = "alone", firstReleaseDate = "1980", releases = emptyList())
+            val musicBrainz =
+                FakeMusicBrainz(
+                    Lookup.Found(emptyList()),
+                    mapOf(
+                        "alone" to detail(alone, listOf(relation("conductor", "Another Conductor"))),
+                        "tenor" to
+                            detail(
+                                tenor,
+                                listOf(relation("conductor", mehta), relation("performing orchestra", orchestra)),
+                            ),
+                    ),
+                    mapOf("w" to work(puccini)),
+                ).apply { searchesBy[pavarotti] = Lookup.Found(listOf(alone, tenor)) }
+            assertEquals("tenor", resolve(musicBrainz, aria, 204).recordingMbid)
+            // Without a later artist's search the earliest stays chosen, as before: by the tenor alone.
+            val first = FakeMusicBrainz(Lookup.Found(listOf(alone, tenor)), mapOf("alone" to detail(alone)))
+            assertEquals("alone", resolve(first, track(nessunDorma, "$pavarotti, $mehta"), 204).recordingMbid)
         }
 }
