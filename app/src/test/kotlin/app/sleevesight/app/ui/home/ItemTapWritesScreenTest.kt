@@ -182,7 +182,7 @@ class ItemTapWritesScreenTest {
                 InsightItem.ALBUM to ItemShown.Shown(InsightState.Failed("timed_out"), evidenceOf),
             )
         show(state(onDemand)) {
-            for (item in InsightItem.entries) row(item).performScrollTo().performClick()
+            for (item in ROW_ITEMS) row(item).performScrollTo().performClick()
             compose.waitForIdle()
             assertTrue(notes.writes.isEmpty())
             compose.onNodeWithText("by Claude Haiku 4.5").assertExists()
@@ -218,7 +218,7 @@ class ItemTapWritesScreenTest {
         show(NowPlayingState(view, view.track!!.nowPlaying, playback, settings = skip)) {
             compose.waitForIdle()
             compose.onAllNodesWithText(text(R.string.home_item_tap_write)).assertCountEquals(3)
-            for (item in InsightItem.entries) compose.onNodeWithTag(itemWriteTag(item)).assertExists()
+            for (item in ROW_ITEMS) compose.onNodeWithTag(itemWriteTag(item)).assertExists()
         }
         assertTrue(notes.asks.all { it == ItemAsk.BY_ITSELF })
     }
@@ -347,7 +347,7 @@ class ItemTapWritesScreenTest {
             compose
                 .onAllNodes(hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(ITEM_ROWS_TAG)), true)
                 .assertCountEquals(0)
-            notes.shown.value = InsightItem.entries.associateWith { ItemShown.Off }
+            notes.shown.value = ROW_ITEMS.associateWith { ItemShown.Off }
             row(InsightItem.SONG).performScrollTo().performClick()
             compose.waitForIdle()
             assertTrue(notes.writes.isEmpty())
@@ -356,7 +356,7 @@ class ItemTapWritesScreenTest {
     @Test
     fun everyButtonCarriesTheMarkAfterItsKind() =
         show(state(onDemand)) {
-            for (item in InsightItem.entries) {
+            for (item in ROW_ITEMS) {
                 compose
                     .onAllNodes(hasTestTag(AI_MARK_TAG) and hasAnyAncestor(hasTestTag(itemRowTag(item))), true)
                     .assertCountEquals(1)

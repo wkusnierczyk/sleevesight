@@ -157,9 +157,11 @@ const val ITEM_UNREACHABLE_RETRY_TAG: String = "item_unreachable_retry"
 internal fun noEvidence(item: InsightItem): Int =
     when (item) {
         InsightItem.SONG -> R.string.home_item_no_evidence_song
+        InsightItem.COMPOSER -> R.string.home_item_no_evidence_composer
         InsightItem.ARTIST -> R.string.home_item_no_evidence_artist
         InsightItem.ALBUM -> R.string.home_item_no_evidence_album
+        else -> R.string.home_item_no_evidence_named
     }
 
 /** The test tag of [item]'s *Stop writing*. */
-fun itemStopTag(item: InsightItem): String = "item-stop:${item.kind.key}"
+fun itemStopTag(item: InsightItem): String = "item-stop:${item.key}"

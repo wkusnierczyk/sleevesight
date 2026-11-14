@@ -141,7 +141,7 @@ class ItemInsightsTest {
     // Each item of [track] written once, unless kept; the kinds written.
     private suspend fun play(track: TrackState): List<CardKind> {
         val written = mutableListOf<CardKind>()
-        for (item in InsightItem.entries) {
+        for (item in ROW_ITEMS) {
             val evidence = checkNotNull(items.evidence(item, track, settings))
             val key = checkNotNull(items.key(item, track, evidence, settings))
             if (items.kept(key, evidence) == null) {
@@ -445,7 +445,7 @@ class ItemInsightsTest {
         runTest {
             val track = track("Sundown", listOf(line(SourceId.WIKIPEDIA, "Sundown is a song.")))
             val kinds =
-                InsightItem.entries.map { item ->
+                ROW_ITEMS.map { item ->
                     checkNotNull(
                         items.key(item, track, checkNotNull(items.evidence(item, track, settings)), settings),
                     ).kind
@@ -573,7 +573,7 @@ class ItemInsightsTest {
             val track = track("Sundown", listOf(line(SourceId.MUSICBRAINZ, "It runs three minutes.")))
 
             suspend fun writeAll(settings: Settings) {
-                for (item in InsightItem.entries) {
+                for (item in ROW_ITEMS) {
                     val evidence = checkNotNull(items.evidence(item, track, settings))
                     val key = checkNotNull(items.key(item, track, evidence, settings))
                     items.write(key, item, track, evidence) { _, _ -> }

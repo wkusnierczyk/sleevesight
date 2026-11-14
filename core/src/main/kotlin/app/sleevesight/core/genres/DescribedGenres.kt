@@ -26,21 +26,23 @@ data class DescribedIn(
  * label source. The artist's own names in a line name no genre ("Soul II Soul", the band
  * *Electronic*). A line is the artist's its adapter says it is about ([EvidenceLine.about], by [names]; the
  * one credited artist when it names none of them); one that
- * does not say is the artist's when the track credits one, or, with several, a web page's is the
- * primary artist's (the artist's web search, #912, looks up the primary alone) and another's the
- * first credited artist it names. A genre name that is an everyday word counts only in a music
- * phrase ([EverydayNames]). [withDescribed] places them beside the tags.
+ * does not say is the artist's when the track credits one, or, with several, a web page's is
+ * [webArtist]'s, the Artist panel's subject, whom the artist's web search (#912) looks up: the lead
+ * performer once the roles tell a composer apart (#1199), else the first credited artist; and
+ * another's the first credited artist it names. A genre name that is an everyday word counts only
+ * in a music phrase ([EverydayNames]). [withDescribed] places them beside the tags.
  */
 fun describedGenres(
     vocabulary: GenreVocabulary,
     lines: List<EvidenceLine>,
     artists: List<String>,
     names: NameMatcher? = null,
+    webArtist: String? = null,
 ): List<GenreRow> {
     val found = linkedMapOf<String, LinkedHashMap<String, TrackLabel>>()
     val describing = lines.filter { it.scope == Scope.ARTIST && !it.aggregate && it.source in DESCRIBING }
     for (line in describing) {
-        val artist = artistOf(line, artists, names) ?: continue
+        val artist = artistOf(line, artists, names, webArtist?.takeIf { it in artists }) ?: continue
         val named = found.getOrPut(artist) { linkedMapOf() }
         val credited = artists.flatMap { occurrences(line.text, it) }
         val all = vocabulary.namedIn(line.text).filter { (_, range) -> credited.none { it.overlaps(range) } }
@@ -291,11 +293,13 @@ fun TrackGenres.describedIn(identity: String): DescribedIn? =
 /** The sources whose artist's lines describe them in words (#1000): not Wikidata's or MusicBrainz's templated facts. */
 val DESCRIBING: Set<SourceId> = setOf(SourceId.LASTFM, SourceId.WIKIPEDIA, SourceId.WEB)
 
-// The credited artist of [artists] that [line] is about, as [describedGenres] says; null for none.
+// The credited artist of [artists] that [line] is about, as [describedGenres] says, a web page naming
+// none [webArtist]'s; null for none.
 private fun artistOf(
     line: EvidenceLine,
     artists: List<String>,
     names: NameMatcher?,
+    webArtist: String?,
 ): String? {
     line.about?.let { about ->
         val same = { artist: String -> names?.sameName(artist, about) ?: artist.equals(about, ignoreCase = true) }
@@ -303,10 +307,9 @@ private fun artistOf(
     }
     return when {
         artists.size == 1 -> artists.single()
-        // The artist's web search looks up the Artist panel's subject, the first credited artist, a
-        // classical track's composer among them, so its page is theirs, not the lead performer's (#1180;
-        // the panel's subject is #1181's).
-        line.source == SourceId.WEB -> artists.firstOrNull()
+        // The artist's web search looks up the Artist panel's subject: the lead performer once the roles
+        // tell a composer apart (#1199), else the first credited artist.
+        line.source == SourceId.WEB -> webArtist ?: artists.firstOrNull()
         else -> artists.firstOrNull { occurrences(line.text, it).isNotEmpty() }
     }
 }

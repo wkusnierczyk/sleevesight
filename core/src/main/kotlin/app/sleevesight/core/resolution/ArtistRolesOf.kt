@@ -23,6 +23,7 @@ import app.sleevesight.core.sources.ResolvedArtist
  * recording's credit shows it too, so a songwriter who sings their own song is a performer, and so is
  * the band of `Band: Song`. The others are performers, but an artist the
  * title names beside its composer (an arranger in `(Arr. Busoni)`) whom the recording does not have.
+ * Whether the work is of a classical form is kept with them ([ArtistRoles.classical], #1199).
  * Null when the work names no composer: the title's lead then decides ([ArtistRoles.of]).
  */
 internal fun NameMatcher.rolesOf(
@@ -62,7 +63,7 @@ internal fun NameMatcher.rolesOf(
             .distinct()
     val titled = track.titleArtists.toSet()
     val performers = track.artists.filter { it !in composed && (it !in titled || it in onRecording) }
-    return ArtistRoles(composed, performers)
+    return ArtistRoles(composed, performers, classical)
 }
 
 // A work's relationship naming who composed it.

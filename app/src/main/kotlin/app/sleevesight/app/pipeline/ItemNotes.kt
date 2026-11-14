@@ -196,6 +196,14 @@ interface ItemNotes {
     fun songEvidence(track: TrackState): Flow<EvidenceSet?> = flowOf(null)
 
     /**
+     * The lines gathered for the other artists' insights on [track] (#1199: the composer's, and those a
+     * performer's or an author's chip opened), as they come, each line said to be about its artist
+     * ([app.sleevesight.core.evidence.EvidenceLine.about]): what *Sources* lists beside the track's, so
+     * their citations open there, and the genres a page about them names are theirs.
+     */
+    fun othersEvidence(track: TrackState): Flow<List<EvidenceSet>> = flowOf(emptyList())
+
+    /**
      * The lines the song's, the artist's and the album's evidence gathered for [track] holds beyond the
      * track's own (#1131, `ItemLines.beyond`), the album's marked, as they come: what *Sources* lists
      * after the track's lines, and what *Key insights* takes once the track's own found nothing to
@@ -794,17 +802,40 @@ class AppItemNotes(
 
     // The lines beyond the track's own evidence under the settings now (`ItemInsights.ownEvidence`, not
     // [TrackState.evidence], which holds those a run took from here already), in *Sources*' order: the
-    // album's, the artist's, then the song's.
+    // album's, the artist's, the other artists' (#1199), then the song's.
     override fun foundLines(track: TrackState): Flow<ItemLines?> =
         combine(
-            albumEvidence(track),
-            artistEvidence(track),
+            combine(albumEvidence(track), artistEvidence(track), othersEvidence(track), ::Triple),
             songEvidence(track),
             parts,
             settings,
-        ) { album, artist, song, made, now ->
+        ) { (album, artist, others), song, made, now ->
             val own = if (made != null && now != null) insightsOf(made).ownEvidence(track, now) else null
-            own?.let { ItemLines.beyond(it.lines, album, artist, song) }
+            own?.let { ItemLines.beyond(it.lines, album, artist, song, others) }
+        }.distinctUntilChanged()
+
+    // The lines gathered for the other artists' insights on [track] (#1199: the composer's, and those a
+    // performer's or an author's chip opened), each item's last, for what it is about now (its entity);
+    // every line said to be about that artist ([EvidenceLine.about]), so the genres a web page about them
+    // names are theirs, not the lead performer's, whom the artist's own web lines are taken to be about.
+    override fun othersEvidence(track: TrackState): Flow<List<EvidenceSet>> =
+        combine(gathered, parts) { kept, made ->
+            val insights = made?.let(::insightsOf) ?: return@combine emptyList()
+            kept.entries
+                .filter { (at, _) ->
+                    at.item.aboutArtist &&
+                        at.item != InsightItem.ARTIST &&
+                        at.lookupKey == track.normalized.lookupKey &&
+                        at.entity == insights.entity(at.item, track)
+                }.groupBy { it.key.item }
+                .mapNotNull { (item, found) ->
+                    val artist = insights.artistOf(item, track) ?: return@mapNotNull null
+                    val lines =
+                        found
+                            .last()
+                            .value.evidence.evidence.lines
+                    EvidenceSet.of(lines.map { it.draft().copy(about = it.about ?: artist) }, made.hasher)
+                }
         }.distinctUntilChanged()
 
     // [item]'s lines gathered for [track], and what it is about as it names it now (its entity).
@@ -1529,7 +1560,13 @@ class AppItemNotes(
     ) = publish(work) {
         gathered.update { kept ->
             kept.mapValues { (at, other) ->
-                val same = at != from && at.item == from.item && at.item != InsightItem.SONG && at.entity == from.entity
+                // The same album, or the same artist whichever item it is (#1199: the composer's, the lead
+                // performer's, a chip's); never the song's, whose evidence is its track's.
+                val same =
+                    at != from &&
+                        at.item.kind == from.item.kind &&
+                        from.item != InsightItem.SONG &&
+                        at.entity == from.entity
                 // Never the evidence of a search that kept nothing, with a search still due.
                 val given =
                     if (same && other.evidence.webDue && !found.webDue) {

@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.map
 
 // The song's, the artist's and the album's notes as the rows' tests set them (#522, #948).
 
+/** The rows every track with a title, an artist and an album has; the Composer row only some (#1199). */
+internal val ROW_ITEMS: List<InsightItem> = listOf(InsightItem.SONG, InsightItem.ARTIST, InsightItem.ALBUM)
+
 /** Each item's state, as the test sets it; the writes asked for, and the items followed. */
 internal class FakeItemNotes : ItemNotes {
     val shown = MutableStateFlow<Map<InsightItem, ItemShown>>(emptyMap())
@@ -56,6 +59,11 @@ internal class FakeItemNotes : ItemNotes {
     val artist = MutableStateFlow<EvidenceSet?>(null)
 
     override fun artistEvidence(track: TrackState): Flow<EvidenceSet?> = artist
+
+    // The composer's and the chips' lines, once gathered (#1199).
+    val others = MutableStateFlow<List<EvidenceSet>>(emptyList())
+
+    override fun othersEvidence(track: TrackState): Flow<List<EvidenceSet>> = others
 
     override fun write(
         track: TrackState,

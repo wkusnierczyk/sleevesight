@@ -177,9 +177,9 @@ class ItemButtonsScreenTest {
     @Config(qualifiers = PHONE)
     fun theButtonsAreAllAsWideAsTheWidestAndTheNamesStayInOneColumnWhenOneOpens() =
         show(state(onDemand)) {
-            val buttons = InsightItem.entries.map { bounds(itemRowTag(it)) }
+            val buttons = ROW_ITEMS.map { bounds(itemRowTag(it)) }
             assertTrue(buttons.all { near(it.width, buttons[0].width) && near(it.left, buttons[0].left) })
-            val names = InsightItem.entries.map { bounds(name(it), unmerged = true).left }
+            val names = ROW_ITEMS.map { bounds(name(it), unmerged = true).left }
             assertTrue(names.toString(), names.all { near(it, names[0]) })
             tap(itemRowTag(InsightItem.ARTIST))
             assertTrue(near(bounds(name(InsightItem.SONG), unmerged = true).left, names[0]))
@@ -256,8 +256,8 @@ class ItemButtonsScreenTest {
     @Test
     fun aNewTrackUnfoldedOpensEveryPanelAndAsLeftKeepsThoseOpen() {
         show(state(onDemand.copy(itemsOnNewTrack = NewTrackFold.UNFOLDED))) {
-            assertEquals(3, InsightItem.entries.sumOf { count(itemPanelTag(it)) })
-            assertEquals(0, InsightItem.entries.sumOf { count(itemRowTag(it)) })
+            assertEquals(3, ROW_ITEMS.sumOf { count(itemPanelTag(it)) })
+            assertEquals(0, ROW_ITEMS.sumOf { count(itemRowTag(it)) })
         }
         val left = onDemand.copy(itemsOnNewTrack = NewTrackFold.AS_LEFT)
         show(state(left)) {
