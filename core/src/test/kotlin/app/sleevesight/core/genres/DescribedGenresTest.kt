@@ -209,6 +209,21 @@ class DescribedGenresTest {
     }
 
     @Test
+    fun `a web page naming no artist is the Artist panel's subject's, the lead performer once the composer is told`() {
+        // The artist's web search looks up the Artist panel's subject (#1199): on a classical track, the
+        // lead performer, not the composer credited first.
+        val page = listOf(line("S1", "A jazz pianist who plays Mozart."))
+        val artists = listOf(ANN, BOB)
+        assertEquals(listOf(ANN), describedGenres(vocabulary, page, artists).map { it.artist })
+        assertEquals(listOf(BOB), describedGenres(vocabulary, page, artists, webArtist = BOB).map { it.artist })
+        // One the track does not credit is no one's to take it.
+        assertEquals(listOf(ANN), describedGenres(vocabulary, page, artists, webArtist = "Carl").map { it.artist })
+        // A page that says whom it is about stays theirs.
+        val about = listOf(line("S1", "A jazz pianist.", about = ANN))
+        assertEquals(listOf(ANN), describedGenres(vocabulary, about, artists, webArtist = BOB).map { it.artist })
+    }
+
+    @Test
     fun `a genre a tag gives keeps the tag's chip, the AI's genre too, and the chips keep the described row's cap`() {
         val line = line("S1", "A rock, jazz, blues, funk, disco, reggae and ska band.")
         val found = describedGenres(vocabulary, listOf(line), listOf(ANN))

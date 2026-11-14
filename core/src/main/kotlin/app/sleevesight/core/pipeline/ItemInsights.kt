@@ -30,7 +30,6 @@ import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearcher
-import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.ItemPrompt
@@ -39,18 +38,6 @@ import app.sleevesight.core.text.DateForm
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Instant
-
-/**
- * The song's, the artist's and the album's insights under *Key insights* on Home (#522), each its
- * own [kind] of card.
- */
-enum class InsightItem(
-    val kind: CardKind,
-) {
-    SONG(CardKind.SONG),
-    ARTIST(CardKind.ARTIST),
-    ALBUM(CardKind.ALBUM),
-}
 
 /**
  * The evidence an item is written from ([ItemInsights.evidence]): [evidence], and of its ids those
@@ -165,10 +152,14 @@ data class KeptItem(
  *   for the song found joins them ([songWeb]), made only on the way to a write, as the artist's is. When
  *   they still only list it, its prompt says so ([ItemEvidence.onlyListings]), and the artist's lines
  *   are among them;
- * - **the artist's** ([InsightItem.ARTIST]): about the track's primary artist ([CardEntity.Artist]),
+ * - **the composer's** ([InsightItem.COMPOSER], #1199): as the artist's, about the composer, on a
+ *   track whose roles tell one apart from a performer ([split]); a **named artist's**
+ *   ([InsightItem.named]), a performer's or an author's chip, likewise about that artist;
+ * - **the artist's** ([InsightItem.ARTIST]): about the lead performer when the roles tell a composer
+ *   apart (#1199), else the track's primary artist ([CardEntity.Artist]),
  *   by its MusicBrainz id when the resolution has one, else by the name the player gives; from the
  *   artist-level lines of the track's evidence (#238: Last.fm's, the artist's Wikipedia article and
- *   Wikidata item), those naming the primary artist when the track credits several; when there is
+ *   Wikidata item), those about that artist when the track credits several; when there is
  *   none, and *AI web search* is used ([Settings.aiWebSearchUsed], *Exa web search* on), from what a
  *   web search for the artist found ([artistWeb], #912), made only on the way to a write: *Once*,
  *   the app's own search ([search]); *Up to 3 times*, the AI service's own searches while it writes
@@ -230,8 +221,10 @@ class ItemInsights(
     private val songWeb: SongWebLookup? = null,
 ) {
     /**
-     * The name [item] goes by on [track]'s row: the title the player gives, the primary artist, or
-     * the player's album name; null for an album when the player names none, which shows no row.
+     * The name [item] goes by on [track]'s row: the title the player gives, the artist it is about
+     * ([artistOf]: the composer, the lead performer or the primary artist, a named artist), or the
+     * player's album name; null for an album when the player names none, and for the composer when the
+     * roles tell none, which show no row.
      */
     fun name(
         item: InsightItem,
@@ -239,9 +232,32 @@ class ItemInsights(
     ): String? =
         when (item) {
             InsightItem.SONG -> track.nowPlaying.title
-            InsightItem.ARTIST -> track.normalized.primary
             InsightItem.ALBUM -> album(track)
+            else -> artistOf(item, track)
         }?.takeIf { it.isNotBlank() }
+
+    /**
+     * The artist [item]'s insight on [track] is about (#1199): for the composer's, the first composer,
+     * once the roles tell one apart from a performer ([split]); for the artist's, the lead performer
+     * then, else the primary artist, as before; for a named artist's ([InsightItem.named]), its name.
+     * Null for the song's and the album's, and for the composer's with no split.
+     */
+    fun artistOf(
+        item: InsightItem,
+        track: TrackState,
+    ): String? =
+        when {
+            !item.aboutArtist -> null
+            item == InsightItem.COMPOSER -> split(track)?.composer
+            item == InsightItem.ARTIST -> split(track)?.lead ?: track.normalized.primary
+            else -> item.artist
+        }
+
+    /**
+     * [track]'s artists split between a Composer row and an Artist row (#1199, [ArtistSplit]); null
+     * for one Artist row.
+     */
+    fun split(track: TrackState): ArtistSplit? = track.artistSplit(names::sameName)
 
     /** What [item]'s insight on [track] is about, its entity in the synthesis cache's key (#240). */
     fun entity(
@@ -251,13 +267,6 @@ class ItemInsights(
         when (item) {
             InsightItem.SONG -> {
                 CardEntity.Track(track.normalized, track.nowPlaying.duration)
-            }
-
-            InsightItem.ARTIST -> {
-                val primary = track.normalized.primary
-                val resolved = resolvedArtists(track)
-                val artist = resolved.firstOrNull { names.sameName(it.name, primary) } ?: resolved.firstOrNull()
-                artist?.let(CardEntity.Artist::of) ?: CardEntity.Artist(primary, null)
             }
 
             InsightItem.ALBUM -> {
@@ -274,7 +283,26 @@ class ItemInsights(
                         .copy(year = year)
                 }
             }
+
+            else -> {
+                artistEntity(item, track)
+            }
         }
+
+    // The artist [item]'s insight on [track] is about ([artistOf]): by its MusicBrainz id when the
+    // resolution names it, else by its name. The primary artist, which the resolution may name
+    // otherwise, takes the first artist it names (#522); another artist only its own (#1199).
+    private fun artistEntity(
+        item: InsightItem,
+        track: TrackState,
+    ): CardEntity.Artist? {
+        val subject = artistOf(item, track) ?: return null
+        val resolved = resolvedArtists(track)
+        val artist =
+            resolved.firstOrNull { names.sameName(it.name, subject) }
+                ?: resolved.firstOrNull()?.takeIf { subject == track.normalized.primary }
+        return artist?.let(CardEntity.Artist::of) ?: CardEntity.Artist(subject, null)
+    }
 
     // [track]'s artists with their MusicBrainz ids: the resolution's, made on this play; else, for a
     // track served whole from the retrieval cache, which makes none, those MusicBrainz's kept result
@@ -329,7 +357,7 @@ class ItemInsights(
         return when {
             own == null || shown == null -> null
             item == InsightItem.SONG -> songEvidence(own, shown, track, settings)
-            item == InsightItem.ARTIST -> artistEvidence(own, shown, track, settings)
+            item.aboutArtist -> artistEvidence(item, own, shown, track, settings)
             album == null -> null
             else -> albumEvidence(album, shown, settings, own, track)
         }
@@ -375,7 +403,8 @@ class ItemInsights(
         val all = own.with(pages.filter { settings.isEnabled(it.source) && it.url !in quoted }, hasher)
         val song = all.without(hasher) { it.scope == Scope.ARTIST }
         if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
-        val artist = artistLines(all, track).mapTo(mutableSetOf()) { it.id }
+        val lead = artistOf(InsightItem.ARTIST, track).orEmpty()
+        val artist = artistLines(all, track, lead).mapTo(mutableSetOf()) { it.id }
         val set = all.without(hasher) { it.scope == Scope.ARTIST && it.id !in artist }
         // No line at all, not even the release: nothing to write from, and nothing for the plain sentence
         // to be true of; no call, whatever is known of the artist.
@@ -406,14 +435,16 @@ class ItemInsights(
     // no search is due, and the evidence is unreachable, gathered again, as an album's is when a source
     // fails; so too with no search to make (#1163: MusicBrainz not reached leaves a well-known band with
     // no line, Last.fm's unverified, Wikipedia's article unconfirmed), naming those sources.
+    @Suppress("LongParameterList") // The item, the lines it is from and maps to, and what it is about.
     private suspend fun artistEvidence(
+        item: InsightItem,
         own: EvidenceSet,
         shown: EvidenceSet,
         track: TrackState,
         settings: Settings,
     ): ItemEvidence {
-        val query = artistQuery(track)
-        val (english, found) = artistLines(own, track).partition { it.found == null }
+        val query = artistQuery(item, track)
+        val (english, found) = artistLines(own, track, artistOf(item, track).orEmpty()).partition { it.found == null }
         val subject = query?.let { LanguageSubject.Artist(it.name, it.mbid) }
         val lines = english.map(::draftOf) + inLanguage(subject, found, settings)
         val held = if (lines.isEmpty()) heldOf(track, settings) else null
@@ -446,10 +477,10 @@ class ItemInsights(
         item: InsightItem,
         settings: Settings,
     ): Boolean =
-        when (item) {
-            InsightItem.ARTIST -> artistWeb != null && usesWebSearch(settings)
-            InsightItem.ALBUM -> albums?.searchesWeb == true && settings.isEnabled(SourceId.WEB)
-            InsightItem.SONG -> songWeb != null && usesWebSearch(settings)
+        when {
+            item.aboutArtist -> artistWeb != null && usesWebSearch(settings)
+            item == InsightItem.ALBUM -> albums?.searchesWeb == true && settings.isEnabled(SourceId.WEB)
+            else -> songWeb != null && usesWebSearch(settings)
         }
 
     // Whether the artist (#912) or the song (#958) may be searched for under [settings]: *AI web
@@ -470,9 +501,12 @@ class ItemInsights(
         }
     }
 
-    // The artist of [track]'s artist's card, as its web lines are searched for and kept by (#912).
-    private fun artistQuery(track: TrackState): ArtistWebQuery? =
-        (entity(InsightItem.ARTIST, track) as? CardEntity.Artist)
+    // The artist of [item]'s card on [track], as its web lines are searched for and kept by (#912).
+    private fun artistQuery(
+        item: InsightItem,
+        track: TrackState,
+    ): ArtistWebQuery? =
+        (entity(item, track) as? CardEntity.Artist)
             ?.takeIf { it.name.isNotBlank() }
             ?.let { ArtistWebQuery(it.name, it.mbid) }
 
@@ -602,7 +636,7 @@ class ItemInsights(
         when {
             !evidence.webDue -> ItemSearch.None
             item == InsightItem.ALBUM -> albumSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
-            item == InsightItem.ARTIST -> artistSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
+            item.aboutArtist -> artistSearch(item, track, settings, evidence, sent, WriteGates(mayPay, reserve))
             else -> songSearch(track, settings, evidence, sent, WriteGates(mayPay, reserve))
         }
 
@@ -657,8 +691,10 @@ class ItemInsights(
                 ?.let { gates.reserve(it) }
         }
 
-    // The artist's web lines for a write (#912), as [search] says.
+    // [item]'s artist's web lines for a write (#912), as [search] says.
+    @Suppress("LongParameterList") // The item, what it is searched for from and under, and its gates.
     private suspend fun artistSearch(
+        item: InsightItem,
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
@@ -666,10 +702,10 @@ class ItemInsights(
         gates: WriteGates,
     ): ItemSearch {
         val lookup = artistWeb
-        val query = artistQuery(track)
+        val query = artistQuery(item, track)
         if (lookup == null || query == null) return ItemSearch.None
         val ways = WebWays({ lookup.kept(query) }) { keeping, mayPay -> lookup.search(query, sent, keeping, mayPay) }
-        return keptOrSearched(InsightItem.ARTIST, track, settings, evidence, gates, ways)
+        return keptOrSearched(item, track, settings, evidence, gates, ways)
     }
 
     // The song's web lines for a write (#958), as [search] says.
@@ -740,10 +776,10 @@ class ItemInsights(
     ): Boolean =
         evidence.webDue &&
             webWay(settings) == AiWebSearch.UP_TO &&
-            when (item) {
-                InsightItem.ARTIST -> artistWeb != null
-                InsightItem.SONG -> songWeb != null
-                InsightItem.ALBUM -> false
+            when {
+                item.aboutArtist -> artistWeb != null
+                item == InsightItem.SONG -> songWeb != null
+                else -> false
             }
 
     /**
@@ -836,20 +872,21 @@ class ItemInsights(
         val name = name(item, track)
         if (access == null || engine == null || name == null) return null
         val subject = ItemPrompt.Subject(item.kind, name)
-        return when (item) {
-            InsightItem.ARTIST -> artistQuestion(subject, first, track)
+        return when {
+            item.aboutArtist -> artistQuestion(item, subject, first, track)
             else -> songQuestion(subject, first, track, settings, evidence)
         }?.let { (question, keep) -> Searching(access, engine, question, keep) }
     }
 
-    // The artist's question (#912), and where its pages are kept.
+    // [item]'s artist's question (#912), and where its pages are kept.
     private fun artistQuestion(
+        item: InsightItem,
         subject: ItemPrompt.Subject,
         first: CardKey,
         track: TrackState,
     ): Pair<ItemWebQuestion, suspend (List<EvidenceDraft>) -> Unit>? {
         val lookup = artistWeb
-        val query = artistQuery(track)
+        val query = artistQuery(item, track)
         if (lookup == null || query == null) return null
         val line = { page: WebPage -> lookup.pageLine(query, page) }
         val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now(), line, dates())
@@ -1033,23 +1070,24 @@ class ItemInsights(
         return ItemEvidence(set, matching(set.lines, shown), unreachable = evidence.unreachable, held = held)
     }
 
-    // The artist-level lines of the track's [own] evidence about the primary artist: all of them when
-    // [track] credits one; when it credits several, those its adapter says are about the primary
-    // artist ([EvidenceLine.about]), so a collaboration gives the lines a solo track does, whatever
-    // their text names. A line that does not say (kept before #522) is taken when it names the artist.
+    // The artist-level lines of the track's [own] evidence about [artist] (the primary artist, or the
+    // one an item is about, #1199): all of them when [track] credits one and it is [artist]; else
+    // those its adapter says are about [artist] ([EvidenceLine.about]), so a collaboration gives the
+    // lines a solo track does, whatever their text names. A line that does not say (kept before #522)
+    // is taken when it names the artist.
     private fun artistLines(
         own: EvidenceSet,
         track: TrackState,
+        artist: String,
     ): List<EvidenceLine> {
         // Not the counts and lists of what many listeners did (Last.fm's listeners, tags, similar
         // artists: `EvidenceLine.aggregate`), whose numbers and order change from one lookup to the
         // next: in the artist's fingerprint, they would key the same artist anew on each.
         val lines = own.lines.filter { it.scope == Scope.ARTIST && !it.aggregate }
-        val primary = track.normalized.primary
-        if (track.normalized.artists.size <= 1) return lines
-        val key = " ${names.key(primary)} "
+        if (track.normalized.artists.size <= 1 && artist == track.normalized.primary) return lines
+        val key = " ${names.key(artist)} "
         return lines.filter { line ->
-            line.about?.let { names.sameName(it, primary) } ?: (key.isNotBlank() && key in " ${names.key(line.text)} ")
+            line.about?.let { names.sameName(it, artist) } ?: (key.isNotBlank() && key in " ${names.key(line.text)} ")
         }
     }
 
@@ -1114,9 +1152,13 @@ class ItemInsights(
         val lookup = languageLines ?: return
         val own = ownEvidence(track, settings)
         if (own == null || settings.trackLanguageSearch == TrackLanguageSearch.OFF) return
-        artistQuery(track)?.let { query ->
-            val found = artistLines(own, track).filter { it.found != null }
-            keep(lookup, LanguageSubject.Artist(query.name, query.mbid), found.map(::draftOf))
+        // The artist's and the composer's (#1199).
+        for (item in listOf(InsightItem.ARTIST, InsightItem.COMPOSER)) {
+            val artist = artistOf(item, track) ?: continue
+            artistQuery(item, track)?.let { query ->
+                val found = artistLines(own, track, artist).filter { it.found != null }
+                keep(lookup, LanguageSubject.Artist(query.name, query.mbid), found.map(::draftOf))
+            }
         }
         (entity(InsightItem.ALBUM, track) as? CardEntity.Album)?.let { album ->
             val found = albumInLanguage(album, own)
@@ -1373,18 +1415,26 @@ class ItemInsights(
             attempt { lookup.renewWeb(albumQuery) }
         }
         val artist = artistWeb
-        val query = artistQuery(track)
-        if (item == InsightItem.ARTIST && artist != null && query != null) attempt { artist.renew(query) }
+        val query = if (item.aboutArtist) artistQuery(item, track) else null
+        if (artist != null && query != null) attempt { artist.renew(query) }
         if (item ==
             InsightItem.SONG
         ) {
             songWeb?.let { attempt { it.renew(SongWebQuery(track.normalized, roles = track.roles)) } }
         }
         val subject =
-            when (item) {
-                InsightItem.ARTIST -> query?.let { LanguageSubject.Artist(it.name, it.mbid) }
-                InsightItem.ALBUM -> album?.let { LanguageSubject.Album(it.title, it.artist, it.group, it.performers) }
-                InsightItem.SONG -> null
+            when {
+                item.aboutArtist -> query?.let { LanguageSubject.Artist(it.name, it.mbid) }
+                item == InsightItem.ALBUM ->
+                    album?.let {
+                        LanguageSubject.Album(
+                            it.title,
+                            it.artist,
+                            it.group,
+                            it.performers,
+                        )
+                    }
+                else -> null
             }
         if (subject != null) renewInLanguage(subject, evidence)
     }

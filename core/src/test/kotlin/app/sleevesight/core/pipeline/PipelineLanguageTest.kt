@@ -535,7 +535,7 @@ class PipelineLanguageTest {
             val none =
                 ItemInsights(AiAccess(provider, Secret("sk-test")), cache, JvmHasher, NameMatcher(JvmAccentFolder))
             val noLines =
-                InsightItem.entries.associateWith { item ->
+                ROW_ITEMS.associateWith { item ->
                     none.key(item, plain, none.evidence(item, plain, off)!!, off)
                 }
             assertEquals(noLines[InsightItem.ALBUM], keyOf(InsightItem.ALBUM, plain))
