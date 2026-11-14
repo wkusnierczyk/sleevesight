@@ -1560,7 +1560,13 @@ class AppItemNotes(
     ) = publish(work) {
         gathered.update { kept ->
             kept.mapValues { (at, other) ->
-                val same = at != from && at.item == from.item && at.item != InsightItem.SONG && at.entity == from.entity
+                // The same album, or the same artist whichever item it is (#1199: the composer's, the lead
+                // performer's, a chip's); never the song's, whose evidence is its track's.
+                val same =
+                    at != from &&
+                        at.item.kind == from.item.kind &&
+                        from.item != InsightItem.SONG &&
+                        at.entity == from.entity
                 // Never the evidence of a search that kept nothing, with a search still due.
                 val given =
                     if (same && other.evidence.webDue && !found.webDue) {
