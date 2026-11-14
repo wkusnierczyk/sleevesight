@@ -48,8 +48,6 @@ At the bottom, a link opens the privacy policy in your browser.
 
 {% include screenshots.html ids="first-run-top" %}
 
-<!-- screenshot (0.6.6) to retake if it shows the line: first-run-top, the first line under What leaves the phone now lists the sources (LRCLIB among them), the track's length to LRCLIB, and Exa's searches -->
-
 ## 2. Notification access
 
 **Why.** A player reports what it is playing in a *media session*, and Android lists other apps' media sessions only to an app with notification access. Sleevesight reads the media sessions of the players you follow, not your notifications. The access cannot be limited to one app, so Android's screen for it warns that the app could read all your notifications.
@@ -84,8 +82,6 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 {% include screenshots.html ids="settings-ai-services-no-key" %}
 
-<!-- screenshot (0.6.6) to retake: settings-ai-services-no-key, AI services with no key saved, the descriptions folded to one line, down to Retry when the AI fails (dimmed, no AI service on) -->
-
 ## 4. Choosing the sources
 
 **The sources.** The sources are what the AI may use, under *Sources* in the settings, each with a link to its website:
@@ -100,8 +96,6 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 **What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists, and for the genre labels also the title and the album, Wikidata only identifiers, LRCLIB also the album and the track's length, and Exa also the film or show a title says it is from); while the album's insight is open, Wikipedia and Last.fm also get the album's name, and MusicBrainz and Wikidata its identifiers. A source switched off receives nothing. Under *Genres* you choose whose tags give the genre labels, or, with *Show genres* off, none at all. With *Proactive* on, as it is by default, under *Insights*, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; off sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
 
 {% include screenshots.html ids="settings-sources-defaults settings-sources-ai-knowledge" %}
-
-<!-- screenshot (0.6.6) to retake: settings-sources-defaults (MusicBrainz with Wait when busy at 15 s, Wikipedia and Wikidata, Last.fm off needing its key) and settings-sources-ai-knowledge (LRCLIB on, Exa web search off needing its key, Search in the track's language at If needed, AI service knowledge dimmed with its line on no AI service), the descriptions folded, no AI service set up -->
 
 ## 5. Playing music
 
@@ -123,8 +117,6 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 {% include screenshots.html ids="home-playing key-insights sources-unfolded" %}
 
-<!-- screenshot (0.6.6) to retake: key-insights, with the Song, Artist and Album buttons (AI mark) under the insight; sources-unfolded, with the ? line Explain the source chips under the table -->
-
 ## 6. Write, automatic writing, and the history
 
 **Write insight.** Each time the app starts afresh, nothing is written automatically until you act in it: a tap on *Write insight*, which writes the track playing, or a writing mode chosen in the menu beside it (the current one included), which writes nothing by itself. Until then *Key insights* says *Tap Write insight to have it written from the sources below.* That first action is what lets automatic writing go on. Android usually keeps the app's process alive after you leave it, often for days, so coming back keeps it going; a restart of the phone, an update, or the system ending the app asks for it again.
@@ -145,8 +137,6 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 {% include screenshots.html ids="write-insight-waiting as-written-previously settings-insights settings-insights-saver" %}
 
-<!-- screenshot (0.6.6) to retake: as-written-previously, the line now "As written previously. Tap Rewrite insight to have AI rewrite the insight with …" (after a model change, or Look again finding something new); settings-insights (Show insights, Proactive, Look up in the background, Reactive as Demand / Skip / Change buttons) and settings-insights-saver (Saver with its 3 / 5 / 10 buttons), the descriptions folded, no check marks -->
-
 ## 7. Changing settings later, and clearing what is kept
 
 **Settings.** Every choice above can be changed later, and each change is saved at once. [Settings]({{ '/docs/tutorials/settings/' | relative_url }}) describes each one, with its default and what changing it sends or keeps; among those not met above are *Theme* (light, dark or as the phone is, which the theme button on the home screen sets too) and *Theme button*, *Layout* (the sources, the genres and the song's, the artist's and the album's insights in place on the home screen, or each on a page of its own), *Sources on a new track* and *Song, Artist and Album on a new track*, *Font*, *Foldable descriptions*, *Logo intro at start*, *Spin the logo while music plays* and *Restore dismissed messages*, under *Appearance*; how long each source's findings are kept, under *History*; *AI web search*, *Ask AI automatically* and the rows under *Read aloud*, under *Insights*; *Retry when the AI fails*, under *AI services*; and *Only enabled players on Home*, under *Players*.
@@ -161,5 +151,3 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 What a service keeps of the requests it received, such as the AI service for your account, is between you and that service; the [privacy policy]({{ '/privacy.html' | relative_url }}) says more.
 
 {% include screenshots.html ids="settings-history clear-history-dialog" %}
-
-<!-- screenshot (0.6.6) to retake: settings-history, History with the descriptions folded: Keep history for 90 days, Clear history, Look up the track again (Automatically), New session idle trigger 30 minutes -->

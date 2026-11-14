@@ -4,106 +4,171 @@
 # replaces the file and its `version`, and the texts here when what it shows has changed.
 
 first-run-top:
-  version: 0.1.15
+  version: 0.6.6
   caption: The first-run screen
-  alt: "The first-run screen: Sleevesight's intro, then What it reads, and the start of What leaves the phone, and to whom."
+  alt: "The first-run screen: Sleevesight's intro, What it reads, and the start of What leaves the phone, and to whom, which names the sources: MusicBrainz, Wikipedia and Wikidata, Last.fm, LRCLIB, Exa web search."
+
 first-run-access-off:
-  version: 0.1.15
+  version: 0.6.6
   caption: Notification access off
   alt: "The foot of the first-run screen: Notification access is off, why the app needs it, and the Open notification access button."
+
 first-run-access-on:
-  version: 0.1.15
+  version: 0.6.6
   caption: Notification access on
   alt: "The foot of the first-run screen once access is granted: Notification access is on, and the Continue button."
+
 home-nothing-playing:
   version: 0.1.15
   caption: Nothing playing
   alt: "The home screen with nothing playing: Play on Spotify and Play on TIDAL, then the guide, a small picture of the home screen with notes on what each part does, and Hide once and Dismiss."
+
 theme-menu:
   version: 0.1.15
   caption: The theme menu
   alt: "The theme menu open under the header's theme button: Light, Dark, and System, As your phone is, highlighted."
+
 diagnostics-events:
   version: 0.1.15
   caption: Diagnostics
   alt: "The diagnostics screen on its Events tab, beside Track changes and Skip detection: the caches' sizes, then the app's recent steps with their times."
+
 settings-ai-services-no-key:
-  version: 0.1.15
+  version: 0.6.6
   caption: AI services, no key yet
-  alt: "Settings, AI services: Anthropic and OpenAI switched off and greyed, each with Needs your key and a link to set it, and each service's model and reasoning effort."
+  alt: "Settings, AI services, further down: OpenAI and Google switched off, each with Needs your key and a link to set it, and each with its model and reasoning effort; then Retry when the AI fails, dimmed at 30 seconds."
+
 settings-chips:
   version: 0.1.15
   caption: Settings
   alt: "The settings screen with every section closed: a search field, then Players, Sources, AI services, Secrets, Genres, Insights, History, Appearance and About, each with a line on what it holds."
+
 settings-sources-defaults:
-  version: 0.1.15
+  version: 0.6.6
   caption: Sources at their defaults
-  alt: "Settings, Sources at their defaults: MusicBrainz and Wikipedia and Wikidata switched on, Last.fm off and greyed, needing a Last.fm key."
+  alt: "Settings, Sources at their defaults: MusicBrainz on, with Wait when busy at 15 seconds; Wikipedia and Wikidata on; Last.fm off, needing its key; LRCLIB on."
+
 settings-sources-ai-knowledge:
-  version: 0.1.15
+  version: 0.6.6
   caption: Sources, further down
-  alt: "Settings, Sources further down: Last.fm and Exa web search off and greyed, each needing a key, and AI service knowledge switched off."
+  alt: "Settings, Sources further down: LRCLIB on, Exa web search off and needing its key, Search in the track's language at If needed, and AI service knowledge dimmed: no AI service is switched on, so it is not used."
+
 settings-insights:
-  version: 0.1.15
+  version: 0.6.6
   caption: Insights settings
-  alt: "Settings, Insights: Show insights on, Reactive set to On demand, and the start of Proactive."
+  alt: "Settings, Insights at their defaults: Show insights and Proactive on, Look up in the background off, Reactive at Change, and Saver on at 5."
+
 settings-insights-saver:
-  version: 0.1.15
+  version: 0.6.6
   caption: Insights, further down
-  alt: "Settings, Insights further down: Proactive on, Saver greyed out with Stop after 5 track changes away, and Look up in the background on."
+  alt: "Settings, Insights further down: Saver on at 5, Don't repeat artist facts on, AI web search off with Exa web search disabled, Ask AI automatically off, then Read aloud and Music while reading aloud."
+
 settings-ai-web-search:
-  version: 0.1.15
+  version: 0.6.6
   caption: AI web search
   alt: "Settings, Insights: AI web search set to Once, with its line under the buttons, then Ask AI automatically switched on."
+
 settings-history:
-  version: 0.1.15
+  version: 0.6.6
   caption: History settings
-  alt: "Settings, History: Keep history for 90 days, Clear history, and New session idle trigger 30 minutes."
+  alt: "Settings, History: Keep history for 90 days, Clear history, Look up the track again set to Automatically, New session idle trigger 30 minutes, and how long each source's findings are kept."
+
+settings-appearance-layout:
+  version: 0.6.6
+  caption: "Appearance: the layout"
+  alt: "Settings, Appearance from Layout down: Layout at Boxes, Sources on a new track and Song, Artist and Album on a new track both at Folded, Foldable descriptions on, and Descriptions on return at Folded."
+
 clear-history-dialog:
   version: 0.1.15
   caption: Clear history?
   alt: "The Clear history? dialog: what is deleted, what stays, This cannot be undone, and Cancel and Clear."
+
 home-playing:
-  version: 0.1.15
+  version: 0.6.6
   caption: A track playing
-  alt: "The home screen while Spotify plays Already Forgiven by Basia Bulat, from Are You in Love?, 2020: the cover, the progress bar, the title, artist and album, and the Dates, Genres and Lyrics buttons."
+  alt: "The home screen while Spotify plays Ki C' Ki M' by David Krakauer, Modgeist and Karimouche, from Songs of Action (The French Connection): the cover, the progress bar, the title, artists and album, the Dates, Genres and Lyrics buttons, and the start of Key insights."
+
+cover-tracklist:
+  version: 0.6.6
+  caption: The cover turned over
+  alt: "The cover turned over to the tracklist of The Wall's second disc: Disc 2, Hey You marked as playing, each track with its length, and two dots for the two discs."
+
+lyrics-explained:
+  version: 0.6.6
+  caption: The song explained
+  alt: "Lyrics open: Lyrics on Musixmatch, linked from MusicBrainz; then what Hey You is about in four cited sentences, Pages cited with their links, and by Claude Haiku 5.5."
+
 key-insights:
-  version: 0.1.15
+  version: 0.6.6
   caption: An insight
-  alt: "Key insights by Claude Haiku 5.5, with the Read aloud button beside the heading: three sentences, each ending in a citation chip, P1, MB1 and S2; then Report a problem, Write insight and Sources."
+  alt: "Key insights by Claude Haiku 5.5, with Read aloud beside the heading: the insight with its citation chips S2, P1 and S4; Report a problem; Write insight greyed out; the Song, Artist and Album buttons with their names; and Sources."
+
+insight-dimmed:
+  version: 0.6.6
+  caption: Text not backed by the sources
+  alt: "Key insights with its second sentence dimmed and in italics, and the note Dimmed text is not backed by the sources. Above it, Genres with the AI's Techno and Electro and the pages they were found on."
+
+artist-insight:
+  version: 0.6.6
+  caption: The artist's insight
+  alt: "Song closed above; Artist open on Dan Cray Trio, by Claude Haiku 5.5, with three cited sentences and Report a problem; Album closed below."
+
 sources-unfolded:
-  version: 0.1.15
+  version: 0.6.6
   caption: Sources unfolded
-  alt: "Sources unfolded: each source with its chip and what it found, the legend Shown, Hidden and No results, and the lines the insight cites, each with its chip, text and link."
+  alt: "Sources unfolded: each source with its chip and what it found, Last.fm in grey with Found the artist (unverified), the line Explain the source chips, then Showing 8 of 11 entries and the cited lines, each with its chip, text and link."
+
+sources-legend:
+  version: 0.6.6
+  caption: The source chips explained
+  alt: "Sources with the legend open under the table: Source chips, then Verified, cited in the insight; Unverified, not cited in the insight; Hidden, tap to show; No results from this source."
+
 sources-page:
-  version: 0.1.15
+  version: 0.6.6
   caption: Sources as a page
-  alt: "Sources on a page of its own, with a back arrow: the same table of sources and the cited lines."
+  alt: "Sources on a page of its own, with a back arrow: the same table of sources, Explain the source chips, and the cited lines."
+
 genres-ai-genre:
   version: 0.1.15
   caption: A genre the AI service named
   alt: "Genres open on Soul, marked AI: what soul is, from Wikipedia, the Why is this soul? button, and the genre tags with Claude Haiku 5.5 among their sources."
+
+genres-weak-instrumental:
+  version: 0.6.6
+  caption: A weak genre
+  alt: "Genres for Treefingers by Radiohead, open on Instrumental, in italics: what instrumental music is, from Wikipedia; Only Last.fm's tags for this track give Instrumental, and neither the artist's nor the album's tags include it; and Why is this instrumental?"
+
+genre-why-answer:
+  version: 0.6.6
+  caption: Why is this instrumental?
+  alt: "Why is this instrumental? answered by Claude Haiku 5.5 for Treefingers: four sentences citing the AI service's own knowledge, MusicBrainz, Last.fm and Wikidata."
+
 genres-ask-ai:
   version: 0.1.15
   caption: Ask AI offered
   alt: "Genres for I Will Die Alone by Jessie Payo: The sources give no genres, and the Ask AI button."
-genre-no-definition:
-  version: 0.1.15
-  caption: No definition from Wikipedia
-  alt: "Genres open on Acoustic: No definition from Wikipedia for this genre, Ask AI, and Why is this acoustic?"
+
 dates-ask-ai-web:
   version: 0.1.15
   caption: Dates answered from the web
   alt: "Dates: MusicBrainz didn't find this song; then the AI's answer, This album was released on 6 October 2017 and This track was first released on this album, each From qobuz.com, by Claude Haiku 5.5."
+
 genres-ask-ai-nothing:
   version: 0.1.15
   caption: Nothing from the AI service
   alt: "Genres: The sources give no genres, and under it Claude Haiku 5.5 couldn't say from its own knowledge."
+
 write-insight-waiting:
   version: 0.1.15
   caption: Waiting for Write insight
   alt: "Key insights waiting for the first tap: Tap Write insight to have it written from the sources below, and the Write insight button with its arrow."
+
 as-written-previously:
-  version: 0.1.15
+  version: 0.6.6
   caption: As written previously
-  alt: "An insight written earlier, with the line As written previously. New findings from sources: tap Rewrite insight to use them, a paid call; and the Rewrite insight button."
+  alt: "An insight written earlier, with the line As written previously. Tap Rewrite insight to have AI rewrite the insight with Claude Haiku 5.5 medium effort. Then Rewrite insight, and the Song, Artist and Album buttons."
+
+insight-resumed:
+  version: 0.6.6
+  caption: Automatic writing resumed
+  alt: "Key insights after a pause: Automatic writing was paused while Sleevesight was not on screen, and resumes now. This track wasn't written: tap Write insight to have it written. Then Write insight."
