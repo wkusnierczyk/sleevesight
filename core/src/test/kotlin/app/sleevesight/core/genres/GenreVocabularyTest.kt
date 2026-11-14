@@ -96,6 +96,10 @@ class GenreVocabularyTest {
                 listOf("synth-pop", "synthpop"),
                 listOf("pop punk", "pop-punk"),
                 listOf("neo soul", "neo-soul"),
+                // #1098: Wikidata's names for three genres the list had.
+                listOf("r&b", "rhythm and blues"),
+                listOf("edm", "electronic dance music"),
+                listOf("score", "film score"),
             )
         for (spellings in folded) {
             assertEquals(1, vocabulary.labelsFor(spellings).size, "$spellings")
@@ -106,6 +110,10 @@ class GenreVocabularyTest {
             assertEquals(listOf("Rock 'n' Roll"), vocabulary.labelsFor(listOf(spelling)).map { it.label }, spelling)
         }
         assertEquals(listOf("IDM", "EBM", "EDM"), vocabulary.labelsFor(listOf("idm", "ebm", "edm")).map { it.label })
+        assertEquals(
+            listOf("R&B", "EDM"),
+            vocabulary.labelsFor(listOf("rhythm and blues", "electronic dance music")).map { it.label },
+        )
     }
 
     @Test

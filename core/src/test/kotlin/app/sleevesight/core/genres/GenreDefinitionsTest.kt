@@ -161,7 +161,8 @@ class GenreDefinitionsTest {
         // #852, each article's lead checked on 2026-11-02 to say what the tag means, and #1011's on
         // 2026-11-06. Each tag has no MusicBrainz genre that fits, or, for *classic rock* and
         // *singer-songwriter* (2026-10-27), and *big band*, *vocal jazz* and *orchestral*
-        // (2026-11-06), a genre whose Wikidata item has no English article.
+        // (2026-11-06), a genre whose Wikidata item has no English article. #1098 (2026-11-14): *chanson*,
+        // which MusicBrainz has only as one country's, and *film score*, a spelling of *score*.
         val named =
             mapOf(
                 "acoustic" to "Acoustic music",
@@ -176,6 +177,8 @@ class GenreDefinitionsTest {
                 "vocal jazz" to "Vocal jazz",
                 "orchestral" to "Orchestra",
                 "world music" to "World music",
+                "chanson" to "Chanson",
+                "film score" to "Film score",
             )
 
         fun articleOf(tag: String) = vocabulary.wikipediaArticle(checkNotNull(vocabulary.identity(tag)))
@@ -226,6 +229,8 @@ class GenreDefinitionsTest {
                 "score" to "a kind of release in MusicBrainz, not a genre",
                 "choral" to "MusicBrainz has none; choral symphony is one form of it",
                 "world music" to "MusicBrainz has none; a catch-all of regions, not one style",
+                "chanson" to "MusicBrainz has only chanson française, one country's chanson (#1098)",
+                "film score" to "a spelling of score, a kind of release in MusicBrainz (#1098)",
             )
         val without =
             vocabulary.tags.filter {
