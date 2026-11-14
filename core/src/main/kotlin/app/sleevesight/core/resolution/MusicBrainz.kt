@@ -214,6 +214,8 @@ data class MbArtistSearch(
  *
  * @property begin the relationship's begin date as MusicBrainz gives it, null when it gives none: for a
  *   work's `composer`, when the work was composed (`1788` for Mozart's K. 545), for *Dates* (#1132).
+ * @property end the relationship's end date, as [begin]: for a work's `composer`, when its composition
+ *   ended (`1924-03` for Puccini's *Turandot*, begun `1921-03`; `1788` for K. 545, as its begin).
  */
 data class MbArtistRelation(
     val type: String,
@@ -221,6 +223,7 @@ data class MbArtistRelation(
     val artistName: String,
     val attributes: List<String>,
     val begin: String? = null,
+    val end: String? = null,
 )
 
 /**

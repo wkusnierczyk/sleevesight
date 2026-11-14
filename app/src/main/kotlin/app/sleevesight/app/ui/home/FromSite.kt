@@ -17,12 +17,23 @@ import app.sleevesight.app.ui.theme.linkedParts
  * style: the page's site ([siteOf]: its host, without `www.`) a link to the page ([url]).
  */
 @Composable
-internal fun FromSite(url: String) {
-    val site = siteOf(url)
+internal fun FromSite(url: String) = FromSource(siteOf(url), url, AI_SEARCH_FROM_TAG)
+
+/**
+ * "From {name}" on a line of its own in the credit's style, [name] a link to [url], tagged [tag]: under
+ * a value *Ask AI* found on the web ([FromSite]), and under a date a source gives (#1132: "From
+ * MusicBrainz" under when the music was composed, its page the work's).
+ */
+@Composable
+internal fun FromSource(
+    name: String,
+    url: String,
+    tag: String,
+) {
     LinkedText(
-        linkedParts(stringResource(R.string.home_ai_from), TextPart.Link(site, url)),
+        linkedParts(stringResource(R.string.home_ai_from), TextPart.Link(name, url)),
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.testTag(AI_SEARCH_FROM_TAG),
+        modifier = Modifier.testTag(tag),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
