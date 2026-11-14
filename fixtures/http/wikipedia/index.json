@@ -52,12 +52,15 @@
   "query": {
    "action": "query",
    "titles": "Baby, Please Don't Go",
-   "prop": "extracts",
+   "prop": "extracts|revisions",
    "exintro": "1",
    "explaintext": "1",
    "redirects": "1",
    "format": "json",
-   "formatversion": "2"
+   "formatversion": "2",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0"
   },
   "status": 200,
   "file": "query-baby-please-don-t-go.json"
@@ -115,12 +118,15 @@
   "query": {
    "action": "query",
    "titles": "Fisherman's Blues (song)",
-   "prop": "extracts",
+   "prop": "extracts|revisions",
    "exintro": "1",
    "explaintext": "1",
    "redirects": "1",
    "format": "json",
-   "formatversion": "2"
+   "formatversion": "2",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0"
   },
   "status": 200,
   "file": "query-fisherman-s-blues-song.json"
@@ -330,12 +336,15 @@
   "query": {
    "action": "query",
    "titles": "New York Groove",
-   "prop": "extracts",
+   "prop": "extracts|revisions",
    "exintro": "1",
    "explaintext": "1",
    "redirects": "1",
    "format": "json",
-   "formatversion": "2"
+   "formatversion": "2",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0"
   },
   "status": 200,
   "file": "query-new-york-groove.json"
@@ -346,12 +355,15 @@
   "query": {
    "action": "query",
    "titles": "Ode to Newfoundland",
-   "prop": "extracts",
+   "prop": "extracts|revisions",
    "exintro": "1",
    "explaintext": "1",
    "redirects": "1",
    "format": "json",
-   "formatversion": "2"
+   "formatversion": "2",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0"
   },
   "status": 200,
   "file": "query-ode-to-newfoundland.json"
@@ -377,12 +389,15 @@
   "query": {
    "action": "query",
    "titles": "Roll Over Beethoven",
-   "prop": "extracts",
+   "prop": "extracts|revisions",
    "exintro": "1",
    "explaintext": "1",
    "redirects": "1",
    "format": "json",
-   "formatversion": "2"
+   "formatversion": "2",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0"
   },
   "status": 200,
   "file": "query-roll-over-beethoven.json"
@@ -408,12 +423,15 @@
   "query": {
    "action": "query",
    "titles": "Snowbird (song)",
-   "prop": "extracts",
+   "prop": "extracts|revisions",
    "exintro": "1",
    "explaintext": "1",
    "redirects": "1",
    "format": "json",
-   "formatversion": "2"
+   "formatversion": "2",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0"
   },
   "status": 200,
   "file": "query-snowbird-song.json"
@@ -439,12 +457,15 @@
   "query": {
    "action": "query",
    "titles": "Sundown (Gordon Lightfoot song)",
-   "prop": "extracts",
+   "prop": "extracts|revisions",
    "exintro": "1",
    "explaintext": "1",
    "redirects": "1",
    "format": "json",
-   "formatversion": "2"
+   "formatversion": "2",
+   "rvprop": "content",
+   "rvslots": "main",
+   "rvsection": "0"
   },
   "status": 200,
   "file": "query-sundown-gordon-lightfoot-song.json"

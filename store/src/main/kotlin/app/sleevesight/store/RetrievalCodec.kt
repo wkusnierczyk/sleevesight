@@ -70,7 +70,7 @@ internal object RetrievalCodec {
      * The work's librettists (#1274, [WorkLyrics.librettists]) are an optional field too, made a miss
      * the same way (MusicBrainz's extraction version 19).
      * The genres Wikidata states (#1098, [SourceResult.statedGenres]) are an optional field too, made a
-     * miss the same way (Wikipedia's extraction version 8).
+     * miss the same way (Wikipedia's extraction version 9).
      */
     const val FORMAT: Int = 7
 

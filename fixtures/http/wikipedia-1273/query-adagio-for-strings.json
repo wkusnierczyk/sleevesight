@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 643728,
+    "ns": 0,
+    "title": "Adagio for Strings",
+    "extract": "Adagio for Strings is a work by Samuel Barber arranged for string orchestra from the second movement of his String Quartet, Op. 11.\nBarber finished the arrangement in 1936, the same year that he wrote the quartet. It was performed for the first time on November 5, 1938, by Arturo Toscanini conducting the NBC Symphony Orchestra in a radio broadcast from NBC Studio 8H. Toscanini also conducted the piece on his South American tour with the NBC Symphony in 1940.\nIts reception has generally been positive, with Alexander J. Morin writing that Adagio for Strings is \"full of pathos and cathartic passion\" and that it \"rarely leaves a dry eye\". The music is the setting for Barber's 1967 choral arrangement of Agnus Dei. It has been called \"America's semi-official music for mourning.\" Adagio for Strings has been featured in many TV and movie soundtracks.",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1938 musical work by Samuel Barber}}\n{{About|the composition by Samuel Barber}}\n{{Use mdy dates|date=February 2023}}\n{{Italic title}}\n{{Infobox musical composition\n| name      = ''Adagio for Strings''\n| composer  = [[Samuel Barber]]\n| image     =Samuel Barber.jpg|image_caption=Samuel Barber, photographed by [[Carl Van Vechten]], 1944\n| year      = {{Start date|1936}}\n| key       = [[B-flat minor|B{{music|flat}} minor]]\n| based_on  = Barber's ''[[String Quartet (Barber)|String Quartet]]''\n| duration  = Approximately eight minutes\n| scoring   = [[String orchestra]]\n| premiere_date = {{start date|1938|11|05}}<ref>[https://www.loc.gov/programs/static/national-recording-preservation-board/documents/ADAGIO%20FOR%20STRINGS.pdf Adagio for Strings] by Cary O'Dell, [[Library of Congress]], [[National Recording Registry]]</ref>\n| premiere_conductor  = [[Arturo Toscanini]]\n| premiere_location   = NBC [[Studio 8H]], New York City\n| premiere_performers =[[NBC Symphony Orchestra]]\n| misc     =\n  {{Audio sample\n | type        = song\n | file        = Adagio for Strings-Samuel Barber.ogg\n | description = 30-second sample of ''Adagio for Strings''\n}}\n}}\n\n'''''Adagio for Strings''''' is a work by [[Samuel Barber]] arranged for [[string orchestra]] from the second movement of his [[String Quartet (Barber)|String Quartet, Op. 11]].\n\nBarber finished the arrangement in 1936, the same year that he wrote the quartet. It was performed for the first time on November 5, 1938, by [[Arturo Toscanini]] conducting the [[NBC Symphony Orchestra]] in a radio broadcast from NBC [[Studio 8H]]. Toscanini also conducted the piece on his South American tour with the NBC Symphony in 1940.\n\nIts reception has generally been positive, with Alexander J. Morin writing that ''Adagio for Strings'' is \"full of [[pathos]] and [[catharsis|cathartic]] [[passion (emotion)|passion]]\" and that it \"rarely leaves a dry eye\".<ref name=\"Third Ear?\"/> The music is the setting for Barber's 1967 choral arrangement of ''[[Agnus Dei (Barber)|Agnus Dei]]''. It has been called \"America's semi-official music for mourning.\" ''Adagio for Strings'' has been featured in many TV and movie soundtracks."
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

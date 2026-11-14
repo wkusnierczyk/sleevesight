@@ -1,0 +1,24 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "pageid": 9379555,
+    "ns": 0,
+    "title": "Nocturnes, Op. 9 (Chopin)",
+    "extract": "The Nocturnes, Op. 9 are a set of three nocturnes for solo piano written by Frédéric Chopin between 1831 and 1832, published in 1832, and dedicated to Madame Marie Pleyel. These were Chopin's first published set of nocturnes. The second nocturne of the work is often regarded as Chopin's most famous piece.\n\n",
+    "revisions": [
+     {
+      "slots": {
+       "main": {
+        "contentmodel": "wikitext",
+        "contentformat": "text/x-wiki",
+        "content": "{{Short description|1832 set of three solo piano pieces}}{{More citations needed|date=June 2025}}[[File:Chopin nocturne op9 1a.png|thumb|400px|The opening bars and main theme of No. 1]]\n\nThe '''Nocturnes, Op. 9''' are a set of three [[Nocturnes (Chopin)|nocturnes]] for solo piano written by [[Frédéric Chopin]] between 1831 and 1832, published in 1832, and dedicated to Madame [[Marie Pleyel]]. These were Chopin's first published set of nocturnes. The second nocturne of the work is often regarded as Chopin's most famous piece.<ref name=\"Allmusic\">{{cite web|url={{AllMusic|class=work|id=c260478|pure_url=yes}} |title=Nocturnes (3) for piano, Op. 9 |first=Blair |last=Johnston}}</ref><ref>{{cite web|last=Tomaszewski|first=Mieczysław|url=https://chopin.nifc.pl/en/chopin/kompozycja/154_nocturne-in-e-flat-major|title=Nocturne in E flat major, Op. 9 No. 2|website=Narodowy Instytut Fryderyka Chopina|access-date=June 25, 2022}}</ref>"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

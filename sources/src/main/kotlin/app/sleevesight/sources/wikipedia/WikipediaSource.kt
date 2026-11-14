@@ -19,6 +19,7 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistRoles
+import app.sleevesight.core.sources.ComposedDate
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -97,7 +98,7 @@ class WikipediaSource(
         val verdicts =
             credits.mapIndexed { i, artist -> artist.takeIf { kept[i] == null }?.let { artist(it, pages[it.name]) } }
         val retrievedAt = clock.now()
-        val songLines = findings.song?.let { lines(it, track, retrievedAt) }
+        val songLines = findings.song?.let { lines(it, track, retrievedAt, song = true) }
         if (songLines?.unreachable == true) findings.unreachable = true
         val parts =
             credits.mapIndexed { i, artist ->
@@ -121,9 +122,9 @@ class WikipediaSource(
             evidence,
             start.elapsedNow(),
             rejections = findings.rejections,
-            // When the music was composed, as the song's item says (#1132): its own song's, or for a
-            // cover the original's, whose music it is.
-            composed = findings.song?.let { ComposedDates.ofItem(it.item) },
+            // When the music was composed, as the song's article's infobox says (#1273), else its item
+            // (#1132): its own song's, or for a cover the original's, whose music it is.
+            composed = findings.song?.let { songLines?.composed ?: ComposedDates.ofItem(it.item) },
             freshUntil = parts.mapNotNull { it.freshUntil }.minOrNull(),
             // Every credited artist's article is looked up, and its finding, found or not, is about
             // the artist (#420): only a track with no artist to look up is about the track alone.
@@ -411,25 +412,33 @@ class WikipediaSource(
         return ArtistVerdict(item?.let { check.artist(it, artist) }, unreachable)
     }
 
-    /** An article's lines, and whether its lead could not be read. */
+    /**
+     * An article's lines, whether its lead could not be read, and for a song's, when its infobox says
+     * the music was composed (#1273).
+     */
     private class Lines(
         val drafts: List<EvidenceDraft>,
         val unreachable: Boolean,
+        val composed: ComposedDate? = null,
     )
 
+    // A [song]'s article is read with its opening section's wikitext, in the same request, for when its
+    // infobox says it was composed (#1273); an artist's without.
     private suspend fun lines(
         accepted: Verdict.Accepted,
         track: NormalizedTrack,
         retrievedAt: Instant,
+        song: Boolean = false,
     ): Lines {
         val title = accepted.item.enwiki
         var unreachable = false
-        val lead =
-            when (val found = title?.let { wikipedia.lead(it) }) {
+        val found =
+            when (val read = title?.let { if (song) wikipedia.songLead(it) else wikipedia.lead(it).asLead() }) {
                 null -> null
-                is Lookup.Found -> found.value
+                is Lookup.Found -> read.value
                 else -> null.also { unreachable = true }
             }
+        val lead = found?.text
         val subjects =
             listOfNotNull(accepted.item.label, track.title.takeIf { accepted.scope != Scope.ARTIST })
         val sentences = lead?.let { sentences(it, subjects, names) }.orEmpty()
@@ -437,7 +446,9 @@ class WikipediaSource(
             sentences.map {
                 EvidenceDraft(SourceId.WIKIPEDIA, accepted.scope, it, title?.let(::articleUrl), retrievedAt)
             }
-        return Lines(quoted + WikidataEvidence.lines(accepted, retrievedAt), unreachable)
+        val composed =
+            found?.opening?.let { wikitext -> title?.let { ComposedDates.ofInfobox(wikitext, articleUrl(it)) } }
+        return Lines(quoted + WikidataEvidence.lines(accepted, retrievedAt), unreachable, composed)
     }
 
     companion object {
@@ -498,11 +509,13 @@ class WikipediaSource(
          * [ARTIST_PART] stays. 7: a composed work's part with no Wikidata item of its own, and no
          * article found by name, is checked by the whole work's item (`IdentityCheck.wholeItems`,
          * #1133: K. 545's Andante by its sonata's), so a song's result kept without it is looked up
-         * again; [ARTIST_PART] stays. 8: the song's and the artists' items give the genres they state
+         * again; [ARTIST_PART] stays. 8: the song's article's infobox gives when the music was composed
+         * (#1273), before the item's inception, so a song's result kept without it is looked up again;
+         * [ARTIST_PART] stays. 9: the song's and the artists' items give the genres they state
          * (`SourceResult.statedGenres`, #1098), so a result kept without them is looked up again;
          * [ARTIST_PART] goes with it ([ARTIST_PART_VERSION] 4).
          */
-        const val EXTRACTION_VERSION: Int = 8
+        const val EXTRACTION_VERSION: Int = 9
 
         private val json = Json { encodeDefaults = false }
 
@@ -624,3 +637,11 @@ class WikipediaSource(
                 .replaceFirstChar { it.uppercaseChar() }
     }
 }
+
+// A lead's plain text, as a [WpLead] without its wikitext.
+private fun Lookup<String?>.asLead(): Lookup<WpLead?> =
+    when (this) {
+        is Lookup.Found -> Lookup.Found(value?.let { WpLead(it, null) })
+        Lookup.NotFound -> Lookup.NotFound
+        is Lookup.Failed -> this
+    }
