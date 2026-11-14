@@ -202,6 +202,35 @@ class ComposerItemInsightsTest {
         }
 
     @Test
+    fun `a split track's song, its own lines only listing it, reads the first credited artist's as before`() =
+        runTest {
+            // The same track, its roles telling the composer apart or not (as before #1199).
+            val split = track(K545, "$MOZART, $KHATIA, $ACADEMY")
+            val unsplit =
+                split.copy(
+                    resolution =
+                        Resolution(
+                            recordingMbid = "r",
+                            roles = ArtistRoles(emptyList(), split.normalized.artists),
+                        ),
+                )
+            assertNull(items.split(unsplit))
+            val song = checkNotNull(items.evidence(InsightItem.SONG, split, settings))
+            val before = checkNotNull(items.evidence(InsightItem.SONG, unsplit, settings))
+            assertEquals(true, song.onlyListings)
+            assertEquals(
+                listOf(lines[0].text),
+                song.evidence.lines
+                    .filter { it.scope == Scope.ARTIST }
+                    .map { it.text },
+            )
+            assertEquals(
+                items.key(InsightItem.SONG, unsplit, before, settings),
+                items.key(InsightItem.SONG, split, song, settings),
+            )
+        }
+
+    @Test
     fun `a pop track keeps one Artist row about its primary artist`() =
         runTest {
             val pop = track("Somebody That I Used To Know", "Gotye, Kimbra", emptyList())

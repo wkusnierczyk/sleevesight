@@ -406,8 +406,9 @@ class ItemInsights(
         val all = own.with(pages.filter { settings.isEnabled(it.source) && it.url !in quoted }, hasher)
         val song = all.without(hasher) { it.scope == Scope.ARTIST }
         if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
-        val lead = artistOf(InsightItem.ARTIST, track).orEmpty()
-        val artist = artistLines(all, track, lead).mapTo(mutableSetOf()) { it.id }
+        // The first credited artist's, as before #1199, a classical track's composer among them: what the
+        // song's insight reads of the music is #1133's to decide, and its key stays as it was.
+        val artist = artistLines(all, track, track.normalized.primary).mapTo(mutableSetOf()) { it.id }
         val set = all.without(hasher) { it.scope == Scope.ARTIST && it.id !in artist }
         // No line at all, not even the release: nothing to write from, and nothing for the plain sentence
         // to be true of; no call, whatever is known of the artist.
