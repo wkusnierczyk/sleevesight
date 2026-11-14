@@ -36,7 +36,7 @@ diagnostics-events:
 settings-ai-services-no-key:
   version: 0.6.6
   caption: AI services, no key yet
-  alt: "Settings, AI services, further down: OpenAI and Google switched off, each with Needs your key and a link to set it, and each with its model and reasoning effort; then Retry when the AI fails, dimmed at 30 seconds."
+  alt: "Settings, AI services, further down: OpenAI and Google switched off, with Needs your OpenAI key and Needs your Google key, each with a link to set it, and each with its model and reasoning effort; then Retry when the AI fails, dimmed at 30 seconds."
 
 settings-chips:
   version: 0.1.15
@@ -141,7 +141,7 @@ genres-weak-instrumental:
 genre-why-answer:
   version: 0.6.6
   caption: Why is this instrumental?
-  alt: "Why is this instrumental? answered by Claude Haiku 5.5 for Treefingers: four sentences citing the AI service's own knowledge, MusicBrainz, Last.fm and Wikidata."
+  alt: "Why is this instrumental? answered by Claude Haiku 5.5 for Treefingers: three sentences citing the AI service's own knowledge, MusicBrainz, Last.fm and Wikidata."
 
 genres-ask-ai:
   version: 0.1.15
