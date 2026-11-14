@@ -411,6 +411,7 @@ class MusicBrainzClient(
                             artistName = artist.required("name"),
                             attributes = attributes(relation),
                             begin = relation.string("begin")?.ifEmpty { null },
+                            end = relation.string("end")?.ifEmpty { null },
                         )
                     }
                 }

@@ -218,6 +218,11 @@
     <string name="home_dates_original_ep">The song was originally recorded by %2$s %1$s, and released on the EP %3$s.</string>
     <!-- The same, the release it first came out on not known. -->
     <string name="home_dates_original_unreleased">The song was originally recorded by %2$s %1$s.</string>
+    <!-- When the music was composed (#1132), after the release lines, with "From MusicBrainz" (home_ai_from)
+         under it; %1$s is home_dates_in_year ("in 1788") or home_dates_between_years. -->
+    <string name="home_dates_composed">The music was composed %1$s.</string>
+    <!-- A composition over several years: "between 1921 and 1924". -->
+    <string name="home_dates_between_years">between %1$s and %2$s</string>
     <!-- A panel on Home that has nothing from MusicBrainz to show says why (#724: Dates; Lyrics, #728, as
          well), one of these at a time. MusicBrainz is still being asked, or asked again after Retry. -->
     <string name="home_musicbrainz_looking">Looking on MusicBrainz…</string>
@@ -324,8 +329,9 @@
     <!-- The same, written on an earlier day: its date ("31 October", with the year when not this year). -->
     <string name="home_ai_kept_on">Kept from before: written on %1$s.</string>
     <!-- Under a value found on the web (#801), on its own line: %1$s is the page's site ("discogs.com"),
-         a link to the page. Under genres found on the web, %1$s is every page's site, each a link to its
-         page, " · " between (#1204): "From en.wikipedia.org · albumoftheyear.org". -->
+         a link to the page. Also under when the music was composed (#1132): %1$s is the source's name
+         ("MusicBrainz"), a link to its page. Under genres found on the web, %1$s is every page's site,
+         each a link to its page, " · " between (#1204): "From en.wikipedia.org · albumoftheyear.org". -->
     <string name="home_ai_from">From %1$s</string>
     <!-- In the answer's place, under the rule, the answer having nothing usable; %1$s is the model, as
          the AI settings name it: with AI web search off, then on (#801, #802). Kept, as an answer is;

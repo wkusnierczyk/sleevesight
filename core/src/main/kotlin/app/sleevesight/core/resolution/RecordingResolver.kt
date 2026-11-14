@@ -359,12 +359,23 @@ class RecordingResolver(
         val relations = withRecording.credits.filter { it.role == CreditRole.PERFORMER }
         val earliest =
             !cover && original != null && ourFirstSession != null && isEarlier(ourFirstSession, original.date)
+        val roles = names.rolesOf(track, withRecording.artists, credited, relations, work)
+        val composers = roles?.composers.orEmpty()
+        // The ids the resolution has for the credited composers, by which their dates are found where the
+        // player spells a name otherwise (#1132).
+        val composerIds =
+            withRecording.artists
+                .filter { it.name in composers }
+                .mapNotNull { it.mbid }
+                .toSet()
         return withRecording.copy(
             work = ResolvedWork(work.mbid, work.title),
             cover = cover,
             earliest = earliest,
             original = original?.takeIf { named },
-            roles = names.rolesOf(track, withRecording.artists, credited, relations, work),
+            roles = roles,
+            // When the music was composed (#1132): the dates of the credited composers' relationships.
+            composed = ComposedDates.ofWork(work, composers, names, composerIds),
             credits = workCredits(work.artistRelations) + withRecording.credits,
             wikidataIds = (withRecording.wikidataIds + work.wikidataIds).distinct(),
         )
