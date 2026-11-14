@@ -30,6 +30,7 @@ import app.sleevesight.core.sources.SongWebQuery
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearcher
+import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.ItemPrompt
@@ -52,8 +53,12 @@ import kotlin.time.Instant
  * no line about the artist while a source its lines come from (or MusicBrainz, whose resolution
  * verifies them) did not answer on the track, is [unreachable], and [held] says which (#1163); the
  * album's, with no line while one of its own lookups, or the track's MusicBrainz, which names its
- * release group, did not answer, has [held] too (#1187).
+ * release group, did not answer, has [held] too (#1187). [parts] when it is the song's on a track
+ * whose roles tell its composer apart from its performers (#1133, [ItemInsights.split]): its insight
+ * is written in two parts, the music and this recording (`SongParts`), under a prompt version of its
+ * own ([ItemPrompt.PARTS_VERSION]).
  */
+@Suppress("LongParameterList") // The lines, and what each kind of item's evidence says of them.
 class ItemEvidence(
     val evidence: EvidenceSet,
     val trackIds: Map<String, String>,
@@ -61,6 +66,7 @@ class ItemEvidence(
     val webDue: Boolean = false,
     val onlyListings: Boolean = false,
     val held: SourcesHeld? = null,
+    val parts: Boolean = false,
 ) {
     /** The sources that could not be reached, which the row names ([SourcesHeld.named]); none without [held]. */
     val unanswered: List<SourceId> get() = held?.named.orEmpty()
@@ -377,11 +383,12 @@ class ItemInsights(
         settings: Settings,
     ): ItemEvidence {
         val song = own.without(hasher) { it.scope == Scope.ARTIST }
-        if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
+        val parts = split(track) != null
+        if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown), parts = parts)
         val lookup = songWeb?.takeIf { usesWebSearch(settings) }
         val kept = lookup?.let { attempt { it.kept(songQuery(track, settings)) } }
         return if (kept == null && unanswered(track, settings, SONG_SOURCES)) {
-            ItemEvidence(song, matching(song.lines, shown))
+            ItemEvidence(song, matching(song.lines, shown), parts = parts)
         } else {
             songWith(own, shown, track, settings, kept.orEmpty(), webDue = lookup != null && kept == null)
         }
@@ -392,7 +399,10 @@ class ItemInsights(
     // song's own lines still only list it, with the artist's description ([artistLines]: not the counts
     // and lists of what many listeners did, tags among them, whose numbers and order change from one
     // lookup to the next), each keeping its id; so only then does the card's key read those, and
-    // [webDue] whether a search is due then.
+    // [webDue] whether a search is due then. The artist's: the first credited artist's, as before
+    // #1199; on a track whose roles tell the composer apart ([split], #1133), whose insight is written
+    // in two parts, the composers' for the music and the performers' for this recording, each named
+    // so in the prompt (`ItemPrompt.PARTS_PEOPLE_RULE`).
     @Suppress("LongParameterList") // The lines, what they are about, and what is added to them.
     private fun songWith(
         own: EvidenceSet,
@@ -405,17 +415,19 @@ class ItemInsights(
         val quoted = own.lines.filter { it.source == SourceId.WEB }.mapNotNullTo(mutableSetOf()) { it.url }
         val all = own.with(pages.filter { settings.isEnabled(it.source) && it.url !in quoted }, hasher)
         val song = all.without(hasher) { it.scope == Scope.ARTIST }
-        if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown))
-        // The first credited artist's, as before #1199, a classical track's composer among them: what the
-        // song's insight reads of the music is #1133's to decide, and its key stays as it was.
-        val artist = artistLines(all, track, track.normalized.primary).mapTo(mutableSetOf()) { it.id }
+        val split = split(track)
+        val parts = split != null
+        if (!SongListings.listingOnly(song.lines)) return ItemEvidence(song, matching(song.lines, shown), parts = parts)
+        // With no split, the first credited artist's, as before #1199, and its key as it was.
+        val people = split?.let { it.composers + it.performers } ?: listOf(track.normalized.primary)
+        val artist = people.flatMap { artistLines(all, track, it) }.mapTo(mutableSetOf()) { it.id }
         val set = all.without(hasher) { it.scope == Scope.ARTIST && it.id !in artist }
         // No line at all, not even the release: nothing to write from, and nothing for the plain sentence
         // to be true of; no call, whatever is known of the artist.
         return if (song.isEmpty()) {
-            ItemEvidence(song, emptyMap(), webDue = webDue)
+            ItemEvidence(song, emptyMap(), webDue = webDue, parts = parts)
         } else {
-            ItemEvidence(set, matching(set.lines, shown), webDue = webDue, onlyListings = true)
+            ItemEvidence(set, matching(set.lines, shown), webDue = webDue, onlyListings = true, parts = parts)
         }
     }
 
@@ -1267,9 +1279,18 @@ class ItemInsights(
         }
     }
 
-    // The version of the prompt a card from [evidence] is written with, part of its key.
+    // The version of the prompt a card from [evidence] is written with, part of its key: the song's in
+    // two parts its own (#1133), whatever its lines.
     private fun promptVersion(evidence: ItemEvidence): Int =
-        if (evidence.onlyListings) ItemPrompt.ONLY_LISTINGS_VERSION else ItemPrompt.VERSION
+        when {
+            evidence.parts -> ItemPrompt.PARTS_VERSION
+            evidence.onlyListings -> ItemPrompt.ONLY_LISTINGS_VERSION
+            else -> ItemPrompt.VERSION
+        }
+
+    // Whether [key]'s card is the song's in two parts (#1133), whose part headings are read as such.
+    private fun parted(key: CardKey): Boolean =
+        key.kind == CardKind.SONG && key.promptVersion == ItemPrompt.PARTS_VERSION
 
     /** Whether an insight may be written now: an AI service ready (none while its model is unavailable, #540). */
     val writes: Boolean get() = ai != null
@@ -1284,7 +1305,7 @@ class ItemInsights(
         evidence: ItemEvidence,
     ): KeptItem? {
         val card = attempt { cache.keptCard(key) } ?: return null
-        val reply = readReply(card.text, evidence.evidence, key.modelKnowledge, subjectOf(key.entity))
+        val reply = readReply(card.text, evidence.evidence, key.modelKnowledge, subjectOf(key.entity), parted(key))
         return reply?.let {
             KeptItem(stateOf(it, key, cached = true, usage = null, complete = true, card.rewritten), card.writtenAt)
         }
@@ -1309,6 +1330,7 @@ class ItemInsights(
                     evidence.evidence,
                     key.modelKnowledge,
                     subjectOf(key.entity),
+                    parted(key),
                 ) as? InsightReply.Written
             reply?.let {
                 val state = stateOf(it, other.key, cached = true, usage = null, complete = true, other.card.rewritten)
@@ -1364,6 +1386,7 @@ class ItemInsights(
                 dates(),
                 evidence.onlyListings,
                 track.roles,
+                evidence.parts,
             )
         val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
         var billed: Usage? = null
@@ -1526,7 +1549,7 @@ class ItemInsights(
                     if (blank == null &&
                         end.stopReason != StopReason.REFUSAL
                     ) {
-                        readReply(text, evidence, key.modelKnowledge, subjectOf(key.entity))
+                        readReply(text, evidence, key.modelKnowledge, subjectOf(key.entity), parted(key))
                     } else {
                         null
                     }

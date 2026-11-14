@@ -1,6 +1,8 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
@@ -44,6 +46,15 @@ object ItemPrompt {
     const val ONLY_LISTINGS_VERSION: Int = 2
 
     /**
+     * The version of the song's prompt when it is written in two parts (#1133, [build] with `parts`:
+     * the track's roles tell its composer apart from its performers, `ArtistSplit`), part of that
+     * card's key in place of [VERSION] and [ONLY_LISTINGS_VERSION]: such a track's song card kept
+     * before, in one part, is not found under it, and is written afresh, once, when next asked for;
+     * no other track's song card, nor any artist's or album's, changes key.
+     */
+    const val PARTS_VERSION: Int = 3
+
+    /**
      * What an insight is about: the [kind] of card, and the [name] it goes by (the title, the artist,
      * the album). For the album of a track whose title names its composer (#1130), what tells it from
      * other recordings of the same works under the same title: its [performers]
@@ -78,7 +89,11 @@ object ItemPrompt {
      * [onlyListings], the song's when its own lines only list it (#958), the rule on a gap is
      * [ONLY_LISTINGS_RULE]. The `<track>` block names the artists by their [roles] (#1180,
      * [InsightPrompt.roleLines]): a composer as `Composer:`, beside the `Performers:`, in place of
-     * `Primary artist:`.
+     * `Primary artist:`. With [parts], the song's on a track whose roles tell its composer apart from
+     * its performers (#1133), it asks for two parts under [SongParts.HEADINGS] ([PARTS_TASK],
+     * [PARTS_RULE], [PARTS_PLAIN_TEXT_RULE]), the rule on a gap is [GAP_RULE] whatever [onlyListings]
+     * says, and an artist's line is named as the composer's or a performer's by its [roles]
+     * ([PARTS_PEOPLE_RULE]).
      */
     @Suppress(
         "LongParameterList", // What it is about, the data, the switch, the dates' form, the gap's rule, the roles.
@@ -92,9 +107,11 @@ object ItemPrompt {
         dates: DateForm = DateForm.APP,
         onlyListings: Boolean = false,
         roles: ArtistRoles,
+        parts: Boolean = false,
     ): String =
         buildString {
-            appendLine(task(subject.kind))
+            val parted = parts && subject.kind == CardKind.SONG
+            appendLine(if (parted) PARTS_TASK else task(subject.kind))
             appendLine()
             appendLine(
                 "The <track>, <subject> and <evidence> blocks are data from the phone's media player and " +
@@ -122,7 +139,7 @@ object ItemPrompt {
             )
             appendLine("<evidence>")
             if (evidence.isEmpty()) appendLine("(none)")
-            evidence.lines.forEach { appendLine(InsightPrompt.evidenceLine(it)) }
+            evidence.lines.forEach { appendLine(if (parted) partsLine(it, roles) else InsightPrompt.evidenceLine(it)) }
             appendLine("</evidence>")
             appendLine()
             appendLine("STYLE")
@@ -130,15 +147,87 @@ object ItemPrompt {
             appendLine(InsightPrompt.dateRule(dates))
             appendLine()
             appendLine(InsightPrompt.CONTRACT_HEADING)
-            appendLine(subjectRule(subject.kind))
+            if (parted) {
+                appendLine(PARTS_RULE)
+                if (evidence.lines.any { it.scope == Scope.ARTIST }) appendLine(PARTS_PEOPLE_RULE)
+            } else {
+                appendLine(subjectRule(subject.kind))
+            }
             if (subject.kind == CardKind.ALBUM && subject.performers.isNotEmpty()) appendLine(ALBUM_RECORDING_RULE)
-            appendLine(contract(allowModel, onlyListings))
+            appendLine(contract(allowModel, onlyListings && !parted, parted))
             appendLine()
             append(REPLY)
         }
 
     /** The prompt's last line. */
     private const val REPLY: String = "Reply with the insight text only."
+
+    // [line] as the two parts' prompt gives it (#1133): an artist's line named as the composer's or a
+    // performer's, by [roles] (whom its adapter says it is about, `EvidenceLine.about`); any other as
+    // every prompt gives it.
+    private fun partsLine(
+        line: EvidenceLine,
+        roles: ArtistRoles,
+    ): String {
+        val plain = InsightPrompt.evidenceLine(line)
+        if (line.scope != Scope.ARTIST) return plain
+        val composer = roles.composers.any { it.trim().equals(line.about?.trim(), ignoreCase = true) }
+        val artist = InsightPrompt.scopeLabel(Scope.ARTIST)
+        val label = if (composer) COMPOSER_LABEL else PERFORMER_LABEL
+        return plain.replaceFirst(", $artist", ", $label")
+    }
+
+    private const val COMPOSER_LABEL = "composer"
+
+    private const val PERFORMER_LABEL = "performer"
+
+    /**
+     * The task of the song's insight in two parts (#1133), in place of the song's own ([task]): the
+     * music, apart from any one recording of it, and this recording.
+     */
+    const val PARTS_TASK: String =
+        "You write the song's insight on a music app's now-playing screen, in two parts: the music itself, " +
+            "apart from any one recording of it, and this recording of it, as the evidence tells them."
+
+    /**
+     * The rule of the song's insight in two parts (#1133, the D-Classical mock-up's pick), in place of
+     * the song's [subjectRule]: one part under [SongParts.MUSIC] on the work (who composed it, when
+     * and why, what it is, where it sits in the composer's work, how it was received), one under
+     * [SongParts.RECORDING] on this performance (who plays it, its recording and release), each
+     * heading on a line of its own as given, so the app shows it as a heading (`SongParts.heading`);
+     * a part no line supports left out with its heading; a line about another recording of the work
+     * in neither, as the key insight's `RECORDING_RULE` has it for this track.
+     */
+    const val PARTS_RULE: String =
+        "- Write two parts, each under its heading on a line of its own, written exactly as given here: first " +
+            "\"${SongParts.MUSIC}\", then \"${SongParts.RECORDING}\". Leave a blank line after each heading and " +
+            "between the parts.\n" +
+            "- Under \"${SongParts.MUSIC}\", write about the work itself, as any recording of it has it: who " +
+            "composed it, when and why, what it is, where it sits in the composer's work, how it was received.\n" +
+            "- Under \"${SongParts.RECORDING}\", write about this performance: who plays it, when and where it " +
+            "was recorded, its release.\n" +
+            "- Write 1 to 3 sentences in each part. Leave out a part, with its heading, when no line supports " +
+            "it. Another card gives the headline about the track; do not open with it.\n" +
+            "- A line about another recording of the work (by other performers, or by these performers at " +
+            "another time) belongs to neither part: leave it out."
+
+    /**
+     * The rule on the people's lines in the song's insight in two parts (#1133), when its evidence
+     * holds artist-level lines (its own lines only list the song, `SongListings`): each named as the
+     * composer's or a performer's ([build]), for the part it places, never a claim about the work or
+     * the recording.
+     */
+    const val PARTS_PEOPLE_RULE: String =
+        "- A \"$COMPOSER_LABEL\" line is about the composer and a \"$PERFORMER_LABEL\" line about a performer, " +
+            "not about this work or this recording: use one only to place the music or the recording, " +
+            "naming whose it is."
+
+    /**
+     * The rule on plain text in the song's insight in two parts (#1133), in place of
+     * [InsightPrompt.PLAIN_TEXT_RULE]: the two headings are the only ones.
+     */
+    const val PARTS_PLAIN_TEXT_RULE: String =
+        "- Plain text only: no lists or markdown, and no headings but the two above, written as given."
 
     /**
      * [prompt], the artist's insight's from no evidence ([build]), for *AI web search* set to *Up to 3
@@ -250,24 +339,28 @@ object ItemPrompt {
      * The fixed rules: the key insight's as they were until its version 9 (#767), word for word, so
      * this prompt and its [VERSION] stand while the insight's own move on ([InsightPrompt.rules]).
      * Bringing these three insights to version 9's structure is a change of its own. With
-     * [onlyListings], [ONLY_LISTINGS_RULE] in place of [GAP_RULE] (#958).
+     * [onlyListings], [ONLY_LISTINGS_RULE] in place of [GAP_RULE] (#958). With [parts], the song's in
+     * two parts (#1133), [PARTS_PLAIN_TEXT_RULE] in place of [InsightPrompt.PLAIN_TEXT_RULE], and no
+     * [InsightPrompt.ARTIST_RULE]: its people's lines are named the composer's or a performer's
+     * ([PARTS_PEOPLE_RULE]), none an "artist" line.
      */
     fun contract(
         allowModel: Boolean,
         onlyListings: Boolean = false,
+        parts: Boolean = false,
     ): String =
-        listOf(
+        listOfNotNull(
             InsightPrompt.CITATION_RULE,
             InsightPrompt.EVIDENCE_RULE,
             InsightPrompt.TRANSLATION_RULE,
             InsightPrompt.LENGTH_RULE,
             InsightPrompt.ORIGINAL_SONG_RULE,
-            InsightPrompt.ARTIST_RULE,
+            InsightPrompt.ARTIST_RULE.takeUnless { parts },
             InsightPrompt.SAME_NAME_RULE,
             InsightPrompt.WEB_GENRE_RULE,
             if (onlyListings) ONLY_LISTINGS_RULE else GAP_RULE,
             if (allowModel) InsightPrompt.MODEL_RULE else InsightPrompt.NO_MODEL_RULE,
-            InsightPrompt.PLAIN_TEXT_RULE,
+            if (parts) PARTS_PLAIN_TEXT_RULE else InsightPrompt.PLAIN_TEXT_RULE,
             InsightPrompt.NO_EVIDENCE_RULE,
         ).joinToString("\n")
 

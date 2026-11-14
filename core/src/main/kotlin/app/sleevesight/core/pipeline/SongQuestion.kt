@@ -84,6 +84,7 @@ internal class SongQuestion(
             dates,
             asked.onlyListings,
             track.roles,
+            asked.parts,
         )
 
     // Of [pages], the lines of those that give one ([line]) and no line of the track's own quotes, at

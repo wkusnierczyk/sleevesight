@@ -18,19 +18,23 @@ import app.sleevesight.core.text.trimJs
  * that still revises itself, the part after the revision ([SelfRevision.salvage]), the rest
  * withdrawn; null when nothing usable is left. [revised] is told of a revision found, and whether
  * anything was salvaged. Either way its sentences are checked for support by the lines they cite,
- * the words of [subject] (what the card is about) allowed besides (`Support`, #1036).
+ * the words of [subject] (what the card is about) allowed besides (`Support`, #1036). With
+ * [headings], the song's insight in two parts (#1133), its part headings are read as such
+ * (`SongParts`).
  */
+@Suppress("LongParameterList") // The reply, its lines, the switch, what it is about, how it is read.
 internal fun readReply(
     text: String,
     evidence: EvidenceSet,
     allowModel: Boolean,
     subject: Collection<String> = emptyList(),
+    headings: Boolean = false,
     revised: (SelfRevision.Found, Boolean) -> Unit = { _, _ -> },
 ): InsightReply? {
-    val reply = GroundingCheck.check(text, evidence, allowModel, notes = true, subject = subject)
+    val reply = GroundingCheck.check(text, evidence, allowModel, notes = true, subject = subject, headings = headings)
     val grounded = (reply as? InsightReply.Written)?.grounded
     val found = grounded?.let { SelfRevision.find(it.text) } ?: return reply
-    val salvaged = SelfRevision.salvage(checkNotNull(grounded), found, evidence.ids.toSet())
+    val salvaged = SelfRevision.salvage(checkNotNull(grounded), found, evidence.ids.toSet(), headings)
     revised(found, salvaged != null)
     return salvaged?.let { InsightReply.Written(GroundingCheck.supported(it, evidence, subject)) }
 }

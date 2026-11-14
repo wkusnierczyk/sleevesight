@@ -139,17 +139,21 @@ enum class SelfRevision(
          * [grounded] cut down to [found]'s [Found.rest], checked against [ids]: what the card shows
          * of a reply that revised itself, with the cut part added to what was [GroundedText.withdrawn].
          * Null when nothing usable is left: no text, a correction or a sign of revision in it still,
-         * or a sentence the grounding check finds uncited or citing a line that is not there.
+         * or a sentence the grounding check finds uncited or citing a line that is not there. With
+         * [headings], the song's part headings are read as such (`SongParts`, #1133).
          */
         fun salvage(
             grounded: GroundedText,
             found: Found,
             ids: Set<String>,
+            headings: Boolean = false,
         ): GroundedText? =
             found.rest
                 .takeIf { it.isNotEmpty() && SelfCorrection.of(it) == null && find(it) == null }
-                ?.let { GroundingCheck.check(it, ids, grounded.allowModel, notes = true) as? InsightReply.Written }
-                ?.grounded
+                ?.let {
+                    GroundingCheck.check(it, ids, grounded.allowModel, notes = true, headings = headings) as?
+                        InsightReply.Written
+                }?.grounded
                 ?.takeIf { it.paragraphs.isNotEmpty() && it.counts.uncited == 0 && it.counts.unknown == 0 }
                 ?.let {
                     it.copy(

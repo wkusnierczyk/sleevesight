@@ -22,6 +22,7 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.sources.WebPage
+import app.sleevesight.core.synthesis.ItemPrompt
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -202,7 +203,7 @@ class ComposerItemInsightsTest {
         }
 
     @Test
-    fun `a split track's song, its own lines only listing it, reads the first credited artist's as before`() =
+    fun `a split track's song, its own lines only listing it, reads the composer's and the performers' (#1133)`() =
         runTest {
             // The same track, its roles telling the composer apart or not (as before #1199).
             val split = track(K545, "$MOZART, $KHATIA, $ACADEMY")
@@ -218,16 +219,27 @@ class ComposerItemInsightsTest {
             val song = checkNotNull(items.evidence(InsightItem.SONG, split, settings))
             val before = checkNotNull(items.evidence(InsightItem.SONG, unsplit, settings))
             assertEquals(true, song.onlyListings)
+            assertEquals(true, song.parts)
+            // The composer's for the music, the performers' for this recording.
             assertEquals(
-                listOf(lines[0].text),
+                lines.map { it.text },
                 song.evidence.lines
                     .filter { it.scope == Scope.ARTIST }
                     .map { it.text },
             )
+            // Unsplit, the first credited artist's, in one part, keyed as before.
+            assertEquals(false, before.parts)
             assertEquals(
-                items.key(InsightItem.SONG, unsplit, before, settings),
-                items.key(InsightItem.SONG, split, song, settings),
+                listOf(lines[0].text),
+                before.evidence.lines
+                    .filter { it.scope == Scope.ARTIST }
+                    .map { it.text },
             )
+            assertEquals(
+                ItemPrompt.ONLY_LISTINGS_VERSION,
+                items.key(InsightItem.SONG, unsplit, before, settings)?.promptVersion,
+            )
+            assertEquals(ItemPrompt.PARTS_VERSION, items.key(InsightItem.SONG, split, song, settings)?.promptVersion)
         }
 
     @Test
