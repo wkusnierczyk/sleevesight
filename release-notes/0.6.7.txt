@@ -1,0 +1,4 @@
+Fixed in 0.6.7:
+- Links: the site a link is named by is always the site it opens; oddly written web addresses are not offered as links.
+- Cover art: a player whose cover art never loads no longer ties up the app.
+- Insights: an unusual reply from the AI service no longer slows the app while it is read.

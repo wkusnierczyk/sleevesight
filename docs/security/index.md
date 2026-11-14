@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.6.6
+docs_version: 0.6.7
 nav:
-  - id: results-for-065
+  - id: results-for-067
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.6.6
+## Results for 0.6.7
 
-Checked on 13 November 2026, on the code of release 0.6.6.
+Checked on 14 November 2026, on the code of release 0.6.7.
 
-- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app. The libraries are the same as in 0.6.5.
+- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app. The libraries are the same as in 0.6.6.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code, and nothing new that could run up your costs. The release opens only web (`http` and `https`) links and names a linked page by its site, reads a player's cover art with a time limit and no longer fetches covers from addresses on your own network, overwrites in the app's database files what *Clear history* and *Keep history for* delete, and dims a cited sentence whose names or years its sources don't hold. Three minor hardening points turned up, none of them reaching your keys or data, and are left for a later release.
+- **Security review:** no way found to reach your keys or your data in the new code, and nothing new that could run up your costs. The release names a linked page by the same site the link opens, refuses links written in forms that browsers read differently, limits how many covers it reads from players at once, and reads a note at the end of an AI reply in time that no longer grows with the square of the reply's length. One older slowdown turned up in reading an unusual AI reply, along with two minor points, none of them reaching your keys or data; they are left for a later release.
 
 ## What is checked
 
