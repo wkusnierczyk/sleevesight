@@ -126,6 +126,11 @@ val SourceAdapter.tag: String get() = id.tag
  * on MusicBrainz's result only, kept the same way, so a replay prompts and searches by the performers
  * as its first play did; null where the resolution told none (the title's composer lead decides).
  *
+ * [composed] is when the track's music was composed (#1132, [ComposedDate]): on MusicBrainz's result,
+ * as the resolution dates it (`Resolution.composed`), and on Wikipedia's, as the song's Wikidata item
+ * the identity check accepted dates it (its inception, P571); kept the same way, for Home's *Dates*.
+ * Null where neither dates it, and on every other source's result.
+ *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
  * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name), or left
  * short of a part a later lookup may bring (MusicBrainz's, without the release of a cover's
@@ -172,6 +177,7 @@ data class SourceResult(
     val original: OriginalRecording? = null,
     val lyrics: WorkLyrics? = null,
     val roles: ArtistRoles? = null,
+    val composed: ComposedDate? = null,
     val freshUntil: Instant? = null,
     val trackOnly: Boolean = false,
     val pages: List<String> = emptyList(),

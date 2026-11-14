@@ -75,7 +75,9 @@ class MusicBrainzSource(
      * every group, so a first release kept as a year for a compilation's later day is asked again.
      * 17: the credited artists' roles, composer and performers, are kept (`SourceResult.roles`, #1180),
      * and a track with no composer lead whose first artist's search found nothing that fits is
-     * searched by the next ones, so every kept result is asked again, once.
+     * searched by the next ones, so every kept result is asked again, once. 18: when the music was
+     * composed is kept (`SourceResult.composed`, #1132), released in the same version as 17, whose
+     * upgrade asks every kept result again, so it costs no further request.
      * Without [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart
      * ([WITHOUT_GENRES_VERSION]).
      */
@@ -107,6 +109,7 @@ class MusicBrainzSource(
             // Only for an accepted recording: without one, there is no song to link the lyrics of.
             lyrics = resolved.lyrics.takeIf { resolved.resolved },
             roles = resolved.roles,
+            composed = resolved.composed,
             provisional = resolved.provisional,
             // No recording and no artist: a result that names an artist, or rejects a recording by
             // another one, is about the artists (#420).
@@ -115,4 +118,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 17
+private const val EXTRACTION_VERSION = 18

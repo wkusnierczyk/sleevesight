@@ -77,11 +77,17 @@ private fun AiDatesPanel(sentences: List<Pair<DateSentence, String?>>) {
     }
 }
 
-/** The panel's content: each of [sentences] on its own, a release's title in italics. */
+/**
+ * The panel's content: each of [sentences] on its own, a release's title in italics; under when the
+ * music was composed, its source, "From {source}" (#1132, [FromSource]).
+ */
 @Composable
 internal fun DatesPanel(sentences: List<DateSentence>) {
     for (sentence in sentences) {
         Text(dateText(sentence), style = MaterialTheme.typography.bodyLarge)
+        if (sentence is DateSentence.Composed) {
+            FromSource(sourceName(sentence.date.source), sentence.date.url, DATES_FROM_TAG)
+        }
     }
 }
 
@@ -188,7 +194,23 @@ internal fun dateText(sentence: DateSentence): AnnotatedString =
                 withAlbum(stringResource(format, date, sentence.artist, ALBUM_MARK), title)
             }
         }
+        is DateSentence.Composed ->
+            AnnotatedString(stringResource(R.string.home_dates_composed, composedWhen(sentence)))
     }
+
+// When the music was composed (#1132), in years: "in 1788", or "between 1921 and 1924" over several.
+@Composable
+private fun composedWhen(sentence: DateSentence.Composed): String {
+    val date = sentence.date
+    if (date.from == date.to) return whenText(date.from)
+    val phone = LocalConfiguration.current.locales[0]
+    val form = remember(phone) { phoneDateForm(phone) }
+    return stringResource(
+        R.string.home_dates_between_years,
+        form.format(DateWhen.Year(date.from)),
+        form.format(DateWhen.Year(date.to)),
+    )
+}
 
 // An edition's sentences (#1099, #1116), as one paragraph: its album's first release, its title in
 // italics, then the edition as [DateSentence.Edition.edition] says it, a title it names in italics too.
@@ -258,3 +280,6 @@ const val DATES_CHIP_TAG: String = "dates-chip"
 const val DATES_PANEL_TAG: String = "dates-panel"
 const val DATES_PANEL_HEADING_TAG: String = "dates-panel:heading"
 const val DATES_PANEL_CLOSE_TAG: String = "dates-panel:close"
+
+/** The test tag of the *From* line under when the music was composed (#1132). */
+const val DATES_FROM_TAG: String = "dates-panel:from"
