@@ -84,8 +84,6 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
   {% include screenshots.html ids="key-insights" %}
 
-  <!-- screenshot (0.6.6) to retake: key-insights, with the Song, Artist and Album buttons under the insight -->
-
 - **Diagnostics.** The test build starts in developer mode, so Settings shows a *Developer* section, last. If it is not there (its *Developer mode* switch hides it), open *About* and tap *Version* seven times to bring it back. Under *Developer*, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise. *Report button*, *Auto* in the test build, shows the report button on the home screen (*What to tell us*, below).
 
   {% include screenshots.html ids="diagnostics-events" %}
