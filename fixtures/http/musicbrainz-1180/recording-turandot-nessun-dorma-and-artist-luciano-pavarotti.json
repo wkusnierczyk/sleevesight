@@ -1,0 +1,1813 @@
+{
+ "created": "2026-11-14T12:09:03.096Z",
+ "count": 4,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "38e73992-38de-43b1-ba07-420c9e2e9cc1",
+   "score": 100,
+   "artist-credit-id": "fa361e1c-d208-3dd6-bf22-0efb6091cdd7",
+   "title": "Turandot: “Nessun dorma!”",
+   "length": 204266,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti",
+      "sort-name": "Pavarotti, Luciano",
+      "disambiguation": "tenor",
+      "aliases": [
+       {
+        "sort-name": "Pavarotti, Luciano",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Luciano Pavarotti",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ルチアーノ・パヴァロッティ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ルチアーノ・パヴァロッティ",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarati",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Pavarati",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti",
+        "name": "Pavarotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Pavoratti",
+        "name": "Luciano Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavoratti",
+        "name": "Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paverotti",
+        "name": "Luciano Paverotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paveretti",
+        "name": "Luciano Paveretti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti Luciano",
+        "name": "Pavarotti Luciano",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1994-08-29",
+   "releases": [
+    {
+     "id": "fd08e6b2-f6a0-4671-850e-cb119d7bfbaa",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "555984df-e099-3f61-9943-9f5c56d9ddc8",
+     "count": 1,
+     "title": "The 3 Tenors in Concert 1994",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Three Tenors",
+       "artist": {
+        "id": "986ff361-7c8d-4662-8bfc-5a01da5f09ed",
+        "name": "The Three Tenors",
+        "sort-name": "Three Tenors, The"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1994",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "1994",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "7062ab76-9aaf-3b81-8d08-76be5723a983",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "a8545e4c-a8a5-49a4-8058-488ddd4a0663",
+         "number": "13",
+         "title": "Turandot: “Nessun dorma!”",
+         "length": 204266
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "e1108ae9-5932-43af-be6b-4705affaf8cc",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ea7fd0e0-6347-3e67-ac10-2f37c857036e",
+     "count": 27,
+     "title": "The Complete Warner Recordings",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Zubin Mehta",
+       "artist": {
+        "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+        "name": "Zubin Mehta",
+        "sort-name": "Mehta, Zubin",
+        "disambiguation": "conductor"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "89c8c874-29f1-45d4-a5ad-7a1fdf65a150",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Complete Warner Recordings",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 312,
+     "media": [
+      {
+       "id": "25627408-1fc9-3f92-8571-7649d03a8a97",
+       "position": 21,
+       "format": "CD",
+       "track": [
+        {
+         "id": "1362b583-1274-4bbb-b5e4-467c15d6d4e6",
+         "number": "13",
+         "title": "Nessun dorma!",
+         "length": 204266
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "82b0c690-7f6d-45cd-b04c-c2374ee6ee2d",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "095a674b-144b-43cc-8658-6d8f26e6e4ae",
+     "count": 1,
+     "title": "The 3 Tenors in Concert 1994",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "joinphrase": " - ",
+       "name": "Carreras",
+       "artist": {
+        "id": "7716ddac-2f24-44fa-81b1-bfa920811445",
+        "name": "José Carreras",
+        "sort-name": "Carreras, José",
+        "disambiguation": "Spanish tenor"
+       }
+      },
+      {
+       "joinphrase": " - ",
+       "name": "Domingo",
+       "artist": {
+        "id": "521df2bd-01f6-456e-9d5f-f081068819c2",
+        "name": "Plácido Domingo",
+        "sort-name": "Domingo, Plácido",
+        "disambiguation": "tenor"
+       }
+      },
+      {
+       "joinphrase": " with ",
+       "name": "Pavarotti",
+       "artist": {
+        "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+        "name": "Luciano Pavarotti",
+        "sort-name": "Pavarotti, Luciano",
+        "disambiguation": "tenor"
+       }
+      },
+      {
+       "name": "Mehta",
+       "artist": {
+        "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+        "name": "Zubin Mehta",
+        "sort-name": "Mehta, Zubin",
+        "disambiguation": "conductor"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1994",
+     "country": "CA",
+     "release-events": [
+      {
+       "date": "1994",
+       "area": {
+        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+        "name": "Canada",
+        "sort-name": "Canada",
+        "iso-3166-1-codes": [
+         "CA"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "726198ce-7657-30d1-a4dd-4631776ddfa5",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "8ccf6545-c7a0-402c-a358-dead3b1db122",
+         "number": "13",
+         "title": "Nessun dorma!",
+         "length": 204266
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "2e01c66b-3f01-4863-9e58-8ef5b2f74167",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "555984df-e099-3f61-9943-9f5c56d9ddc8",
+     "count": 1,
+     "title": "The 3 Tenors in Concert 1994",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Three Tenors",
+       "artist": {
+        "id": "986ff361-7c8d-4662-8bfc-5a01da5f09ed",
+        "name": "The Three Tenors",
+        "sort-name": "Three Tenors, The"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1994",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "1994",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "8e3802a7-141a-30a9-861b-97fefbb2b78d",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "0fff358c-dd2c-4c3c-8c4f-5215fba269a6",
+         "number": "13",
+         "title": "Turandot: Act 3. Nessun dorma!",
+         "length": 204493
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "299ad099-0805-3fd1-a843-a1fb9ccac291",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "555984df-e099-3f61-9943-9f5c56d9ddc8",
+     "count": 1,
+     "title": "The 3 Tenors in Concert 1994",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Three Tenors",
+       "artist": {
+        "id": "986ff361-7c8d-4662-8bfc-5a01da5f09ed",
+        "name": "The Three Tenors",
+        "sort-name": "Three Tenors, The"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1994-08-30",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "1994-08-30",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      },
+      {
+       "date": "1994-08-29",
+       "area": {
+        "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+        "name": "Netherlands",
+        "sort-name": "Netherlands",
+        "iso-3166-1-codes": [
+         "NL"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "588bea48-2ff7-3039-985e-eccd2dbf80cd",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "e71a09ac-9b6a-3539-8874-76f1dc6419cd",
+         "number": "13",
+         "title": "Turandot: “Nessun dorma!”",
+         "length": 204493
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "aeae95c0-79d1-4faa-b66e-4af42361853c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "555984df-e099-3f61-9943-9f5c56d9ddc8",
+     "count": 1,
+     "title": "The 3 Tenors in Concert 1994",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Three Tenors",
+       "artist": {
+        "id": "986ff361-7c8d-4662-8bfc-5a01da5f09ed",
+        "name": "The Three Tenors",
+        "sort-name": "Three Tenors, The"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1994",
+     "country": "AU",
+     "release-events": [
+      {
+       "date": "1994",
+       "area": {
+        "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+        "name": "Australia",
+        "sort-name": "Australia",
+        "iso-3166-1-codes": [
+         "AU"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "a2dfe23c-07a0-3943-86be-3aa5a38fd885",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "1746a8ee-2d90-404e-86e8-84a6cfdc2cd6",
+         "number": "13",
+         "title": "Nessun dorma!",
+         "length": 204266
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "b556eef0-3c8e-3d7a-a4d0-944c3b5254c3",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "555984df-e099-3f61-9943-9f5c56d9ddc8",
+     "count": 1,
+     "title": "The 3 Tenors in Concert 1994",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Three Tenors",
+       "artist": {
+        "id": "986ff361-7c8d-4662-8bfc-5a01da5f09ed",
+        "name": "The Three Tenors",
+        "sort-name": "Three Tenors, The"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2004-08-30",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2004-08-30",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "450443c9-9554-3fa3-a2fb-d15cfe949717",
+       "position": 1,
+       "track": [
+        {
+         "id": "bf02202e-065b-367d-b8d3-9103092d6f51",
+         "number": "13",
+         "title": "Nessun dorma!",
+         "length": 204493
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    },
+    {
+     "id": "9b5d0fb2-165c-37da-a08c-97aae87c2391",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "555984df-e099-3f61-9943-9f5c56d9ddc8",
+     "count": 1,
+     "title": "The 3 Tenors in Concert 1994",
+     "status": "Official",
+     "disambiguation": "Atlantic label release includes 32 page booklet.",
+     "artist-credit": [
+      {
+       "name": "The Three Tenors",
+       "artist": {
+        "id": "986ff361-7c8d-4662-8bfc-5a01da5f09ed",
+        "name": "The Three Tenors",
+        "sort-name": "Three Tenors, The"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1994-08-30",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1994-08-30",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      },
+      {
+       "date": "1994-08-30",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "a78f814a-0075-35b4-8cd6-01aca90489a2",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "6eab3f2d-d525-3042-96ba-e5d134175287",
+         "number": "13",
+         "title": "Nessun dorma!",
+         "length": 204493
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "d0289c4f-19bd-4ce5-b798-b2fb7a1f7c6c",
+   "score": 100,
+   "artist-credit-id": "fa361e1c-d208-3dd6-bf22-0efb6091cdd7",
+   "title": "Turandot: “Nessun dorma”",
+   "length": 198000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti",
+      "sort-name": "Pavarotti, Luciano",
+      "disambiguation": "tenor",
+      "aliases": [
+       {
+        "sort-name": "Pavarotti, Luciano",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Luciano Pavarotti",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ルチアーノ・パヴァロッティ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ルチアーノ・パヴァロッティ",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarati",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Pavarati",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti",
+        "name": "Pavarotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Pavoratti",
+        "name": "Luciano Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavoratti",
+        "name": "Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paverotti",
+        "name": "Luciano Paverotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paveretti",
+        "name": "Luciano Paveretti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti Luciano",
+        "name": "Pavarotti Luciano",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2006",
+   "releases": [
+    {
+     "id": "1ae2d76f-a68c-4d86-9440-984bbb110ef8",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "fa361e1c-d208-3dd6-bf22-0efb6091cdd7",
+     "count": 1,
+     "title": "Luciano Pavarotti DVD",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Luciano Pavarotti",
+       "artist": {
+        "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+        "name": "Luciano Pavarotti",
+        "sort-name": "Pavarotti, Luciano",
+        "disambiguation": "tenor"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "cc9fd5d1-f819-3b1f-b638-25c6e2956c09",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Greatest Tenor of All Time",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2006",
+     "country": "CA",
+     "release-events": [
+      {
+       "date": "2006",
+       "area": {
+        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+        "name": "Canada",
+        "sort-name": "Canada",
+        "iso-3166-1-codes": [
+         "CA"
+        ]
+       }
+      }
+     ],
+     "track-count": 19,
+     "media": [
+      {
+       "id": "62e5c7b7-1fc8-3a27-a6b9-9ee4044b86d7",
+       "position": 1,
+       "format": "DVD-Video",
+       "track": [
+        {
+         "id": "cdc8a3e6-f99b-4a4d-acd4-4f6054398b0d",
+         "number": "18",
+         "title": "Turandot: “Nessun dorma”",
+         "length": 198000
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 17
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "45255a45-c74d-4df8-9328-cd8c7dd94428",
+   "score": 81,
+   "artist-credit-id": "1e587d31-ab2f-35ca-a7e0-66e3a9166676",
+   "title": "Turandot: “Nessun dorma”",
+   "length": 201866,
+   "disambiguation": "live, 1982-04: Royal Albert Hall, London, UK",
+   "video": null,
+   "artist-credit": [
+    {
+     "joinphrase": ", ",
+     "name": "Luciano Pavarotti",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti",
+      "sort-name": "Pavarotti, Luciano",
+      "disambiguation": "tenor",
+      "aliases": [
+       {
+        "sort-name": "Pavarotti, Luciano",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Luciano Pavarotti",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ルチアーノ・パヴァロッティ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ルチアーノ・パヴァロッティ",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarati",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Pavarati",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti",
+        "name": "Pavarotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Pavoratti",
+        "name": "Luciano Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavoratti",
+        "name": "Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paverotti",
+        "name": "Luciano Paverotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paveretti",
+        "name": "Luciano Paveretti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti Luciano",
+        "name": "Pavarotti Luciano",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    },
+    {
+     "joinphrase": ", ",
+     "name": "Royal Philharmonic Orchestra",
+     "artist": {
+      "id": "299597ae-3a20-4bf1-973e-03704af69f6b",
+      "name": "Royal Philharmonic Orchestra",
+      "sort-name": "Royal Philharmonic Orchestra",
+      "aliases": [
+       {
+        "sort-name": "Лондонский Королевский Филармонический Оркестр",
+        "name": "Лондонский Королевский Филармонический Оркестр",
+        "locale": "ru",
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philharmonic Orchestra, Le",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Le Royal Philharmonic Orchestra",
+        "locale": "fr",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "로열 필하모닉 오케스트라",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "로열 필하모닉 오케스트라",
+        "locale": "ko",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ロイヤル・フィルハーモニーかんげんがくだん",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ロイヤル・フィルハーモニー管弦楽団",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "RPO, The",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "The RPO",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Britain’s National Orchestra",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Britain’s National Orchestra",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "RPO",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "RPO",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philharmonic Orchestra",
+        "name": "Royal Philharmonic Orchestra, The",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philharmonic",
+        "name": "Royal Philharmonic",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philharmonic Orchestra, London",
+        "name": "Royal Philharmonic Orchestra, London",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Phiharmonic Orchestra",
+        "name": "Royal Phiharmonic Orchestra",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philharmonic Concert Orchestra",
+        "name": "Royal Philharmonic Concert Orchestra",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Phil. Orch.",
+        "name": "Royal Phil. Orch.",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philarmonic Orchestra",
+        "name": "Royal Philarmonic Orchestra",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "The Royal Philarmonic Orchestra",
+        "name": "The Royal Philarmonic Orchestra",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philharmonic Orchestra L",
+        "name": "Royal Philharmonic Orchestra L",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "The Royal Philharmonic Orchestra",
+        "name": "The Royal Philharmonic Orchestra",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "The Royal Philharmonic Concert Orchestra",
+        "name": "The Royal Philharmonic Concert Orchestra",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Royal Philharmonic Orchestra",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Royal Philharmonic Orchestra",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Královský filharmonický orchestr",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Královský filharmonický orchestr",
+        "locale": "cs",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "Kurt Herbert Adler",
+     "artist": {
+      "id": "1d0eb81c-3205-482e-90bc-382aba30f9b3",
+      "name": "Kurt Herbert Adler",
+      "sort-name": "Adler, Kurt Herbert",
+      "disambiguation": "conductor"
+     }
+    }
+   ],
+   "first-release-date": "1991",
+   "releases": [
+    {
+     "id": "37478287-990e-4fdf-b76c-acbc45368b76",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "fa361e1c-d208-3dd6-bf22-0efb6091cdd7",
+     "count": 1,
+     "title": "Essential Pavarotti II",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Luciano Pavarotti",
+       "artist": {
+        "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+        "name": "Luciano Pavarotti",
+        "sort-name": "Pavarotti, Luciano",
+        "disambiguation": "tenor"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a6cd2874-6185-31c7-b4d2-daf01784d43f",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Essential Pavarotti II",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1991",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1991",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "1c68308f-9c3f-3e27-8324-8ca1c8522d7e",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "a23ec57a-70c0-3fd8-b632-7797bf5b0c8e",
+         "number": "18",
+         "title": "Nessun dorma",
+         "length": 205893
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 17
+      }
+     ]
+    },
+    {
+     "id": "66f83c45-62b3-4ec6-91c9-63b923848cd4",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "fa361e1c-d208-3dd6-bf22-0efb6091cdd7",
+     "count": 1,
+     "title": "Essential Pavarotti II",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Luciano Pavarotti",
+       "artist": {
+        "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+        "name": "Luciano Pavarotti",
+        "sort-name": "Pavarotti, Luciano",
+        "disambiguation": "tenor"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "a6cd2874-6185-31c7-b4d2-daf01784d43f",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Essential Pavarotti II",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1991",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1991",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "6d3a994a-6fc2-3574-bb90-45deb71c1ba3",
+       "position": 1,
+       "format": "Cassette",
+       "track": [
+        {
+         "id": "13821ce8-32d5-4224-b14d-c4aa653bb972",
+         "number": "B8",
+         "title": "Nessun dorma - Live Version",
+         "length": 190000
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 17
+      }
+     ]
+    },
+    {
+     "id": "8f3545ee-2fc0-4fe2-bbde-f0e8d4ea0605",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "1674d3cb-2e9e-3a4f-90ce-ed44d45ec9a7",
+     "count": 1,
+     "title": "Love at the Opera",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "joinphrase": " including: ",
+       "name": "World Famous Opera Stars",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      },
+      {
+       "joinphrase": ", ",
+       "name": "Jose Carreras",
+       "artist": {
+        "id": "7716ddac-2f24-44fa-81b1-bfa920811445",
+        "name": "José Carreras",
+        "sort-name": "Carreras, José",
+        "disambiguation": "Spanish tenor"
+       }
+      },
+      {
+       "joinphrase": ", ",
+       "name": "Renata Tebaldi",
+       "artist": {
+        "id": "04d5556f-7ac5-4328-b0d5-08d42199e0cf",
+        "name": "Renata Tebaldi",
+        "sort-name": "Tebaldi, Renata",
+        "disambiguation": "soprano"
+       }
+      },
+      {
+       "joinphrase": ", ",
+       "name": "Cecilia Bartoli",
+       "artist": {
+        "id": "043a40c7-fb90-42f7-89a8-077a8ff61db6",
+        "name": "Cecilia Bartoli",
+        "sort-name": "Bartoli, Cecilia",
+        "disambiguation": "mezzo‐soprano"
+       }
+      },
+      {
+       "joinphrase": ", ",
+       "name": "Luciano Pavarotti",
+       "artist": {
+        "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+        "name": "Luciano Pavarotti",
+        "sort-name": "Pavarotti, Luciano",
+        "disambiguation": "tenor"
+       }
+      },
+      {
+       "joinphrase": ", ",
+       "name": "Joan Sutherland",
+       "artist": {
+        "id": "dd5ef185-fc41-425d-8bd9-a5a600a8cc17",
+        "name": "Joan Sutherland",
+        "sort-name": "Sutherland, Joan",
+        "disambiguation": "soprano"
+       }
+      },
+      {
+       "name": "Kiri Te Kanawa",
+       "artist": {
+        "id": "1a78bb97-ad86-4f89-b4b4-cc10953103c3",
+        "name": "Kiri Te Kanawa",
+        "sort-name": "Te Kanawa, Kiri",
+        "disambiguation": "soprano"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6bdde237-b92b-4429-a2cd-bff45781ea43",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Love at the Opera",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1997",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1997",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 16,
+     "media": [
+      {
+       "id": "bcb63d22-4747-33f5-8f9e-91381b711853",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "0b0b92c9-fdec-49bc-9863-928c3f0053e3",
+         "number": "16",
+         "title": "Nessun dorma",
+         "length": 201866
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 15
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "GBFO78240410",
+    "GBF078240410"
+   ]
+  },
+  {
+   "id": "f1d0cb60-677f-448c-bb6a-38285b719ae3",
+   "score": 79,
+   "artist-credit-id": "d27ed24d-3958-3b39-9db1-38ad2ca86247",
+   "title": "Turandot: “Nessun dorma”",
+   "length": 199266,
+   "video": null,
+   "artist-credit": [
+    {
+     "joinphrase": ", ",
+     "name": "Luciano Pavarotti",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti",
+      "sort-name": "Pavarotti, Luciano",
+      "disambiguation": "tenor",
+      "aliases": [
+       {
+        "sort-name": "Pavarotti, Luciano",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Luciano Pavarotti",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ルチアーノ・パヴァロッティ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ルチアーノ・パヴァロッティ",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarati",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "Pavarati",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti",
+        "name": "Pavarotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Pavoratti",
+        "name": "Luciano Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavoratti",
+        "name": "Pavoratti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paverotti",
+        "name": "Luciano Paverotti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Luciano Paveretti",
+        "name": "Luciano Paveretti",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Pavarotti Luciano",
+        "name": "Pavarotti Luciano",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    },
+    {
+     "joinphrase": ", ",
+     "name": "Members of the New York Philharmonic",
+     "artist": {
+      "id": "7cdb68bc-c4f1-4a92-9bd2-739641c5eff0",
+      "name": "New York Philharmonic",
+      "sort-name": "New York Philharmonic",
+      "aliases": [
+       {
+        "sort-name": "Simfnicheskiy Orkestr N'yu-Yorkskoy Filarmonii",
+        "name": "Симфнический Оркестр Нью-Йоркской Филармонии",
+        "locale": "ru",
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Philharmanic Orchestrange, The",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "The Philharmanic Orchestrange",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Philharmonic-Symphony Society of New York, Inc.",
+        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+        "name": "Philharmonic-Symphony Society of New York, Inc.",
+        "locale": "en",
+        "type": "Legal name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Philharmonic Society of New York",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Philharmonic Society of New York",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "1842",
+        "end-date": null
+       },
+       {
+        "sort-name": "New York Philharmonic Society",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "New York Philharmonic Society",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "New York Philharmonic Orchestra",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "New York Philharmonic Orchestra",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "NYP",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "NYP",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "NY Phil",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "NY Phil",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "NY Philharmonic",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "NY Philharmonic",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "New York Phil",
+        "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+        "name": "New York Phil",
+        "locale": null,
+        "type": "Search hint",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "New York Philharmonic",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "New York Philharmonic",
+        "locale": "en",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Flux Fiddlers, The",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "The Flux Fiddlers",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "NYPO",
+        "name": "NYPO",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "New York Philharmonic-Symphony Orchestra",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "New York Philharmonic-Symphony Orchestra",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "Leone Magiera",
+     "artist": {
+      "id": "0a470c25-de1c-4042-b7cb-828b13b68c43",
+      "name": "Leone Magiera",
+      "sort-name": "Magiera, Leone",
+      "disambiguation": "conductor, pianist"
+     }
+    }
+   ],
+   "first-release-date": "1993",
+   "releases": [
+    {
+     "id": "74d1a413-c775-48f1-9d9c-46ac628b80f0",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "fa361e1c-d208-3dd6-bf22-0efb6091cdd7",
+     "count": 1,
+     "title": "Pavarotti in Central Park",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Luciano Pavarotti",
+       "artist": {
+        "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+        "name": "Luciano Pavarotti",
+        "sort-name": "Pavarotti, Luciano",
+        "disambiguation": "tenor"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "92a1847d-e7c2-3af6-83fb-cd05b6569a02",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Pavarotti in Central Park",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1993",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1993",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 20,
+     "media": [
+      {
+       "id": "5cfa8988-c095-3d14-b620-d07da7d49981",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "1f381dbb-fa0e-356d-97bf-3f3fa3bb5b29",
+         "number": "20",
+         "title": "Turandot - Nessun dorma",
+         "length": 199266
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 19
+      }
+     ]
+    },
+    {
+     "id": "e55c1c16-8c94-410c-94eb-6c1461b3fb99",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "fa361e1c-d208-3dd6-bf22-0efb6091cdd7",
+     "count": 1,
+     "title": "Pavarotti in Central Park",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Luciano Pavarotti",
+       "artist": {
+        "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+        "name": "Luciano Pavarotti",
+        "sort-name": "Pavarotti, Luciano",
+        "disambiguation": "tenor"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "92a1847d-e7c2-3af6-83fb-cd05b6569a02",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Pavarotti in Central Park",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1994-10-25",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "1994-10-25",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 20,
+     "media": [
+      {
+       "id": "42dae26e-ee18-3c70-aacd-c020a87bfa5a",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "80333ec3-9728-4d83-bd48-95b3b3dc2d23",
+         "number": "20",
+         "title": "Turandot: “Nessun dorma”",
+         "length": 199266
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 19
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

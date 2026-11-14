@@ -122,6 +122,10 @@ val SourceAdapter.tag: String get() = id.tag
  * without an accepted recording. A result whose lyrics links are not known (a lookup failed) is
  * [provisional].
  *
+ * [roles] are the credited artists' roles MusicBrainz's resolution told (`Resolution.roles`, #1180),
+ * on MusicBrainz's result only, kept the same way, so a replay prompts and searches by the performers
+ * as its first play did; null where the resolution told none (the title's composer lead decides).
+ *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
  * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name), or left
  * short of a part a later lookup may bring (MusicBrainz's, without the release of a cover's
@@ -167,6 +171,7 @@ data class SourceResult(
     val firstRelease: FirstRelease? = null,
     val original: OriginalRecording? = null,
     val lyrics: WorkLyrics? = null,
+    val roles: ArtistRoles? = null,
     val freshUntil: Instant? = null,
     val trackOnly: Boolean = false,
     val pages: List<String> = emptyList(),

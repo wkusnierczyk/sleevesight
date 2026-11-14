@@ -46,19 +46,35 @@ class RecordingResolverArtistSearchTest {
         }
 
     @Test
-    fun `without a composer, one search by the first artist, however many are credited`() =
+    fun `without a composer, nothing that fits is searched for by the next artists, three searches at most`() =
         runTest {
+            // #1180: a classical track credited to its composer first, with no lead in its title, is
+            // found by a performer; however many are credited, three searches in all.
             val musicBrainz = FakeMusicBrainz(nothing)
             assertEquals(Outcome.None, resolve(musicBrainz, track("Song", "A, B, C, D, E")).outcome)
+            assertEquals(listOf("Song" to "A", "Song" to "B", "Song" to "C"), musicBrainz.searched)
+        }
+
+    @Test
+    fun `without a composer, a first search that finds what fits is the only one`() =
+        runTest {
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(listOf(recording("a", "Song", "A", 200, "1990"))))
+            assertEquals("a", resolve(musicBrainz, track("Song", "A, B, C")).recordingMbid)
             assertEquals(listOf("Song" to "A"), musicBrainz.searched)
         }
 
     @Test
-    fun `a title whose lead names no credited artist is searched whole, once, by the first artist`() =
+    fun `a title whose lead names no credited artist is searched whole, by the first artist, then the next`() =
         runTest {
             val musicBrainz = FakeMusicBrainz(nothing)
             resolve(musicBrainz, track("Star Wars: Main Title", "John Williams, London Symphony Orchestra"))
-            assertEquals(listOf("Star Wars: Main Title" to "John Williams"), musicBrainz.searched)
+            assertEquals(
+                listOf(
+                    "Star Wars: Main Title" to "John Williams",
+                    "Star Wars: Main Title" to "London Symphony Orchestra",
+                ),
+                musicBrainz.searched,
+            )
         }
 
     @Test

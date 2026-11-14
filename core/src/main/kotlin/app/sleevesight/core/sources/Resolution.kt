@@ -1,5 +1,6 @@
 package app.sleevesight.core.sources
 
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.text.DateWhen
@@ -66,6 +67,10 @@ import app.sleevesight.core.text.DateWhen
  * @property lyrics what MusicBrainz says of the track's lyrics (#728): the lyrics pages its works
  *   link, their languages, and whether the recording is marked instrumental ([WorkLyrics]); none
  *   when no recording was accepted.
+ * @property roles which credited artists composed the work and which perform it, as MusicBrainz tells
+ *   once resolved (#1180, [ArtistRoles]): set only when the recording's work was looked up and names
+ *   at least one composer; null otherwise (no recording, no work, a work lookup that failed, or no
+ *   composer relationship), where the title's composer lead decides ([ArtistRoles.of]).
  * @property failure why MusicBrainz could not be asked, when [outcome] is [Outcome.Unreachable]:
  *   the failed lookup's kind as the client names it (`RateLimited`, `Offline`, `Server`,
  *   `status 400`, …), never a URL or a value; for the diagnostics only (#191). Null otherwise.
@@ -95,6 +100,7 @@ data class Resolution(
     val recordingTags: List<String> = emptyList(),
     val recordingTagVotes: Map<String, Int> = emptyMap(),
     val lyrics: WorkLyrics = WorkLyrics.NONE,
+    val roles: ArtistRoles? = null,
     val failure: String? = null,
     val provisional: Boolean = false,
 ) {
@@ -114,6 +120,50 @@ data class Resolution(
 
         /** MusicBrainz could not be asked, for the reason [failure] names. */
         fun unreachable(failure: String): Resolution = Resolution(outcome = Outcome.Unreachable, failure = failure)
+    }
+}
+
+/**
+ * The credited artists of a track by role (#1180, `design/classical.md`, section 2): who composed the
+ * work ([composers]) and who performs this recording of it ([performers]), each as the track credits
+ * them, in its order. Streaming services credit a classical track's composer first, so the first
+ * credited artist ([NormalizedTrack.primary]) is no performer there; where a search, a filter or a
+ * prompt means the performer, it reads [lead].
+ *
+ * @property composers the credited artists who composed the work and do not perform on the recording;
+ *   empty when nothing tells (a pop song's writer who sings it is a performer).
+ * @property performers the other credited artists, but an artist the title names beside its composer
+ *   (an arranger in `(Arr. Busoni)`) whom the recording does not credit; empty when no one else is
+ *   credited.
+ */
+data class ArtistRoles(
+    val composers: List<String>,
+    val performers: List<String>,
+) {
+    /** The first performer, else [track]'s first credited artist ([NormalizedTrack.primary]). */
+    fun lead(track: NormalizedTrack): String = performers.firstOrNull { it.isNotBlank() } ?: track.primary
+
+    companion object {
+        /**
+         * [track]'s roles: those MusicBrainz [told] once resolved ([Resolution.roles], kept with its
+         * result for a replay, `SourceResult.roles`), else the title's (#1129): a composer the title
+         * leads with ([NormalizedTrack.composer]) and the [NormalizedTrack.performers], or, with no
+         * such lead, no composer and every credited artist a performer, as before #1180. A track
+         * crediting no one but the composer and the artists the title names (`Liszt: … (Arr. Busoni)` by
+         * Liszt and Busoni) has no performer the title tells ([NormalizedTrack.performers] is then every
+         * credited artist).
+         */
+        fun of(
+            track: NormalizedTrack,
+            told: ArtistRoles? = null,
+        ): ArtistRoles {
+            val composer = track.composer?.name
+            return when {
+                told != null -> told
+                composer == null -> ArtistRoles(emptyList(), track.artists)
+                else -> ArtistRoles(listOf(composer), track.performers.takeIf { composer !in it }.orEmpty())
+            }
+        }
     }
 }
 
