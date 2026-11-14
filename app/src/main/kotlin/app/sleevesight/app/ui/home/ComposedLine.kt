@@ -1,5 +1,8 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.R
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
@@ -9,10 +12,11 @@ import app.sleevesight.core.sources.ReleaseDate
 
 /**
  * When [track]'s music was composed (#1132), after the release sentences ([said]): as MusicBrainz
- * dates it (its result's, else the run's resolution's), else as Wikidata does (Wikipedia's result,
- * from the song's item). None beside no release sentence, since nothing then tells whether it repeats
- * one, and none unless every year of its dates is before the earliest year they say: in that year, the
- * music and the recording are of one date, and the line would only repeat the release.
+ * dates it (its result's, else the run's resolution's), else as Wikipedia's result does, from the
+ * infobox of the song's article (#1273), else from the song's Wikidata item. None beside no release
+ * sentence, since nothing then tells whether it repeats one, and none unless every year of its dates is
+ * before the earliest year they say: in that year, the music and the recording are of one date, and the
+ * line would only repeat the release.
  */
 internal fun composedSentence(
     track: TrackState?,
@@ -43,3 +47,12 @@ private fun DateSentence.dates(): List<String> =
         is DateSentence.Original -> listOf(date)
         is DateSentence.FirstOriginal, is DateSentence.FirstHere, is DateSentence.Composed -> emptyList()
     }
+
+/**
+ * The name of the source of when the music was composed, for the From line under it: "Wikipedia" for
+ * the infobox of the song's article (#1273), not the source's name in the settings, "Wikipedia and
+ * Wikidata", since the line links the article; else the source's name ([sourceName]).
+ */
+@Composable
+internal fun composedSourceName(source: SourceId): String =
+    if (source == SourceId.WIKIPEDIA) stringResource(R.string.home_source_name_wikipedia) else sourceName(source)

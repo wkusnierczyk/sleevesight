@@ -23,6 +23,15 @@ data class WpPage(
 )
 
 /**
+ * An article's lead as [WikipediaClient.songLead] reads it: [text], the plain text of its lead section,
+ * and [opening], the wikitext of the same section, the infobox's (#1273); either null when missing.
+ */
+data class WpLead(
+    val text: String?,
+    val opening: String?,
+)
+
+/**
  * A Wikipedia's action API, the English one's (`https://en.wikipedia.org/w/api.php`) unless [wiki]
  * names another's subdomain (`hi`, for the search in the track's language, #902), keyless, through
  * the one [NetClient], whose User-Agent names the app and a contact as Wikimedia's policy asks.
@@ -72,26 +81,58 @@ class WikipediaClient(
     }
 
     /** The plain text of [title]'s lead section, or null when there is no such article. */
-    suspend fun lead(title: String): Lookup<String?> {
-        val query =
-            mapOf(
-                "action" to "query",
-                "titles" to title,
-                "prop" to "extracts",
-                "exintro" to "1",
-                "explaintext" to "1",
-                "redirects" to "1",
-                "format" to "json",
-                "formatversion" to "2",
-            )
-        return net.lookup(NetRequest(api, query = query)) { response ->
+    suspend fun lead(title: String): Lookup<String?> =
+        net.lookup(NetRequest(api, query = leadQuery(title, "extracts"))) { response ->
             parseWikimedia(response.body)
                 .obj("query")
                 .array("pages")
                 .firstOrNull()
                 ?.string("extract")
         }
+
+    /**
+     * A song's article [title]: its lead's plain text, as [lead] gives it, and in the same request the
+     * wikitext of its lead section (`rvsection=0`), which holds its infobox (#1273); null when there
+     * is no such article.
+     */
+    suspend fun songLead(title: String): Lookup<WpLead?> {
+        val query =
+            leadQuery(title, "extracts|revisions") +
+                mapOf("rvprop" to "content", "rvslots" to "main", "rvsection" to "0")
+        return net.lookup(NetRequest(api, query = query)) { response ->
+            parseWikimedia(response.body)
+                .obj("query")
+                .array("pages")
+                .firstOrNull()
+                ?.takeIf { it.isPresent() }
+                ?.let { page ->
+                    val opening =
+                        page
+                            .array("revisions")
+                            .firstOrNull()
+                            .obj("slots")
+                            .obj("main")
+                            .string("content")
+                    WpLead(page.string("extract"), opening)
+                }
+        }
     }
+
+    // The query of [title]'s lead, with [prop] (its extract, and perhaps its wikitext).
+    private fun leadQuery(
+        title: String,
+        prop: String,
+    ): Map<String, String> =
+        mapOf(
+            "action" to "query",
+            "titles" to title,
+            "prop" to prop,
+            "exintro" to "1",
+            "explaintext" to "1",
+            "redirects" to "1",
+            "format" to "json",
+            "formatversion" to "2",
+        )
 
     companion object {
         const val API: String = "https://en.wikipedia.org/w/api.php"

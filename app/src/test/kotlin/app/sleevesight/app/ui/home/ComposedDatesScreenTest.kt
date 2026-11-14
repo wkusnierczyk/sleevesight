@@ -22,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * When the music was composed, as the *Dates* panel says it (#1132): the line after the release
+ * When the music was composed, as the *Dates* panel says it (#1132, #1273): the line after the release
  * sentences, in years, and under it its source, a link to the page that says so. Which date is said is
  * `ComposedDatesTest`'s.
  */
@@ -84,6 +84,18 @@ class ComposedDatesScreenTest {
         said(listOf(DateSentence.Album("1994"), composed)) {
             compose.onNodeWithTag(DATES_FROM_TAG).assertTextEquals("From Wikidata")
             assertEquals(item, linkOf(DATES_FROM_TAG))
+        }
+    }
+
+    @Test
+    fun wikipediasInfoboxDateNamesWikipediaAloneAndLinksTheArticle() {
+        // The source's name in the settings is "Wikipedia and Wikidata"; the line links the article (#1273).
+        val article = "https://en.wikipedia.org/wiki/Symphony_No._5_(Beethoven)"
+        val composed = DateSentence.Composed(ComposedDate("1804", "1808", SourceId.WIKIPEDIA, article))
+        said(listOf(DateSentence.Album("1963"), composed)) {
+            compose.onNodeWithText("The music was composed between 1804 and 1808.").fetchSemanticsNode()
+            compose.onNodeWithTag(DATES_FROM_TAG).assertTextEquals("From Wikipedia")
+            assertEquals(article, linkOf(DATES_FROM_TAG))
         }
     }
 
