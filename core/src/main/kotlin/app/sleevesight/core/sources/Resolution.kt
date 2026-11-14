@@ -366,11 +366,15 @@ data class ReleaseDate(
  * nothing tells which is its own. The identity check looks for the whole's
  * Wikidata item when the part has none (`IdentityCheck.wholeItems`): K. 545's Andante has no
  * item, its sonata has one, with the sonata's article. Null for any other work, and when not known.
+ * [type] is the work's own type as MusicBrainz gives it (`Aria`, `Song`), from the work's lookup:
+ * MusicBrainz's lines name the kind of piece a libretto is of by it (#1274); null when it gives none,
+ * or when the work was not looked up.
  */
 data class ResolvedWork(
     val mbid: String,
     val title: String,
     val whole: ResolvedWork? = null,
+    val type: String? = null,
 )
 
 /**

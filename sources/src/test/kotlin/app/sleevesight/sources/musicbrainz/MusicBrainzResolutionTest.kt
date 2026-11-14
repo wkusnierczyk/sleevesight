@@ -272,13 +272,13 @@ class MusicBrainzResolutionTest {
             assertEquals(AuthorsName.AUTHORS, split.name)
             assertEquals(listOf("Giacomo Puccini"), split.composers)
             assertEquals(listOf("Giuseppe Adami", "Renato Simoni"), split.words)
-            // The work's lines name them beside the composer.
+            // The work's lines name them beside the composer, the piece by its type, an aria.
             val result = MusicBrainzSource().lookup(track, CompletableDeferred(resolution))
             val work = "Turandot: Atto III, scena 1. Aria “Nessun dorma” (Calaf)"
             assertEquals(
                 listOf(
                     "The music of “$work” was composed by Giacomo Puccini.",
-                    "The libretto of “$work” was written by Giuseppe Adami and Renato Simoni.",
+                    "The libretto of this aria was written by Giuseppe Adami and Renato Simoni.",
                 ),
                 result.evidence.map { it.text }.filter { "composed by" in it || "libretto" in it },
             )

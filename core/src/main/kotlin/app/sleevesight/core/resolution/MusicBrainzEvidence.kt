@@ -6,6 +6,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.ResolvedWork
 import kotlin.time.Instant
 
 /**
@@ -21,6 +22,11 @@ object MusicBrainzEvidence {
     const val MAX_PERFORMER_LINES: Int = 6
 
     private const val SITE = "https://musicbrainz.org"
+
+    // The work types, as MusicBrainz names them lowercased, a libretto is written for (#1274); any
+    // other piece is "this piece".
+    private val LIBRETTO_FORMS =
+        setOf("aria", "cantata", "musical", "opera", "operetta", "oratorio", "zarzuela")
 
     // The first-release line as [lines] writes it: the title quoted, an optional credit, the date as
     // `EvidenceText.date` words it, then the release's type, if any, and its title, quoted, to the end.
@@ -97,16 +103,18 @@ object MusicBrainzEvidence {
                     )
             }
         }
-        if (work != null) lines += writerLines(work.title, resolution.credits, "$SITE/work/${work.mbid}")
+        if (work != null) lines += writerLines(work, resolution.credits, "$SITE/work/${work.mbid}")
         lines += recordingLines(title, resolution.credits, "$SITE/recording/$recording")
         return lines.map { EvidenceDraft(SourceId.MUSICBRAINZ, it.scope, it.text, it.url, retrievedAt) }
     }
 
     private fun writerLines(
-        title: String,
+        work: ResolvedWork,
         credits: List<Credit>,
         url: String,
     ): List<Line> {
+        val title = work.title
+
         // MusicBrainz's special-purpose artists, `[traditional]`, `[unknown]` and the like, are not people.
         fun named(role: CreditRole) = credits.filter { it.role == role && !it.name.startsWith("[") }.map { it.name }
         val traditional =
@@ -133,10 +141,12 @@ object MusicBrainzEvidence {
                     Line(Scope.SONG, "The lyrics of “$title” were written by ${EvidenceText.list(lyricists)}.", url)
             }
         }
-        // An opera's or an aria's words (#1274), whoever wrote the music.
+        // An opera's or an aria's words (#1274), whoever wrote the music: the piece named by its kind,
+        // the title being the playing track's.
         if (librettists.isNotEmpty()) {
+            val kind = work.type?.lowercase()?.takeIf { it in LIBRETTO_FORMS } ?: "piece"
             lines +=
-                Line(Scope.SONG, "The libretto of “$title” was written by ${EvidenceText.list(librettists)}.", url)
+                Line(Scope.SONG, "The libretto of this $kind was written by ${EvidenceText.list(librettists)}.", url)
         }
         if (writers.isNotEmpty()) {
             lines +=

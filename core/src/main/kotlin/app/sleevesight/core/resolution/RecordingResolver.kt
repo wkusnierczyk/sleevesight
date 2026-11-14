@@ -381,6 +381,7 @@ class RecordingResolver(
                         .singleOrNull()
                         ?.takeIf { composedWork }
                         ?.let { ResolvedWork(it.mbid, it.title) },
+                    type = work.type,
                 ),
             cover = cover,
             earliest = earliest,

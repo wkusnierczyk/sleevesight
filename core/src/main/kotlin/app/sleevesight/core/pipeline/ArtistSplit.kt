@@ -60,9 +60,9 @@ data class ArtistSplit(
             if (composers.isEmpty() || performers.isEmpty()) return null
             val lead = roles.lead(track).takeIf { it in performers } ?: performers.first()
             // A work's lyricists and librettists alike (#1274); one credited as both is one author.
-            val writers = lyrics?.let { it.lyricists + it.librettists }.orEmpty().filter(String::isNotBlank)
-            val words = writers.filter { writer -> composers.none { same(it, writer) } }.distinct()
-            val ownWords = writers.any { writer -> composers.any { same(it, writer) } }
+            val wordsBy = lyrics?.let { it.lyricists + it.librettists }.orEmpty().filter(String::isNotBlank)
+            val words = wordsBy.filter { author -> composers.none { same(it, author) } }.distinct()
+            val ownWords = wordsBy.any { author -> composers.any { same(it, author) } }
             val name =
                 when {
                     composers.size + words.size > 1 -> AuthorsName.AUTHORS
