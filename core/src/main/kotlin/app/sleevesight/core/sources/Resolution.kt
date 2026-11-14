@@ -184,8 +184,9 @@ data class ArtistRoles(
  * month or a day a source gives marks where it began or a catalogue's entry, not when the music was.
  *
  * @property source [SourceId.MUSICBRAINZ] for the dates of the composer relationship of the recording's
- *   work ([url] the work's page), [SourceId.WIKIDATA] for the inception (P571) of the song's item the
- *   identity check accepted ([url] the item's page).
+ *   work ([url] the work's page), [SourceId.WIKIPEDIA] for the years the infobox of the song's article
+ *   gives (#1273, [url] the article's address), [SourceId.WIKIDATA] for the inception (P571) of the
+ *   song's item the identity check accepted ([url] the item's page).
  */
 data class ComposedDate(
     val from: String,
