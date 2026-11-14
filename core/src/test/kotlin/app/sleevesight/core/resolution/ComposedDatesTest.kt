@@ -50,8 +50,16 @@ class ComposedDatesTest {
         val arranged = work(bach, composer("Ferruccio Busoni", "1897", "1897"))
         val date = ComposedDates.ofWork(arranged, listOf("Johann Sebastian Bach"), names)
         assertEquals("1722" to "1722", date?.let { it.from to it.to })
-        // With no credited composer among them, every composer relationship counts.
+        // With no credited composer (a pop song, its writer singing it), every composer relationship counts.
         assertEquals("1722" to "1897", ComposedDates.ofWork(arranged, emptyList(), names)?.let { it.from to it.to })
+    }
+
+    @Test
+    fun `a credited composer the work's relationships do not name leaves no date, not an arranger's`() {
+        // `Liszt: …` with the title's composer credited, and the work naming only its arranger, dated 1897:
+        // no MusicBrainz date, so Wikidata may answer.
+        val arrangement = work(composer("Ferruccio Busoni", "1897", "1897"))
+        assertNull(ComposedDates.ofWork(arrangement, listOf("Franz Liszt"), names))
     }
 
     @Test

@@ -12,11 +12,12 @@ import app.sleevesight.core.text.DateWhen
 object ComposedDates {
     /**
      * When [work] was composed: the years its `composer` relationships date, from the earliest to the
-     * latest of their begin and end dates (`1921-03` to `1924-03` for *Turandot*, 1921 to 1924). Of the
-     * relationships naming one of [composers], the credited composers (`ArtistRoles.composers`, by
-     * [names]' [NameMatcher.sameName]), when any does, since a work's composer relationship may name an
-     * arranger or a sampled song's writer, whose dates are not this music's; else of them all. Null when
-     * none of them is dated.
+     * latest of their begin and end dates (`1921-03` to `1924-03` for *Turandot*, 1921 to 1924). With
+     * credited composers ([composers], `ArtistRoles.composers`), only the relationships naming one of them
+     * (by [names]' [NameMatcher.sameName]), and none when none does: a work's composer relationship may
+     * name an arranger or a sampled song's writer, whose dates are not this music's, and with none of the
+     * composer's own, Wikidata may still date it ([ofItem]). With no credited composer (a pop song, its
+     * writer singing it), all of them. Null when none of those is dated.
      */
     fun ofWork(
         work: MbWork,
@@ -24,10 +25,14 @@ object ComposedDates {
         names: NameMatcher,
     ): ComposedDate? {
         val all = work.artistRelations.filter { it.type == COMPOSER_RELATION }
-        val credited = all.filter { relation -> composers.any { names.sameName(relation.artistName, it) } }
+        val counted =
+            if (composers.isEmpty()) {
+                all
+            } else {
+                all.filter { relation -> composers.any { names.sameName(relation.artistName, it) } }
+            }
         val years =
-            credited
-                .ifEmpty { all }
+            counted
                 .flatMap { listOfNotNull(it.begin, it.end) }
                 .mapNotNull { DateWhen.of(it)?.year }
                 .sorted()
