@@ -15,8 +15,8 @@ import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
@@ -53,17 +53,19 @@ fun HttpArt.onlyWhen(allowed: () -> Flow<Boolean>): HttpArt =
  * where the player grants read access: otherwise a `SecurityException`, and the next source), an
  * `https` URI through [http]. Decoding runs in [io].
  *
- * A `content://` read runs on a thread of [reader], not in [io]: the provider is another app's
+ * A `content://` read runs on a thread of [reads], not in [io]: the provider is another app's
  * code, and a provider that never answers would hold a thread that coroutine cancellation cannot
  * free. The read is given [CONTENT_TIMEOUT]; then, or when the load is cancelled, the open is
  * cancelled through its `CancellationSignal` and the stream closed, which frees the thread where
- * the provider honours either, and the next source is tried (#1042).
+ * the provider honours either, and the next source is tried (#1042). [reads] bounds the reads in
+ * flight, in all and per provider, and passes over a provider whose read is still stuck: then the
+ * URI is skipped like an unreadable one, for that track, since a track's art is loaded once.
  */
 class ArtLoader(
     private val resolver: ContentResolver,
     private val http: HttpArt,
     private val io: CoroutineContext,
-    private val reader: Executor = CONTENT_READER,
+    private val reads: ContentReads = ContentReads.SHARED,
 ) {
     suspend fun load(sources: List<ArtSource>): Bitmap? {
         for (source in sources) {
@@ -79,21 +81,55 @@ class ArtLoader(
         return null
     }
 
-    /** [uri]'s bytes, read on [reader] within [CONTENT_TIMEOUT], or null. */
+    /** [uri]'s bytes, read on [reads] within [CONTENT_TIMEOUT], or null. */
     private suspend fun readContentInTime(uri: String): ByteArray? {
+        // A `content://` URI always names its provider; one that does not shares the key "".
+        val authority = uri.toUri().authority.orEmpty()
+        if (!reads.tryStart(authority)) {
+            Log.i(TAG, "Art not read: too many reads in flight, or the provider has not answered yet")
+            return null
+        }
+        return readStarted(uri, authority)
+    }
+
+    /** [readContentInTime] once [reads] has given [authority]'s read a slot, which this frees. */
+    private suspend fun readStarted(
+        uri: String,
+        authority: String,
+    ): ByteArray? {
         val signal = CancellationSignal()
         val opened = AtomicReference<Closeable?>()
         val read = CompletableDeferred<ByteArray?>()
-        reader.execute {
+        val state = AtomicInteger(RUNNING)
+        val started =
             try {
-                read.complete(readContent(uri, signal, opened))
-            } finally {
-                read.complete(null)
+                reads.executor.execute {
+                    try {
+                        read.complete(readContent(uri, signal, opened))
+                    } finally {
+                        read.complete(null)
+                        if (!state.compareAndSet(RUNNING, RETURNED)) reads.unmarkStuck(authority)
+                        reads.finish(authority)
+                    }
+                }
+                true
+            } catch (e: RejectedExecutionException) {
+                Log.i(TAG, "Art not read: ${e::class.simpleName}")
+                reads.finish(authority)
+                false
             }
-        }
+        if (!started) return null
         try {
             return withTimeoutOrNull(CONTENT_TIMEOUT) { read.await() }
-                .also { if (!read.isCompleted) Log.i(TAG, "Art not read in time") }
+                .also {
+                    if (!read.isCompleted) {
+                        Log.i(TAG, "Art not read in time")
+                        // Marked first, so the reader, once it sees STUCK, has a mark to remove;
+                        // unmarked again if the read returned in between.
+                        reads.markStuck(authority)
+                        if (!state.compareAndSet(RUNNING, STUCK)) reads.unmarkStuck(authority)
+                    }
+                }
         } finally {
             if (!read.isCompleted) {
                 // Cancel before reading [opened]: the reader stores the stream before it checks the
@@ -185,11 +221,9 @@ class ArtLoader(
         /** As `ArtFetcher.TIMEOUT`, the bound on the other way art is read: far above a cover's read. */
         val CONTENT_TIMEOUT = 15.seconds
 
-        /**
-         * A thread per read in flight, kept a minute once idle: a read that hangs holds only its
-         * own thread, never `Dispatchers.IO`'s, and does not queue the next track's read behind it.
-         */
-        val CONTENT_READER: Executor =
-            Executors.newCachedThreadPool { task -> Thread(task, "art-read").apply { isDaemon = true } }
+        // A read's [AtomicInteger] state: whichever of the reader and the timeout moves it first.
+        const val RUNNING = 0
+        const val RETURNED = 1
+        const val STUCK = 2
     }
 }
