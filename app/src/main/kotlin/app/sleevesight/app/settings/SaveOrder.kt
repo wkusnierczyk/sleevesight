@@ -15,6 +15,17 @@ import java.io.IOException
  * save asked for before it has ended. Its place in line is taken in the call itself
  * ([CoroutineStart.UNDISPATCHED] up to the lock, which [Mutex] grants first come, first served),
  * not when the scope's dispatcher gets round to it, so a later save never goes first.
+ *
+ * Every writer of a choice goes through it, so none overtakes a save still waiting its turn: the
+ * settings screen's saves ([saving]), Home's (*Reactive*'s mode, the theme, the report button's
+ * *Hide*, *Dismiss* and its *Undo*), the key dialogs' choices
+ * ([app.sleevesight.app.ui.settings.applyChoices]), and *Players*' list as the app keeps it
+ * ([SettingsStore.playerSeen], [SettingsStore.forgetPlayer]). [SettingsStore.update] itself takes
+ * no turn, as it runs inside one; the turn is not reentrant, so nothing in a turn waits for another.
+ * The keys' gate ([app.sleevesight.app.secrets.KeyGate], `servicesOff`) writes outside it: it keeps
+ * a rule rather than a choice, and applies it again at every change of the settings, so a save that
+ * lands after it is put right at once; in line, a key's save would wait on the settings' saves
+ * while it holds the key store's lock.
  */
 internal class SaveOrder {
     private val turn = Mutex()
@@ -24,6 +35,9 @@ internal class SaveOrder {
         scope: CoroutineScope,
         block: suspend () -> T,
     ): Deferred<T> = scope.async(start = CoroutineStart.UNDISPATCHED) { turn.withLock { block() } }
+
+    /** Runs [block] in line, in the caller's coroutine: its place is taken when this is called. */
+    suspend fun <T> inTurn(block: suspend () -> T): T = turn.withLock { block() }
 
     /** Launches [block] in [scope], in line; a failure reaches [scope], awaited or not. */
     fun launch(
