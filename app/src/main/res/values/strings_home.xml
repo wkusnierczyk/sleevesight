@@ -497,10 +497,9 @@
     <string name="home_item_show_performer">show the performer’s insight</string>
     <string name="home_item_show_author">show the author’s insight</string>
     <string name="home_item_show_authors">show the authors’ insight</string>
-    <!-- A chip of another performer or an author (#1199), which opens that artist's insight in place. -->
+    <!-- A chip of another performer or an author (#1199), which gives way to that artist's insight
+         in its place (#1288). -->
     <string name="home_item_show_named">show this artist’s insight</string>
-    <!-- That chip while its artist's insight is open under it: a tap folds it. -->
-    <string name="home_item_hide_named">hide this artist’s insight</string>
     <!-- A row of the song, the artist or the album as a screen reader reads it while its insight is
          written with its panel or page closed (#948): "Song, Paper Boats, uses AI, writing"; %1$s:
          the row as read otherwise, "Song, Paper Boats, uses AI". -->

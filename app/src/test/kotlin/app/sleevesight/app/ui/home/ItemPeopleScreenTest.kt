@@ -10,6 +10,10 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -27,15 +31,17 @@ import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The other performers' chips in the artist's panel (#1199): one artist's insight open at a time,
- * each a tap's write; the focus goes to the open one's *Close*, a chip tapped while another is open
- * included, and back to its chip when it closes.
+ * The other performers' chips in the artist's panel (#1199) and on its page: a chip's tap puts its
+ * artist's insight in the chip's place, titled with the name, and *Close* puts the chip back
+ * (#1288); each opens and closes on its own, several at once, each a tap's write; the focus goes to
+ * the opened panel's *Close*, and back to its chip when it closes.
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemPeopleScreenTest {
@@ -62,47 +68,83 @@ class ItemPeopleScreenTest {
 
     private fun state(said: String) = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, said)
 
-    private fun close(name: String) = itemPanelTag(InsightItem.named(name)) + ":close"
+    private fun panel(name: String) = itemPanelTag(InsightItem.named(name))
 
-    @Test
-    fun aChipTappedWhileAnotherIsOpenTakesTheFocusToItsCloseAndClosingGoesBackToItsChip() {
-        val notes = FakeItemNotes()
+    private fun close(name: String) = panel(name) + ":close"
+
+    private val settings = Settings(writeAutomatically = WriteAutomatically.NEVER)
+
+    // Home under *Expandable boxes*, the artist's row unfolded; or, with [page], the artist's page.
+    private fun show(
+        notes: FakeItemNotes,
+        page: Boolean,
+    ) = ActivityScenario.launch(MainActivity::class.java).also { scenario ->
         val normalized = normalizer.normalize(playing)
-        val rows = itemRows(playing, normalized, splitOf(track, normalized))
-        val settings = Settings(writeAutomatically = WriteAutomatically.NEVER)
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity {
-                it.setContent {
-                    val context = ItemContext(track, settings, notes, false, {}, { _, _, _ -> }, readAloud = null)
-                    val folds = itemFolds(ItemFoldMemory(), playing, NewTrackFold.FOLDED)
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
+        scenario.onActivity {
+            it.setContent {
+                val context = ItemContext(track, settings, notes, false, {}, { _, _, _ -> }, readAloud = null)
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    if (page) {
+                        val row = itemRow(InsightItem.ARTIST, playing, normalized, track)
+                        ItemPage(InsightItem.ARTIST, row, context, tapped = true)
+                    } else {
+                        val rows = itemRows(playing, normalized, splitOf(track, normalized))
+                        val folds = itemFolds(ItemFoldMemory(), playing, NewTrackFold.FOLDED)
                         ItemRows(rows, false, folds, context) {}
                     }
                 }
             }
-            compose.waitForIdle()
+        }
+        compose.waitForIdle()
+        if (!page) {
             compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).performScrollTo().performClick()
             compose.waitForIdle()
+        }
+    }
+
+    private fun top(tag: String) = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot().top
+
+    @Test
+    fun aChipGivesWayToItsPanelAndCloseBringsItBackUnderBoxes() = chipsGiveWayToPanels(page = false)
+
+    @Test
+    fun aChipGivesWayToItsPanelAndCloseBringsItBackOnThePage() = chipsGiveWayToPanels(page = true)
+
+    private fun chipsGiveWayToPanels(page: Boolean) {
+        val notes = FakeItemNotes()
+        show(notes, page).use {
             // Nothing about the other performers is written before their chip's tap.
             assertEquals(emptyList<InsightItem>(), notes.writes.filter { it.artist != null })
             compose.onNodeWithTag(itemChipTag(MEHTA)).assert(state("collapsed"))
-            compose.onNodeWithTag(itemChipTag(MEHTA)).performScrollTo().performClick()
-            compose.waitForIdle()
-            compose.onNodeWithTag(close(MEHTA)).assertIsFocused()
-            // Open, the chip says so, and its tap would hide it.
-            compose.onNodeWithTag(itemChipTag(MEHTA)).assert(state("expanded"))
             compose
                 .onNodeWithTag(itemChipTag(MEHTA))
-                .assert(SemanticsMatcher("hides") { it.config[SemanticsActions.OnClick].label == HIDE })
-            // Another chip while one is open: its panel in the other's place, the focus on its *Close*.
+                .assert(SemanticsMatcher("shows") { it.config[SemanticsActions.OnClick].label == SHOW })
+            compose.onNodeWithTag(itemChipTag(MEHTA)).performScrollTo().performClick()
+            compose.waitForIdle()
+            // The chip gives way to its panel, titled with the name, in the chip's place: above the
+            // next chip, not under the chips.
+            compose.onNodeWithTag(itemChipTag(MEHTA)).assertDoesNotExist()
+            compose.onNode(hasText(MEHTA) and hasAnyAncestor(hasTestTag(panel(MEHTA)))).assertExists()
+            assertTrue(top(panel(MEHTA)) < top(itemChipTag(LA_PHIL)))
+            compose.onNodeWithTag(close(MEHTA)).assertIsFocused()
+            // Another chip while one is open: both open, each in its own place, the focus on its *Close*.
             compose.onNodeWithTag(itemChipTag(LA_PHIL)).performScrollTo().performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag(close(MEHTA)).assertDoesNotExist()
+            compose.onNodeWithTag(itemChipTag(LA_PHIL)).assertDoesNotExist()
+            compose.onNodeWithTag(panel(MEHTA)).assertExists()
+            assertTrue(top(panel(MEHTA)) < top(panel(LA_PHIL)))
             compose.onNodeWithTag(close(LA_PHIL)).assertIsFocused()
-            compose.onNodeWithTag(close(LA_PHIL)).performClick()
+            // *Close* puts the chip back where it was, and the focus on it; the other stays open.
+            compose.onNodeWithTag(close(MEHTA)).performScrollTo().performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag(close(LA_PHIL)).assertDoesNotExist()
+            compose.onNodeWithTag(panel(MEHTA)).assertDoesNotExist()
+            compose.onNodeWithTag(itemChipTag(MEHTA)).assertIsFocused()
+            assertTrue(top(itemChipTag(MEHTA)) < top(panel(LA_PHIL)))
+            compose.onNodeWithTag(close(LA_PHIL)).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(panel(LA_PHIL)).assertDoesNotExist()
             compose.onNodeWithTag(itemChipTag(LA_PHIL)).assertIsFocused()
+            compose.onNodeWithTag(itemChipTag(MEHTA)).assertExists()
             // Each opened by its tap, its write asked for once.
             assertEquals(
                 listOf(InsightItem.named(MEHTA), InsightItem.named(LA_PHIL)),
@@ -116,6 +158,6 @@ class ItemPeopleScreenTest {
         const val PAVAROTTI = "Luciano Pavarotti"
         const val MEHTA = "Zubin Mehta"
         const val LA_PHIL = "Los Angeles Philharmonic"
-        const val HIDE = "hide this artist’s insight"
+        const val SHOW = "show this artist’s insight"
     }
 }
