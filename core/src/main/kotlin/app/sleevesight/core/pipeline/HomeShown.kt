@@ -23,7 +23,8 @@ import app.sleevesight.core.resolution.MusicBrainzEvidence
  * - the player's own release line ([SourceId.PLAYER]);
  * - MusicBrainz's first-release line naming the album the player reports
  *   ([MusicBrainzEvidence.firstRelease]): of the album type or of none, by the album's name; a single
- *   or an EP only where the player names its release as one (" - Single", " - EP"). Another release
+ *   or an EP only where the player names its release as one (" - Single", " - EP", "(EP)",
+ *   "[Single]": [PlayerAlbum]), an album only where it does not. Another release
  *   named, a single before the album among them, is an earlier release;
  * - MusicBrainz's line on the album itself, as `AlbumSource` writes it ("“Sundown” is an album by
  *   Gordon Lightfoot, first released in January 1974."), for the album the player reports;
@@ -61,14 +62,39 @@ object HomeShown {
                 .filter { it.isNotEmpty() }
                 .distinct()
                 .sortedByDescending { it.length }
-        val album = nowPlaying.album?.let { ArtistFact.matchKey(Edition.strip(it)) }?.takeIf { it.isNotEmpty() }
-        val shown = Shown(album, artists, datesShown(evidence))
+        val shown = Shown(nowPlaying.album?.let(PlayerAlbum::of), artists, datesShown(evidence))
         return evidence.lines.all { shown.only(it) }
+    }
+
+    /**
+     * The release the player names, as [of] reads it: its [name] folded ([ArtistFact.matchKey]), less
+     * the closing edition parts ([Edition.strip]) and the mark of a single or an EP, and that mark
+     * ([kind]: `single` or `ep`, null for none). The player marks it " - Single", " - EP", or in
+     * brackets, "(EP)", "[Single]", which [Edition.strip] takes as an edition and drops.
+     */
+    internal class PlayerAlbum(
+        val name: String,
+        val kind: String?,
+    ) {
+        companion object {
+            /** [release] as the player names it; null when nothing is left of its name. */
+            fun of(release: String): PlayerAlbum? {
+                val marked = KIND.find(release.trim())
+                val rest = marked?.groupValues?.get(1) ?: release
+                val kind = marked?.groupValues?.get(2)?.lowercase()
+                val name = ArtistFact.matchKey(Edition.strip(rest))
+                return if (name.isEmpty()) null else PlayerAlbum(name, kind)
+            }
+
+            // A closing " - Single" or " - EP", or "(EP)" or "[Single]", any case; the mark in the second group.
+            private val KIND =
+                Regex("^(.*?)(?:\\s+-\\s+|\\s*[(\\[])(single|ep)[)\\]]?$", RegexOption.IGNORE_CASE)
+        }
     }
 
     // What Home shows: the [album] the player names, the [artists] and authors, and the [dates] *Dates* gives.
     private class Shown(
-        val album: String?,
+        val album: PlayerAlbum?,
         val artists: List<String>,
         val dates: Set<String>,
     ) {
@@ -91,7 +117,7 @@ object HomeShown {
                 Scope.SONG ->
                     MusicBrainzEvidence.firstRelease(line.text)?.let { (type, title) -> isAlbum(type, title, album) }
                 Scope.RELEASE ->
-                    ALBUM_LINE.find(line.text)?.let { album != null && ArtistFact.matchKey(it.groupValues[1]) == album }
+                    ALBUM_LINE.find(line.text)?.let { ArtistFact.matchKey(it.groupValues[1]) == album?.name }
                 else -> null
             } == true
     }
@@ -129,18 +155,18 @@ object HomeShown {
             else -> null
         }
 
-    // Whether a first release of [type] named [title] is the [album] the player names.
+    // Whether a first release of [type] named [title] is the [album] the player names: by its name, of
+    // the kind the player marks it, or an album where it marks none; a release of no type by name alone.
     private fun isAlbum(
         type: String,
         title: String,
-        album: String?,
+        album: PlayerAlbum?,
     ): Boolean {
-        if (album == null) return false
-        val named = ArtistFact.matchKey(title)
+        if (album == null || ArtistFact.matchKey(title) != album.name) return false
         return when (type) {
-            "", "album" -> named == album
-            "single" -> album == "$named - single"
-            "ep" -> album == "$named - ep"
+            "" -> true
+            "album" -> album.kind == null
+            "single", "ep" -> album.kind == type
             else -> false
         }
     }

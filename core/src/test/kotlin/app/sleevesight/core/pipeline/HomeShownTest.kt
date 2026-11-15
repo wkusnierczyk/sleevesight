@@ -217,6 +217,24 @@ class HomeShownTest {
     }
 
     @Test
+    fun `the player's single or EP, marked in any of its forms, is MusicBrainz's single or EP`() {
+        val ep = musicBrainz(release = FirstRelease("2021-04-09", "Numb Nothing Days", "rg", "r", "EP"))
+        // The playlist's track 56 marked its EP "(EP)", which no form matched before.
+        for (named in listOf("Numb Nothing Days (EP)", "Numb Nothing Days [EP]", "Numb Nothing Days - EP")) {
+            assertTrue(nothingBeyond(ep, playing.copy(album = named)), named)
+        }
+        assertFalse(nothingBeyond(ep, playing.copy(album = "Numb Nothing Days")), "an album is not the EP")
+        assertFalse(nothingBeyond(ep, playing.copy(album = "Numb Nothing Days (Single)")), "nor is a single")
+        for (named in listOf("The Campaign for Real Rock (Single)", "The Campaign for Real Rock [single]")) {
+            assertTrue(nothingBeyond(musicBrainz(release = SINGLE), playing.copy(album = named)), named)
+        }
+        // An album the player marks as a single is another release.
+        assertFalse(nothingBeyond(musicBrainz(), playing.copy(album = "Gorgeous George - Single")))
+        val marked = checkNotNull(HomeShown.PlayerAlbum.of("Numb Nothing Days (Remastered) - EP"))
+        assertEquals("numb nothing days" to "ep", marked.name to marked.kind)
+    }
+
+    @Test
     fun `a credit's names are only the artists shown, whole names, any of them`() {
         val artists = listOf("edwyn collins", "roddy frame")
         assertTrue(HomeShown.namesOnly("Edwyn Collins", artists))
