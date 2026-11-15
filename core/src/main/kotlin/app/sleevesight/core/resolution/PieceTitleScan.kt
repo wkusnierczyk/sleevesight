@@ -13,7 +13,8 @@ import app.sleevesight.core.text.isJsWhitespace
  * over for each kind of quote, however many quotes open and never close.
  */
 internal fun firstQuoted(text: CharSequence): IntRange? {
-    // Where the closing quote of each kind found last is, -1 for none left, before any opening one.
+    // Where the closing quote last found for each kind is: `NOT_LOOKED_UP` before any opening quote of
+    // that kind, `NONE_LEFT` once none follows.
     val closes = IntArray(PIECE_QUOTES.size) { NOT_LOOKED_UP }
     for (open in text.indices) {
         val c = text[open]
