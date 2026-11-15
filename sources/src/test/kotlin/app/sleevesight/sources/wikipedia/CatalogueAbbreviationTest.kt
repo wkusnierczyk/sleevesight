@@ -80,10 +80,15 @@ class CatalogueAbbreviationTest {
         assertEquals(listOf("The answer was No.", "He left."), LastFmBio.split("The answer was No. He left."))
         // A Roman numeral alone may be the pronoun, so it is not taken for a catalogue number.
         assertEquals(listOf("They said No.", "I left."), LastFmBio.split("They said No. I left."))
-        // Before a number of an ordinary sentence's opening, the sentence goes on: a known limit.
+        // Nor is a year that opens the next sentence (#1192's second review).
         assertEquals(
-            listOf("The answer was No. 1975 was the year."),
+            listOf("The answer was No.", "1975 was the year."),
             LastFmBio.split("The answer was No. 1975 was the year."),
+        )
+        // Before a number that is not a year, the sentence goes on: a known limit.
+        assertEquals(
+            listOf("The answer was No. 42 was the reply."),
+            LastFmBio.split("The answer was No. 42 was the reply."),
         )
     }
 
@@ -108,6 +113,20 @@ class CatalogueAbbreviationTest {
                 first,
             )
         }
+    }
+
+    @Test
+    fun `an ordinary op or no before a year ends its sentence`() {
+        for (first in listOf("The band posed for a photo op.", "Their answer was a firm no.")) {
+            assertEquals(
+                listOf(first, "1984 saw their first release."),
+                LastFmBio.split("$first 1984 saw their first release."),
+                first,
+            )
+        }
+        // A year-like number with more catalogue after it is still a catalogue number.
+        val numbered = "The Sonata, Op. 1984, No. 2, is a made-up work."
+        assertEquals(listOf(numbered), LastFmBio.split(numbered))
     }
 
     @Test

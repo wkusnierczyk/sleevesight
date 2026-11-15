@@ -80,7 +80,10 @@ internal object LastFmBio {
     // A catalogue number after a [CATALOGUE] abbreviation and a space: a digit (`27`, `1007–1012`),
     // or Hoboken's Roman group, a letter for a subgroup maybe, then `:` or `/` and a number
     // (`XVI:52`, `VIIe/1`). A Roman numeral alone (`No. I`) is not taken: it may be the pronoun.
-    private val CATALOGUE_NUMBER = Regex("^(?:\\p{N}|[IVXLC]+[a-z]?[:/]\\p{N})")
+    // A year, four digits from 1000 to 2099 and then a space or the end, is not taken either: it
+    // more likely opens the next sentence (`a photo op. 1984 saw …`) than numbers a work, whose
+    // numbers in these catalogues stay below 1000; with more after it (`Op. 1984, No. 2`) it is.
+    private val CATALOGUE_NUMBER = Regex("^(?:(?!(?:1[0-9]|20)[0-9]{2}(?: |$))\\p{N}|[IVXLC]+[a-z]?[:/]\\p{N})")
 
     private val ENTITIES =
         mapOf("amp" to "&", "quot" to "\"", "apos" to "'", "lt" to "<", "gt" to ">", "nbsp" to " ")
