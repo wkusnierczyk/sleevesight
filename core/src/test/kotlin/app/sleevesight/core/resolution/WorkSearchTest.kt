@@ -4,7 +4,6 @@ import app.sleevesight.core.sources.Resolution
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -124,8 +123,13 @@ class WorkSearchTest {
                     catchAll,
                     found("catch-all-2", "Adagio for Strings", "Catch-all for arrangements"),
                     organ,
-                    found("woodwind", "Adagio for Strings", "arr. John O'Reilly for woodwind band"),
-                    found("piano", "Adagio for Strings", "transcription for piano"),
+                    found(
+                        "woodwind",
+                        "Adagio for Strings",
+                        "arr. John O'Reilly for woodwind band",
+                        others = mapOf("arranger" to "John O'Reilly"),
+                    ),
+                    found("piano", "Adagio for Strings", others = mapOf("vocal arranger" to "Cy Kay")),
                     found("band", "Adagio for Strings", others = mapOf("instrument arranger" to "Ann Lee")),
                     found("strings", "Adagio for Strings", others = mapOf("orchestrator" to "Bo Day")),
                 )
@@ -133,6 +137,18 @@ class WorkSearchTest {
                 val (resolution, musicBrainz) = resolved("Adagio for Strings", work)
                 assertNull(resolution.work, work.mbid)
                 assertTrue(musicBrainz.worksAsked.isEmpty(), work.mbid)
+            }
+        }
+
+    @Test
+    fun `a disambiguation naming arrangements does not make the original one, only a catch-all's does`() =
+        runTest {
+            for (said in listOf("original orchestration", "original version, not an arrangement")) {
+                val original = found("piece", "Adagio for Strings", said, others = mapOf("orchestrator" to barber))
+                assertEquals("piece", resolved("Adagio for Strings", original).first.work?.mbid, said)
+            }
+            for (said in listOf("catch‐all for arrangements", "catch-all", "Catchall")) {
+                assertNull(resolved("Adagio for Strings", found("all", "Adagio for Strings", said)).first.work, said)
             }
         }
 
@@ -165,25 +181,37 @@ class WorkSearchTest {
     @Test
     fun `a whole work's title takes no unnumbered movement of it, nor a movement's the whole work`() =
         runTest {
-            // As alike as titles that fit, with the same numbers: the structure tells them apart.
-            val whole = "Variations on an Original Theme, op. 36 “Enigma”"
-            val movement = "$whole: Nimrod"
-            assertNull(resolved(whole, found("nimrod", movement)).first.work)
-            assertNull(resolved(movement, found("enigma", whole)).first.work)
-            // Each its own.
-            assertEquals("enigma", resolved(whole, found("enigma", whole), found("nimrod", movement)).first.work?.mbid)
-            assertEquals(
-                "nimrod",
-                resolved(movement, found("enigma", whole), found("nimrod", movement)).first.work?.mbid,
-            )
+            // As alike as titles that fit, with the same numbers: the segments tell them apart, with or
+            // without a colon before the whole work's subtitle.
+            for (whole in listOf(
+                "Variations on an Original Theme, op. 36 “Enigma”",
+                "Variations on an Original Theme, op. 36: “Enigma”",
+            )) {
+                val movement = "$whole: Nimrod"
+                assertNull(resolved(whole, found("nimrod", movement)).first.work, whole)
+                assertNull(resolved(movement, found("enigma", whole)).first.work, whole)
+                // Each its own.
+                assertEquals(
+                    "enigma",
+                    resolved(whole, found("enigma", whole), found("nimrod", movement)).first.work?.mbid,
+                    whole,
+                )
+                assertEquals(
+                    "nimrod",
+                    resolved(movement, found("enigma", whole), found("nimrod", movement)).first.work?.mbid,
+                    whole,
+                )
+                // Another unnumbered movement of the same work is not this one.
+                assertNull(resolved(movement, found("dorabella", "$whole: Dorabella")).first.work, whole)
+            }
         }
 
     @Test
     fun `a colon in a catalogue number is no part's - Hob XVI 52`() =
         runTest {
             val sonata = "Piano Sonata in E-flat major, Hob. XVI:52"
-            assertFalse(isPart(sonata))
-            assertTrue(isPart("$sonata: I. Allegro"))
+            assertEquals(listOf(sonata), segments(sonata))
+            assertEquals(listOf(sonata, "I. Allegro"), segments("$sonata: I. Allegro"))
             val (resolution, _) = resolved(sonata, found("sonata", sonata), found("first", "$sonata: I. Allegro"))
             assertEquals("sonata", resolution.work?.mbid)
         }
@@ -268,6 +296,8 @@ class WorkSearchTest {
                 "enigma",
                 "sonata",
                 "aria",
+                "dorabella",
+                "all",
             )
     }
 }

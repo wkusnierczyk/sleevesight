@@ -213,15 +213,17 @@ work found by a search (the fourth): one search more, and the lookup of the work
   10 works, each with its disambiguation and artist relationships: core data; the search gives no
   relationships between works). A work found is a candidate only when its composer relationship names
   that composer; when it is no arrangement: no arranger or orchestrator but the composer among its
-  artist relationships, and no disambiguation calling it an arrangement, a transcription or a catch-all
-  for them (MusicBrainz keeps a work for each arrangement of a much-arranged piece, of the same title
-  and composer); and when its title fits the track's. The title first by its structure: a part of a
-  work (`Work: Part`, a colon with whitespace after it, so not a catalogue number's `Hob. XVI:52`) fits
-  only a part, or a title that is no part's as the part it quotes (`Vanessa: Act I. “Must the winter come
-  so soon?”`), and a whole work only a whole one (*Variations on an Original Theme, op. 36 “Enigma”*
-  and its *: Nimrod* are as alike as titles that fit, with the same numbers); then alike as a
-  recording's, with the same numbers (`NameMatcher.numberWords`: Barber's *Essay for Orchestra No. 1*
-  or *Third Essay* is not his *No. 2*). Only a single candidate is taken: with two, nothing tells which
+  artist relationships, and no disambiguation marking it a catch-all for arrangements (MusicBrainz keeps
+  a work for each arrangement of a much-arranged piece, of the same title and composer; no other words
+  of a disambiguation count, since `original orchestration` names arrangements and is none); and when
+  its title fits the track's, either way. Segment by segment: the titles split at a part's separators (a
+  colon with whitespace after it, so not a catalogue number's `Hob. XVI:52`), as many segments, each
+  alike as a recording's title, with the same numbers (`NameMatcher.numberWords`: Barber's *Essay for
+  Orchestra No. 1* or *Third Essay* is not his *No. 2*); not the titles joined, which a whole work and
+  its unnumbered movement pass (*Variations on an Original Theme, op. 36: “Enigma”* and its *: Nimrod*,
+  as alike as titles that fit, with the same numbers). Or as the part a part of a work quotes
+  (`pieceSimilarity`: `Vanessa: Act I. “Must the winter come so soon?”` for its aria's own title), with
+  the same numbers. Only a single candidate is taken: with two, nothing tells which
   is the track's, and the recording keeps no work. It is linked as the recording's own performance of it
   (no cover, not instrumental) and looked up as any work, so the resolution keeps it as its work
   (`Resolution.work`), and the search's answer is held in memory with MusicBrainz's others
