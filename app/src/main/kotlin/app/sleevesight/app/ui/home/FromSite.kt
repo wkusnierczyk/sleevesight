@@ -82,9 +82,9 @@ internal fun FromSites(urls: List<String>) {
 internal fun unbroken(site: String): String = site.replace("-", "-$WORD_JOINER")
 
 /** Between two sites on the From line: the dot held to the site before it (a no-break space). */
-private const val NO_BREAK_SPACE = "\u00A0"
+internal const val NO_BREAK_SPACE = "\u00A0"
 
-private const val SITE_SEPARATOR = "$NO_BREAK_SPACE· "
+internal const val SITE_SEPARATOR = "$NO_BREAK_SPACE· "
 
 private const val WORD_JOINER = "\u2060"
 

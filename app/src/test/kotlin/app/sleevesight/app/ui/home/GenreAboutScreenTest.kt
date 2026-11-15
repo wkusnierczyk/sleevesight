@@ -194,10 +194,23 @@ class GenreAboutScreenTest {
     fun thePanelShowsTheDefinitionWithItsCreditThenWhyThenTheTable() =
         showBox(Notes()) {
             compose.onNodeWithText(jazz.text).assertExists()
-            compose.onNodeWithText("From Wikipedia · CC BY-SA 4.0").assertExists()
+            compose.onNodeWithTag(GENRE_DEFINITION_CREDIT_TAG).assertTextEquals(CREDIT)
             val order = listOf(JAZZ_CHIP, GENRE_DEFINITION_TAG, GENRE_WHY_TAG, GENRES_ROW_PREFIX + "0")
             val tops = order.map(::top)
             assertEquals("chip, definition, Why, tags, in that order", tops.sorted(), tops)
+        }
+
+    @Test
+    fun theCreditLinksWikipediaAloneNotFromAndTheLicenceOnItsOwn() =
+        showBox(Notes()) {
+            // "From Wikipedia · CC BY-SA 4.0", wrapping only after the dot: "From" held to the name, the dot
+            // to it, and no break inside the licence's name.
+            compose.onNodeWithTag(GENRE_DEFINITION_CREDIT_TAG).assertTextEquals(CREDIT)
+            // "From" plain text (#1285): the source's name is the link, and what a screen reader names it.
+            assertEquals(
+                listOf("Wikipedia" to jazz.url, LICENCE to WIKIPEDIA_LICENCE),
+                compose.linkedRanges(GENRE_DEFINITION_CREDIT_TAG),
+            )
         }
 
     @Test
@@ -530,5 +543,9 @@ class GenreAboutScreenTest {
         const val JAZZ_CHIP = GENRE_PREFIX + "artist:Miles Davis:jazz"
         const val MODEL = "Claude Haiku 5.5"
         const val AI_JAZZ = "Jazz is music of swing, blue notes and improvisation, born in New Orleans."
+
+        // The licence's name as the credit holds it together (#1285): no-break spaces, a word joiner after the hyphen.
+        const val LICENCE = "CC\u00A0BY-\u2060SA\u00A04.0"
+        const val CREDIT = "From\u00A0Wikipedia\u00A0· $LICENCE"
     }
 }
