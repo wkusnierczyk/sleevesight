@@ -15,8 +15,10 @@ import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
@@ -55,7 +57,9 @@ import kotlin.math.abs
  * buttons and *Sources*' chip all one width, the widest of them fitting its label and its **AI** mark
  * exactly, a pop track's narrower than a classical one's; the mark at the same place at every row
  * button's end, its name centred in the room left of it; *Sources*' name centred in the whole chip.
- * At the default font size and twice it, under both layouts, with *Show insights* on and off. With
+ * At the default font size and twice it, under both layouts, with *Show insights* on and off. An
+ * artist's chip under *Also performing*, outside the column, keeps its look: its name's lines from
+ * their start, wrapping, the mark after the last. With
  * `SLEEVESIGHT_PICTURES` set, [pictures] saves Home's rows and *Sources* there, light and dark, as
  * `ComposerPanelPicturesTest` saves its own.
  */
@@ -74,12 +78,12 @@ class KeyInsightsColumnScreenTest {
     private val classical =
         sundown.copy(
             title = "Mozart: Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante",
-            artists = "$MOZART, Khatia Buniatishvili, Academy of St. Martin in the Fields",
+            artists = "$MOZART, Khatia Buniatishvili, $ACADEMY",
             album = "Mozart: Piano Concertos Nos. 20 & 23",
             mediaId = "spotify:track:k545",
         )
     private val classicalRoles =
-        ArtistRoles(listOf(MOZART), listOf("Khatia Buniatishvili", "Academy of St. Martin in the Fields"))
+        ArtistRoles(listOf(MOZART), listOf("Khatia Buniatishvili", ACADEMY))
 
     // A pop track: Song, Artist, Album.
     private val pop =
@@ -243,6 +247,37 @@ class KeyInsightsColumnScreenTest {
         }
 
     @Test
+    fun anArtistsChipOutsideTheColumnWrapsItsNameWithTheMarkAfterItsLastLine() {
+        // Under *Also performing*, no column (#1286): the name's lines from their start, wrapping at
+        // twice the font size, the mark right after its last line rather than at the chip's end.
+        RuntimeEnvironment.setFontScale(2f)
+        show(track(classical, classicalRoles), onDemand) {
+            compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).performClick()
+            compose.waitForIdle()
+            val tag = itemChipTag(ACADEMY)
+            val inside = hasAnyAncestor(hasTestTag(tag))
+            val chip = bounds(hasTestTag(tag))
+            val name = bounds(hasText(ACADEMY) and inside, unmerged = true)
+            val mark = bounds(hasTestTag(AI_MARK_TAG) and inside, unmerged = true)
+            // One line of a chip's name, as the Composer row's button draws it.
+            val composer = hasAnyAncestor(hasTestTag(itemRowTag(InsightItem.COMPOSER)))
+            val line = bounds(hasTestTag(CHIP_LABEL_TAG) and composer, unmerged = true)
+            assertTrue("wrapped: ${name.height} against a line's ${line.height}", name.height > line.height * 1.5f)
+            // Its lines as a block in the chip, as before (#1199): the last one, shorter, inside its width.
+            near("the name's centre", chip.center.x, name.center.x)
+            // After the last line, shorter than the first: inside the name's width, not at the chip's end.
+            assertTrue("mark ${mark.right} after the last line, within ${name.right}", mark.right < name.right)
+            assertTrue("mark ${mark.bottom} on the last line, ${name.bottom}", mark.bottom <= name.bottom + TOLERANCE)
+            out?.let { dir -> save(File(dir, "also-performing-wrapped-font200.png")) }
+        }
+    }
+
+    private fun save(file: File) {
+        val bitmap = compose.onNodeWithTag(PICTURE).captureToImage().asAndroidBitmap()
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    @Test
     fun pictures() {
         val dir = out ?: return
         for (scale in listOf(1f, 2f)) {
@@ -251,11 +286,8 @@ class KeyInsightsColumnScreenTest {
             for ((name, track) in listOf("classical" to track(classical, classicalRoles), "pop" to track(pop, null))) {
                 for (dark in listOf(false, true)) {
                     show(track, onDemand, dark) {
-                        val bitmap = compose.onNodeWithTag(PICTURE).captureToImage().asAndroidBitmap()
                         val theme = if (dark) "dark" else "light"
-                        File(dir, "$name-$theme-$size.png").outputStream().use {
-                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-                        }
+                        save(File(dir, "$name-$theme-$size.png"))
                     }
                 }
             }
@@ -265,6 +297,7 @@ class KeyInsightsColumnScreenTest {
     private companion object {
         const val PICTURE = "picture"
         const val MOZART = "Wolfgang Amadeus Mozart"
+        const val ACADEMY = "Academy of St. Martin in the Fields"
 
         // A pixel's rounding at each of the edges a measure is taken between.
         const val TOLERANCE = 1.5f

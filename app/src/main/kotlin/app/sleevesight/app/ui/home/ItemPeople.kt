@@ -158,6 +158,7 @@ private fun PeopleChips(
                     width = width,
                     ai = ai,
                     expanded = open == name,
+                    markAtEnd = false,
                 ) { onTap(name) }
             }
         }

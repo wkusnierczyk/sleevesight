@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,7 +92,8 @@ internal fun SourcesChip(
  * when given. With [width], it is that wide (the chips under *Key insights*, #894, #1286; an
  * artist's chip, #1199), with the **AI** mark at its end when [ai] (#948, #1286), its name centred
  * in the room left of the mark, or in the whole chip without it ([ColumnChipLabel]; [description]
- * then says "uses AI").
+ * then says "uses AI"). Not [markAtEnd] (an artist's chip, which is no column), its name from the
+ * chip's start, wrapping inside its width, the mark right after its last line ([AiLabel]).
  * [modifier] goes on the chip's outside: a focus requester.
  */
 @Suppress("LongParameterList") // What the chip says and is, each its own.
@@ -105,6 +109,7 @@ internal fun PanelChip(
     width: Dp? = null,
     ai: Boolean = false,
     expanded: Boolean = false,
+    markAtEnd: Boolean = true,
     onClick: () -> Unit,
 ) {
     val folded = stringResource(R.string.home_fold_collapsed)
@@ -125,6 +130,15 @@ internal fun PanelChip(
     ) {
         if (width == null) {
             Text(name, style = MaterialTheme.typography.labelLarge, color = content)
+        } else if (!markAtEnd) {
+            // The mark after the name's last line; read in [description], with the rest.
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CompositionLocalProvider(LocalContentColor provides content) {
+                    ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                        if (ai) AiLabel(name, described = description) else Text(name)
+                    }
+                }
+            }
         } else {
             // The mark, if any, read in [description] with the rest.
             ColumnChipLabel(name, content, ai, Modifier.weight(1f))
