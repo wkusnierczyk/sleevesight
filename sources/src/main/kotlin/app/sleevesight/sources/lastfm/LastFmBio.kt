@@ -167,28 +167,39 @@ internal object LastFmBio {
         if (end >= text.length) return true
         val next = text.getOrNull(end + 1)
         val startsNext = text[end] == ' ' && next != null && (next.isUpperCase() || next.isDigit() || next in OPENERS)
-        val word = text.substring(0, mark).takeLastWhile { it.isLetterOrDigit() }.lowercase()
+        val word = text.substring(0, mark).takeLastWhile { it.isLetterOrDigit() }
         // An initial (`J. R. R.`), an abbreviation (`St. John's`), or a catalogue abbreviation before
-        // its number (`Op. 27`, [CATALOGUE]) does not end a sentence.
+        // its number (`Op. 27`, [CATALOGUE]) does not end a sentence. The initial is read on the word
+        // as written: lowercased, `İ` is two characters (#1192).
+        val lower = word.lowercase()
         val shortened =
             text[mark] == '.' &&
-                ((word.length == 1 && word[0].isLetter()) || word in ABBREVIATIONS || catalogued(text, word, end))
+                (
+                    (word.length == 1 && word[0].isLetter()) ||
+                        lower in ABBREVIATIONS ||
+                        catalogued(text, lower, mark, end)
+                )
         return startsNext && !shortened
     }
 
     private const val OPENERS = "\"“‘'("
 
-    // Whether [word], lowercased and ending at the full stop before [end], is a [CATALOGUE]
-    // abbreviation with its number after the space at [end].
+    // Whether [word], lowercased and ending at the full stop at [mark], is a [CATALOGUE]
+    // abbreviation with its number after the space at [end]. The end of a hyphenated word is not one
+    // (`a co-op. 1984 …`, `a no-no. 2 …`): an abbreviation stands alone.
     private fun catalogued(
         text: String,
         word: String,
+        mark: Int,
         end: Int,
     ): Boolean {
+        if (word !in CATALOGUE || text.getOrNull(mark - word.length - 1) in HYPHENS) return false
         val from = minOf(end + 1, text.length)
-        return word in CATALOGUE &&
-            CATALOGUE_NUMBER.containsMatchIn(text.substring(from, minOf(from + NUMBER_WINDOW, text.length)))
+        return CATALOGUE_NUMBER.containsMatchIn(text.substring(from, minOf(from + NUMBER_WINDOW, text.length)))
     }
+
+    // A hyphen, plain, Unicode's, or non-breaking, before the last part of a hyphenated word.
+    private val HYPHENS = setOf('-', '‐', '‑')
 
     // Enough of the text after the space for the longest [CATALOGUE_NUMBER] start (`XXVIIIb:1`).
     private const val NUMBER_WINDOW = 12

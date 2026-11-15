@@ -88,6 +88,29 @@ class CatalogueAbbreviationTest {
     }
 
     @Test
+    fun `an initial whose lowercase is longer, as İ, is still an initial`() {
+        // "İlhan Mimaroğlu", as initialled; lowercased, `İ` is `i` and a combining dot.
+        val sentence = "İ. Mimaroğlu was an electronic composer."
+        assertEquals(
+            listOf(sentence, "He was born in Istanbul."),
+            LastFmBio.split("$sentence He was born in Istanbul."),
+        )
+    }
+
+    @Test
+    fun `the end of a hyphenated word is not a catalogue abbreviation`() {
+        // A plain hyphen, and a non-breaking one (U+2011).
+        val firsts = listOf("The musicians formed a co-op.", "Touring was a no-no.", "Encores were a no\u2011no.")
+        for (first in firsts) {
+            assertEquals(
+                listOf(first, "1984 marked its first release."),
+                LastFmBio.split("$first 1984 marked its first release."),
+                first,
+            )
+        }
+    }
+
+    @Test
     fun `a sentence ending in Op before a capital word still ends`() {
         assertEquals(
             listOf("They called it a pop op.", "Then came rock."),
