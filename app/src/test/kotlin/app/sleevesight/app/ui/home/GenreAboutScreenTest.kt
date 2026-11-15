@@ -201,6 +201,17 @@ class GenreAboutScreenTest {
         }
 
     @Test
+    fun theCreditLinksWikipediaAloneNotFromAndTheLicenceOnItsOwn() =
+        showBox(Notes()) {
+            compose.onNodeWithTag(GENRE_DEFINITION_CREDIT_TAG).assertTextEquals("From Wikipedia · CC BY-SA 4.0")
+            // "From" plain text (#1285): the source's name is the link, and what a screen reader names it.
+            assertEquals(
+                listOf("Wikipedia" to jazz.url, "CC BY-SA 4.0" to WIKIPEDIA_LICENCE),
+                compose.linkedRanges(GENRE_DEFINITION_CREDIT_TAG),
+            )
+        }
+
+    @Test
     fun whyCarriesTheAiMarkAndReadsAsUsesAi() =
         showBox(Notes()) {
             val question = text(R.string.genre_why, "jazz")

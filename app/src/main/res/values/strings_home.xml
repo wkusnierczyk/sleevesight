@@ -226,7 +226,7 @@
     <!-- The same, the release it first came out on not known. -->
     <string name="home_dates_original_unreleased">The song was originally recorded by %2$s %1$s.</string>
     <!-- When the music was composed (#1132), after the release lines, with "From MusicBrainz" (home_ai_from)
-         under it, or "From Wikipedia" or "From Wikidata"; %1$s is home_dates_in_year ("in 1788") or home_dates_between_years. -->
+         under it, or "From Wikipedia" or "From Wikidata", the source's name the link; %1$s is home_dates_in_year ("in 1788") or home_dates_between_years. -->
     <string name="home_dates_composed">The music was composed %1$s.</string>
     <!-- A composition over several years: "between 1921 and 1924". -->
     <string name="home_dates_between_years">between %1$s and %2$s</string>
@@ -336,7 +336,7 @@
     <!-- The same, written on an earlier day: its date ("31 October", with the year when not this year). -->
     <string name="home_ai_kept_on">Kept from before: written on %1$s.</string>
     <!-- Under a value found on the web (#801), on its own line: %1$s is the page's site ("discogs.com"),
-         a link to the page. Also under when the music was composed (#1132): %1$s is the source's name
+         a link to the page, "From" plain text (#1285). Also under when the music was composed (#1132): %1$s is the source's name
          ("MusicBrainz"), a link to its page. Under genres found on the web, %1$s is every page's site,
          each a link to its page, " · " between (#1204): "From en.wikipedia.org · albumoftheyear.org". -->
     <string name="home_ai_from">From %1$s</string>
@@ -795,7 +795,7 @@
     <string name="home_line_purpose_vocals_check">vocals check</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <!-- The From line under when the music was composed, when the infobox of the work's Wikipedia
-         article dates it (#1273): "From Wikipedia", linking the article. -->
+         article dates it (#1273): "From Wikipedia", "Wikipedia" linking the article. -->
     <string name="home_source_name_wikipedia">Wikipedia</string>
     <string name="home_source_name_discogs">Discogs</string>
     <string name="home_source_name_web">Web search</string>

@@ -212,6 +212,11 @@ class GenreBroaderScreenTest {
             open()
             // R&B's definition in Contemporary R&B's place, with its *Why is this R&B?*.
             compose.onNodeWithText(rnb.text).assertExists()
+            // Its credit links "Wikipedia" alone, not "From" (#1285), to the broader genre's article.
+            assertEquals(
+                listOf("Wikipedia" to rnb.url, "CC BY-SA 4.0" to WIKIPEDIA_LICENCE),
+                compose.linkedRanges(GENRE_DEFINITION_CREDIT_TAG),
+            )
             assertEquals(0, compose.onAllNodesWithText(contemporary.text).fetchSemanticsNodes().size)
             compose.onNodeWithText("Why is this R&B?", substring = true, useUnmergedTree = true).assertExists()
             assertEquals(0, count(GENRE_BROADER_TAG))

@@ -30,6 +30,7 @@ import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.handoffTarget
+import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
@@ -249,19 +250,22 @@ internal fun GenreDefinitionNote(
 private fun NoDefinition() =
     QuietNote(stringResource(R.string.genre_definition_none), Modifier.testTag(GENRE_NO_DEFINITION_TAG))
 
-// The definition, then its credit: the article linked, and the licence.
+// The definition, then its credit: "From Wikipedia", the source's name alone a link to the article
+// (#1285: "From" plain, as every From line is), and the licence a link of its own.
 @Composable
 private fun Definition(definition: GenreDefinition) {
     Column(modifier = Modifier.testTag(GENRE_DEFINITION_TAG), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(definition.text, style = MaterialTheme.typography.bodyMedium)
+        val article = TextPart.Link(stringResource(R.string.genre_definition_source), definition.url)
         LinkedText(
-            listOf(
-                TextPart.Link(stringResource(R.string.genre_definition_from), definition.url),
-                TextPart.Words(" · "),
-                TextPart.Link(stringResource(R.string.genre_definition_licence), WIKIPEDIA_LICENCE),
-            ),
+            linkedParts(stringResource(R.string.genre_definition_from), article) +
+                listOf(
+                    TextPart.Words(" · "),
+                    TextPart.Link(stringResource(R.string.genre_definition_licence), WIKIPEDIA_LICENCE),
+                ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(GENRE_DEFINITION_CREDIT_TAG),
         )
     }
 }
@@ -319,6 +323,9 @@ internal const val WIKIPEDIA_LICENCE: String = "https://creativecommons.org/lice
  */
 const val GENRE_DEFINITION_TAG: String = "genre-panel:definition"
 const val GENRE_NO_DEFINITION_TAG: String = "genre-panel:no-definition"
+
+/** The test tag of the credit under a genre's definition, "From Wikipedia · CC BY-SA 4.0" (#1285). */
+const val GENRE_DEFINITION_CREDIT_TAG: String = "genre-panel:definition-credit"
 
 /** The test tags of a genre's definition's line while it is looked up, and when the lookup failed (#786). */
 const val GENRE_DEFINITION_LOOKING_TAG: String = "genre-panel:definition-looking"

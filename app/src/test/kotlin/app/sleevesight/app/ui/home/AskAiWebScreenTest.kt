@@ -263,6 +263,8 @@ class AskAiWebScreenTest {
             )
             compose.waitUntil(WAIT_MS) { shows(ALBUM_SENTENCE) }
             compose.onNodeWithTag(AI_SEARCH_FROM_TAG).assertTextEquals("From discogs.com")
+            // The site alone the link, "From" plain text (#1285).
+            assertEquals(listOf("discogs.com" to discogs), compose.linkedRanges(AI_SEARCH_FROM_TAG))
             assertTrue(bounds(AI_SEARCH_FROM_TAG).top >= boundsOf(ALBUM_SENTENCE).bottom)
             assertEquals(0, count(AI_SEARCH_KNOWLEDGE_TAG))
             compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by Claude Haiku 5.5")
@@ -362,6 +364,7 @@ class AskAiWebScreenTest {
             val named = listOf(vocabulary.labelsFor(listOf("folk rock"), level = GenreLevel.TRACK).single())
             set(SearchKind.GENRES, AiSearch.Answered(SearchAnswer.Genres(named, listOf(discogs)), model, web))
             compose.onNodeWithTag(AI_SEARCH_FROM_TAG).assertTextEquals("From\u00A0discogs.com")
+            assertEquals(listOf("discogs.com" to discogs), compose.linkedRanges(AI_SEARCH_FROM_TAG))
             // The line above them, and the chips marked AI, read as the AI's list's are (#762).
             assertTrue(shows("The sources give no genres."))
             val chip = app.getString(R.string.genre_ai_added, named.single().label, model)
@@ -421,8 +424,10 @@ class AskAiWebScreenTest {
                     .config[SemanticsProperties.Text]
                     .single()
             assertEquals("From\u00A0en.wikipedia.org\u00A0· lyric-\u2060stories.com", shown.text)
-            val links = shown.getLinkAnnotations(0, shown.length)
-            assertEquals(listOf(wiki, stories), links.map { (it.item as LinkAnnotation.Url).url })
+            assertEquals(
+                listOf("en.wikipedia.org" to wiki, "lyric-\u2060stories.com" to stories),
+                compose.linkedRanges(AI_SEARCH_FROM_TAG),
+            )
         }
     }
 
