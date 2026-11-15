@@ -1,0 +1,43 @@
+# Code owners (#1035): names the owner of these files. Enforced only on pull requests into `main`,
+# which requires a code owner's review; work goes into `dev-*` branches, and gates bypass it by a
+# fast-forward. Paths starting with `/` are from the repository's root; a path ending in `/` takes
+# everything under it; where several lines match a file, the last one wins.
+
+# The pages that handle keys, served straight from `main`: the API keys page (`api-keys.html`, #436)
+# and the keyboard page (`keyboard.html`, #394), their scripts and style sheets, and the includes and
+# site files built into them (the header's script and style, the footer).
+/api-keys.html @wkusnierczyk
+/keyboard.html @wkusnierczyk
+/assets/api-keys/ @wkusnierczyk
+/assets/keyboard/ @wkusnierczyk
+/assets/site/ @wkusnierczyk
+/_includes/site-header.html @wkusnierczyk
+/_includes/site-header-script.js @wkusnierczyk
+/_includes/site-header-style.css @wkusnierczyk
+/_includes/docs-style.css @wkusnierczyk
+/_includes/site-footer.html @wkusnierczyk
+/_includes/made-in.html @wkusnierczyk
+
+# What else changes how the site builds or what it serves on those pages: the site's settings, the
+# layouts, a theme's style sheet or Sass overridden here (`assets/css/`, `_sass/`), the fonts and
+# icon the pages load, the gems that would choose the build, a `.nojekyll` that would serve the pages
+# unbuilt, and posts and drafts, which Jekyll builds wherever their permalink says (the site has no
+# other collection; one would be set in `_config.yml`). Some do not exist yet; a line for them takes
+# effect when one is added.
+/_config.yml @wkusnierczyk
+/_layouts/ @wkusnierczyk
+/_sass/ @wkusnierczyk
+/assets/css/ @wkusnierczyk
+/assets/fonts/ @wkusnierczyk
+/assets/favicon.svg @wkusnierczyk
+/Gemfile @wkusnierczyk
+/Gemfile.lock @wkusnierczyk
+/.nojekyll @wkusnierczyk
+/_posts/ @wkusnierczyk
+/_drafts/ @wkusnierczyk
+
+# The workflows, the scripts they run (the pages' policy test among them), and this file.
+/.github/ @wkusnierczyk
+
+# How to report a vulnerability.
+/SECURITY.md @wkusnierczyk
