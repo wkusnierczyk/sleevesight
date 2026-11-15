@@ -1,0 +1,24 @@
+# Code owners (#1035): a pull request that changes one of these files asks its owner for a review,
+# which `main`'s protection requires. Paths starting with `/` are from the repository's root; a path
+# ending in `/` takes everything under it; where several lines match a file, the last one wins.
+
+# The pages that handle keys, served straight from `main`: the API keys page (`api-keys.html`, #436)
+# and the keyboard page (`keyboard.html`, #394), their scripts and style sheets, and the includes and
+# site files built into them (the header's script and style, the footer).
+/api-keys.html @wkusnierczyk
+/keyboard.html @wkusnierczyk
+/assets/api-keys/ @wkusnierczyk
+/assets/keyboard/ @wkusnierczyk
+/assets/site/ @wkusnierczyk
+/_includes/site-header.html @wkusnierczyk
+/_includes/site-header-script.js @wkusnierczyk
+/_includes/site-header-style.css @wkusnierczyk
+/_includes/docs-style.css @wkusnierczyk
+/_includes/site-footer.html @wkusnierczyk
+/_includes/made-in.html @wkusnierczyk
+
+# The workflows, the scripts they run (the pages' policy test among them), and this file.
+/.github/ @wkusnierczyk
+
+# How to report a vulnerability.
+/SECURITY.md @wkusnierczyk
