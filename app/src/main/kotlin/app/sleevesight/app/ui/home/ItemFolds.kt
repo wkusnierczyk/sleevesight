@@ -34,7 +34,7 @@ import app.sleevesight.core.sources.ArtistRoles
  * said in its panel's heading and on its page, or null for none. [kind] is what its button and its
  * panel's title call it, [action] its button's action as a screen reader names it, each a string's
  * id: the item's own ([itemKindOf], [itemShowAction]), but for the Composer row and the Artist row
- * of a track whose roles tell a composer apart (#1199, [itemRows]).
+ * of a track whose roles tell a composer apart (#1199, [itemRows]; *Performer*, #1276).
  */
 internal class ItemRow(
     val item: InsightItem,
@@ -53,19 +53,19 @@ internal class ItemRow(
  *
  * With [split], the roles telling a composer apart from the performers (#1199): a Composer row
  * before the artist's, by the composer, or with more than one author by all of them (*Composer*,
- * *Author* or *Authors*, [AuthorsName]); and the artist's by the lead performer, called *Artists*
- * when other performers are known (their chips are in its panel), as [PERFORMER_ROW] words it.
+ * *Author* or *Authors*, [AuthorsName]); and the artist's by the lead performer, called *Performer*
+ * (#1276), one performer even when others are known: the panel is about the lead, the others its
+ * chips.
  */
 internal fun itemRows(
     header: NowPlaying,
     normalized: NormalizedTrack,
     split: ArtistSplit? = null,
-    performerRow: Boolean = PERFORMER_ROW,
 ): List<ItemRow> =
     listOfNotNull(
         songRow(header, normalized),
         split?.let(::composerRow),
-        split?.let { artistRow(it, performerRow) }
+        split?.let(::performerRow)
             ?: normalized.primary.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.ARTIST, it) },
         header.album
             ?.trim()
@@ -85,22 +85,14 @@ private fun composerRow(split: ArtistSplit): ItemRow {
     return ItemRow(InsightItem.COMPOSER, name, kind = kind, action = action)
 }
 
-// The Artist row of [split] (#1199): by the lead performer, *Artists* with others known ([performer]:
-// *Performer*, *Performers*).
-private fun artistRow(
-    split: ArtistSplit,
-    performer: Boolean,
-): ItemRow {
-    val several = split.others.isNotEmpty()
-    val kind =
-        when {
-            performer && several -> R.string.home_item_performers
-            performer -> R.string.home_item_performer
-            several -> R.string.home_item_artists
-            else -> R.string.home_item_artist
-        }
-    return ItemRow(InsightItem.ARTIST, split.lead, kind = kind)
-}
+// The Artist row of [split] (#1199): *Performer*, by the lead performer, whoever else performs (#1276).
+private fun performerRow(split: ArtistSplit): ItemRow =
+    ItemRow(
+        InsightItem.ARTIST,
+        split.lead,
+        kind = R.string.home_item_performer,
+        action = R.string.home_item_show_performer,
+    )
 
 /**
  * [track]'s artists split between a Composer row and an Artist row (#1199, [ArtistSplit]) while it is
@@ -119,12 +111,6 @@ internal fun splitOf(
 
 // Names compared as the resolution compares them.
 private val NAMES = NameMatcher(JvmAccentFolder)
-
-/**
- * Whether the Artist row of a track whose roles tell a composer apart (#1199) is called *Performer*
- * and *Performers* rather than *Artist* and *Artists*: the one switch between the two wordings.
- */
-internal const val PERFORMER_ROW: Boolean = false
 
 // The song's row: its title as under the cover ([KeyData]), with the version dropped from it; the
 // player's whole title, and no version, when normalizing leaves no title.

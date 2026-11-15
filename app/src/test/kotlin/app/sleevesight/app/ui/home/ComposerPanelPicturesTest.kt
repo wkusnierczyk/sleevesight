@@ -56,7 +56,7 @@ import java.io.File
  * track (5). Each shows the artists under the title and the rows closed, then the Artist panel open
  * with another performer's chip opened, then the Composer panel open; each is checked, and with
  * `SLEEVESIGHT_PICTURES` set, also saved there as a picture, as `SongVersionPicturesTest` saves its
- * own. With `SLEEVESIGHT_PERFORMER` set too, the Artist row is drawn as *Performer*, *Performers*.
+ * own. The Artist row is *Performer* where the Composer row shows (#1276), *Artist* otherwise.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h2200dp-420dpi")
@@ -66,7 +66,6 @@ class ComposerPanelPicturesTest {
     val compose = createEmptyComposeRule()
 
     private val out = System.getenv("SLEEVESIGHT_PICTURES")?.let { File(it).apply { mkdirs() } }
-    private val performer = System.getenv("SLEEVESIGHT_PERFORMER") != null
 
     private val settings = Settings(writeAutomatically = WriteAutomatically.NEVER)
 
@@ -101,7 +100,7 @@ class ComposerPanelPicturesTest {
                     InsightItem.named(ACADEMY) to
                         "The Academy of St Martin in the Fields is a chamber orchestra founded in London in 1958 [W1].",
                 ),
-                "Artists, Khatia Buniatishvili, uses AI",
+                "Performer, Khatia Buniatishvili, uses AI",
                 chip = ACADEMY,
             ),
             Situation(
@@ -115,7 +114,7 @@ class ComposerPanelPicturesTest {
                     InsightItem.ARTIST to "Luciano Pavarotti (1935–2007) was an Italian tenor [W1].",
                     InsightItem.named(MEHTA) to "Zubin Mehta is an Indian conductor, born in Bombay in 1936 [W1].",
                 ),
-                "Artists, Luciano Pavarotti, uses AI",
+                "Performer, Luciano Pavarotti, uses AI",
                 chip = MEHTA,
             ),
             Situation(
@@ -165,11 +164,11 @@ class ComposerPanelPicturesTest {
         val track = track(situation)
         val normalized = normalizer.normalize(situation.playing)
         val split = splitOf(track, normalized)
-        val rows = itemRows(situation.playing, normalized, split, performer)
+        val rows = itemRows(situation.playing, normalized, split)
         val notes = notes(situation)
         val memory = ItemFoldMemory()
         val theme = if (dark) "dark" else "light"
-        val name = "${situation.number}-$theme-$size" + if (performer) "-performer" else ""
+        val name = "${situation.number}-$theme-$size"
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
@@ -190,16 +189,7 @@ class ComposerPanelPicturesTest {
                 }
             }
             compose.waitForIdle()
-            compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).assertContentDescriptionEquals(
-                // Only the Artist row of a track with a Composer row is worded otherwise.
-                if (performer &&
-                    split != null
-                ) {
-                    situation.artistRow.replace("Artist", "Performer")
-                } else {
-                    situation.artistRow
-                },
-            )
+            compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).assertContentDescriptionEquals(situation.artistRow)
             save("$name-a-rows")
             compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).performClick()
             compose.waitForIdle()

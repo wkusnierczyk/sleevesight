@@ -66,7 +66,7 @@ class SongPartsStreamingScreenTest {
                     SleevesightTheme {
                         val settings = Settings(writeAutomatically = WriteAutomatically.NEVER)
                         val context = ItemContext(track, settings, notes, false, {}, { _, _, _ -> }, readAloud = null)
-                        val rows = itemRows(sundown, normalizer.normalize(sundown), null, false)
+                        val rows = itemRows(sundown, normalizer.normalize(sundown), null)
                         val folds = itemFolds(ItemFoldMemory(), sundown, NewTrackFold.FOLDED)
                         ItemRows(rows, false, folds, context) {}
                     }

@@ -468,12 +468,9 @@
     <string name="home_item_composer">Composer</string>
     <string name="home_item_author">Author</string>
     <string name="home_item_authors">Authors</string>
-    <!-- On such a track, the artist's row, about the lead performer: Artists when other performers
-         are known, their chips in its panel. Performer and Performers are the other wording tried
-         for it (the switch PERFORMER_ROW in ItemFolds.kt). -->
-    <string name="home_item_artists">Artists</string>
+    <!-- On such a track, the artist's row, about the lead performer (#1276): Performer, singular,
+         even when other performers are known, their chips in its panel. -->
     <string name="home_item_performer">Performer</string>
-    <string name="home_item_performers">Performers</string>
     <!-- In the artist's panel on such a track (#1199), above the chips of the other performers, each
          opening its own insight in place. -->
     <string name="home_item_also_performing">Also performing on this recording</string>
@@ -497,6 +494,7 @@
     <string name="home_item_show_artist">show the artist’s insight</string>
     <string name="home_item_show_album">show the album’s insight</string>
     <string name="home_item_show_composer">show the composer’s insight</string>
+    <string name="home_item_show_performer">show the performer’s insight</string>
     <string name="home_item_show_author">show the author’s insight</string>
     <string name="home_item_show_authors">show the authors’ insight</string>
     <!-- A chip of another performer or an author (#1199), which opens that artist's insight in place. -->
