@@ -1,9 +1,14 @@
 name: Release
 
 # A version tag, `v<major>.<minor>.<patch>`, builds the app bundle for Google Play, signed with the
-# upload key, and uploads it to a Play track (D7; `design/release.md`). The key is in the `release`
-# environment's secrets, which only tags matching `v*` may use, and each run waits for a reviewer's
-# approval before it starts. The actions are pinned to commits, since the job holds the key.
+# upload key, and uploads it to a Play track (D7; `design/release.md`). Two jobs: `bundle` builds and
+# signs it, with Gradle and the key; `upload` sends it to Play, with no Gradle, and only it may ask
+# for the token Play takes. So the build's dependencies never run where that token can be minted.
+# Both jobs run in the `release` environment: the key is in its secrets, and Google gives the token
+# only to a job of that environment. Only tags matching `v*` may use it, and each job that names it
+# waits for a reviewer's approval before it starts. `upload` needs `bundle`, so a release takes two
+# approvals: one before the build, and one before the upload, once the bundle exists. The actions
+# are pinned to commits, since the jobs hold the key and the token.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
@@ -20,11 +25,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: release
-    # `id-token` lets the job ask GitHub for an OIDC token, which Google exchanges for a short-lived
-    # access token to the Play Developer API (Workload Identity Federation): no stored Google key.
+    # No `id-token`: the job that runs the build cannot ask for the token that reaches Play.
     permissions:
       contents: read
-      id-token: write
+    # The track and developer mode the bundle is built for, decided before the build runs, so no
+    # step of the build can change them; `upload` checks its own decision against them.
+    outputs:
+      track: ${{ steps.track.outputs.name }}
+      developer-mode: ${{ steps.track.outputs.developer-mode }}
     steps:
       # No token kept in `.git/config`: nothing after the checkout pushes, and the repository is
       # public, so the fetch below needs none.
@@ -119,6 +127,86 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.p12"
 
+      # The `upload` job takes the bundle from this artifact, and a failed upload can be finished by
+      # hand from it. The R8 mapping is in the bundle as well, where Play Console reads it; the copy
+      # here is for retracing a stack trace locally.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sleevesight-${{ steps.version.outputs.name }}
+          path: |
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 90
+
+
+  upload:
+    needs: bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    # `id-token` lets the job ask GitHub for an OIDC token, which Google exchanges for a short-lived
+    # access token to the Play Developer API (Workload Identity Federation): no stored Google key.
+    # It reads no secret and runs no build.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The scripts and the notes come from the tagged commit, not from the `bundle` job, so nothing
+      # the build ran can change what runs here. Only those directories are checked out (not in cone
+      # mode, which would add every file at the root); the history and the tags are fetched for the
+      # track's check below.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/scripts/
+            /release-notes/
+
+      - name: Version from the tag
+        id: version
+        run: echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # The track, decided again as `bundle` decided it, from the same variable and tags, with the
+      # production check; its summary line is written by `bundle` already. `PLAY_TRACK` can change
+      # between the two approvals, or before a re-run of this job alone, so the decision must equal
+      # the one the bundle was built for: a bundle built for a testing track, in developer mode, never
+      # goes to production, and a track that differs only makes the upload fail.
+      - name: Track
+        id: track
+        env:
+          TRACK: ${{ vars.PLAY_TRACK }}
+          BUILT_TRACK: ${{ needs.bundle.outputs.track }}
+          BUILT_DEVELOPER_MODE: ${{ needs.bundle.outputs.developer-mode }}
+        run: |
+          git fetch --no-tags origin '+refs/tags/v*:refs/tags/v*'
+          if ! decided=$(GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' .github/scripts/release-track.sh "$TRACK" "$GITHUB_REF_NAME" "$GITHUB_SHA"); then
+            echo "$decided"
+            exit 1
+          fi
+          echo "$decided"
+          track=$(printf '%s\n' "$decided" | sed -n 's/^name=//p')
+          developer=$(printf '%s\n' "$decided" | sed -n 's/^developer-mode=//p')
+          if [ -z "$BUILT_TRACK" ] || [ "$track" != "$BUILT_TRACK" ] || [ "$developer" != "$BUILT_DEVELOPER_MODE" ]; then
+            echo "::error::The bundle was built for track '$BUILT_TRACK' (developer mode $BUILT_DEVELOPER_MODE), but PLAY_TRACK now gives '$track' (developer mode $developer); set PLAY_TRACK back and re-run this job, or re-run all jobs to build for the new track (design/release.md)"
+            exit 1
+          fi
+          echo "name=$track" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sleevesight-${{ steps.version.outputs.name }}
+          path: ${{ runner.temp }}/artifact
+
+      # For `jarsigner` and `keytool`; no Gradle.
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # Checked here, on the bundle that goes to Play, rather than where it was built.
       # `jarsigner -verify` succeeds on an unsigned bundle too, so its output is checked. The
       # signer's SHA-256 fingerprint must be the upload certificate's, which Play Console shows and
       # the environment variable `UPLOAD_CERT_SHA256` records once the first bundle is uploaded.
@@ -126,7 +214,7 @@ jobs:
         env:
           UPLOAD_CERT_SHA256: ${{ vars.UPLOAD_CERT_SHA256 }}
         run: |
-          aab=app/build/outputs/bundle/release/app-release.aab
+          aab=$RUNNER_TEMP/artifact/bundle/release/app-release.aab
           out=$(jarsigner -verify "$aab")
           echo "$out"
           case "$out" in
@@ -148,18 +236,7 @@ jobs:
             exit 1
           fi
 
-      # The R8 mapping is in the bundle as well, where Play Console reads it; the copy here is for
-      # retracing a stack trace locally.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: sleevesight-${{ steps.version.outputs.name }}
-          path: |
-            app/build/outputs/bundle/release/app-release.aab
-            app/build/outputs/mapping/release/mapping.txt
-          if-no-files-found: error
-          retention-days: 90
-
-      # The bundle is kept as an artifact above, so a failure from here on can still be uploaded by
+      # The bundle is kept as the run's artifact, so a failure from here on can still be uploaded by
       # hand. The environment's variables name the Google service account and the identity provider
       # that lets this repository act as it (`design/release.md`, *Google Play Developer API*).
       - name: Google Play setup
@@ -184,9 +261,9 @@ jobs:
           create_credentials_file: false
           export_environment_variables: false
 
-      # The track is the one the bundle was built for (*Track and developer mode*), so the closed
-      # test (#58) can take its bundles from the same job. `PLAY_RELEASE_STATUS`, `completed` when
-      # unset, can be `draft` while Play treats the app as a draft (`design/release.md`).
+      # The track is the one the bundle was built for (*Track*), so the closed test (#58) can take
+      # its bundles from the same workflow. `PLAY_RELEASE_STATUS`, `completed` when unset, can be
+      # `draft` while Play treats the app as a draft (`design/release.md`).
       - name: Upload to Google Play
         env:
           PLAY_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
@@ -195,5 +272,5 @@ jobs:
           VERSION: ${{ steps.version.outputs.name }}
         run: |
           .github/scripts/play-upload.sh app.sleevesight \
-            app/build/outputs/bundle/release/app-release.aab \
+            "$RUNNER_TEMP/artifact/bundle/release/app-release.aab" \
             "$VERSION" "$TRACK" "release-notes/$VERSION.txt" "$STATUS"
