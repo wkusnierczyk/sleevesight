@@ -98,6 +98,17 @@ interface MusicBrainzLookup {
      */
     suspend fun artistNames(mbid: String): Lookup<List<String>> = Lookup.NotFound
 
+    /**
+     * Works titled [title] that [composer] is related to (#1299), as MusicBrainz's search ranks them, at
+     * most [WORK_SEARCH_PAGE], each with its artist relationships and how many recordings it links: core
+     * data. For the work of a recording that links none, with a composer the title leads with. A stand-in
+     * that does not answer it finds none, so a resolution is what it was before.
+     */
+    suspend fun searchWorks(
+        title: String,
+        composer: String,
+    ): Lookup<List<MbFoundWork>> = Lookup.NotFound
+
     companion object {
         /** The most recordings a search gives, its one page: MusicBrainz's largest. */
         const val SEARCH_PAGE: Int = 100
@@ -110,6 +121,13 @@ interface MusicBrainzLookup {
 
         /** The fewest letters a word of [searchRecordingsLoosely] needs to be matched loosely. */
         const val FUZZY_LENGTH: Int = 4
+
+        /**
+         * The most works [searchWorks] gives (#1299): the work wanted ranks near the top, and each one
+         * found comes with every recording it links, so a much-recorded composer's answer runs to half a
+         * megabyte at this size.
+         */
+        const val WORK_SEARCH_PAGE: Int = 10
     }
 }
 
@@ -334,6 +352,19 @@ data class MbWork(
     val languages: List<String> = emptyList(),
     val type: String? = null,
     val parents: List<MbParentWork> = emptyList(),
+)
+
+/**
+ * A work as MusicBrainz's work search gives it (#1299, [MusicBrainzLookup.searchWorks]): its [title], its
+ * [type] (null when it gives none), its [artistRelations] (the composer's among them, with no dates: the
+ * search gives none), and how many [recordings] it links.
+ */
+data class MbFoundWork(
+    val mbid: String,
+    val title: String,
+    val type: String?,
+    val artistRelations: List<MbArtistRelation>,
+    val recordings: Int,
 )
 
 /**

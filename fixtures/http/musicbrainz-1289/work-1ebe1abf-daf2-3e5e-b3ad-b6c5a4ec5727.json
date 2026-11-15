@@ -1,0 +1,1050 @@
+{
+ "type": null,
+ "title": "Adagio for Strings",
+ "id": "1ebe1abf-daf2-3e5e-b3ad-b6c5a4ec5727",
+ "language": "zxx",
+ "relations": [
+  {
+   "ended": true,
+   "attribute-ids": {},
+   "type": "composer",
+   "target-credit": "",
+   "begin": "1936",
+   "attributes": [],
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "name": "Samuel Barber",
+    "disambiguation": "American composer",
+    "type": "Person",
+    "country": "US",
+    "sort-name": "Barber, Samuel",
+    "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a"
+   },
+   "target-type": "artist",
+   "direction": "backward",
+   "end": "1936",
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f"
+  },
+  {
+   "attribute-ids": {},
+   "ended": true,
+   "type": "orchestrator",
+   "begin": "1938",
+   "target-credit": "",
+   "artist": {
+    "country": "US",
+    "type": "Person",
+    "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a",
+    "sort-name": "Barber, Samuel",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "disambiguation": "American composer",
+    "name": "Samuel Barber"
+   },
+   "attributes": [],
+   "direction": "backward",
+   "target-type": "artist",
+   "end": "1938",
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "0a1771e1-8639-4740-8a43-bdafc050c3da"
+  },
+  {
+   "artist": {
+    "id": "229d5a97-b8e1-4195-a696-d74bc8db90ed",
+    "sort-name": "NBC Symphony Orchestra",
+    "type": "Orchestra",
+    "country": "US",
+    "disambiguation": "",
+    "name": "NBC Symphony Orchestra",
+    "type-id": "a0b36c92-3eb1-3839-a4f9-4799823f54a5"
+   },
+   "attributes": [],
+   "begin": "1938-11-05",
+   "target-credit": "",
+   "type": "premiere",
+   "attribute-ids": {},
+   "ended": true,
+   "type-id": "5cc8cfb5-cca0-4395-a44b-b7d3c1777608",
+   "attribute-values": {},
+   "source-credit": "",
+   "end": "1938-11-05",
+   "direction": "backward",
+   "target-type": "artist"
+  },
+  {
+   "end": "1938-11-05",
+   "direction": "backward",
+   "target-type": "artist",
+   "type-id": "5cc8cfb5-cca0-4395-a44b-b7d3c1777608",
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "premiere",
+   "attribute-ids": {},
+   "ended": true,
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "disambiguation": "conductor",
+    "name": "Arturo Toscanini",
+    "type": "Person",
+    "country": "IT",
+    "id": "da96be23-ef88-420e-8173-3efb7fd995cc",
+    "sort-name": "Toscanini, Arturo"
+   },
+   "attributes": [],
+   "begin": "1938-11-05",
+   "target-credit": ""
+  },
+  {
+   "recording": {
+    "disambiguation": "",
+    "id": "79ea137f-541c-4ae3-85bb-9d099be6994f",
+    "title": "Adagio for Strings (from String Quartet)",
+    "video": false,
+    "length": 430000,
+    "artist-credit": [
+     {
+      "name": "NBC Symphony Orchestra",
+      "joinphrase": ", ",
+      "artist": {
+       "type": null,
+       "country": "US",
+       "sort-name": "NBC Symphony Orchestra",
+       "id": "229d5a97-b8e1-4195-a696-d74bc8db90ed",
+       "type-id": null,
+       "name": "NBC Symphony Orchestra",
+       "disambiguation": ""
+      }
+     },
+     {
+      "name": "Arturo Toscanini",
+      "artist": {
+       "type-id": null,
+       "disambiguation": "conductor",
+       "name": "Arturo Toscanini",
+       "country": "IT",
+       "type": null,
+       "sort-name": "Toscanini, Arturo",
+       "id": "da96be23-ef88-420e-8173-3efb7fd995cc"
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": "1942-03-19",
+   "target-credit": "",
+   "begin": "1942-03-19",
+   "attributes": [],
+   "ended": true,
+   "attribute-ids": {},
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "attribute-ids": {},
+   "ended": true,
+   "attributes": [],
+   "begin": "2009",
+   "target-credit": "",
+   "end": "2009",
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "source-credit": "",
+   "attribute-values": {},
+   "recording": {
+    "disambiguation": "",
+    "id": "df63ab79-74de-4184-819a-db697e1e4a24",
+    "title": "Adagio voor strijkers, op. 11",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "artist": {
+       "country": "DE",
+       "type": null,
+       "sort-name": "Berliner Philharmoniker",
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "type-id": null,
+       "disambiguation": "",
+       "name": "Berliner Philharmoniker"
+      },
+      "joinphrase": ", "
+     },
+     {
+      "artist": {
+       "id": "80c3bce9-0b54-409c-aa10-3b0c7dbbc597",
+       "sort-name": "Rattle, Simon",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "conductor",
+       "name": "Simon Rattle",
+       "type-id": null
+      },
+      "joinphrase": "",
+      "name": "Simon Rattle"
+     }
+    ],
+    "length": 532000
+   }
+  },
+  {
+   "end": "2013-02",
+   "target-type": "recording",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "disambiguation": "",
+    "id": "3be4b81c-1558-4b58-8046-4727ee3933b2",
+    "title": "Adagio for Strings",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "artist": {
+       "name": "Berliner Philharmoniker",
+       "disambiguation": "",
+       "type-id": null,
+       "sort-name": "Berliner Philharmoniker",
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "country": "DE",
+       "type": null
+      },
+      "joinphrase": ", "
+     },
+     {
+      "artist": {
+       "disambiguation": "conductor and violinist",
+       "name": "Gustavo Dudamel",
+       "type-id": null,
+       "id": "4c8702d6-86f9-4ef0-a9ee-08042481c542",
+       "sort-name": "Dudamel, Gustavo",
+       "type": null,
+       "country": "VE"
+      },
+      "joinphrase": "",
+      "name": "Gustavo Dudamel"
+     }
+    ],
+    "length": 674000
+   },
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "performance",
+   "ended": true,
+   "attribute-ids": {},
+   "attributes": [],
+   "target-credit": "",
+   "begin": "2013-01"
+  },
+  {
+   "ended": false,
+   "attribute-ids": {},
+   "type": "performance",
+   "target-credit": "",
+   "begin": null,
+   "attributes": [],
+   "target-type": "recording",
+   "direction": "backward",
+   "end": null,
+   "recording": {
+    "length": 484000,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "sort-name": "Berliner Philharmoniker",
+       "type": null,
+       "country": "DE",
+       "name": "Berliner Philharmoniker",
+       "disambiguation": "",
+       "type-id": null
+      },
+      "joinphrase": ", "
+     },
+     {
+      "artist": {
+       "sort-name": "Bychkov, Semyon",
+       "id": "6badf867-cc3f-4fae-a6e7-9156e1769dc2",
+       "country": "RU",
+       "type": null,
+       "name": "Семён Бычков",
+       "disambiguation": "conductor",
+       "type-id": null
+      },
+      "joinphrase": "",
+      "name": "Semyon Bychkov"
+     }
+    ],
+    "video": false,
+    "title": "Adadio for Strings, op. 11",
+    "id": "7a531247-8c65-4211-8261-4d1fdffe9b80",
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "type": "performance",
+   "attribute-ids": {},
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "source-credit": "",
+   "attribute-values": {},
+   "recording": {
+    "length": 537427,
+    "artist-credit": [
+     {
+      "joinphrase": ", ",
+      "artist": {
+       "sort-name": "Berliner Philharmoniker",
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "country": "DE",
+       "type": null,
+       "name": "Berliner Philharmoniker",
+       "disambiguation": "",
+       "type-id": null
+      },
+      "name": "Berliner Philharmoniker"
+     },
+     {
+      "name": "Simon Rattle",
+      "artist": {
+       "disambiguation": "conductor",
+       "name": "Simon Rattle",
+       "type-id": null,
+       "id": "80c3bce9-0b54-409c-aa10-3b0c7dbbc597",
+       "sort-name": "Rattle, Simon",
+       "country": "GB",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "title": "Adagio for Strings, op. 11",
+    "id": "5bb1d974-bafb-4cb8-86ad-f2a479a743f6",
+    "disambiguation": ""
+   }
+  },
+  {
+   "type": "allmusic",
+   "ended": false,
+   "attribute-ids": {},
+   "attributes": [],
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.allmusic.com/composition/mc0002368672",
+    "id": "c7273f15-da02-42ed-9ad4-8d7df603d144"
+   },
+   "begin": null,
+   "end": null,
+   "target-type": "url",
+   "direction": "backward",
+   "type-id": "ca9c9f46-11bd-423a-b134-9109cbebe9d7",
+   "source-credit": "",
+   "attribute-values": {}
+  },
+  {
+   "ended": false,
+   "attribute-ids": {},
+   "type": "secondhandsongs",
+   "target-credit": "",
+   "url": {
+    "resource": "https://secondhandsongs.com/work/5718",
+    "id": "47d28f9f-a009-433a-8dce-489ccad97e63"
+   },
+   "begin": null,
+   "attributes": [],
+   "target-type": "url",
+   "direction": "backward",
+   "end": null,
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "b80dff64-9560-445a-b824-c8b432d77a52"
+  },
+  {
+   "target-type": "url",
+   "direction": "backward",
+   "end": null,
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
+   "ended": false,
+   "attribute-ids": {},
+   "type": "wikidata",
+   "url": {
+    "id": "25d35793-c6d8-4860-89ca-c195b4728a0d",
+    "resource": "https://www.wikidata.org/wiki/Q346715"
+   },
+   "target-credit": "",
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "attribute-ids": {},
+   "ended": false,
+   "type": "arrangement",
+   "begin": null,
+   "target-credit": "",
+   "attributes": [],
+   "direction": "forward",
+   "target-type": "work",
+   "work": {
+    "type-id": null,
+    "iswcs": [],
+    "attributes": [],
+    "languages": [
+     "zxx"
+    ],
+    "disambiguation": "for organ, Strickland",
+    "title": "Adagio for Strings",
+    "type": null,
+    "language": "zxx",
+    "id": "5b4a02b6-848f-4596-ac78-8ee5970bfcea"
+   },
+   "end": null,
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299"
+  },
+  {
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "source-credit": "",
+   "attribute-values": {},
+   "end": null,
+   "direction": "forward",
+   "work": {
+    "language": null,
+    "id": "63c674fe-0204-4f3f-b197-a949ffc60190",
+    "type": null,
+    "title": "Agnus Dei",
+    "languages": [],
+    "disambiguation": "arr. Samuel Barber for chorus",
+    "type-id": null,
+    "iswcs": [],
+    "attributes": []
+   },
+   "target-type": "work",
+   "attributes": [],
+   "begin": null,
+   "target-credit": "",
+   "type": "arrangement",
+   "attribute-ids": {},
+   "ended": false
+  },
+  {
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "source-credit": "",
+   "attribute-values": {},
+   "end": null,
+   "work": {
+    "attributes": [],
+    "iswcs": [],
+    "type-id": null,
+    "disambiguation": "arr. Lucien Cailliet for clarinet choir",
+    "languages": [],
+    "type": null,
+    "title": "Adagio for Strings",
+    "id": "f2eeeeee-85a7-4b35-bb60-4f2673bad8e0",
+    "language": null
+   },
+   "target-type": "work",
+   "direction": "forward",
+   "attributes": [],
+   "target-credit": "",
+   "begin": null,
+   "type": "arrangement",
+   "ended": false,
+   "attribute-ids": {}
+  },
+  {
+   "direction": "forward",
+   "target-type": "work",
+   "work": {
+    "title": "Adagio for Strings",
+    "type": null,
+    "language": null,
+    "id": "5bebbf3e-3e1c-4e20-a2d4-5ba225056039",
+    "type-id": null,
+    "iswcs": [],
+    "attributes": [],
+    "disambiguation": "arr. John O'Reilly for woodwind band",
+    "languages": []
+   },
+   "end": null,
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "attribute-ids": {},
+   "ended": false,
+   "type": "arrangement",
+   "begin": null,
+   "target-credit": "",
+   "attributes": []
+  },
+  {
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "target-type": "work",
+   "work": {
+    "title": "Adagio for Strings",
+    "type": null,
+    "language": "zxx",
+    "id": "78823d85-3148-409e-b903-af9f0cfaf02d",
+    "type-id": null,
+    "iswcs": [],
+    "attributes": [],
+    "languages": [
+     "zxx"
+    ],
+    "disambiguation": "catch‐all for arrangements"
+   },
+   "direction": "forward",
+   "end": null,
+   "target-credit": "",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "attribute-ids": {},
+   "type": "arrangement"
+  },
+  {
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "direction": "backward",
+   "work": {
+    "type": null,
+    "title": "String Quartet, op. 11: II. Molto adagio",
+    "id": "976f478f-9ef0-3ea6-adb3-b0414e8c5580",
+    "language": "zxx",
+    "attributes": [],
+    "iswcs": [],
+    "type-id": null,
+    "languages": [
+     "zxx"
+    ],
+    "disambiguation": ""
+   },
+   "target-type": "work",
+   "end": null,
+   "begin": null,
+   "target-credit": "",
+   "attributes": [],
+   "attribute-ids": {},
+   "ended": false,
+   "type": "arrangement"
+  },
+  {
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "6bb1df6b-57f3-434d-8a39-5dc363d2eb78",
+   "direction": "forward",
+   "target-type": "work",
+   "work": {
+    "type": "Song",
+    "title": "Dov’è l’amore",
+    "id": "f5e1192d-f32e-481a-b113-a82120b58be7",
+    "language": "ita",
+    "attributes": [],
+    "iswcs": [
+     "T-910.915.754-2"
+    ],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "languages": [
+     "ita"
+    ],
+    "disambiguation": ""
+   },
+   "end": null,
+   "begin": null,
+   "target-credit": "",
+   "attributes": [],
+   "attribute-ids": {},
+   "ended": false,
+   "type": "based on"
+  }
+ ],
+ "attributes": [
+  {
+   "value": "002233 752 92",
+   "type": "SUISA ID",
+   "type-id": "034f35ae-d250-3749-95e7-854e606d5960"
+  },
+  {
+   "value": "000063 220 36",
+   "type-id": "034f35ae-d250-3749-95e7-854e606d5960",
+   "type": "SUISA ID"
+  },
+  {
+   "type": "SPAC ID",
+   "type-id": "fd46ccc3-b3bb-4c5a-b40d-23b81899ef46",
+   "value": "4875534"
+  },
+  {
+   "type-id": "fd46ccc3-b3bb-4c5a-b40d-23b81899ef46",
+   "type": "SPAC ID",
+   "value": "4047793"
+  },
+  {
+   "type-id": "f15e9a05-231e-415b-8b7d-8ec44c736bde",
+   "type": "SPA ID",
+   "value": "213888"
+  },
+  {
+   "value": "10008117",
+   "type-id": "00370bc6-7388-34a1-aa5b-b0e081ccb53d",
+   "type": "SOCAN ID"
+  },
+  {
+   "type-id": "3667d8d9-9fe4-4df0-873b-4dc00a886d80",
+   "type": "SOBODAYCOM ID",
+   "value": "4047793"
+  },
+  {
+   "value": "11846046500",
+   "type": "SIAE ID",
+   "type-id": "2e4f9e12-d094-4bd0-b4dd-a560cc5c4977"
+  },
+  {
+   "value": "602.400",
+   "type": "SGAE ID",
+   "type-id": "6a200b13-ca08-3b32-87a9-7aaa46368d75"
+  },
+  {
+   "type-id": "6a200b13-ca08-3b32-87a9-7aaa46368d75",
+   "type": "SGAE ID",
+   "value": "2.889.938"
+  },
+  {
+   "type-id": "33fe1f90-d812-48ef-839f-bc151afecaca",
+   "type": "SGACEDOM ID",
+   "value": "4047793"
+  },
+  {
+   "type": "SGACEDOM ID",
+   "type-id": "33fe1f90-d812-48ef-839f-bc151afecaca",
+   "value": "4875534"
+  },
+  {
+   "value": "621136",
+   "type": "SAYCO ID",
+   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297"
+  },
+  {
+   "value": "1632774",
+   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297",
+   "type": "SAYCO ID"
+  },
+  {
+   "value": "2861437",
+   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297",
+   "type": "SAYCO ID"
+  },
+  {
+   "value": "2861954",
+   "type": "SAYCO ID",
+   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297"
+  },
+  {
+   "value": "9194593",
+   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297",
+   "type": "SAYCO ID"
+  },
+  {
+   "type": "SAYCE ID",
+   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef",
+   "value": "621136"
+  },
+  {
+   "value": "1632774",
+   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef",
+   "type": "SAYCE ID"
+  },
+  {
+   "type": "SAYCE ID",
+   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef",
+   "value": "2861437"
+  },
+  {
+   "value": "2861954",
+   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef",
+   "type": "SAYCE ID"
+  },
+  {
+   "value": "9194593",
+   "type": "SAYCE ID",
+   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef"
+  },
+  {
+   "value": "188521",
+   "type-id": "d8aa6512-314a-478d-bd30-e8d7411509cb",
+   "type": "SADAIC ID"
+  },
+  {
+   "value": "1138770",
+   "type-id": "d8aa6512-314a-478d-bd30-e8d7411509cb",
+   "type": "SADAIC ID"
+  },
+  {
+   "value": "3243184",
+   "type": "SACVEN ID",
+   "type-id": "91064561-0c00-4574-ad18-247c7216675f"
+  },
+  {
+   "value": "043145803",
+   "type": "SACM ID",
+   "type-id": "519f3860-0b48-4532-8752-25984f662360"
+  },
+  {
+   "value": "082476558",
+   "type": "SACM ID",
+   "type-id": "519f3860-0b48-4532-8752-25984f662360"
+  },
+  {
+   "type-id": "43b74305-291f-4ae3-9e59-0dca457c00fe",
+   "type": "SACIM ID",
+   "value": "4047793"
+  },
+  {
+   "type-id": "d08147e2-d167-3c2b-bbe4-af6643a194f9",
+   "type": "SACEM ID",
+   "value": "90 012 960 11"
+  },
+  {
+   "value": "023371500",
+   "type": "SABAM ID",
+   "type-id": "b2e4067b-a9e4-44fb-bfcd-3c1fc41dc06d"
+  },
+  {
+   "value": "023371503",
+   "type": "SABAM ID",
+   "type-id": "b2e4067b-a9e4-44fb-bfcd-3c1fc41dc06d"
+  },
+  {
+   "value": "507356800",
+   "type": "SABAM ID",
+   "type-id": "b2e4067b-a9e4-44fb-bfcd-3c1fc41dc06d"
+  },
+  {
+   "value": "214067200",
+   "type": "SABAM ID",
+   "type-id": "b2e4067b-a9e4-44fb-bfcd-3c1fc41dc06d"
+  },
+  {
+   "value": "547437700",
+   "type-id": "b2e4067b-a9e4-44fb-bfcd-3c1fc41dc06d",
+   "type": "SABAM ID"
+  },
+  {
+   "type": "SABAM ID",
+   "type-id": "b2e4067b-a9e4-44fb-bfcd-3c1fc41dc06d",
+   "value": "641877400"
+  },
+  {
+   "value": "2327398X",
+   "type": "PRS tune code",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6"
+  },
+  {
+   "value": "114683HW",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "type": "PRS tune code"
+  },
+  {
+   "type": "PRS tune code",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "value": "2403819E"
+  },
+  {
+   "value": "5766829J",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "type": "PRS tune code"
+  },
+  {
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "type": "PRS tune code",
+   "value": "16609GS"
+  },
+  {
+   "value": "4209870N",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "type": "PRS tune code"
+  },
+  {
+   "value": "22348V",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "type": "PRS tune code"
+  },
+  {
+   "value": "395088KP",
+   "type": "PRS tune code",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6"
+  },
+  {
+   "value": "630829FQ",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "type": "PRS tune code"
+  },
+  {
+   "value": "4047793",
+   "type-id": "5ab3cd1a-b9ad-4244-8b32-b3a958d4ede6",
+   "type": "NICAUTOR ID"
+  },
+  {
+   "type": "NICAUTOR ID",
+   "type-id": "5ab3cd1a-b9ad-4244-8b32-b3a958d4ede6",
+   "value": "4875534"
+  },
+  {
+   "value": "0A0-0273-2",
+   "type": "JASRAC ID",
+   "type-id": "31048fcc-3dbb-3979-8f85-805afb933e0c"
+  },
+  {
+   "value": "8129415-002",
+   "type": "GEMA ID",
+   "type-id": "01eeee67-f514-3801-bdce-279e04872f91"
+  },
+  {
+   "value": "274711",
+   "type": "ECAD ID",
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990"
+  },
+  {
+   "type": "ECAD ID",
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990",
+   "value": "2888631"
+  },
+  {
+   "value": "4010242",
+   "type": "ECAD ID",
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990"
+  },
+  {
+   "value": "5816980",
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990",
+   "type": "ECAD ID"
+  },
+  {
+   "value": "10217623",
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "value": "3432829",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "type": "COMPASS ID"
+  },
+  {
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "value": "3681578"
+  },
+  {
+   "value": "10058833",
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "value": "10049884",
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "type": "COMPASS ID",
+   "value": "9964039"
+  },
+  {
+   "value": "9932798",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "type": "COMPASS ID"
+  },
+  {
+   "value": "9909630",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "type": "COMPASS ID"
+  },
+  {
+   "value": "9260843",
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "value": "4834208",
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "type": "COMPASS ID",
+   "value": "8631974"
+  },
+  {
+   "value": "8696997",
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "value": "9465524",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "type": "COMPASS ID"
+  },
+  {
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "type": "COMPASS ID",
+   "value": "14157856"
+  },
+  {
+   "value": "200",
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "type-id": "a6492434-b847-4f1b-9869-9184ade990ed",
+   "type": "BUMA/STEMRA ID",
+   "value": "W-001360271"
+  },
+  {
+   "type": "BUMA/STEMRA ID",
+   "type-id": "a6492434-b847-4f1b-9869-9184ade990ed",
+   "value": "W-000000731"
+  },
+  {
+   "value": "W-000202805",
+   "type-id": "a6492434-b847-4f1b-9869-9184ade990ed",
+   "type": "BUMA/STEMRA ID"
+  },
+  {
+   "type": "ASCAP ID",
+   "type-id": "d833318c-6c6a-370e-8b16-9cb15873ba76",
+   "value": "310007159"
+  },
+  {
+   "value": "GW40473388",
+   "type-id": "bdf50af8-0881-322a-8ab7-f031a4935d04",
+   "type": "APRA ID"
+  },
+  {
+   "type-id": "bdf50af8-0881-322a-8ab7-f031a4935d04",
+   "type": "APRA ID",
+   "value": "GW02599631"
+  },
+  {
+   "type-id": "b66d6f47-2a58-4bc1-ac75-b44c47a198f8",
+   "type": "APDAYC ID",
+   "value": "2161666"
+  },
+  {
+   "type-id": "b66d6f47-2a58-4bc1-ac75-b44c47a198f8",
+   "type": "APDAYC ID",
+   "value": "9384936"
+  },
+  {
+   "type-id": "b66d6f47-2a58-4bc1-ac75-b44c47a198f8",
+   "type": "APDAYC ID",
+   "value": "9536575"
+  },
+  {
+   "value": "5422666",
+   "type-id": "84afca1d-80dc-4d44-8d7a-e1e84e70aa65",
+   "type": "APA ID"
+  },
+  {
+   "value": "565443201",
+   "type": "AKM ID",
+   "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2"
+  },
+  {
+   "value": "189671301",
+   "type": "AKM ID",
+   "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2"
+  },
+  {
+   "type": "AKM ID",
+   "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2",
+   "value": "316201"
+  },
+  {
+   "value": "525216701",
+   "type": "AKM ID",
+   "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2"
+  },
+  {
+   "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2",
+   "type": "AKM ID",
+   "value": "714484101"
+  },
+  {
+   "value": "349762601",
+   "type": "AKM ID",
+   "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2"
+  },
+  {
+   "type": "AKM ID",
+   "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2",
+   "value": "2005814701"
+  },
+  {
+   "value": "4243109",
+   "type-id": "27ea7f59-9f9c-4aee-b31a-61109ac03819",
+   "type": "AGADU ID"
+  },
+  {
+   "type-id": "d12e548d-4579-4ddd-abb6-9ffa4fee6826",
+   "type": "AEI ID",
+   "value": "4875534"
+  },
+  {
+   "type-id": "d12e548d-4579-4ddd-abb6-9ffa4fee6826",
+   "type": "AEI ID",
+   "value": "4047793"
+  },
+  {
+   "value": "4875534",
+   "type": "ACAM ID",
+   "type-id": "955305a2-58ec-4c64-94f7-7fb9b209416c"
+  },
+  {
+   "value": "4047793",
+   "type": "ACAM ID",
+   "type-id": "955305a2-58ec-4c64-94f7-7fb9b209416c"
+  },
+  {
+   "value": "4875534",
+   "type": "AACIMH ID",
+   "type-id": "a9551cb7-ee2c-4b05-87b6-18ef0e549865"
+  },
+  {
+   "value": "4047793",
+   "type-id": "a9551cb7-ee2c-4b05-87b6-18ef0e549865",
+   "type": "AACIMH ID"
+  }
+ ],
+ "iswcs": [
+  "T-070.000.199-5",
+  "T-901.134.571-4"
+ ],
+ "type-id": null,
+ "disambiguation": "",
+ "languages": [
+  "zxx"
+ ]
+}

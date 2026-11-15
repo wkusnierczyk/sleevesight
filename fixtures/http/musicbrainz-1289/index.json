@@ -139,6 +139,16 @@
  },
  {
   "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work/1ebe1abf-daf2-3e5e-b3ad-b6c5a4ec5727",
+  "query": {
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-1ebe1abf-daf2-3e5e-b3ad-b6c5a4ec5727.json"
+ },
+ {
+  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/work/876aa6e9-0a0a-3408-bbfa-0565582cf8e0",
   "query": {
    "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
@@ -146,5 +156,16 @@
   },
   "status": 200,
   "file": "work-876aa6e9-0a0a-3408-bbfa-0565582cf8e0.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work",
+  "query": {
+   "query": "work:\"Adagio for Strings\" AND artist:\"Samuel Barber\"",
+   "limit": "10",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-work-adagio-for-strings-and-artist-samuel-barber.json"
  }
 ]

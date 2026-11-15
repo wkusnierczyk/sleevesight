@@ -153,8 +153,9 @@ internal suspend fun MusicBrainzLookup.loosely(
 // numerals, single letters, ordinals, numbers in words), in the same order (`Op. 1 No. 2` is not `Op. 2
 // No. 1`), the recording's title read whole or as the part of a work it
 // names (#1289): a title found loosely may differ from the track's by little else (`Gymnopédie No. 1`
-// and `No. 2`, `Part 1` and `Part 2`), which its similarity alone would let pass.
-private fun NameMatcher.sameNumbers(
+// and `No. 2`, `Part 1` and `Part 2`), which its similarity alone would let pass. So may a work's title
+// a work search finds (#1299, `searchedWork`).
+internal fun NameMatcher.sameNumbers(
     title: String,
     recordingTitle: String,
 ): Boolean {

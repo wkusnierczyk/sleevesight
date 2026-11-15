@@ -7,6 +7,7 @@ import app.sleevesight.core.resolution.MbArtist
 import app.sleevesight.core.resolution.MbArtistRelation
 import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MbCredit
+import app.sleevesight.core.resolution.MbFoundWork
 import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.MbMedium
 import app.sleevesight.core.resolution.MbParentWork
@@ -91,6 +92,43 @@ class MusicBrainzClient(
             val json = parseObject(response.body)
             (listOf(json.required("name")) + json.array("aliases").mapNotNull { it.string("name")?.ifEmpty { null } })
                 .distinct()
+        }
+    }
+
+    override suspend fun searchWorks(
+        title: String,
+        composer: String,
+    ): Lookup<List<MbFoundWork>> {
+        // Nothing to search by is nothing found: no request.
+        if (title.isBlank() || composer.isBlank()) return Lookup.NotFound
+        val query =
+            mapOf(
+                "query" to "work:${phrase(title)} AND artist:${phrase(composer)}",
+                "limit" to "${MusicBrainzLookup.WORK_SEARCH_PAGE}",
+                "fmt" to "json",
+            )
+        return net.lookup(NetRequest("$BASE/work", query = query)) { response ->
+            parseObject(response.body).array("works").map { work ->
+                // The search's relationships carry no `target-type`: an artist's is the one with an artist.
+                val relations = work.array("relations")
+                MbFoundWork(
+                    mbid = work.required("id"),
+                    title = work.required("title"),
+                    type = work.string("type")?.ifEmpty { null },
+                    artistRelations =
+                        relations.mapNotNull { relation ->
+                            relation.obj("artist")?.let { artist ->
+                                MbArtistRelation(
+                                    type = relation.required("type"),
+                                    artistMbid = artist.required("id"),
+                                    artistName = artist.required("name"),
+                                    attributes = attributes(relation),
+                                )
+                            }
+                        },
+                    recordings = relations.count { it.obj("recording") != null },
+                )
+            }
         }
     }
 
