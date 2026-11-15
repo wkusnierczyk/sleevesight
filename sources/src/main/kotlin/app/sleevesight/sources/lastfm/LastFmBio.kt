@@ -57,7 +57,6 @@ internal object LastFmBio {
             "jr",
             "sr",
             "mt",
-            "no",
             "vs",
             "feat",
             "ft",
@@ -68,6 +67,20 @@ internal object LastFmBio {
             "ltd",
             "co",
         )
+
+    /**
+     * Catalogue abbreviations that end in a full stop without ending a sentence when a catalogue
+     * number follows (#1192): `No. 2`, `Nos. 20 & 23`, `Op. 27`, `Opp. 1`, `Nr. 3`, `Hob. VIIe/1`,
+     * `K. Anh. 1` (Anhang), `Sz. 106` (Bartók), `Kk. 380` (Scarlatti), `Wq. 182` (C. P. E. Bach).
+     * Single letters (`K. 545`, `D. 960`, `H. 1/94`) are initials already, and `BWV`, `HWV`, `RV`,
+     * `WoO` take no full stop. Before anything else they end one: `The answer was No. He left.`
+     */
+    private val CATALOGUE = setOf("no", "nos", "nr", "op", "opp", "hob", "anh", "sz", "kk", "wq")
+
+    // A catalogue number after a [CATALOGUE] abbreviation and a space: a digit (`27`, `1007–1012`),
+    // or Hoboken's Roman group, a letter for a subgroup maybe, then `:` or `/` and a number
+    // (`XVI:52`, `VIIe/1`). A Roman numeral alone (`No. I`) is not taken: it may be the pronoun.
+    private val CATALOGUE_NUMBER = Regex("^(?:\\p{N}|[IVXLC]+[a-z]?[:/]\\p{N})")
 
     private val ENTITIES =
         mapOf("amp" to "&", "quot" to "\"", "apos" to "'", "lt" to "<", "gt" to ">", "nbsp" to " ")
@@ -154,14 +167,31 @@ internal object LastFmBio {
         if (end >= text.length) return true
         val next = text.getOrNull(end + 1)
         val startsNext = text[end] == ' ' && next != null && (next.isUpperCase() || next.isDigit() || next in OPENERS)
-        val word = text.substring(0, mark).takeLastWhile { it.isLetterOrDigit() }
-        // An initial (`J. R. R.`) or an abbreviation (`St. John's`) does not end a sentence.
+        val word = text.substring(0, mark).takeLastWhile { it.isLetterOrDigit() }.lowercase()
+        // An initial (`J. R. R.`), an abbreviation (`St. John's`), or a catalogue abbreviation before
+        // its number (`Op. 27`, [CATALOGUE]) does not end a sentence.
         val shortened =
-            text[mark] == '.' && ((word.length == 1 && word[0].isLetter()) || word.lowercase() in ABBREVIATIONS)
+            text[mark] == '.' &&
+                ((word.length == 1 && word[0].isLetter()) || word in ABBREVIATIONS || catalogued(text, word, end))
         return startsNext && !shortened
     }
 
     private const val OPENERS = "\"“‘'("
+
+    // Whether [word], lowercased and ending at the full stop before [end], is a [CATALOGUE]
+    // abbreviation with its number after the space at [end].
+    private fun catalogued(
+        text: String,
+        word: String,
+        end: Int,
+    ): Boolean {
+        val from = minOf(end + 1, text.length)
+        return word in CATALOGUE &&
+            CATALOGUE_NUMBER.containsMatchIn(text.substring(from, minOf(from + NUMBER_WINDOW, text.length)))
+    }
+
+    // Enough of the text after the space for the longest [CATALOGUE_NUMBER] start (`XXVIIIb:1`).
+    private const val NUMBER_WINDOW = 12
 
     // Tags removed; a line break or a block's edge (`<br>`, `<p>`, `</li>`) leaves a space, so the
     // words on either side stay apart.

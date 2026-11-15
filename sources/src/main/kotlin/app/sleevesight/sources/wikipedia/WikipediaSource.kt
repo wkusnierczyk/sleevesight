@@ -513,9 +513,12 @@ class WikipediaSource(
          * (#1273), before the item's inception, so a song's result kept without it is looked up again;
          * [ARTIST_PART] stays. 9: the song's and the artists' items give the genres they state
          * (`SourceResult.statedGenres`, #1098), so a result kept without them is looked up again;
-         * [ARTIST_PART] goes with it ([ARTIST_PART_VERSION] 4).
+         * [ARTIST_PART] goes with it ([ARTIST_PART_VERSION] 4). 10: a sentence no longer ends at a
+         * catalogue abbreviation before its number (`Op. 27`, `Nos. 20 & 23`, `LastFmBio.split`,
+         * #1192), so a song's result kept with a work's lead cut there is made again; [ARTIST_PART]
+         * stays, since an artist's lead seldom holds one.
          */
-        const val EXTRACTION_VERSION: Int = 9
+        const val EXTRACTION_VERSION: Int = 10
 
         private val json = Json { encodeDefaults = false }
 

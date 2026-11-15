@@ -102,14 +102,15 @@ class WikipediaSourceTest {
         }
 
     @Test
-    fun `the kept part's version moved to 4 with the track results' to 9, for the genres items state`() {
+    fun `the kept part's version is 4 and the track results' 10, for sentences cut at catalogue numbers`() {
         // #1129 and #1203 changed what a track resolves to, which a track's result is checked against; an
         // artist's article, reached by the artist's id, is not, so the artist cache was kept; nor did the
         // song's composition date (#1132, #1273: its item's, its article's infobox's), which a track's
         // result holds, nor the whole work's item a movement is checked by (#1133). The genres the items
-        // state (#1098) are in both, so both moved.
+        // state (#1098) are in both, so both moved. The track results' moved on to 10 alone for sentences
+        // no longer cut at a catalogue abbreviation (#1192), which an artist's lead seldom holds.
         assertEquals(4, WikipediaSource.ARTIST_PART.extraction)
-        assertEquals(9, adapter.extractionVersion)
+        assertEquals(10, adapter.extractionVersion)
     }
 
     @Test
