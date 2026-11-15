@@ -3,9 +3,10 @@
 # takes one fixed branch, and the release branch is new each release (security updates go to `main`
 # regardless), so its pull requests target `main`, which takes work only through a release branch.
 # They are notices, never merged as they stand: an agent carries each bump into the open release
-# branch, with the lockfiles written again (`--write-locks`), and Dependabot closes its PR once
-# `main` has the new version. Being notices, they carry no milestone; the PR that carries the bump
-# does. The root directory covers `build-logic` too: Dependabot follows `includeBuild`, and the
+# branch, with the lockfiles and the dependency verification metadata written again
+# (`tools/refresh-dependency-verification.sh`; Dependabot writes no verification metadata, so its
+# Gradle PRs fail CI until then), and Dependabot closes its PR once `main` has the new version.
+# Being notices, they carry no milestone; the PR that carries the bump does. The root directory covers `build-logic` too: Dependabot follows `includeBuild`, and the
 # build logic takes its versions from the root's catalog.
 # The prefix's trailing space keeps Dependabot from adding a colon after it.
 version: 2
