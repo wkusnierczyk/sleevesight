@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,8 @@ import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.handoffTarget
+import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.TrackGenres
@@ -98,17 +101,29 @@ internal fun GenreAbout(
         track.genres.everyLabel
             .firstOrNull { it.genre.identity == genre }
             ?.genre ?: return
-    // Its broader genre (#1127), opened in its place by the line under the definition, until *Back*.
+    // Its broader genre (#1127), opened in its place by the line under the definition, until *Back*;
+    // the focus handed from the link that goes to the one that takes its place, each way.
     val broader = notes.vocabulary?.broader(genre)
     var opened by rememberSaveable(genre) { mutableStateOf(false) }
+    val handoff = rememberFocusHandoff()
+    val line = remember(genre) { FocusRequester() }
+    val back = remember(genre) { FocusRequester() }
     if (opened && broader != null) {
-        BroaderAbout(asked, named, broader, shown, afterRetry) { opened = false }
+        BroaderAbout(asked, named, broader, shown, afterRetry, Modifier.handoffTarget(handoff, back)) {
+            opened = false
+            handoff.moveTo(line)
+        }
         return
     }
     // The check of the track's vocals (#998), for Instrumental: its line under the weak genre's.
     val vocals = vocalsOf(track, notes).takeIf { genre == TrackGenres.INSTRUMENTAL }
     GenreDefinitionNote(named, notes, search, afterRetry)
-    if (broader != null) BroaderLine(named, broader) { opened = true }
+    if (broader != null) {
+        BroaderLine(named, broader, Modifier.handoffTarget(handoff, line)) {
+            opened = true
+            handoff.moveTo(back)
+        }
+    }
     // Why its evidence is weak, for a weak genre (#875), under the definition, unless the check of the
     // track's vocals, asked by a tap, says what it found in its place (#998); for a genre the
     // artist's description names (#1000), where, unless the weak line says it.
@@ -126,7 +141,10 @@ internal fun GenreAbout(
 /**
  * *Why is this …?* for [named], [asked]'s genre, as [reason] has it ([GenreAbout]): offered, a
  * button; unavailable, disabled with why; asked for, the reason with its credit and *Read aloud*.
+ * [asBroader] for [named] opened as another genre's broader genre (#1127, [BroaderAbout]): a tap
+ * asks [GenreNotes.explainBroader], and *Read aloud* follows [GenreNotes.broaderReason].
  */
+@Suppress("LongParameterList") // The reason, its track and genre, the notes, the focus, and how it is opened.
 @Composable
 internal fun GenreReasonBlock(
     reason: GenreReason,
@@ -134,13 +152,15 @@ internal fun GenreReasonBlock(
     named: GenreLabel,
     shown: PanelNotes,
     afterRetry: () -> Unit,
+    asBroader: Boolean = false,
 ) {
     val notes = shown.notes
     val genre = named.identity
     val reader = shown.readAloud
     val said = inSentence(named.label)
     val question = stringResource(R.string.genre_why, said)
-    val explain = { notes.explain(asked, genre) }
+    val explain = { if (asBroader) notes.explainBroader(asked, genre) else notes.explain(asked, genre) }
+    val follow = { if (asBroader) notes.broaderReason(asked, genre) else notes.reason(asked, genre) }
     when (reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question, onClick = explain)
@@ -150,7 +170,7 @@ internal fun GenreReasonBlock(
                 readAloudControl(reader, Reading.genreReason(genre)) {
                     // Read aloud follows the reason as the notes give it, whatever screen shows.
                     (reason.state as? InsightState.Written)?.let { written ->
-                        reader?.readGenreReason(asked, genre, question, written, notes.reason(asked, genre))
+                        reader?.readGenreReason(asked, genre, question, written, follow())
                     }
                 }
             ReasonShown(

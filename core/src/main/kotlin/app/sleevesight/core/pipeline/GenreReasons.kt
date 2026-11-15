@@ -139,24 +139,31 @@ class GenreReasons(
      * - path B ([ReasonPath.Listing]): for a genre only MusicBrainz gives, the AI's list first, while
      *   it is not known and it can run; [ReasonPath.CannotList] when it cannot ([GenreLists.mode]);
      *   once known without the genre, [ReasonPath.NotListed], and no call.
+     *
+     * [asBroader] for the genre opened as another genre's broader genre (#1127), in that genre's
+     * place: the reason where [allowed], [ReasonPath.NoService] where it would be but no AI service
+     * is ready, else nothing, never the AI's list, whatever the track's own labels of the genre.
      */
+    @Suppress("LongParameterList") // The track's genre, the settings, the list known, and how it is opened.
     fun path(
         track: TrackState,
         genre: String,
         settings: Settings,
         lists: GenreLists,
         listed: Set<String>?,
+        asBroader: Boolean = false,
     ): ReasonPath {
         val key = key(track, genre, settings, listed)
         val own = track.genres.everyLabel.any { it.genre.identity == genre }
+        // A broader genre (#1127), opened as one or the track's only through another genre: asked only
+        // as a source other than MusicBrainz allows it, never through the AI's list.
+        val guarded = asBroader || !own
         return when {
             !offered(track, settings) || !(own || broadens(track, genre)) -> ReasonPath.None
+            guarded && !allowed(track, genre, listed) -> ReasonPath.None
             key != null -> ReasonPath.Reason(key)
-            // Only a broader genre (#1127): asked only as a source other than MusicBrainz allows it,
-            // never through the AI's list.
-            !own && !allowed(track, genre, listed) -> ReasonPath.None
             ready(track, settings) == null -> ReasonPath.NoService
-            !own -> ReasonPath.None
+            guarded -> ReasonPath.None
             listed != null -> ReasonPath.NotListed
             else -> lists.key(track, settings)?.let(ReasonPath::Listing) ?: ReasonPath.CannotList
         }
