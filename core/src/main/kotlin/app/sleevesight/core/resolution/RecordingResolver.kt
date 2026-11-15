@@ -87,23 +87,18 @@ class RecordingResolver(
         val measured = duration != null
         val ours: (MbRecording) -> Boolean = { track.composer == null || names.performedBy(it, track) }
         val fits: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fits }
+        // The fallbacks (#1289) only when nothing fits in any form, a weaker one included, so a track that
+        // resolved before makes none of their requests and keeps its choice.
+        val fitsAtAll: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fitsAtAll }
         val first = musicBrainz.searched(title, searchArtist(track), measured, fits)
         val further = musicBrainz.further(track, first, measured, fits) { names.performedBy(it, track) }
         val aliased =
-            if (further.found.any(fits)) {
+            if (further.found.any(fitsAtAll)) {
                 further
             } else {
                 musicBrainz.withAliases(names, track, duration, further) { candidate(track, duration, it).matches }
             }
-        // The loose search only when nothing fits in any form, a weaker one included (#1289), so a track
-        // that resolved before makes no new search and keeps its choice.
-        val searched =
-            musicBrainz.loosely(
-                names,
-                track,
-                duration,
-                aliased,
-            ) { ours(it) && candidate(track, duration, it).fitsAtAll }
+        val searched = musicBrainz.loosely(names, track, duration, aliased, fitsAtAll)
         return when (val answer = searched.answer) {
             is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(answer.reason)
@@ -123,10 +118,11 @@ class RecordingResolver(
     ): Resolution {
         val all = found.map { candidate(track, duration, it) }
         // A recording read as a part of a work (`Turandot: “Nessun dorma”` for `Nessun Dorma`, #1289)
-        // counts only when none read otherwise fits; then those that fit are kept aside, for the work
-        // the chosen recording may not link (`Leaders.lentWork`), with the player's length only those whose
-        // own length is known.
-        val plainFits = all.any { it.fits }
+        // counts only when none read otherwise fits in any form (a weaker one included, so a track that
+        // resolved before keeps its recording); then those that fit are kept aside, for the work the chosen
+        // recording may not link (`Leaders.lentWork`), with the player's length only those whose own length
+        // is known.
+        val plainFits = all.any { it.fitsAtAll }
         val read = if (plainFits) all.filterNot { it.workLed } else all
         val pieces = all.filter { plainFits && it.isPiece(measured = duration != null) }
         // A recording read without the composer's lead counts only when none read as the player writes
@@ -286,7 +282,7 @@ class RecordingResolver(
         chosen: Candidate,
         fetched: MbRecordingDetail?,
         pool: List<Candidate>,
-        lent: MbWorkLink? = null,
+        lent: Lent? = null,
     ): Resolution {
         val recording = chosen.recording
         // The pool's releases: the album's sentences and the first release's date weigh the same ones.
@@ -321,7 +317,7 @@ class RecordingResolver(
         chosen: Candidate,
         base: Resolution,
         detail: MbRecordingDetail,
-        lent: MbWorkLink?,
+        lent: Lent?,
     ): Resolution {
         val recording = chosen.recording
         val artists =
@@ -629,6 +625,9 @@ class RecordingResolver(
         var incomplete: Boolean = false
             private set
 
+        // Whether a work's lookup [lendable] made failed, which ends [firstLinked]'s search.
+        private var workFailed: Boolean = false
+
         /** The reason of the lookup that made [confirm] return null. */
         var failure: String? = null
             private set
@@ -744,7 +743,7 @@ class RecordingResolver(
             track: NormalizedTrack,
             chosen: Candidate,
             pieces: List<Candidate>,
-        ): MbWorkLink? {
+        ): Lent? {
             val others =
                 pieces
                     .filter { names.performedBy(it.recording, track) }
@@ -766,31 +765,50 @@ class RecordingResolver(
             piece.ids.keys == chosen.ids.keys &&
                 piece.ids.all { (artist, ids) -> ids.any { it in chosen.ids[artist].orEmpty() } }
 
-        // The work the first of [pieces] links that may be lent ([lentWork]), as this recording's performance
-        // of it: no cover, not instrumental, no languages of the other's (#1289). Without a composer lead, only
-        // the first piece found is weighed, so a pop match costs one lookup at most; with one, up to all.
-        // Null for none, or once a lookup fails.
+        // The work the first of [pieces] links that may be lent ([lentWork], [lendable]). Without a composer
+        // lead, only the first piece found is weighed, so a pop match costs two lookups at most (its detail,
+        // then, lent, the work); with one, each in turn, its work looked up to check the composer, until one
+        // is that composer's. Null for none, or once a lookup fails.
         private suspend fun firstLinked(
             track: NormalizedTrack,
             pieces: List<Candidate>,
-        ): MbWorkLink? {
-            var link: MbWorkLink? = null
+        ): Lent? {
+            var lent: Lent? = null
             var i = 0
-            while (link == null && i < pieces.size) {
-                when (val detail = detail(pieces[i].recording.mbid)) {
-                    is Lookup.Found -> {
-                        link =
-                            detail.value.works
-                                .firstOrNull()
-                                ?.takeIf { track.composer != null || it.classical }
-                        if (track.composer == null) i = pieces.size
-                    }
-                    Lookup.NotFound -> Unit
-                    is Lookup.Failed -> i = pieces.size
-                }
-                i++
+            workFailed = false
+            while (lent == null && i < pieces.size) {
+                val detail = detail(pieces[i].recording.mbid)
+                lent =
+                    (detail as? Lookup.Found)
+                        ?.value
+                        ?.works
+                        ?.firstOrNull()
+                        ?.let { lendable(track, it) }
+                val last = detail is Lookup.Failed || workFailed || (detail is Lookup.Found && track.composer == null)
+                i = if (last) pieces.size else i + 1
             }
-            return link?.copy(cover = false, instrumental = false, languages = emptyList())
+            return lent
+        }
+
+        // [link] as lent, this recording's performance of it (no cover, not instrumental, no languages of the
+        // other's): without a composer lead, a work of a classical form; with one, a work whose lookup names
+        // that composer (`writtenByLead`), its lookup kept for [workOf]. Null otherwise; a lookup that fails
+        // marks the choice [incomplete] and stops the search ([workFailed]).
+        private suspend fun lendable(
+            track: NormalizedTrack,
+            link: MbWorkLink,
+        ): Lent? {
+            val own = link.copy(cover = false, instrumental = false, languages = emptyList())
+            val work = if (track.composer == null) null else musicBrainz.work(link.mbid)
+            if (work is Lookup.Failed) {
+                incomplete = true
+                workFailed = true
+            }
+            return when {
+                work == null -> Lent(own).takeIf { link.classical }
+                work is Lookup.Found && names.writtenByLead(track, work.value) -> Lent(own, work)
+                else -> null
+            }
         }
 
         /** [resolution], provisional when a lookup of [detail] failed ([incomplete]). */

@@ -155,9 +155,11 @@ orchestra (`performing orchestra`): Puccini is the composer, the other three the
 **When nothing fits** (#1289; `RecordingFallbacks.kt`, `fixtures/http/musicbrainz-1289/`), three
 bounded fallbacks. A track that resolved before keeps its recording, and the alias lookup and the loose
 search run only when nothing fits in any form (by name, as a band, under an honorific variant, in a
-joint credit), so it makes neither; what it can gain is a lent work (the third), at the cost of at most
-one more lookup without a composer lead and three with one, only when its recording links no work and
-another recording of its artists of MusicBrainz's `Work: “Part”` shape fits.
+joint credit), so it makes neither, and a part-of-work reading is then not weighed as its recording;
+what it can gain is a lent work (the third), only when its recording links no work and another
+recording of its artists of MusicBrainz's `Work: “Part”` shape fits: at most two more lookups without a
+composer lead (the other recording's detail, then its work), up to six with one (three recordings'
+details and the works they link, each work looked up once).
 - *An alias of a credited artist.* With a composer lead, a recording whose title, length and a
   performer fit, but whose credit names someone none of the track's artists is by name, has that
   artist's other names looked up (`artist/<id>?inc=aliases`, core data; at most two artists, only while
@@ -171,7 +173,8 @@ another recording of its artists of MusicBrainz's `Work: “Part”` shape fits.
   (`searchRecordingsLoosely`). Only a recording whose credits stand for two or more of the track's
   artists (a joint credit for one of them counting once), and for no one else, counts, and only with
   the same numbers in its title as the track's (`NameMatcher.numberWords`: digits, Roman numerals,
-  single letters; *Gymnopédie No. 1* is not *No. 2*, which the title's similarity alone would pass);
+  single letters, ordinals, numbers in words one to twelve, in the same order; *Gymnopédie No. 1* is not
+  *No. 2*, nor *Op. 1 No. 2* *Op. 2 No. 1*, which the title's similarity alone would pass);
   its title is then weighed as any other's. *Nessun doma - Turandot* (sic) by Puccini, Adami, "Carlo
   Simoni", Pavarotti, Magiera and the Orchestra da camera di Bologna: the three searches by name end at
   the librettists; the loose search ranks first `4cf239b6`, credited to the last three. MusicBrainz's
@@ -186,7 +189,9 @@ another recording of its artists of MusicBrainz's `Work: “Part”` shape fits.
   reading counts only when no recording read as written fits. When one does but links no work, the
   artist's recordings read so, of a known length that fits and standing for the same of the track's
   artists as the chosen one, and for the same people (an id in common for each), are looked up for one
-  that does (`Leaders.lentWork`): the first one found without a composer lead, up to three with one.
+  that does (`Leaders.lentWork`): the first one found without a composer lead; with one, up to three in
+  turn, each one's work looked up to check its composer, until one names the composer the title leads
+  with (Schubert's own *Ave Maria* after Verdi's *Otello* aria).
   That work is lent to the chosen recording as its own performance of it (no cover, not instrumental,
   no languages of the other's), the recording kept with its credits, relationships, resolved ids and
   dates: only the work is borrowed, never the recording swapped. With a composer lead, only a work whose

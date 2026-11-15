@@ -149,45 +149,17 @@ internal suspend fun MusicBrainzLookup.loosely(
     }
 }
 
-/**
- * The work a resolution reads (#1289): the recording's [own], else the one [lent] by another recording of
- * the track's artists (`RecordingResolver.Leaders.lentWork`), with its lookup. With a composer the title
- * leads with ([NormalizedTrack.composer]), a lent work counts only when its composer relationship names
- * them, whatever its type: a lead is only a credited artist's name before a colon (`Band: Song` has one
- * too), and `Schubert: Ave Maria` is not Verdi's `Otello` aria. Without one, only a work of a classical
- * form ([MbWorkLink.classical]). One that does not count is dropped with its lookup; one whose
- * lookup failed, dropped with the failure kept, so the resolution is asked again later.
- */
-internal suspend fun MusicBrainzLookup.workOf(
-    names: NameMatcher,
-    track: NormalizedTrack,
-    own: MbWorkLink?,
-    lent: MbWorkLink?,
-): Pair<MbWorkLink?, Lookup<MbWork>?> {
-    val link = own ?: lent
-    val lookup = link?.let { work(it.mbid) }
-    val lead = track.composer?.name
-    val written =
-        (lookup as? Lookup.Found)?.value?.artistRelations.orEmpty().any {
-            lead != null && it.type == "composer" && names.sameName(it.artistName, lead)
-        }
-    return when {
-        own != null || lent == null || (if (lead == null) lent.classical else written) -> link to lookup
-        lookup is Lookup.Failed -> null to lookup
-        else -> null to null
-    }
-}
-
 // Whether [title] and [recordingTitle] have the same numbers ([NameMatcher.numberWords]: digits, Roman
-// numerals, single letters), in any order, the recording's title read whole or as the part of a work it
+// numerals, single letters, ordinals, numbers in words), in the same order (`Op. 1 No. 2` is not `Op. 2
+// No. 1`), the recording's title read whole or as the part of a work it
 // names (#1289): a title found loosely may differ from the track's by little else (`Gymnopédie No. 1`
 // and `No. 2`, `Part 1` and `Part 2`), which its similarity alone would let pass.
 private fun NameMatcher.sameNumbers(
     title: String,
     recordingTitle: String,
 ): Boolean {
-    val wanted = numberWords(title).sorted()
-    return listOfNotNull(recordingTitle, quotedPart(recordingTitle)).any { numberWords(it).sorted() == wanted }
+    val wanted = numberWords(title)
+    return listOfNotNull(recordingTitle, quotedPart(recordingTitle)).any { numberWords(it) == wanted }
 }
 
 // How many of [artists] the credits of [recording] stand for ([standsFor]): a joint credit standing for one

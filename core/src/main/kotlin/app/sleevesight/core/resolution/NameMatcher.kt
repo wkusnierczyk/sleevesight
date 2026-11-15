@@ -50,9 +50,11 @@ class NameMatcher(
 
     /**
      * The words of [text]'s [key] that number something (#1289): digits, a Roman numeral, or a single
-     * letter, as [albumKey] reads a volume's number. In the order they come.
+     * letter, as [albumKey] reads a volume's number; an ordinal in digits (`1st`, `22nd`); and a number or
+     * an ordinal in English words, one to twelve (`Part One`, `Second Movement`). In the order they come.
      */
-    fun numberWords(text: String): List<String> = key(text).split(' ').filter(::numbers)
+    fun numberWords(text: String): List<String> =
+        key(text).split(' ').filter { numbers(it) || ORDINAL.matches(it) || it in NUMBER_WORDS }
 
     /** Whether [a] and [b] name the same artist: equal keys, a leading `the` aside. */
     fun sameName(
@@ -153,6 +155,38 @@ class NameMatcher(
         // Whether [word], a key's word, numbers a volume: digits, a Roman numeral, or one letter.
         fun numbers(word: String): Boolean =
             word.isNotEmpty() && (word.all(Char::isDigit) || word.length == 1 || ROMAN.matches(word))
+
+        // An ordinal in digits, as a key has it. No braces: ICU reads the pattern as the JVM does.
+        val ORDINAL = Regex("[0-9]+(st|nd|rd|th)")
+
+        // Numbers and ordinals in English words, one to twelve, as keys.
+        val NUMBER_WORDS =
+            setOf(
+                "one",
+                "two",
+                "three",
+                "four",
+                "five",
+                "six",
+                "seven",
+                "eight",
+                "nine",
+                "ten",
+                "eleven",
+                "twelve",
+                "first",
+                "second",
+                "third",
+                "fourth",
+                "fifth",
+                "sixth",
+                "seventh",
+                "eighth",
+                "ninth",
+                "tenth",
+                "eleventh",
+                "twelfth",
+            )
 
         const val VOL = "vol"
         const val VOLUME = "volume"

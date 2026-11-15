@@ -80,8 +80,21 @@ internal class FakeMusicBrainz(
         return releases[mbid] ?: Lookup.NotFound
     }
 
-    override suspend fun work(mbid: String): Lookup<MbWork> =
-        workFailure?.let { Lookup.Failed(it) } ?: works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+    /** The works looked up, in order. */
+    val worksAsked = mutableListOf<String>()
+
+    /** The artists whose names were looked up (#1289), in order. */
+    val artistNamesAsked = mutableListOf<String>()
+
+    override suspend fun work(mbid: String): Lookup<MbWork> {
+        worksAsked += mbid
+        return workFailure?.let { Lookup.Failed(it) } ?: works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+    }
+
+    override suspend fun artistNames(mbid: String): Lookup<List<String>> {
+        artistNamesAsked += mbid
+        return Lookup.NotFound
+    }
 
     /** The loose search's answer (#1289), whatever is asked. */
     var loose: Lookup<List<MbRecording>> = Lookup.NotFound

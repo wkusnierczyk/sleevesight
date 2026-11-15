@@ -418,6 +418,79 @@ class RecordingFallbacksTest {
         }
 
     @Test
+    fun `a composer-led track resolved under an honorific variant makes no alias lookup`() =
+        runTest {
+            // `Ann Lee` stands for Mr. Ann Lee as a variant; the other recording, crediting Bo Day and an
+            // orchestra that is none of the track's, would have had the orchestra's names looked up.
+            val variant = recording("variant", "Ave Maria", "Ann Lee", 300, "2001")
+            val other =
+                recording("other", "Ave Maria", "Bo Day", 300, "2003")
+                    .copy(credits = listOf(credit("Bo Day").copy(joinPhrase = " & "), credit("Cy Orchestra")))
+            val musicBrainz = FakeMusicBrainz(search = Lookup.Found(listOf(variant, other)))
+            val resolution =
+                resolve(musicBrainz, track("Schubert: Ave Maria", "Franz Schubert, Mr. Ann Lee, Bo Day"), 300)
+            assertEquals(emptyList(), musicBrainz.artistNamesAsked)
+            assertEquals(emptyList(), musicBrainz.looseSearched)
+            assertEquals("variant", resolution.recordingMbid)
+        }
+
+    @Test
+    fun `a recording that fits under an honorific variant is kept over a part of a work naming the artist`() =
+        runTest {
+            val variant = recording("variant", "Winter Rose", "Ann Lee", 200, "2001")
+            val piece = recording("piece", "Opera: “Winter Rose”", "Mr. Ann Lee", 201, "1990")
+            val musicBrainz = FakeMusicBrainz(search = Lookup.Found(listOf(variant, piece)))
+            assertEquals("variant", resolve(musicBrainz, track("Winter Rose", "Mr. Ann Lee"), 200).recordingMbid)
+        }
+
+    @Test
+    fun `the loose search's title with its numbers in another order, in words or as ordinals, is no match`() =
+        runTest {
+            val pairs =
+                listOf(
+                    "Sonata Op. 1 No. 2" to "Sonata Op. 2 No. 1",
+                    "Winter Rose Part One" to "Winter Rose Part Two",
+                    "Winter Rose 1st Movement" to "Winter Rose 2nd Movement",
+                )
+            for ((wanted, found) in pairs) {
+                val musicBrainz = FakeMusicBrainz(search = Lookup.Found(emptyList()))
+                musicBrainz.loose = Lookup.Found(listOf(duo("other", found, 200)))
+                val resolution = resolve(musicBrainz, track(wanted, "Ann Lee, Bo Day"), 200)
+                assertEquals(1, musicBrainz.looseSearched.size, wanted)
+                assertNull(resolution.recordingMbid, wanted)
+            }
+        }
+
+    @Test
+    fun `with a composer lead the parts of a work are weighed in turn - Schubert's own Ave Maria after Verdi's`() =
+        runTest {
+            val plain = recording("plain", "Ave Maria", "Angela Gheorghiu", 300, "2001")
+            val verdi = recording("verdi", "Otello: Atto IV. “Ave Maria”", "Angela Gheorghiu", 303, "1990")
+            val schubert = recording("schubert", "Ellens dritter Gesang: “Ave Maria”", "Angela Gheorghiu", 302, "1995")
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, verdi, schubert)),
+                    recordings =
+                        mapOf(
+                            "plain" to detail(plain, null),
+                            "verdi" to detail(verdi, "v", "Aria"),
+                            "schubert" to detail(schubert, "s", "Song"),
+                        ),
+                    works =
+                        mapOf(
+                            "v" to work("Giuseppe Verdi").copy(mbid = "v"),
+                            "s" to work("Franz Schubert").copy(mbid = "s"),
+                        ),
+                )
+            val resolution =
+                resolve(musicBrainz, track("Schubert: Ave Maria", "Franz Schubert, Angela Gheorghiu"), 300)
+            assertEquals("plain", resolution.recordingMbid)
+            assertEquals("s", resolution.work?.mbid)
+            // Each work looked up once: Schubert's, weighed, is not asked again.
+            assertEquals(listOf("v", "s"), musicBrainz.worksAsked)
+        }
+
+    @Test
     fun `a title is read as a part of a work only in MusicBrainz's form for one, the part in quotes`() {
         assertEquals(1.0, names.pieceSimilarity("Nessun Dorma", "Turandot: “Nessun dorma”"))
         assertEquals(1.0, names.pieceSimilarity("Nessun Dorma", "Turandot: Atto III. “Nessun dorma!”"))
