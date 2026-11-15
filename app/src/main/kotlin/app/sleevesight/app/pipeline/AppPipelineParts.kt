@@ -92,6 +92,7 @@ class AppPipelineParts(
             songWeb = wiring.songWeb(keys.sources, settings),
             lyricsLibrary = wiring.lyricsLibrary,
             vocabulary = wiring.genreVocabulary,
+            wikidataLabels = wiring.wikidataLabels,
         )
     }
 }

@@ -74,6 +74,9 @@ object Wd {
     const val MUSICBRAINZ_ARTIST: String = "P434"
     const val MUSICBRAINZ_WORK: String = "P435"
 
+    /** An album's MusicBrainz release group id (#1098: the album's genres). */
+    const val MUSICBRAINZ_RELEASE_GROUP: String = "P436"
+
     /** Language of work or name, and the original language of a film or show (#902). */
     const val LANGUAGE: String = "P407"
     const val ORIGINAL_LANGUAGE: String = "P364"

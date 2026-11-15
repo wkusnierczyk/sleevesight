@@ -503,7 +503,11 @@ class AiSearchScreenTest {
 
     @Test
     fun underEachEmptyStateOfGenresTheButtonShowsNotWhileLookingNorWithGenres() {
-        val off = Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ - SourceSwitch.LASTFM)
+        val off =
+            Settings(
+                enabledSources =
+                    Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ - SourceSwitch.LASTFM - SourceSwitch.WIKIPEDIA,
+            )
         val unreachable =
             track(
                 sources =

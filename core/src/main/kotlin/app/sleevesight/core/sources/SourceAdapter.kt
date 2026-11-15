@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.RecordingTags
+import app.sleevesight.core.genres.StatedGenre
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
@@ -161,6 +162,12 @@ val SourceAdapter.tag: String get() = id.tag
  *
  * [library] is LRCLIB's answer for the track (#997), on the result the retrieval cache keeps it in
  * (`PipelineCache.libraryLyrics`) only; null on every other.
+ *
+ * [statedGenres] are the genres Wikidata states (P136) for the items Wikipedia's identity check
+ * accepted (#1098): the track's own song's, at the track's level, and each artist's; the pipeline
+ * makes them labels ([app.sleevesight.core.genres.WikidataLabels]). Not for an original song a cover
+ * was found to be, whose genres may not be the cover's. Empty on every other source's result, and
+ * without genres (*Show genres* off), when the check drops them.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -184,6 +191,7 @@ data class SourceResult(
     val pages: List<String> = emptyList(),
     val language: String? = null,
     val library: LibraryLyrics? = null,
+    val statedGenres: List<StatedGenre> = emptyList(),
 )
 
 /**

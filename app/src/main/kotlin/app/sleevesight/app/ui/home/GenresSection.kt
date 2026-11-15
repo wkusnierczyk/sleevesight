@@ -173,11 +173,12 @@ internal fun GenresContent(
     }
     if (shown.unreachable.isNotEmpty()) {
         // One line for every source not reached, so the list does not look complete (#1121).
-        val names = namedTogether(shown.unreachable.map { sourceName(it.source) })
+        val names = namedTogether(shown.notReached.map { sourceName(it) })
         RetryLine(
             stringResource(R.string.home_genres_partial, names),
             names,
-            retry(shown.unreachable.map { it.source }),
+            // Wikidata's by its own requests' and by Wikipedia's lookup, which brings its labels (#1098).
+            retry(shown.unreachable.flatMap { listOf(it.source, it.lookup) }.distinct()),
             afterRetry = toClose,
         )
     }
@@ -186,11 +187,19 @@ internal fun GenresContent(
     GenresSearch(track, shown, search, notes)
 }
 
-// [sources] named together: "Last.fm", "Last.fm and MusicBrainz".
+// [sources] named together, alphabetically, whatever order they are declared or combine in (#1098):
+// "Last.fm", "Last.fm and MusicBrainz", "Last.fm, MusicBrainz and Wikidata".
 @Composable
 private fun sourcesNamed(sources: List<LabelSource>): String {
-    val names = sources.map { sourceName(it.source) }
-    return names.drop(1).fold(names.first()) { all, next -> stringResource(R.string.home_sources_two, all, next) }
+    val names = sources.map { sourceName(it.source) }.sortedBy { it.lowercase() }
+    if (names.size <= 2) {
+        return names.drop(1).fold(names.first()) { all, next -> stringResource(R.string.home_sources_two, all, next) }
+    }
+    val head =
+        names.dropLast(1).drop(1).fold(names.first()) { all, next ->
+            stringResource(R.string.home_sources_list, all, next)
+        }
+    return stringResource(R.string.home_sources_list_last, head, names.last())
 }
 
 /**
@@ -198,7 +207,9 @@ private fun sourcesNamed(sources: List<LabelSource>): String {
  * sources still being asked while the genres are gathered, by name ([looking]); those that could
  * not be reached, on one line with *Retry* ([unreachable], #1121); with every genre source off and no genre, where
  * its link leads ([off]); whether it says none were found ([none]); and whether LRCLIB, asked about
- * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997).
+ * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997). The line
+ * names the sources not reached ([notReached]): a label source's own, or, where the lookup that
+ * brings its labels was not reached, that lookup's (#1098: Wikipedia's, for Wikidata's genres).
  */
 internal data class GenresShown(
     val looking: List<LabelSource> = emptyList(),
@@ -206,6 +217,7 @@ internal data class GenresShown(
     val off: SettingsTarget? = null,
     val none: Boolean = false,
     val libraryUnreachable: Boolean = false,
+    val notReached: List<SourceId> = unreachable.map { it.source },
 ) {
     companion object {
         /**
@@ -232,7 +244,7 @@ internal data class GenresShown(
             val on = LabelSource.entries.filter(settings::givesLabels)
             return if (track == null || !track.gathered || !track.genresAssembled) {
                 val states = track?.sources.orEmpty()
-                GenresShown(looking = on.filter { states[it.source] is SourceState.Pending }.ifEmpty { on })
+                GenresShown(looking = on.filter { states[it.lookup] is SourceState.Pending }.ifEmpty { on })
             } else {
                 gathered(track, on, empty)
             }
@@ -247,10 +259,12 @@ internal data class GenresShown(
         ): GenresShown {
             val later = track.laterLabels
             val looking = on.filter { later[it] == LaterLabels.ASKING }
-            val unreachable = on.filter { unreachable(track.sources[it.source]) || later[it] == LaterLabels.FAILED }
+            val lookups = on.filter { unreachable(track.sources[it.lookup]) }
+            val unreachable = on.filter { it in lookups || later[it] == LaterLabels.FAILED }
             return GenresShown(
                 looking,
                 unreachable,
+                notReached = unreachable.map { if (it in lookups) it.lookup else it.source }.distinct(),
                 none = empty && looking.isEmpty() && unreachable.isEmpty(),
                 // Said only while an Instrumental is shown (#998's review): not for the composers' hint.
                 libraryUnreachable = track.libraryUnreachable && track.genres.showsInstrumental(),

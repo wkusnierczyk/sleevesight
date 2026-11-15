@@ -6,20 +6,31 @@ import kotlin.math.roundToLong
 /**
  * A source whose tags can become genre labels (D12, #84): which of them give labels is a user
  * setting (`Settings.labelSources`). Web search gives no tags, so it is not one; Discogs joins in
- * Phase 3. The order of the entries is the order their labels combine in ([combineLabels]).
+ * Phase 3. Wikidata gives genres it states rather than tags (#1098), weighed as tags are. The
+ * order of the entries means nothing: labels combine in [LABEL_TIE_ORDER] ([combineLabels]), and
+ * *Tag sources*, the panel's lines and *Settings → Genres* name the sources alphabetically.
  *
  * @property source the evidence source whose lookup brings the tags: a label source gives labels
  *   only while that source is switched on under *Sources*, and Last.fm only with its key.
  * @property credit how a label from it is credited, beside its link.
  * @property licenceUrl the licence of its tags, which the credit links; null where the tags come
  *   under the source's API terms and no licence of their own.
+ * @property lookup the source whose lookup's result brings its labels, and whose state says whether
+ *   they are still to come: its own, but for Wikidata's, which come with Wikipedia's (#1098).
  */
 enum class LabelSource(
     val source: SourceId,
     val credit: String,
     val licenceUrl: String?,
+    val lookup: SourceId = source,
 ) {
-    LASTFM(SourceId.LASTFM, "Last.fm", null),
+    /**
+     * The genres Wikidata states (P136) for the track's song, its artists and its album (#1098,
+     * [WikidataLabels]), CC0: named under *Tag sources* only, linking the item that states them, with
+     * no credit line, and free to reach a prompt. Its labels come with Wikipedia's result and its
+     * identity check, so they follow the *Wikipedia* switch under *Sources*, as Wikidata does.
+     */
+    WIKIDATA(SourceId.WIKIDATA, "Wikidata", null, SourceId.WIKIPEDIA),
 
     /**
      * Tags are MusicBrainz's supplementary data, CC BY-NC-SA 3.0 (`design/architecture.md`,
@@ -31,6 +42,8 @@ enum class LabelSource(
         "MusicBrainz contributors, CC BY-NC-SA 3.0",
         "https://creativecommons.org/licenses/by-nc-sa/3.0/",
     ),
+
+    LASTFM(SourceId.LASTFM, "Last.fm", null),
 }
 
 /**
@@ -50,7 +63,7 @@ data class LabelCredit(
 
 /**
  * A genre label as a track shows it: [genre], as the first source to give it has it, and
- * [credits], each source whose tags gave it, in [LabelSource] order; [votes], the most net votes a
+ * [credits], each source whose tags gave it, in [LABEL_TIE_ORDER]; [votes], the most net votes a
  * source that counts them gave its tag ([GenreLabel.votes], #799), null where none does; [aiModel],
  * the AI model whose genre list for the track has it (#762, [TrackGenres.withAi]), null where none
  * does. A label with no credits but the model's was added by the AI ([aiAdded]). [describedIn], for
@@ -87,6 +100,14 @@ data class TrackLabel(
 }
 
 /**
+ * The order the sources' labels combine in ([combineLabels]), which breaks ties between labels of
+ * equal weight: Last.fm's, then MusicBrainz's, then Wikidata's (#1019, #1098). Kept apart from the
+ * order the sources are named in on purpose: *Tag sources* names them alphabetically, so changing
+ * one never changes the other. Every [LabelSource] is in it, once.
+ */
+val LABEL_TIE_ORDER: List<LabelSource> = listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ, LabelSource.WIKIDATA)
+
+/**
  * How the labels of several sources combine (#84), on one row of a track's genres ([combineGenres],
  * #439), weighed together before the cap (#1019): every label of every source, each weighing its
  * [GenreLabel.weight] (its tag's count over the page's top tag's, so each source's top tag weighs 1,
@@ -96,7 +117,7 @@ data class TrackLabel(
  * bonus of its own. A genre only MusicBrainz gives counts at half its weight (`MUSICBRAINZ_ALONE`),
  * since it can never reach a prompt (D12) and should make room for the other sources'. The
  * [GenreVocabulary.MAX_LABELS] that weigh most are kept, once, after the sources combine; at equal
- * weight, in the order of the sources ([LabelSource], Last.fm's first) and each source's own. A
+ * weight, in the order of [LABEL_TIE_ORDER] (Last.fm's first) and each source's own. A
  * label another source also gave (the same [GenreLabel.identity]) is not shown twice: it credits
  * both.
  *
@@ -107,10 +128,11 @@ data class TrackLabel(
  * sources gave weighed no more than one only a single source gave. [bySource] holds the labels of
  * the sources switched on; the order it is given in does not matter.
  */
+
 fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel> {
     val combined = mutableListOf<TrackLabel>()
     val weights = mutableMapOf<String, Double>()
-    for (source in LabelSource.entries) {
+    for (source in LABEL_TIE_ORDER) {
         val labels = bySource[source].orEmpty()
         labels.forEachIndexed { at, label ->
             val identity = label.identity

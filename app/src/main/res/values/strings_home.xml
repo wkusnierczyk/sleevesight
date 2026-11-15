@@ -360,7 +360,7 @@
     <!-- The Genres button's action, as a screen reader names it ("Double-tap to show genres"). -->
     <string name="home_genres_show">show genres</string>
     <!-- In the Genres panel, while the genres are being gathered: %1$s the genre sources still asked,
-         one (Last.fm) or two (home_sources_two). -->
+         one (Last.fm), two (home_sources_two), or more (home_sources_list). -->
     <string name="home_genres_looking">Looking on %1$s…</string>
     <!-- Two sources named together: "Last.fm and MusicBrainz". -->
     <string name="home_sources_two">%1$s and %2$s</string>

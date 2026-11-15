@@ -248,7 +248,7 @@ internal fun GenresSection(
         summary = stringResource(R.string.settings_show_genres_summary),
         checked = settings.showGenres,
     ) { on -> update { it.copy(showGenres = on) } }
-    for (source in LabelSource.entries) {
+    for (source in labelSourcesByName()) {
         val why =
             when {
                 !settings.showGenres -> stringResource(R.string.settings_labels_genres_off)
@@ -287,6 +287,7 @@ internal fun labelSourceName(source: LabelSource): Int =
     when (source) {
         LabelSource.LASTFM -> R.string.settings_source_lastfm
         LabelSource.MUSICBRAINZ -> R.string.settings_source_musicbrainz
+        LabelSource.WIKIDATA -> R.string.settings_labels_wikidata
     }
 
 @StringRes
@@ -294,17 +295,20 @@ internal fun labelSourceSummary(source: LabelSource): Int =
     when (source) {
         LabelSource.LASTFM -> R.string.settings_labels_lastfm_summary
         LabelSource.MUSICBRAINZ -> R.string.settings_labels_musicbrainz_summary
+        LabelSource.WIKIDATA -> R.string.settings_labels_wikidata_summary
     }
 
 /**
  * The page a source's *Open website ↗* opens: MusicBrainz's on its tags, their votes and its genre
  * list; for Last.fm, which has a page per tag but none that explains its tags (checked 2026-10-25),
- * its home page, as its row under *Sources* has (#545).
+ * its home page, as its row under *Sources* has (#545); for Wikidata, its genre property (P136), whose
+ * statements give its labels (#1098).
  */
 private fun labelSourcePage(source: LabelSource): String =
     when (source) {
         LabelSource.LASTFM -> "https://www.last.fm/"
         LabelSource.MUSICBRAINZ -> "https://musicbrainz.org/doc/Folksonomy_Tagging"
+        LabelSource.WIKIDATA -> "https://www.wikidata.org/wiki/Property:P136"
     }
 
 /**

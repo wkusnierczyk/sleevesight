@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.RecordingTags
+import app.sleevesight.core.genres.StatedGenre
 import app.sleevesight.core.lyrics.LibraryLyrics
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -68,6 +69,8 @@ internal object RetrievalCodec {
      * optional field too, made a miss the same way (MusicBrainz's extraction version 18, Wikipedia's 6).
      * The work's librettists (#1274, [WorkLyrics.librettists]) are an optional field too, made a miss
      * the same way (MusicBrainz's extraction version 19).
+     * The genres Wikidata states (#1098, [SourceResult.statedGenres]) are an optional field too, made a
+     * miss the same way (Wikipedia's extraction version 9).
      */
     const val FORMAT: Int = 7
 
@@ -103,17 +106,7 @@ internal object RetrievalCodec {
                     result.rejections.map {
                         RejectionJson(it.subject, it.reason, it.scope.key, it.withoutMusicBrainz)
                     },
-                genres =
-                    result.genres.map {
-                        GenreJson(
-                            it.tag,
-                            it.label,
-                            it.identity,
-                            it.url,
-                            it.artist,
-                            weight = it.weight,
-                        )
-                    },
+                genres = result.genres.map(::GenreJson),
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags, it.votes) },
                 firstReleased = result.firstReleased,
@@ -148,6 +141,7 @@ internal object RetrievalCodec {
                 pages = result.pages,
                 language = result.language,
                 library = result.library?.name,
+                statedGenres = result.statedGenres.map { StatedGenreJson(it.name, it.level.name, it.artist, it.url) },
             ),
         )
 
@@ -206,6 +200,9 @@ internal object RetrievalCodec {
                 pages = stored.pages,
                 language = stored.language,
                 library = stored.library?.let { name -> LibraryLyrics.entries.firstOrNull { it.name == name } },
+                // An unknown level throws, which reads as no entry.
+                statedGenres =
+                    stored.statedGenres.map { StatedGenre(it.name, GenreLevel.valueOf(it.level), it.artist, it.url) },
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -307,6 +304,17 @@ internal object RetrievalCodec {
         val language: String? = null,
         // LRCLIB's answer for a track (#997, `SourceResult.library`), on that answer's entry only.
         val library: String? = null,
+        // The genres Wikidata states (#1098, `SourceResult.statedGenres`), on Wikipedia's entry only.
+        val statedGenres: List<StatedGenreJson> = emptyList(),
+    )
+
+    // A genre Wikidata states (#1098, `StatedGenre`), its level by name.
+    @Serializable
+    private data class StatedGenreJson(
+        val name: String,
+        val level: String,
+        val artist: String? = null,
+        val url: String,
     )
 
     // The composers and performers MusicBrainz told (#1180, `SourceResult.roles`), and whether the work
@@ -395,7 +403,11 @@ internal object RetrievalCodec {
         // Kept from before #1020, when each label held its genre family: read and ignored, never
         // written (null, and defaults are not encoded).
         val family: String? = null,
-    )
+    ) {
+        // A label as kept; its level is not: kept results hold the artists' labels only.
+        constructor(label: GenreLabel) :
+            this(label.tag, label.label, label.identity, label.url, label.artist, weight = label.weight)
+    }
 
     @Serializable
     private data class LabelArtistJson(

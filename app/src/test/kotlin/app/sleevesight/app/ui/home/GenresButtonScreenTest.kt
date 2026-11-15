@@ -437,7 +437,7 @@ class GenresButtonScreenTest {
                 settings = Settings(),
             ),
         ) {
-            opensTo("Looking on Last.fm and MusicBrainz…")
+            opensTo("Looking on Last.fm, MusicBrainz and Wikidata…")
         }
         // Last.fm's genres switched off: MusicBrainz alone.
         show(state(labelled(TrackGenres(), sources = both), Settings(labelSources = setOf(LabelSource.MUSICBRAINZ)))) {
@@ -497,7 +497,7 @@ class GenresButtonScreenTest {
     fun withEverySourceInButTheGenresNotYetAssembledThePanelIsStillLooking() =
         // The last source landed, its result still being kept: no genre yet is not none found.
         show(state(labelled(TrackGenres()).copy(genresAssembled = false))) {
-            opensTo("Looking on Last.fm and MusicBrainz…")
+            opensTo("Looking on Last.fm, MusicBrainz and Wikidata…")
             compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
         }
 
@@ -545,7 +545,11 @@ class GenresButtonScreenTest {
 
     @Test
     fun withEveryGenreSourceOffInSourcesThePanelLinksToSettingsSources() {
-        val off = Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ - SourceSwitch.LASTFM)
+        val off =
+            Settings(
+                enabledSources =
+                    Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ - SourceSwitch.LASTFM - SourceSwitch.WIKIPEDIA,
+            )
         show(state(labelled(TrackGenres()), off)) {
             assertEquals("Genre sources are disabled.", text(R.string.home_genres_off))
             opensTo(text(R.string.home_genres_off))
@@ -620,6 +624,24 @@ class GenresButtonScreenTest {
             tap(RETRY_TAG)
             assertEquals(listOf(Triple(RunKey.of(normalizer, sundown), SourceId.LASTFM, sundown)), retried)
         }
+
+    @Test
+    fun wikipediasLookupNotReachedIsNamedForWikidatasGenresNotWikidata() {
+        // #1098: Wikidata's genres come with Wikipedia's lookup, so the line names the lookup not reached.
+        val sources =
+            mapOf(
+                SourceId.MUSICBRAINZ to done(),
+                SourceId.LASTFM to done(),
+                SourceId.WIKIPEDIA to done(Outcome.Unreachable),
+            )
+        show(state(labelled(sources = sources))) {
+            tap(GENRES_CHIP_TAG)
+            // Named as *Sources* names the switch (`sourceName`), which covers Wikidata's lookups too.
+            val wikipedia = text(R.string.settings_source_wikipedia)
+            compose.onNodeWithText(app.getString(R.string.home_genres_partial, wikipedia)).assertExists()
+            compose.onNodeWithText("Wikidata could not be reached; some genres may be missing.").assertDoesNotExist()
+        }
+    }
 
     @Test
     fun aTapOnRetryHandsTheFocusToTheGenresClose() =

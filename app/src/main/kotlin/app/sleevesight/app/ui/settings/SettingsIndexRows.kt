@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
-import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
@@ -71,7 +70,7 @@ internal fun genreRows(): List<IndexedRow> =
     listOf(
         indexRow(stringResource(R.string.settings_show_genres), stringResource(R.string.settings_show_genres_summary)),
     ) +
-        LabelSource.entries.map {
+        labelSourcesByName().map {
             indexRow(
                 stringResource(labelSourceName(it)),
                 stringResource(labelSourceSummary(it)),

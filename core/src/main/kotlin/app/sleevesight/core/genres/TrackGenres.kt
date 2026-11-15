@@ -319,11 +319,7 @@ data class TrackGenres(
         val chip = chips().firstOrNull { it.label.genre.identity == identity && it.weak } ?: return null
         val few = fewVotes(chip, otherLevels())
         val mark: WeakEvidence? = if (few) null else libraryMark(chip)
-        return signOfVocals(chip) ?: artistHint(chip) ?: mark ?: WeakEvidence.FewVotes(
-            musicBrainz = chip.label.credits.any { it.source == LabelSource.MUSICBRAINZ },
-            artists = rows.count { it.level == GenreLevel.ARTIST },
-            album = rows.any { it.level == GenreLevel.ALBUM },
-        )
+        return signOfVocals(chip) ?: artistHint(chip) ?: mark ?: fewVotesOf(chip.label)
     }
 
     /**
@@ -548,12 +544,26 @@ data class TrackGenres(
 fun GenreVocabulary.instrumental(): GenreLabel? =
     labelsFor(listOf(TrackGenres.INSTRUMENTAL), level = GenreLevel.TRACK).firstOrNull()
 
+// Few votes, said of the source whose tags give [label]: MusicBrainz's, else Last.fm's; none when
+// neither gives it, so the line never names a source that did not (#1098).
+private fun TrackGenres.fewVotesOf(label: TrackLabel): WeakEvidence.FewVotes? {
+    val sources = label.credits.map { it.source }
+    val musicBrainz = LabelSource.MUSICBRAINZ in sources
+    return WeakEvidence
+        .FewVotes(
+            musicBrainz = musicBrainz,
+            artists = rows.count { it.level == GenreLevel.ARTIST },
+            album = rows.any { it.level == GenreLevel.ALBUM },
+        ).takeIf { musicBrainz || LabelSource.LASTFM in sources }
+}
+
 /**
  * Whether [placed], a source's chip, is weak for its few votes (#875, [TrackGenres.chips]): a track's
  * tag whose genre no other level's row has ([others]), with fewer than [TrackGenres.MIN_VOTES] net
  * votes. Instrumental the check of the track's vocals found so (#998) is not weak for its votes, nor
  * one a source's mark gave (#1024: LRCLIB's), which has none; nor a genre the AI's list added or an
- * artist's description names, which are weighed otherwise.
+ * artist's description names, which are weighed otherwise; nor a genre Wikidata states (#1098), a
+ * stated fact rather than a count of votes.
  */
 private fun TrackGenres.fewVotes(
     placed: PlacedLabel,
@@ -562,7 +572,9 @@ private fun TrackGenres.fewVotes(
     val label = placed.label
     val checked =
         label.genre.identity == TrackGenres.INSTRUMENTAL && singing.checked == VocalsAnswer.INSTRUMENTAL
-    val confirmed = checked || label.markedBy != null || label.aiAdded || label.describedIn != null
+    // A genre Wikidata states for the song (#1098) is a stated fact, not a count of votes.
+    val stated = label.credits.any { it.source == LabelSource.WIKIDATA }
+    val confirmed = checked || stated || label.markedBy != null || label.aiAdded || label.describedIn != null
     return placed.row.level == GenreLevel.TRACK &&
         label.genre.identity !in others &&
         (label.votes ?: 0) < TrackGenres.MIN_VOTES &&
