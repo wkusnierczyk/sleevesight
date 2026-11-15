@@ -116,6 +116,11 @@ jobs:
       - name: API keys page drawing
         run: node --test assets/api-keys/draw.test.mjs
 
+      # The Content Security Policy of the API keys and keyboard pages (#1035), pinned: a change to
+      # it fails here until the test is changed with it.
+      - name: Pages' security policy
+        run: node --test .github/scripts/page-csp.test.mjs
+
       # The release's track and its guard against a `PLAY_TRACK` left at `production`
       # (`release-track.sh`, #451), tested in a throwaway repository.
       - name: Release track
