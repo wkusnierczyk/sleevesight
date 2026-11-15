@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- A genre's panel, above its table (#523): what the genre is, and why this track has it. -->
 <resources>
-    <!-- The credit under a genre's definition: the first words link the Wikipedia article, the
-         licence its terms. -->
-    <string name="genre_definition_from">From Wikipedia</string>
+    <!-- The credit under a genre's definition, "From Wikipedia · CC BY-SA 4.0": %1$s is
+         genre_definition_source ("Wikipedia"), a link to the article, "From" plain text (#1285);
+         the licence a link to its terms. -->
+    <string name="genre_definition_from">From %1$s</string>
     <string name="genre_definition_licence">CC BY-SA 4.0</string>
     <!-- In the definition's place, for a genre that has none (#663): it has no MusicBrainz genre, or
          its genre's Wikidata item has no English article (Wikipedia may still have one by the
@@ -16,7 +17,7 @@
          (home_retry) at the right of the same line, which asks Wikipedia again. -->
     <string name="genre_definition_failed">Wikipedia could not be reached.</string>
     <!-- The source Retry asks again there, as a screen reader names its action (home_retry_action:
-         "Double-tap to ask Wikipedia again"). -->
+         "Double-tap to ask Wikipedia again"); and the link in genre_definition_from. -->
     <string name="genre_definition_source">Wikipedia</string>
     <!-- Under a genre's definition, for a genre the vocabulary gives a broader genre (#1127), in the
          panel's quiet note style: %1$s is the genre, as its chip names it ("Contemporary R&B");
