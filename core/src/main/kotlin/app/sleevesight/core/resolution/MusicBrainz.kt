@@ -100,9 +100,9 @@ interface MusicBrainzLookup {
 
     /**
      * Works titled [title] that [composer] is related to (#1299), as MusicBrainz's search ranks them, at
-     * most [WORK_SEARCH_PAGE], each with its disambiguation and artist relationships: core data. For the
-     * work of a recording that links none, with a composer the title leads with. A stand-in that does not
-     * answer it finds none, so a resolution is what it was before.
+     * most [WORK_SEARCH_PAGE], each with its disambiguation, how many aliases it has, and its artist
+     * relationships: core data. For the work of a recording that links none, with a composer the title
+     * leads with. A stand-in that does not answer it finds none, so a resolution is what it was before.
      */
     suspend fun searchWorks(
         title: String,

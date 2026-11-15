@@ -15,13 +15,15 @@ import app.sleevesight.core.model.NormalizedTrack
  * lookup failed, dropped with the failure kept, so the resolution is asked again later.
  *
  * With that composer and no work so far, and no lookup failed, the composer's work of the title is
- * searched for ([searchedWork], #1299).
+ * searched for ([searchedWork], #1299), read by the composer's MusicBrainz id when the recording gives it
+ * ([composerMbid]).
  */
 internal suspend fun MusicBrainzLookup.workOf(
     names: NameMatcher,
     track: NormalizedTrack,
     own: MbWorkLink?,
     lent: Lent?,
+    composerMbid: String? = null,
 ): Pair<MbWorkLink?, Lookup<MbWork>?> {
     val link = own ?: lent?.link
     // A lent work's lookup made while it was weighed is not made again.
@@ -31,7 +33,7 @@ internal suspend fun MusicBrainzLookup.workOf(
         own != null -> link to lookup
         lent != null && (if (track.composer == null) lent.link.classical else written) -> link to lookup
         lookup is Lookup.Failed -> null to lookup
-        else -> searchedWork(names, track)
+        else -> searchedWork(names, track, composerMbid)
     }
 }
 

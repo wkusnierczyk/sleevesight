@@ -11,11 +11,13 @@ import app.sleevesight.core.text.isJsWhitespace
  * ([NormalizedTrack.searchTitle]) and the composer's name ([MusicBrainzLookup.searchWorks]), of which
  * [canonicalWork] takes one or none. It is linked as this recording's own performance of it (no cover, not
  * instrumental), and looked up as any work. Without a composer, none, no request made; a search that fails,
- * none with the failure, so the resolution is asked again later.
+ * none with the failure, so the resolution is asked again later. [composerMbid]: the composer's MusicBrainz
+ * id, when the recording gives it, by which a work's relationships are read ([canonicalWork]).
  */
 internal suspend fun MusicBrainzLookup.searchedWork(
     names: NameMatcher,
     track: NormalizedTrack,
+    composerMbid: String?,
 ): Pair<MbWorkLink?, Lookup<MbWork>?> {
     val composer = track.composer?.name ?: return null to null
     val title = track.searchTitle
@@ -24,7 +26,7 @@ internal suspend fun MusicBrainzLookup.searchedWork(
         Lookup.NotFound -> null to null
         is Lookup.Found ->
             names
-                .canonicalWork(title, composer, found.value)
+                .canonicalWork(title, composer, found.value, composerMbid)
                 ?.let { MbWorkLink(it.mbid, it.title, cover = false, type = it.type) to work(it.mbid) }
                 ?: (null to null)
     }
@@ -50,20 +52,28 @@ internal suspend fun MusicBrainzLookup.searchedWork(
  * - *Its title fits the track's* ([titleFits]): segment by segment, or as the part it quotes.
  *
  * With two or more left, nothing tells which is the track's, and none is taken.
+ *
+ * A relationship names the composer by [composerMbid], their MusicBrainz id, when it is known (another
+ * spelling of the name is theirs, a namesake is not); by [composer], their name, otherwise.
  */
 fun NameMatcher.canonicalWork(
     title: String,
     composer: String,
     found: List<MbFoundWork>,
-): MbFoundWork? =
-    found
+    composerMbid: String? = null,
+): MbFoundWork? {
+    val isComposer = { relation: MbArtistRelation ->
+        if (composerMbid != null) relation.artistMbid == composerMbid else sameName(relation.artistName, composer)
+    }
+    return found
         .filter { work ->
             work.aliases >= CANONICAL_ALIASES &&
-                composedByLeadAlone(work, composer) &&
-                !arranged(work, composer) &&
-                !namedVersion(work, composer) &&
+                composedByLeadAlone(work, isComposer) &&
+                !arranged(work, isComposer) &&
+                !namedVersion(work, isComposer) &&
                 titleFits(title, work.title)
         }.singleOrNull()
+}
 
 /**
  * The fewest aliases a work needs to be taken for the piece itself ([canonicalWork], #1299). The pieces
@@ -73,41 +83,41 @@ fun NameMatcher.canonicalWork(
  */
 const val CANONICAL_ALIASES: Int = 3
 
-// Whether every `composer` or `writer` relationship of [work] names [composer], and one does ([canonicalWork]).
-private fun NameMatcher.composedByLeadAlone(
+// Whether every `composer` or `writer` relationship of [work] names the composer ([isComposer]), and one
+// does ([canonicalWork]).
+private fun composedByLeadAlone(
     work: MbFoundWork,
-    composer: String,
+    isComposer: (MbArtistRelation) -> Boolean,
 ): Boolean {
     val writers = work.artistRelations.filter { it.type in WRITER_TYPES }
-    return writers.isNotEmpty() && writers.all { sameName(it.artistName, composer) }
+    return writers.isNotEmpty() && writers.all(isComposer)
 }
 
-// Whether [work] is an arrangement ([canonicalWork]): an arranger of any kind, but [composer] as its
-// orchestrator.
-private fun NameMatcher.arranged(
+// Whether [work] is an arrangement ([canonicalWork]): an arranger of any kind, but the composer
+// ([isComposer]) as its orchestrator.
+private fun arranged(
     work: MbFoundWork,
-    composer: String,
-): Boolean =
-    work.artistRelations.any {
-        it.type in ARRANGER_TYPES && !(it.type == ORCHESTRATOR && sameName(it.artistName, composer))
-    }
+    isComposer: (MbArtistRelation) -> Boolean,
+): Boolean = work.artistRelations.any { it.type in ARRANGER_TYPES && !(it.type == ORCHESTRATOR && isComposer(it)) }
 
-// Whether [work]'s disambiguation names a version of it ([canonicalWork]): one of its related artists but
-// [composer], by the last word of their name, or a catch-all for arrangements (`catch‐all`, `catch-all`,
-// `catchall`).
+// Whether [work]'s disambiguation names a version of it ([canonicalWork]): one of those who made a version
+// ([VERSION_TYPES]: a writer, an arranger, a lyricist, a librettist, a translator) but the composer
+// ([isComposer]), by the last word of their name, or a catch-all for arrangements (`catch‐all`, `catch-all`,
+// `catchall`). Not a dedicatee, a commissioner or a performer: a work commissioned by an orchestra may well
+// be `for orchestra`.
 private fun NameMatcher.namedVersion(
     work: MbFoundWork,
-    composer: String,
+    isComposer: (MbArtistRelation) -> Boolean,
 ): Boolean {
     val words = key(work.disambiguation.orEmpty()).split(' ').filter { it.isNotEmpty() }
     val others =
         work.artistRelations
-            .filterNot { sameName(it.artistName, composer) }
+            .filter { it.type in VERSION_TYPES && !isComposer(it) }
             .mapNotNull { nameKey(it.artistName).split(' ').lastOrNull()?.ifEmpty { null } }
     return CATCH_ALL in words.zipWithNext() || CATCH_ALL_JOINED in words || others.any { it in words }
 }
 
-// Whether a work's title [workTitle] fits [title] ([searchedWork]), either way:
+// Whether a work's title [workTitle] fits [title] ([canonicalWork]), either way:
 // - Segment by segment ([segments]): as many, each fitting its own as a recording's title does
 //   ([NameMatcher.titleSimilarity] at the threshold) with the same numbers ([NameMatcher.numberWords]).
 //   Not the titles joined: a whole work and its unnumbered movement (`Variations on an Original Theme, op.
@@ -156,6 +166,9 @@ private const val ORCHESTRATOR = "orchestrator"
 
 // MusicBrainz's work-artist relationships of someone who arranged the work.
 private val ARRANGER_TYPES = setOf("arranger", "instrument arranger", "vocal arranger", ORCHESTRATOR)
+
+// MusicBrainz's work-artist relationships of someone who may have made a version of the work.
+private val VERSION_TYPES = WRITER_TYPES + ARRANGER_TYPES + setOf("lyricist", "librettist", "translator")
 
 // A catch-all for a piece's arrangements, as its disambiguation's key has it (`catch‐all`, `catch-all`), or
 // written as one word.

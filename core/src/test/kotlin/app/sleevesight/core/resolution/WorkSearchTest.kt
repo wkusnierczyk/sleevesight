@@ -110,6 +110,52 @@ class WorkSearchTest {
         }
 
     @Test
+    fun `a disambiguation naming the orchestra that commissioned the work is no version of it`() =
+        runTest {
+            val commissioned =
+                found(
+                    "piece",
+                    "Adagio for Strings",
+                    "for orchestra",
+                    others = mapOf("commissioned" to "Philadelphia Symphony Orchestra"),
+                )
+            assertEquals("piece", resolved("Adagio for Strings", commissioned).first.work?.mbid)
+        }
+
+    @Test
+    fun `with the composer's id known, a work is read by it - another spelling is theirs, a namesake is not`() =
+        runTest {
+            // The recording credits Barber too, so his id is known.
+            val credits =
+                listOf("Samuel Barber", "Sir Simon Rattle", "Berlin Philharmonic").mapIndexed { i, name ->
+                    credit(name).copy(joinPhrase = if (i < 2) ", " else "")
+                }
+            val recording = recording("r", "Adagio for Strings", "Samuel Barber", 537, "2009").copy(credits = credits)
+            val detail = MbRecordingDetail("r", recording.title, credits, "2009", emptyList(), emptyList(), emptyList())
+
+            fun spelled(
+                name: String,
+                mbid: String,
+            ) = found("piece", "Adagio for Strings").copy(
+                artistRelations = listOf(MbArtistRelation("composer", mbid, name, emptyList())),
+            )
+            val track = track("Barber: Adagio for Strings", "Samuel Barber, Sir Simon Rattle, Berlin Philharmonic")
+            for ((work, taken) in listOf(
+                spelled("Sam. Barber", "mbid-Samuel Barber") to "piece",
+                spelled("Samuel Barber", "mbid-namesake") to null,
+            )) {
+                val musicBrainz =
+                    FakeMusicBrainz(
+                        search = Lookup.Found(listOf(recording)),
+                        recordings = mapOf("r" to detail),
+                        works = mapOf("piece" to work("piece", "Adagio for Strings")),
+                    )
+                musicBrainz.foundWorks = Lookup.Found(listOf(work))
+                assertEquals(taken, resolve(musicBrainz, track, 537).work?.mbid, work.artistRelations.toString())
+            }
+        }
+
+    @Test
     fun `the composer orchestrating their own work does not make it an arrangement`() =
         runTest {
             val own = found("piece", "Adagio for Strings", others = mapOf("orchestrator" to barber))
