@@ -4,6 +4,7 @@ import org.w3c.dom.Document
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CheckManifestTest {
     private fun manifest(applicationAttributes: String): Document =
@@ -105,6 +106,68 @@ class CheckManifestTest {
                 """.trimIndent(),
             )
         assertEquals(listOf(CheckManifest.Component("receiver", "a.Implicit")), CheckManifest.exportedComponents(doc))
+    }
+
+    @Test
+    fun `an android exported value other than a plain false counts as exported, as aapt2 may read it as true`() {
+        val doc =
+            componentsManifest(
+                """
+                <activity android:name="a.Capital" android:exported="True" />
+                <activity android:name="a.Spaced" android:exported=" true" />
+                <activity android:name="a.Resource" android:exported="@bool/x" />
+                <activity android:name="a.SpacedFalse" android:exported=" FALSE " />
+                """.trimIndent(),
+            )
+        assertEquals(
+            listOf("a.Capital", "a.Spaced", "a.Resource"),
+            CheckManifest.exportedComponents(doc).map { it.name },
+        )
+    }
+
+    @Test
+    fun `one run reports an extra permission and an unexpected component together`() {
+        val doc =
+            DocumentBuilderFactory.newInstance()
+                .apply { isNamespaceAware = true }
+                .newDocumentBuilder()
+                .parse(
+                    """
+                    <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                        <uses-permission android:name="android.permission.INTERNET" />
+                        <uses-permission android:name="android.permission.READ_CONTACTS" />
+                        <application android:usesCleartextTraffic="false">
+                            <service
+                                android:name="a.Listener"
+                                android:exported="true"
+                                android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+                                <meta-data
+                                    android:name="android.service.notification.default_filter_types"
+                                    android:value="" />
+                                <meta-data
+                                    android:name="android.service.notification.disabled_filter_types"
+                                    android:value="conversations|alerting|silent|ongoing" />
+                            </service>
+                            <receiver android:name="a.Extra" android:exported="true" />
+                        </application>
+                    </manifest>
+                    """.trimIndent().byteInputStream(),
+                )
+        val problems =
+            CheckManifest.problems(
+                doc,
+                CheckManifest.Allowlist("permissions.txt", listOf("android.permission.INTERNET")),
+                CheckManifest.Allowlist("components.txt", listOf("a.Listener")),
+                "debug",
+                "app.x",
+            )
+        assertEquals(2, problems.size)
+        assertTrue(problems[0].startsWith("Permissions outside permissions.txt:\n  android.permission.READ_CONTACTS"))
+        assertTrue(
+            problems[1].startsWith(
+                "Components the debug variant's merged manifest exports outside components.txt:\n  <receiver> a.Extra",
+            ),
+        )
     }
 
     @Test
