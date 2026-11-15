@@ -1,0 +1,12 @@
+# Components each variant's merged manifest may export (#1046): android:exported="true", or an
+# intent filter with no android:exported. A name alone is allowed in every variant; variant names
+# after it allow it in those only. Anything else is unexported, removed with tools:node="remove",
+# or added here after review.
+# The launcher activity.
+app.sleevesight.app.MainActivity
+# The notification listener; only the system can bind it (BIND_NOTIFICATION_LISTENER_SERVICE).
+app.sleevesight.app.session.SleevesightListenerService
+# androidx.profileinstaller's receiver; only a caller holding android.permission.DUMP (the shell) reaches it.
+androidx.profileinstaller.ProfileInstallReceiver
+# Compose's tooling, which the IDE uses to show a preview on a phone; in the debug build only.
+androidx.compose.ui.tooling.PreviewActivity debug
