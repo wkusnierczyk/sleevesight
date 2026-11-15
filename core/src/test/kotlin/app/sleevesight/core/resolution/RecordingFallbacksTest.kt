@@ -101,6 +101,93 @@ class RecordingFallbacksTest {
             assertEquals(listOf("plain"), musicBrainz.recordingsAsked)
         }
 
+    // A recording's detail linking [work] (none for null) of [type].
+    private fun detail(
+        r: MbRecording,
+        work: String?,
+        type: String? = null,
+    ) = MbRecordingDetail(
+        r.mbid,
+        r.title,
+        r.credits,
+        r.firstReleaseDate,
+        listOfNotNull(work?.let { MbWorkLink(it, r.title, cover = false, type = type) }),
+        emptyList(),
+        emptyList(),
+    )
+
+    @Test
+    fun `a pop recording that links no work is not replaced by the artist's live one that links a song`() =
+        runTest {
+            // Neither a composer lead nor a classical work: a pop match stays, whatever the other links.
+            val plain = recording("plain", "Winter Rose", "Ann Lee", 200, "2001")
+            val piece = recording("piece", "Live: “Winter Rose”", "Ann Lee", 201, "1999")
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, piece)),
+                    recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Song")),
+                )
+            assertEquals("plain", resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200).recordingMbid)
+        }
+
+    @Test
+    fun `a duet is not replaced by a part of a work credited to one of its two artists`() =
+        runTest {
+            // The aria is a classical work, but its recording names Ann Lee alone: Bo Day's identity would
+            // be lost.
+            val plain = duo("plain", "Winter Rose", 200)
+            val piece = recording("piece", "Opera: “Winter Rose”", "Ann Lee", 201, "1999")
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, piece)),
+                    recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Aria")),
+                )
+            assertEquals("plain", resolve(musicBrainz, track("Winter Rose", "Ann Lee, Bo Day"), 200).recordingMbid)
+        }
+
+    @Test
+    fun `a part of a work by the same artists, linking an aria, stands in for a recording that links none`() =
+        runTest {
+            val plain = recording("plain", "Winter Rose", "Ann Lee", 200, "2001")
+            val piece = recording("piece", "Opera: “Winter Rose”", "Ann Lee", 201, "1999")
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, piece)),
+                    recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Aria")),
+                )
+            val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200)
+            assertEquals("piece", resolution.recordingMbid)
+            assertEquals("w", resolution.work?.mbid)
+        }
+
+    @Test
+    fun `a part of a work whose lookup fails leaves the recording kept provisional`() =
+        runTest {
+            val plain = recording("plain", "Winter Rose", "Ann Lee", 200, "2001")
+            val piece = recording("piece", "Opera: “Winter Rose”", "Ann Lee", 201, "1999")
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, piece)),
+                    recordings = mapOf("plain" to detail(plain, null)),
+                )
+            musicBrainz.failingRecordings += "piece"
+            val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200)
+            assertEquals("plain", resolution.recordingMbid)
+            assertTrue(resolution.provisional)
+        }
+
+    @Test
+    fun `the loose search's recording by the two artists of one joint credit stands for one artist, no match`() =
+        runTest {
+            // `Ann Lee & Bo Day` is one of the track's two artists: a recording crediting Ann Lee and Bo Day
+            // stands for that one alone.
+            val musicBrainz = FakeMusicBrainz(search = Lookup.Found(emptyList()))
+            musicBrainz.loose = Lookup.Found(listOf(duo("rose", "Winter Rose", 200)))
+            val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee & Bo Day, Cy Kay"), 200)
+            assertEquals(1, musicBrainz.looseSearched.size)
+            assertNull(resolution.recordingMbid)
+        }
+
     @Test
     fun `a title is read as a part of a work only in MusicBrainz's form for one, the part in quotes`() {
         assertEquals(1.0, names.pieceSimilarity("Nessun Dorma", "Turandot: “Nessun dorma”"))

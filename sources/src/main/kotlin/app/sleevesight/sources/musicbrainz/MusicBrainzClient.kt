@@ -134,6 +134,7 @@ class MusicBrainzClient(
                                     cover = "cover" in attributes,
                                     languages = languages(work),
                                     instrumental = "instrumental" in attributes,
+                                    type = work.string("type")?.ifEmpty { null },
                                 )
                             }
                         },

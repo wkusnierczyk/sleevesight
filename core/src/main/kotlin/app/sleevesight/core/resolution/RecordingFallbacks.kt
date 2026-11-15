@@ -107,8 +107,9 @@ private fun NameMatcher.unknownArtists(
 /**
  * With the player's [duration] and two or more credited artists, when nothing [searched] found [fits]
  * (#1289): one search by the words of the title and every credited artist at once
- * ([MusicBrainzLookup.searchRecordingsLoosely]), of whose recordings only those credited to two or more
- * of the track's artists and to no one else are added. A one-letter misspelling of the title (`Nessun
+ * ([MusicBrainzLookup.searchRecordingsLoosely]), of whose recordings only those whose credits stand for
+ * two or more of the track's artists (a joint credit for one of them counting once) and for no one else
+ * are added. A one-letter misspelling of the title (`Nessun
  * doma`) and a performer credited after the composer and the librettists, beyond the searches by name,
  * are found so; the title is then weighed as for any other recording. Incomplete when it fails, so the
  * resolution is asked again later; unchanged when a search before it failed.
@@ -136,11 +137,7 @@ internal suspend fun MusicBrainzLookup.loosely(
     val more = if (asked) searchRecordingsLoosely(words, artists) else null
     val kept =
         (more as? Lookup.Found)?.value.orEmpty().filter { r ->
-            r.credits
-                .map { it.artistMbid }
-                .distinct()
-                .size >= 2 &&
-                names.performedBy(r, track)
+            names.represented(r, artists) >= 2 && names.performedBy(r, track)
         }
     val found = (searched.found + kept).distinctBy { it.mbid }
     return when {
@@ -149,6 +146,13 @@ internal suspend fun MusicBrainzLookup.loosely(
         else -> Searched(Lookup.Found(found), found, searched.incomplete, later = true)
     }
 }
+
+// How many of [artists] the credits of [recording] stand for ([standsFor]): a joint credit standing for one
+// artist ("Ann Lee & Bo Day") counts once, however many MusicBrainz artists it credits (#1289).
+private fun NameMatcher.represented(
+    recording: MbRecording,
+    artists: List<String>,
+): Int = artists.count { artist -> recording.credits.any(standsFor(recording.credits, listOf(artist))) }
 
 /**
  * MusicBrainz's title of a part of a classical work (#1289): the work, a colon, then, after any act or

@@ -264,6 +264,8 @@ data class MbArtistRelation(
  *   gives none.
  * @property instrumental whether MusicBrainz marks this performance `instrumental` (#728): the
  *   recording has no lyrics, whatever the work's.
+ * @property type the work's type as the relationship embeds it (`Aria`, `Song`), null when it has none
+ *   (#1289: whether a recording read as a part of a work may stand in for one that links none).
  */
 data class MbWorkLink(
     val mbid: String,
@@ -271,6 +273,7 @@ data class MbWorkLink(
     val cover: Boolean,
     val languages: List<String> = emptyList(),
     val instrumental: Boolean = false,
+    val type: String? = null,
 )
 
 /**
