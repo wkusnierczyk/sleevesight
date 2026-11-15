@@ -179,7 +179,7 @@
     <string name="settings_sources_on_new_track">Sources on a new track</string>
     <string name="settings_sources_on_new_track_summary">How the sources under each track’s insight start on each new track. Applies with Expandable boxes.</string>
     <string name="settings_items_on_new_track">Song, Artist and Album on a new track</string>
-    <string name="settings_items_on_new_track_summary">How the song’s, the artist’s and the album’s insights under Key insights start on each new track. With Reactive set to an automatic mode, an insight that starts unfolded is written unless its artist or album has one already. Applies with Expandable boxes.</string>
+    <string name="settings_items_on_new_track_summary">How the song’s, the composer’s, the artist’s and the album’s insights under Key insights start on each new track. With Reactive set to an automatic mode, an insight that starts unfolded is written unless its artist or album has one already. Applies with Expandable boxes.</string>
     <!-- The choices of both (#522). -->
     <string name="settings_new_track_folded">Folded</string>
     <string name="settings_new_track_unfolded">Unfolded</string>
