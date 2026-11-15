@@ -1,3 +1,11 @@
+// The build logic's own build classpath (`kotlin-dsl` and the Kotlin plugin it brings) locked as
+// every other one is (#1034), in `build-logic/buildscript-gradle.lockfile`.
+buildscript {
+    dependencyLocking {
+        lockAllConfigurations()
+    }
+}
+
 plugins {
     `kotlin-dsl`
 }
@@ -34,20 +42,35 @@ dependencies.constraints {
     }
 }
 
-// The plugins' classpath locked as the modules' shipping ones are (`sleevesight.locking`), so the
-// versions stay as reviewed and OSV-Scanner reads them (`build-logic/gradle.lockfile`). The root
-// build's `./gradlew resolveAndLockAll --write-locks` rewrites it too.
-val lockedConfigurations = setOf("runtimeClasspath", "compileClasspath")
-configurations.matching { it.name in lockedConfigurations }.configureEach {
-    resolutionStrategy.activateDependencyLocking()
+// Every configuration locked, as the modules' are (`sleevesight.locking`, #1034): the plugins'
+// classpath, so the versions stay as reviewed and OSV-Scanner reads them, and the build logic's own
+// tools and tests (`build-logic/gradle.lockfile`). The root build's `./gradlew resolveAndLockAll
+// --write-locks` rewrites it too, resolving each configuration and its files, as the modules' does.
+dependencyLocking {
+    lockAllConfigurations()
 }
 tasks.register("resolveAndLockAll") {
     notCompatibleWithConfigurationCache("Resolves configurations at execution time to write lockfiles")
     doFirst {
         require(gradle.startParameter.isWriteDependencyLocks) { "Run with --write-locks" }
     }
+    // As `Locking.resolveAll`, which the build logic cannot call from its own build script: a
+    // dependency or a file that does not resolve fails the task.
     doLast {
-        configurations.filter { it.name in lockedConfigurations }.forEach { it.resolve() }
+        val failures =
+            configurations.filter { it.isCanBeResolved }.flatMap { configuration ->
+                val unresolved =
+                    configuration.incoming.resolutionResult.allDependencies
+                        .filterIsInstance<org.gradle.api.artifacts.result.UnresolvedDependencyResult>()
+                        .map { "${configuration.name}: ${it.attempted.displayName}: ${it.failure.message}" }
+                val artifacts = configuration.incoming.artifactView {
+                    lenient(true)
+                    componentFilter { it is org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+                }.artifacts
+                artifacts.artifacts
+                unresolved + artifacts.failures.map { "${configuration.name}: ${it.javaClass.simpleName}: ${it.message}" }
+            }
+        check(failures.isEmpty()) { "Did not resolve:\n" + failures.joinToString("\n") { "  $it" } }
     }
 }
 
@@ -80,6 +103,13 @@ tasks.register<Test>("functionalTest") {
     classpath = functionalTest.runtimeClasspath
     useJUnitPlatform()
     jvmArgumentProviders += TestKitDir(layout.buildDirectory.dir("testkit").get().asFile)
+    // Each nested build checks its downloads against the repository's verification files (`Probe`).
+    val verification = layout.projectDirectory.dir("../gradle")
+    inputs
+        .files(verification.file("verification-metadata.xml"), verification.file("verification-keyring.keys"))
+        .withPropertyName("verification")
+        .withPathSensitivity(PathSensitivity.NONE)
+    jvmArgumentProviders += VerificationDir(verification.asFile)
 }
 
 // The TestKit home as a system property, kept out of the task's inputs so the cache key does not
@@ -88,4 +118,11 @@ class TestKitDir(
     @get:Internal val dir: File,
 ) : CommandLineArgumentProvider {
     override fun asArguments() = listOf("-Dtestkit.dir=${dir.path}")
+}
+
+// Where the repository's verification files are, as `TestKitDir`; their contents are the task's input.
+class VerificationDir(
+    @get:Internal val dir: File,
+) : CommandLineArgumentProvider {
+    override fun asArguments() = listOf("-Dverification.dir=${dir.path}")
 }

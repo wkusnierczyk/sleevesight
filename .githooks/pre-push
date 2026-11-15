@@ -57,7 +57,8 @@ if [ "${#revs[@]}" -gt 0 ]; then
     [ -n "$path" ] || continue
     case "$path" in
       build-logic/* | gradle/* | build.gradle.kts | settings.gradle.kts | settings-gradle.lockfile | \
-        gradle.properties | gradlew | gradlew.bat | config/detekt/* | .editorconfig)
+        buildscript-gradle.lockfile | gradle.properties | gradlew | gradlew.bat | config/detekt/* | \
+        .editorconfig)
         all=true ;;
       *.md) ;;
       */*)

@@ -17,6 +17,12 @@ dependencyResolutionManagement {
 
 rootProject.name = "sleevesight"
 
+// Each project's build classpath (the convention plugins and the Gradle plugins they bring) locked as
+// its configurations are (#1034), in `buildscript-gradle.lockfile` beside its build file.
+gradle.beforeProject {
+    buildscript.dependencyLocking.lockAllConfigurations()
+}
+
 include(":core")
 include(":net")
 include(":sources")

@@ -6,8 +6,8 @@ import kotlin.test.assertTrue
 
 class LockingTest {
     @Test
-    fun `the locked classpaths get no floors`() {
-        Locking.configurations.forEach { assertFalse(Locking.isFloored(it), it) }
+    fun `the shipping classpaths get no floors`() {
+        Locking.shipping.forEach { assertFalse(Locking.isFloored(it), it) }
     }
 
     @Test

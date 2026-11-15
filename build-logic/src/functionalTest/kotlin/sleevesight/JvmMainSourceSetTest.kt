@@ -1,6 +1,6 @@
 package sleevesight
 
-import org.gradle.testkit.runner.GradleRunner
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.zip.ZipEntry
@@ -84,13 +84,10 @@ class JvmMainSourceSetTest {
         text: String,
     ) = resolve(path).apply { parentFile.mkdirs() }.writeText(text)
 
-    private fun runner(vararg tasks: String) =
-        GradleRunner
-            .create()
-            .withProjectDir(dir)
-            .withTestKitDir(File(System.getProperty("testkit.dir")))
-            .withPluginClasspath()
-            .withArguments(*tasks, "--stacktrace")
+    private fun runner(vararg tasks: String) = Probe.runner(dir, *tasks)
+
+    @AfterEach
+    fun collectVerification() = Probe.collect(dir)
 
     @Test
     fun `jvmMain is separate from main and carried by the module`() {

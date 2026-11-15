@@ -1,7 +1,7 @@
 package sleevesight
 
-import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.Test
@@ -60,13 +60,10 @@ class ModuleGraphTest {
         text: String,
     ) = resolve(path).apply { parentFile.mkdirs() }.writeText(text)
 
-    private fun runner(vararg arguments: String) =
-        GradleRunner
-            .create()
-            .withProjectDir(dir)
-            .withTestKitDir(File(System.getProperty("testkit.dir")))
-            .withPluginClasspath()
-            .withArguments(*arguments, "--stacktrace")
+    private fun runner(vararg arguments: String) = Probe.runner(dir, *arguments)
+
+    @AfterEach
+    fun collectVerification() = Probe.collect(dir)
 
     private val forbidden = ":a may not have :c on its compile classpath, even through another module"
 
@@ -75,8 +72,12 @@ class ModuleGraphTest {
         project(bToC = "implementation")
         runner(":a:checkModuleGraph", "--configuration-cache").build()
         val again = runner(":a:checkModuleGraph", "--configuration-cache").build()
-        assertTrue("Reusing configuration cache." in again.output, again.output)
-        assertEquals(TaskOutcome.UP_TO_DATE, again.task(":a:checkModuleGraph")?.outcome)
+        // A build that writes the verification metadata (`Probe.writing`) does not reuse the
+        // configuration cache, so the reuse is checked only in an ordinary run.
+        if (!Probe.writing) {
+            assertTrue("Reusing configuration cache." in again.output, again.output)
+            assertEquals(TaskOutcome.UP_TO_DATE, again.task(":a:checkModuleGraph")?.outcome)
+        }
     }
 
     @Test
