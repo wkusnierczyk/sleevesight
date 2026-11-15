@@ -6,10 +6,9 @@ name: Release
 # for the token Play takes. So the build's dependencies never run where that token can be minted.
 # Both jobs run in the `release` environment: the key is in its secrets, and Google gives the token
 # only to a job of that environment. Only tags matching `v*` may use it, and each job that names it
-# waits for a reviewer's approval before it starts. Jobs waiting at the same time are approved
-# together, so the two start together, on one approval, and `upload` waits for `bundle` itself rather
-# than through `needs`, which would hold it back until the build ends and then ask for a second
-# approval. The actions are pinned to commits, since the jobs hold the key and the token.
+# waits for a reviewer's approval before it starts. `upload` needs `bundle`, so a release takes two
+# approvals: one before the build, and one before the upload, once the bundle exists. The actions
+# are pinned to commits, since the jobs hold the key and the token.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
@@ -137,16 +136,15 @@ jobs:
 
 
   upload:
+    needs: bundle
     runs-on: ubuntu-latest
-    # Up to 30 minutes waiting for `bundle`, then the upload.
-    timeout-minutes: 45
+    timeout-minutes: 20
     environment: release
     # `id-token` lets the job ask GitHub for an OIDC token, which Google exchanges for a short-lived
     # access token to the Play Developer API (Workload Identity Federation): no stored Google key.
-    # `actions: read` lets it follow the `bundle` job. It reads no secret and runs no build.
+    # It reads no secret and runs no build.
     permissions:
       contents: read
-      actions: read
       id-token: write
     steps:
       # The scripts and the notes come from the tagged commit, not from the `bundle` job, so nothing
@@ -159,33 +157,6 @@ jobs:
           sparse-checkout: |
             .github/scripts
             release-notes
-
-      # Both jobs start on the same approval (above). `filter=latest` reads each job's latest
-      # attempt, so a re-run of this job alone takes the bundle of the attempt that built it.
-      - name: Wait for the bundle
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          jobs="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=latest"
-          while :; do
-            # A failed call is tried again; the job's timeout bounds the wait.
-            if ! state=$(gh api "$jobs" --jq '.jobs[] | select(.name == "bundle") | "\(.status) \(.conclusion)"'); then
-              sleep 20
-              continue
-            fi
-            case "$state" in
-              "")
-                echo "::error::The run has no job named bundle"
-                exit 1
-                ;;
-              "completed success") break ;;
-              completed*)
-                echo "::error::The bundle job ended ${state#completed }; nothing to upload"
-                exit 1
-                ;;
-            esac
-            sleep 20
-          done
 
       - name: Version from the tag
         id: version
