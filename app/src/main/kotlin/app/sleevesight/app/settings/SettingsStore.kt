@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -230,16 +231,20 @@ class SettingsStore(
     fun reportButtonHider(saves: CoroutineScope): () -> Deferred<Boolean> =
         {
             val saved = CompletableDeferred<Boolean>()
-            saveOrder
-                .launch(saves) {
-                    saved.complete(
-                        try {
-                            update { it.copy(reportButton = ReportButton.HIDE) }
-                            true
-                        } catch (_: IOException) {
-                            false
-                        },
-                    )
+            saves
+                .launch(start = CoroutineStart.UNDISPATCHED) {
+                    // Its place in line taken now; the result told once the turn has ended, so no
+                    // one waiting for it runs inside the turn.
+                    val hidden =
+                        saveOrder.inTurn {
+                            try {
+                                update { it.copy(reportButton = ReportButton.HIDE) }
+                                true
+                            } catch (_: IOException) {
+                                false
+                            }
+                        }
+                    saved.complete(hidden)
                 }.invokeOnCompletion { saved.cancel() } // Nothing once completed.
             saved
         }

@@ -20,12 +20,22 @@ import java.io.IOException
  * settings screen's saves ([saving]), Home's (*Reactive*'s mode, the theme, the report button's
  * *Hide*, *Dismiss* and its *Undo*), the key dialogs' choices
  * ([app.sleevesight.app.ui.settings.applyChoices]), and *Players*' list as the app keeps it
- * ([SettingsStore.playerSeen], [SettingsStore.forgetPlayer]). [SettingsStore.update] itself takes
- * no turn, as it runs inside one; the turn is not reentrant, so nothing in a turn waits for another.
- * The keys' gate ([app.sleevesight.app.secrets.KeyGate], `servicesOff`) writes outside it: it keeps
- * a rule rather than a choice, and applies it again at every change of the settings, so a save that
- * lands after it is put right at once; in line, a key's save would wait on the settings' saves
- * while it holds the key store's lock.
+ * ([SettingsStore.playerSeen], [SettingsStore.forgetPlayer]), and the services a key's first save
+ * or *Purge keys* writes off ([app.sleevesight.app.secrets.servicesOff]): a choice to switch one on,
+ * waiting its turn, cannot switch it back on after a purge. [SettingsStore.update] itself takes no
+ * turn, as it runs inside one; the turn is not reentrant, so nothing in a turn waits for another.
+ *
+ * **One lock order:** the key store's lock, then a turn. `servicesOff` takes its turn inside the key
+ * store's lock ([app.sleevesight.app.secrets.SecretStore.set] and `reset`); nothing done in a turn
+ * takes the key store's lock or waits on anything that does: a turn writes the settings through
+ * [SettingsStore.update] with a transform that only computes, reads them back
+ * ([SettingsStore.storedMode]), and tells the pipeline of *Reactive*'s mode without waiting
+ * (`trySend`); a save's result is completed once its turn has ended. Keep it so: a turn that took
+ * the key store's lock could wait forever on a key save waiting for that turn.
+ *
+ * The keys' gate ([app.sleevesight.app.secrets.KeyGate]) writes outside the line: it keeps a rule
+ * applied again at every change of the settings or the keys, so a choice that lands after it is put
+ * right at once.
  */
 internal class SaveOrder {
     private val turn = Mutex()
