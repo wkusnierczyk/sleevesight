@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.6.7
+docs_version: 0.7.0
 nav:
-  - id: results-for-067
+  - id: results-for-070
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.6.7
+## Results for 0.7.0
 
-Checked on 14 November 2026, on the code of release 0.6.7.
+Checked on 15 November 2026, on the code of release 0.7.0.
 
-- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app. The libraries are the same as in 0.6.6.
+- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app. The libraries are the same as in 0.6.7.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code, and nothing new that could run up your costs. The release names a linked page by the same site the link opens, refuses links written in forms that browsers read differently, limits how many covers it reads from players at once, and reads a note at the end of an AI reply in time that no longer grows with the square of the reply's length. One older slowdown turned up in reading an unusual AI reply, along with two minor points, none of them reaching your keys or data; they are left for a later release.
+- **Security review:** no way found to reach your keys or your data in the new code. One new path can add cost: with the song's, the artist's and the album's insights set to open on every new track, the new composer's insight is written by itself too; the setting and the privacy policy now say so. The new ways of finding a classical recording on MusicBrainz ask only MusicBrainz, which is free, and keep to its limit of one request a second. A few minor points turned up, among them two slowdowns in reading unusual text, none of them reaching your keys or data; they are left for a later release.
 
 ## What is checked
 
