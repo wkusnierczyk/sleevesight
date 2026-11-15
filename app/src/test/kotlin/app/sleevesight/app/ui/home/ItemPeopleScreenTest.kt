@@ -51,7 +51,7 @@ class ItemPeopleScreenTest {
     private val playing =
         sundown.copy(
             title = "Nessun Dorma",
-            artists = "$PUCCINI, $PAVAROTTI, $MEHTA, $LA_PHIL",
+            artists = "$PUCCINI, $PAVAROTTI, $MEHTA, $LA_PHIL, $DOMINGO",
             mediaId = "spotify:track:nessun",
         )
 
@@ -62,7 +62,7 @@ class ItemPeopleScreenTest {
                 resolution =
                     Resolution(
                         recordingMbid = "r",
-                        roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI, MEHTA, LA_PHIL)),
+                        roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI, MEHTA, LA_PHIL, DOMINGO)),
                     ),
             )
 
@@ -103,6 +103,42 @@ class ItemPeopleScreenTest {
     }
 
     private fun top(tag: String) = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot().top
+
+    // The other performers, each its chip or, when [open], its panel, in the track's order: down the
+    // panel, chips on one line from left to right.
+    private fun assertInOrder(vararg open: String) {
+        val bounds =
+            listOf(MEHTA, LA_PHIL, DOMINGO).map { name ->
+                val tag = if (name in open) panel(name) else itemChipTag(name)
+                compose.onNodeWithTag(tag).assertExists()
+                compose.onNodeWithTag(if (name in open) itemChipTag(name) else panel(name)).assertDoesNotExist()
+                compose.onNodeWithTag(tag).getUnclippedBoundsInRoot()
+            }
+        bounds.zipWithNext().forEach { (a, b) ->
+            assertTrue("$a before $b", a.bottom <= b.top || (a.top == b.top && a.right <= b.left))
+        }
+    }
+
+    @Test
+    fun anOpenPanelKeepsItsStateWhileOthersOpenAndCloseBeforeIt() {
+        // A refused write offers it again: a panel rebuilt would ask for it again without a tap.
+        val notes = FakeItemNotes().apply { takenUp = false }
+        show(notes, page = false).use {
+            compose.onNodeWithTag(itemChipTag(DOMINGO)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertInOrder(DOMINGO)
+            compose.onNodeWithTag(itemChipTag(MEHTA)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertInOrder(MEHTA, DOMINGO)
+            compose.onNodeWithTag(close(MEHTA)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertInOrder(DOMINGO)
+            // The last one's panel kept all along: followed once, its write asked for once.
+            assertEquals(1, notes.followed.count { it == InsightItem.named(DOMINGO) })
+            assertEquals(1, notes.writes.count { it == InsightItem.named(DOMINGO) })
+            assertEquals(1, notes.writes.count { it == InsightItem.named(MEHTA) })
+        }
+    }
 
     @Test
     fun aChipGivesWayToItsPanelAndCloseBringsItBackUnderBoxes() = chipsGiveWayToPanels(page = false)
@@ -158,6 +194,7 @@ class ItemPeopleScreenTest {
         const val PAVAROTTI = "Luciano Pavarotti"
         const val MEHTA = "Zubin Mehta"
         const val LA_PHIL = "Los Angeles Philharmonic"
+        const val DOMINGO = "Plácido Domingo"
         const val SHOW = "show this artist’s insight"
     }
 }

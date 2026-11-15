@@ -97,16 +97,17 @@ internal fun PeopleAfter(
         groups.forEach { group ->
             group.heading?.let { PeopleHeading(it) }
             peopleRuns(group.names, open).forEach { run ->
-                if (run.open) {
-                    val name = run.names.single()
-                    key("panel:$name") {
+                // One key over both kinds, so an open panel moves with its key when the runs before it
+                // change, keeping its state (and its write not asked again); a run of chips, which keeps
+                // none of its own, is laid out anew when its first chip opens.
+                key(if (run.open) "panel:${run.names.single()}" else "chips:${run.names.first()}") {
+                    if (run.open) {
+                        val name = run.names.single()
                         NamedArtist(name, context, Modifier.handoffTarget(handoff, closeOf(name))) {
                             open = open - name
                             handoff.moveTo(chipOf(name))
                         }
-                    }
-                } else {
-                    key("chips:${run.names.first()}") {
+                    } else {
                         PeopleChips(run.names, ai, { Modifier.handoffTarget(handoff, chipOf(it)) }) { name ->
                             open = open + name
                             handoff.moveTo(closeOf(name))
