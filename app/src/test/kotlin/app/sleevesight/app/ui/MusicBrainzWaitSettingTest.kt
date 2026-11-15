@@ -176,9 +176,10 @@ class MusicBrainzWaitSettingTest {
         }
 
     // A drag to 30 s and back to 15 s in one gesture, faster than the store answers: the move back is
-    // written too, and the setting ends where the drag did. The writes are held through the gesture,
-    // so the store still says 15 s when the drag comes back: compared with the stop stored rather
-    // than the one shown, the move back would ask for no write and the setting would end at 30 s.
+    // written too, after the move away (#1146), and the setting ends where the drag did. The writes
+    // are held through the gesture, so the store still says 15 s when the drag comes back: compared
+    // with the stop stored rather than the one shown, the move back would ask for no write and the
+    // setting would end at 30 s.
     @Test
     fun aQuickDragAwayAndBackEndsWhereItEnded() =
         showSources {
@@ -193,12 +194,13 @@ class MusicBrainzWaitSettingTest {
                 up()
             }
             compose.waitForIdle()
-            assertEquals("the move away and the move back both asked for", before + 2, settingsData.writes.get())
-            assertEquals("neither write answered yet", 15.seconds, settings.now().musicBrainzWait)
+            assertEquals("the move back waits for the move away's write", before + 1, settingsData.writes.get())
+            assertEquals("no write answered yet", 15.seconds, settings.now().musicBrainzWait)
             assertEquals("15 seconds", spoken())
 
             held.complete(Unit)
             compose.waitForIdle()
+            assertEquals("the move away and the move back both written", before + 2, settingsData.writes.get())
             assertEquals(15.seconds, settings.now().musicBrainzWait)
             assertEquals("15 seconds", spoken())
         }

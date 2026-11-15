@@ -1,5 +1,8 @@
 name: CI
 
+# Every action is pinned to a commit, with its version in a comment, since a tag can be moved to
+# other code (#1037); Dependabot updates the two together.
+
 on:
   # Every pull request runs `build`, docs-only ones included: `main` requires the check, and a
   # required check that never reports leaves the pull request unmergeable.
@@ -33,7 +36,7 @@ jobs:
       version-arg: ${{ steps.version.outputs.arg }}
       pattern: ${{ steps.version.outputs.pattern }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # A pull request checks out its merge commit; the first parent is the base branch.
           fetch-depth: 2
@@ -100,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The keyboard page's protocol and QR encoder (#394) are checked by the app's tests against
       # vectors their own code makes; this fails if the vectors were not remade after a change to
@@ -115,6 +118,12 @@ jobs:
       # The API keys page's drawing of its sealed code (#590), with sealing that is slow or fails.
       - name: API keys page drawing
         run: node --test assets/api-keys/draw.test.mjs
+
+      # The Content Security Policy of the API keys and keyboard pages (#1035), pinned: a change to
+      # it fails here until the test is changed with it. Also that no other file is served in their
+      # place (it reads `git ls-files`).
+      - name: Pages' security policy
+        run: node --test .github/scripts/page-csp.test.mjs
 
       # The release's track and its guard against a `PLAY_TRACK` left at `production`
       # (`release-track.sh`, #451), tested in a throwaway repository.
@@ -156,7 +165,7 @@ jobs:
     env:
       VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/java-gradle
 
@@ -166,7 +175,7 @@ jobs:
       # cache. The SDK the tests run on is set in that file, so a new one changes the key; an SDK
       # that a test sets for itself (`@Config(sdk = …)`) is outside the key: one new SDK alone is
       # downloaded on each run until the key next changes, slower but never wrong.
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository/org/robolectric
           key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'app/src/test/resources/robolectric.properties') }}
@@ -187,7 +196,7 @@ jobs:
             'Sleevesight Debug' "$PATTERN-debug\$"
 
       # For installing on a phone or an emulator, such as the restricted-settings test (#29).
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sleevesight-debug-apk
           path: app/build/outputs/apk/debug/*.apk
@@ -208,7 +217,7 @@ jobs:
       # A failed test's report, with each class's output and the order the classes ran in, which the
       # log does not give (#940: a test that failed only here). Last, so that a failure in any step
       # of the job uploads them, the developer-mode test's included.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: test-reports
@@ -229,7 +238,7 @@ jobs:
     env:
       VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/java-gradle
 
@@ -258,7 +267,7 @@ jobs:
     env:
       VERSION_ARG: ${{ needs.changes.outputs.version-arg }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/java-gradle
 
@@ -298,7 +307,7 @@ jobs:
       EMULATOR_BUILD: 16740729
       EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/java-gradle
 
@@ -321,7 +330,7 @@ jobs:
       # that build, which the steps below pin (`EMULATOR_BUILD`): a new image, build or options makes
       # a new one. Restored in every run, saved only from pushes to `main` and `dev-*`, as Gradle's
       # cache is: a pull request that misses it boots Android afresh and saves nothing.
-      - uses: actions/cache/restore@v6
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: avd
         with:
           path: |
@@ -343,7 +352,7 @@ jobs:
           script: echo "Snapshot made."
 
       # Saved as the snapshot was made, before a test run changes the device.
-      - uses: actions/cache/save@v6
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: steps.avd.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
         with:
           path: |
@@ -395,7 +404,7 @@ jobs:
               print("::error::No instrumented test ran.")
               sys.exit(1)
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: instrumented-test-reports

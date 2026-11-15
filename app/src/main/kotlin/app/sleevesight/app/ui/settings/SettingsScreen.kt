@@ -41,7 +41,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
-import app.sleevesight.app.settings.SettingsStore.Companion.saving
+import app.sleevesight.app.settings.saving
 import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.CameraQrScanner
@@ -130,7 +130,7 @@ fun SettingsScreen(
     var changeFailures by remember { mutableIntStateOf(0) }
     val clearing = remember(scope) { Clearing(scope) }
     val failed = { failed: Boolean -> changeFailures = if (failed) changeFailures + 1 else 0 }
-    val save = scope.saver(saves, failed)
+    val save = scope.saver(settingsStore, saves, failed)
     val update: Update = { transform -> save { settingsStore.update(transform) } }
     // *Dismiss* and its *Undo* (#759: *Players*' note), and *Restore dismissed messages*, saved as
     // any change is, a failure announced as any change's is.
@@ -250,17 +250,18 @@ internal typealias Update = ((Settings) -> Settings) -> Unit
 private fun Settings?.orDefaults(): Settings = this ?: Settings()
 
 /**
- * Saves each change to the store in [saves], which outlives the screen ([saving]: only an I/O error
- * counts as not saved; cancellation and any other failure propagate), and waits for it in this
- * scope, the screen's, telling [failed] whether it could not be saved; the result says whether it
- * was.
+ * Saves each change to [store] in [saves], which outlives the screen, in the order the changes come
+ * ([saving]: only an I/O error counts as not saved; cancellation and any other failure propagate),
+ * and waits for it in this scope, the screen's, telling [failed] whether it could not be saved; the
+ * result says whether it was.
  */
 private fun CoroutineScope.saver(
+    store: SettingsStore,
     saves: CoroutineScope,
     failed: (Boolean) -> Unit,
 ): (suspend () -> Unit) -> Deferred<Boolean> =
     { change ->
-        val saved = saves.saving(change)
+        val saved = store.saving(saves, change)
         launch { failed(!saved.await()) }
         saved
     }
