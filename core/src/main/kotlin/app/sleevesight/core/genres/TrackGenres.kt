@@ -360,13 +360,19 @@ data class TrackGenres(
      * a track's tag, a vocalist, a lyricist (#998) or a language, never a featured artist; or, where
      * only LRCLIB's mark backs Instrumental, that mark (#1055, [WeakEvidence.LibraryMark]): it lifts
      * such a sign, or a chip's Instrumental is weak for it (the one it added, [TrackLabel.markedBy],
-     * #1024, or one an artist's description names, #1000). Null for any other genre, or with none.
+     * #1024, or one an artist's description names, #1000); or, where a chip's Instrumental is weak as
+     * Wikidata's statement alone, with or without LRCLIB's mark (#1292, `statedAlone`), that, as the
+     * chip says it. Null for any other genre, or with none.
      */
     fun aiWeakEvidence(identity: String): WeakEvidence? {
-        val chipped = chips().any { it.label.genre.identity == INSTRUMENTAL && libraryMark(it) != null }
+        val shown = chips()
+        val chipped = shown.any { it.label.genre.identity == INSTRUMENTAL && libraryMark(it) != null }
         val backs = chipped || signOfVocals(identity, null, lifted = false) != null
-        return signOfVocals(identity, null)
-            ?: WeakEvidence.LibraryMark.takeIf { identity == INSTRUMENTAL && singing.libraryAlone && backs }
+        val stated: WeakEvidence? =
+            if (identity == INSTRUMENTAL) shown.firstNotNullOfOrNull { statedAlone(it) } else null
+        val mark: WeakEvidence? =
+            WeakEvidence.LibraryMark.takeIf { identity == INSTRUMENTAL && singing.libraryAlone && backs }
+        return signOfVocals(identity, null) ?: stated ?: mark
     }
 
     // [signOfVocals] for [identity] on [row]; with none, the track's; [lifted], unless weighed without
@@ -624,7 +630,8 @@ private fun TrackGenres.libraryMark(placed: PlacedLabel): WeakEvidence.LibraryMa
 
 /**
  * Wikidata's statement as why [placed], Instrumental, is weak (#1292): every row's Instrumental is
- * Wikidata's alone (no other source's tags, no source's mark, not added by the AI's genre list), its
+ * Wikidata's alone (no other source's tags, no source's mark, not added by the AI's genre list), and
+ * no other source gave it at all ([TrackGenres.given]: one the rows' cap left out still backs it), its
  * statements edited by its users. With LRCLIB's mark backing it too, and nothing else
  * ([Singing.libraryAlone]), [WeakEvidence.LibraryAndWikidata]; else, with the track neither marked
  * instrumental by MusicBrainz nor found so by the check of its vocals ([Singing.lifted]),
@@ -632,8 +639,13 @@ private fun TrackGenres.libraryMark(placed: PlacedLabel): WeakEvidence.LibraryMa
  */
 private fun TrackGenres.statedAlone(placed: PlacedLabel): WeakEvidence? {
     val instrumental = rows.flatMap { it.labels }.filter { it.genre.identity == TrackGenres.INSTRUMENTAL }
+    val othersGive =
+        given.any { (source, labels) ->
+            source != LabelSource.WIKIDATA && labels.any { it.identity == TrackGenres.INSTRUMENTAL }
+        }
     val stated =
         placed.label.genre.identity == TrackGenres.INSTRUMENTAL &&
+            !othersGive &&
             instrumental.isNotEmpty() &&
             instrumental.all { label ->
                 label.markedBy == null &&
