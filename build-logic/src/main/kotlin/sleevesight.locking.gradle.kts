@@ -36,21 +36,15 @@ if (gradle.startParameter.isWriteDependencyLocks) {
 }
 
 // Every configuration that can be resolved, so each gets its lock state, and its files, so that
-// `--write-verification-metadata` records them (`design/development.md`, *Dependencies*). Files a
-// configuration cannot give as they are (a variant only an artifact transform reads) are left to the
-// tasks that read them.
+// `--write-verification-metadata` records them (`design/development.md`, *Dependencies*). A
+// dependency or a file that does not resolve fails the task (`Locking.resolveAll`).
 tasks.register("resolveAndLockAll") {
     notCompatibleWithConfigurationCache("Resolves configurations at execution time to write lockfiles")
     doFirst {
         require(gradle.startParameter.isWriteDependencyLocks) { "Run with --write-locks" }
     }
     doLast {
-        configurations.filter { it.isCanBeResolved }.forEach { configuration ->
-            configuration.incoming.resolutionResult.rootComponent
-                .get()
-            configuration.incoming
-                .artifactView { lenient(true) }
-                .files.files
-        }
+        val failures = Locking.resolveAll(configurations)
+        check(failures.isEmpty()) { "Did not resolve:\n" + failures.joinToString("\n") { "  $it" } }
     }
 }

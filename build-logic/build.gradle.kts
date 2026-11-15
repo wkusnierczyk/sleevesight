@@ -54,14 +54,23 @@ tasks.register("resolveAndLockAll") {
     doFirst {
         require(gradle.startParameter.isWriteDependencyLocks) { "Run with --write-locks" }
     }
+    // As `Locking.resolveAll`, which the build logic cannot call from its own build script: a
+    // dependency or a file that does not resolve fails the task.
     doLast {
-        configurations.filter { it.isCanBeResolved }.forEach { configuration ->
-            configuration.incoming.resolutionResult.rootComponent
-                .get()
-            configuration.incoming
-                .artifactView { lenient(true) }
-                .files.files
-        }
+        val failures =
+            configurations.filter { it.isCanBeResolved }.flatMap { configuration ->
+                val unresolved =
+                    configuration.incoming.resolutionResult.allDependencies
+                        .filterIsInstance<org.gradle.api.artifacts.result.UnresolvedDependencyResult>()
+                        .map { "${configuration.name}: ${it.attempted.displayName}: ${it.failure.message}" }
+                val artifacts = configuration.incoming.artifactView {
+                    lenient(true)
+                    componentFilter { it is org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+                }.artifacts
+                artifacts.artifacts
+                unresolved + artifacts.failures.map { "${configuration.name}: ${it.javaClass.simpleName}: ${it.message}" }
+            }
+        check(failures.isEmpty()) { "Did not resolve:\n" + failures.joinToString("\n") { "  $it" } }
     }
 }
 

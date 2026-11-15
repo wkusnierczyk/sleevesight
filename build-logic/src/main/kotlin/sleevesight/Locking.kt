@@ -1,5 +1,9 @@
 package sleevesight
 
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
+
 /**
  * Which classpaths ship and which get the build floors (`sleevesight.locking`, #1087). Every
  * configuration is locked (#1034); these sets say only which are held to their lockfile alone.
@@ -29,4 +33,26 @@ object Locking {
     fun isFloored(name: String): Boolean =
         name !in shipping &&
             !(name.endsWith("Classpath") && (name.startsWith("jvmMain") || name.startsWith("testFixtures")))
+
+    /**
+     * Resolves each of [configurations], its graph and its libraries' files, for `resolveAndLockAll`,
+     * and returns what did not resolve: each dependency left unresolved, and each file that failed.
+     * Empty when every one resolved. Files are fetched for the libraries alone: a project's are built,
+     * not downloaded, and many of its variants (an app's symbols, its bundle metadata) cannot be
+     * picked without the attributes only the task that reads them asks for.
+     */
+    fun resolveAll(configurations: Iterable<Configuration>): List<String> =
+        configurations.filter { it.isCanBeResolved }.flatMap { configuration ->
+            val graph = configuration.incoming.resolutionResult.allDependencies
+            val unresolved =
+                graph.filterIsInstance<UnresolvedDependencyResult>().map {
+                    "${configuration.name}: ${it.attempted.displayName}: ${it.failure.message}"
+                }
+            val artifacts = configuration.incoming.artifactView {
+                    lenient(true)
+                    componentFilter { it is ModuleComponentIdentifier }
+                }.artifacts
+            artifacts.artifacts
+            unresolved + artifacts.failures.map { "${configuration.name}: ${it.javaClass.simpleName}: ${it.message}" }
+        }
 }
