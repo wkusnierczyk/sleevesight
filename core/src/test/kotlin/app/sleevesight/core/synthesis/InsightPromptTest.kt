@@ -336,7 +336,8 @@ class InsightPromptTest {
             assertTrue("reply with exactly: ${GroundingCheck.NO_EVIDENCE}." in contract.last(), contract.last())
             assertTrue("A credit or a date is enough for a sentence" in contract.last(), contract.last())
             assertTrue(
-                "retell what the screen shows only when the evidence holds nothing else at all" in contract.last(),
+                "retell the facts shown elsewhere in the app only when the evidence holds nothing else at all" in
+                    contract.last(),
                 contract.last(),
             )
             // A web page's reading is the page's, its facts stated plainly, ids only in citations (#767).
@@ -362,16 +363,19 @@ class InsightPromptTest {
     fun `the role says what Home shows and asks for the story beyond it (#767, #1142)`() {
         val role = InsightPrompt.ROLE
         assertTrue(role.startsWith("You write the insight card on a music app's now-playing screen."))
-        // Version 13 (#1142): the whole header, not only the title and artists, and the rows under it.
+        // Version 13 (#1142): the whole header, not only the title and artists, as facts shown elsewhere,
+        // with no screen to talk about (the check of its first draft: cards that talked about the screen).
         assertTrue(
-            "The screen already shows the title, the artists, the album and its year, the release dates, and a " +
-                "row each naming the song, the artist and the album." in role,
+            "These facts are shown elsewhere in the app: the title, the artists, the album and its year, the " +
+                "release dates, and the names of the song, the artist and the album." in role,
             role,
         )
-        assertTrue("Tell the story the evidence adds beyond that, such as" in role, role)
-        for (beyond in listOf("produced", "played on it", "wrote it if not the performer", "an earlier release")) {
-            assertTrue(beyond in role, beyond)
-        }
+        assertFalse("The screen" in role, role)
+        assertTrue("Tell the story beyond them, such as" in role, role)
+        val beyond = listOf("produced", "played on it", "wrote it if not the performer", "a release before this album")
+        for (kind in beyond) assertTrue(kind in role, kind)
+        // Scoped, as "an earlier release" drew false claims of one.
+        assertTrue("a release before this album when the evidence names one" in role, role)
         assertTrue("what the sources say of the song, the artist, the album or its genres" in role, role)
         // Version 9 kept the release out of the opening; version 10 put it after the story; version 13
         // leaves the album and its date to the screen unless there is nothing else.
@@ -379,9 +383,12 @@ class InsightPromptTest {
         assertFalse("put it after the story" in InsightPrompt.BUILT_IN_STYLE)
         assertTrue("tell a story" in InsightPrompt.BUILT_IN_STYLE)
         assertTrue(
-            "Leave the album and its release date to the screen unless there is nothing else to tell." in
-                InsightPrompt.BUILT_IN_STYLE,
+            "Leave out the album, its release date and a credit naming only the performer unless there is " +
+                "nothing else to tell." in InsightPrompt.BUILT_IN_STYLE,
         )
+        for (part in listOf(InsightPrompt.ROLE, InsightPrompt.BUILT_IN_STYLE, InsightPrompt.NOTHING_TO_TELL_RULE)) {
+            assertFalse("the screen" in part.substringAfter("now-playing screen."), part)
+        }
     }
 
     private companion object {
