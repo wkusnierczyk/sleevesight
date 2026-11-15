@@ -104,15 +104,15 @@ tasks.named("staticChecks") { dependsOn("lintDebug") }
 androidComponents {
     onVariants { variant ->
         val suffix = variant.name.replaceFirstChar { it.uppercase() }
-        // A variant's classpaths ship, so they must be locked (`Locking.configurations`): one left
-        // out would get the build floors instead (#1087), and a library could reach its APK raised,
-        // with no lockfile line for OSV-Scanner to read.
-        val unlocked =
+        // A variant's classpaths ship, so they must be held to their lockfile alone
+        // (`Locking.shipping`): one left out would get the build floors (#1087), and a library could
+        // reach its APK raised past the version reviewed.
+        val floored =
             listOf(variant.runtimeConfiguration.name, variant.compileConfiguration.name)
-                .filterNot { it in Locking.configurations }
-        check(unlocked.isEmpty()) {
-            "Variant ${variant.name}'s classpaths $unlocked are not locked: add them to " +
-                "`Locking.configurations` and run `./gradlew resolveAndLockAll --write-locks`."
+                .filterNot { it in Locking.shipping }
+        check(floored.isEmpty()) {
+            "Variant ${variant.name}'s classpaths $floored are not in `Locking.shipping`: add them " +
+                "and run `./gradlew resolveAndLockAll --write-locks`."
         }
         val runtimeRoot = variant.runtimeConfiguration.incoming.resolutionResult.rootComponent
         val compileRoot = variant.compileConfiguration.incoming.resolutionResult.rootComponent
@@ -193,7 +193,11 @@ androidComponents {
         // The licence POMs: the shipped modules' POMs, and level by level their parents', since a
         // POM may leave its licence to its parent. Each level is one configuration, so a parent
         // two modules name at different versions resolves to one of them, and the other module's
-        // licence is then not found: the list fails on it rather than guessing.
+        // licence is then not found: the list fails on it rather than guessing. Not locked, unlike
+        // every other configuration (#1034): they are no classpath but a lookup of the locked
+        // runtime classpath's own versions, and with their lock state in force a POM of a
+        // multiplatform library resolved to another platform's module than the one locked. Their
+        // files are still checked against `gradle/verification-metadata.xml`.
         val pomLevels =
             (0 until ListLibraryLicences.POM_LEVELS).fold(listOf<NamedDomainObjectProvider<out Configuration>>()) { levels, level ->
                 val coordinates =
@@ -204,6 +208,7 @@ androidComponents {
                 levels +
                     configurations.resolvable("${variant.name}LicencePoms$level") {
                         isTransitive = false
+                        resolutionStrategy.deactivateDependencyLocking()
                         val poms = coordinates.map { all -> all.map { project.dependencies.create("$it@pom") } }
                         (this as Configuration).dependencies.addAllLater(poms)
                     }

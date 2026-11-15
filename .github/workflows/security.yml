@@ -45,10 +45,11 @@ jobs:
             "https://github.com/google/osv-scanner/releases/download/$OSV_VERSION/osv-scanner_linux_amd64"
           echo "$OSV_SHA256  $RUNNER_TEMP/osv-scanner" | sha256sum --check --strict
           chmod +x "$RUNNER_TEMP/osv-scanner"
-          # Every module's lockfile, the build logic's (the Gradle plugins and their libraries, #1087)
-          # and the settings' one, each named as a Gradle lockfile, since `settings-gradle.lockfile`
-          # is not a name the scanner knows. The other tools' classpaths (Android lint, ktlint, the
-          # tests) are not locked; the catalog's `build-floor-*` versions hold them up instead.
+          # Every lockfile, each named as a Gradle lockfile, since `settings-gradle.lockfile` and
+          # `buildscript-gradle.lockfile` are not names the scanner knows. Every configuration is
+          # locked (#1034): each module's classpaths, the tools' (Android lint, ktlint, Detekt, the
+          # tests), whose versions the catalog's `build-floor-*` entries hold up (#1087), each
+          # project's build classpath, and the build logic's (the Gradle plugins and their libraries).
           lockfiles=()
           while IFS= read -r file; do lockfiles+=(--lockfile "gradle.lockfile:$file"); done \
             < <(git ls-files '*gradle.lockfile')

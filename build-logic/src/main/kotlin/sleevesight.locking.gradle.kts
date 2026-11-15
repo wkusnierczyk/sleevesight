@@ -1,21 +1,21 @@
-// Dependency locking for the classpaths that ship. `./gradlew resolveAndLockAll --write-locks`
-// rewrites the lockfiles; `checkDependencies` then reads the same resolution. Every other classpath
-// (the tools': Android lint, ktlint, Detekt, the tests) gets the catalog's floors instead.
+// Dependency locking for every configuration (#1034): the classpaths that ship and the tools' (Android
+// lint, ktlint, Detekt, the Kotlin compiler, the tests) alike, each in the module's `gradle.lockfile`.
+// `./gradlew resolveAndLockAll --write-locks` rewrites the lockfiles; `checkDependencies` then reads
+// the same resolution. Lockfiles pin versions; `gradle/verification-metadata.xml` pins what each
+// version's files hold (`design/development.md`, *Dependencies*).
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import sleevesight.BuildFloors
 import sleevesight.Locking
 
-val lockedConfigurations = Locking.configurations
-
-configurations.matching { it.name in lockedConfigurations }.configureEach {
-    resolutionStrategy.activateDependencyLocking()
+dependencyLocking {
+    lockAllConfigurations()
 }
 
 // The libraries the build's tools bring in, at no lower than the catalog's `build-floor-*` versions,
-// the lowest with no known vulnerability (#1087). Not on the classpaths that ship: what goes into
-// the APK and the CLI stays as the lockfiles say, and OSV-Scanner checks it there; nor on the
-// module's own code beside `main` (`Locking.isFloored`). A build with no such catalog, such as the
-// build logic's functional tests, has no floors.
+// the lowest with no known vulnerability (#1087), and locked as raised. Not on the classpaths that
+// ship: what goes into the APK and the CLI stays as the lockfiles say, and OSV-Scanner checks it
+// there; nor on the module's own code beside `main` (`Locking.isFloored`). A build with no such
+// catalog, such as the build logic's functional tests, has no floors.
 val buildFloors =
     extensions
         .getByType<VersionCatalogsExtension>()
@@ -28,12 +28,29 @@ if (buildFloors.isNotEmpty()) {
     }
 }
 
+// Some plugins give a configuration its dependencies only when they configure the task that reads it
+// (Android lint's `*ForLint` classpaths), so a build that writes the locks configures every task
+// first: otherwise such a configuration would be locked empty, and fail the next build that uses it.
+if (gradle.startParameter.isWriteDependencyLocks) {
+    gradle.projectsEvaluated { tasks.forEach { } }
+}
+
+// Every configuration that can be resolved, so each gets its lock state, and its files, so that
+// `--write-verification-metadata` records them (`design/development.md`, *Dependencies*). Files a
+// configuration cannot give as they are (a variant only an artifact transform reads) are left to the
+// tasks that read them.
 tasks.register("resolveAndLockAll") {
     notCompatibleWithConfigurationCache("Resolves configurations at execution time to write lockfiles")
     doFirst {
         require(gradle.startParameter.isWriteDependencyLocks) { "Run with --write-locks" }
     }
     doLast {
-        configurations.filter { it.name in lockedConfigurations && it.isCanBeResolved }.forEach { it.resolve() }
+        configurations.filter { it.isCanBeResolved }.forEach { configuration ->
+            configuration.incoming.resolutionResult.rootComponent
+                .get()
+            configuration.incoming
+                .artifactView { lenient(true) }
+                .files.files
+        }
     }
 }

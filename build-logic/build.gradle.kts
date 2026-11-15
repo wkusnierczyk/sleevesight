@@ -1,3 +1,11 @@
+// The build logic's own build classpath (`kotlin-dsl` and the Kotlin plugin it brings) locked as
+// every other one is (#1034), in `build-logic/buildscript-gradle.lockfile`.
+buildscript {
+    dependencyLocking {
+        lockAllConfigurations()
+    }
+}
+
 plugins {
     `kotlin-dsl`
 }
@@ -34,12 +42,12 @@ dependencies.constraints {
     }
 }
 
-// The plugins' classpath locked as the modules' shipping ones are (`sleevesight.locking`), so the
-// versions stay as reviewed and OSV-Scanner reads them (`build-logic/gradle.lockfile`). The root
-// build's `./gradlew resolveAndLockAll --write-locks` rewrites it too.
-val lockedConfigurations = setOf("runtimeClasspath", "compileClasspath")
-configurations.matching { it.name in lockedConfigurations }.configureEach {
-    resolutionStrategy.activateDependencyLocking()
+// Every configuration locked, as the modules' are (`sleevesight.locking`, #1034): the plugins'
+// classpath, so the versions stay as reviewed and OSV-Scanner reads them, and the build logic's own
+// tools and tests (`build-logic/gradle.lockfile`). The root build's `./gradlew resolveAndLockAll
+// --write-locks` rewrites it too, resolving each configuration and its files, as the modules' does.
+dependencyLocking {
+    lockAllConfigurations()
 }
 tasks.register("resolveAndLockAll") {
     notCompatibleWithConfigurationCache("Resolves configurations at execution time to write lockfiles")
@@ -47,7 +55,13 @@ tasks.register("resolveAndLockAll") {
         require(gradle.startParameter.isWriteDependencyLocks) { "Run with --write-locks" }
     }
     doLast {
-        configurations.filter { it.name in lockedConfigurations }.forEach { it.resolve() }
+        configurations.filter { it.isCanBeResolved }.forEach { configuration ->
+            configuration.incoming.resolutionResult.rootComponent
+                .get()
+            configuration.incoming
+                .artifactView { lenient(true) }
+                .files.files
+        }
     }
 }
 
