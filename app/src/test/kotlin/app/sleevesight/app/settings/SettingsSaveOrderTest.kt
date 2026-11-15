@@ -4,7 +4,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MemoryStore
-import app.sleevesight.app.memorySettings
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
@@ -26,10 +25,10 @@ import kotlin.time.Duration.Companion.seconds
  * The screens' saves in the order asked for (#1146): two quick changes to a setting, such as a fast
  * drag on a slider or two quick taps on a button group, end at the second, however the threads
  * they hop to run them; each keeps its own result. The race is made certain by a dispatcher that
- * runs the work given it newest first ([NewestFirst]), as a pool of threads may.
+ * runs the work given it newest first ([Queued]), as a pool of threads may.
  */
 class SettingsSaveOrderTest {
-    private val newestFirst = NewestFirst()
+    private val newestFirst = Queued(newestFirst = true)
 
     // Saves on the caller's thread, as the app's are (on the main thread, `Dispatchers.Main.immediate`).
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
@@ -55,13 +54,17 @@ class SettingsSaveOrderTest {
 
     @Test
     fun twoQuickChangesEndAtTheSecondThoughTheirSavesStartNewestFirst() {
-        // Saves in a scope on a pool of threads, such as `Dispatchers.Default`.
+        // Saves in a scope on a pool of threads, such as `Dispatchers.Default`, each hopping to the
+        // store's own dispatcher, which writes in the order it is given: the second save waits for
+        // the first's write. (On the saves' own dispatcher the write would not hop, and the first
+        // save end in its call; newest first there too, the two reversals would cancel out.)
         val data = MemoryStore()
-        val store = memorySettings(data)
+        val inOrder = Queued(newestFirst = false)
+        val store = SettingsStore(data, dispatcher = inOrder)
         val pooled = CoroutineScope(SupervisorJob() + newestFirst)
         store.saving(pooled) { store.update { it.copy(musicBrainzWait = 30.seconds) } }
         store.saving(pooled) { store.update { it.copy(musicBrainzWait = 1.minutes) } }
-        newestFirst.runAll()
+        while (newestFirst.runAll() or inOrder.runAll()) Unit
         pooled.cancel()
         assertEquals(1.minutes, data.now().musicBrainzWait)
     }
@@ -101,20 +104,24 @@ class SettingsSaveOrderTest {
         assertEquals(ThemeChoice.LIGHT, data.now().theme)
     }
 
-    /** Runs the work dispatched to it when told ([runAll]), the newest first, on the test's thread. */
-    private class NewestFirst : CoroutineDispatcher() {
-        private val queued = ArrayDeque<Runnable>()
+    /** Runs the work dispatched to it when told ([runAll]), [newestFirst] or oldest first, on the test's thread. */
+    private class Queued(
+        private val newestFirst: Boolean,
+    ) : CoroutineDispatcher() {
+        private val waiting = ArrayDeque<Runnable>()
 
         override fun dispatch(
             context: CoroutineContext,
             block: Runnable,
         ) {
-            queued.addLast(block)
+            waiting.addLast(block)
         }
 
-        /** Runs what is queued, newest first, and what that queues, until nothing is left. */
-        fun runAll() {
-            while (queued.isNotEmpty()) queued.removeLast().run()
+        /** Runs what is queued, and what that queues, until nothing is left; whether it ran any. */
+        fun runAll(): Boolean {
+            val ran = waiting.isNotEmpty()
+            while (waiting.isNotEmpty()) (if (newestFirst) waiting.removeLast() else waiting.removeFirst()).run()
+            return ran
         }
     }
 }

@@ -72,7 +72,7 @@ class SettingsStore(
     private val stored: Flow<Settings> =
         dataStore.data.map { SettingsCodec.read(it, defaults) }.collectedOn(dispatcher)
 
-    /** The screens' saves, one after another, in the order asked for (#1146; [saving]). */
+    /** Every writer of the settings, one after another, in the order asked for (#1146; [saving]). */
     internal val saveOrder = SaveOrder()
 
     /** The current settings, and each change to them; nothing while the file cannot be read. */
@@ -100,6 +100,8 @@ class SettingsStore(
     /**
      * Applies [transform] to the stored settings, atomically. Only the settings it changes are
      * written ([SettingsCodec.write]), so what a later version stored survives a downgrade.
+     *
+     * Takes no turn: a writer goes through [saveOrder] (or [saving]), except the keys' gate.
      */
     suspend fun update(transform: (Settings) -> Settings) {
         withContext(dispatcher) {

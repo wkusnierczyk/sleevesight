@@ -22,8 +22,8 @@ import java.io.IOException
  * ([app.sleevesight.app.ui.settings.applyChoices]), and *Players*' list as the app keeps it
  * ([SettingsStore.playerSeen], [SettingsStore.forgetPlayer]), and the services a key's first save
  * or *Purge keys* writes off ([app.sleevesight.app.secrets.servicesOff]): a choice to switch one on,
- * waiting its turn, cannot switch it back on after a purge. [SettingsStore.update] itself takes no
- * turn, as it runs inside one; the turn is not reentrant, so nothing in a turn waits for another.
+ * waiting its turn, cannot switch it back on after a purge. [SettingsStore.update] takes no turn of
+ * its own; its callers take one. The turn is not reentrant, so nothing in a turn waits for another.
  *
  * **One lock order:** the key store's lock, then a turn. `servicesOff` takes its turn inside the key
  * store's lock ([app.sleevesight.app.secrets.SecretStore.set] and `reset`); nothing done in a turn
