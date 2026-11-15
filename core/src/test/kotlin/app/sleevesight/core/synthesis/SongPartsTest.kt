@@ -1,5 +1,8 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.text.trimJs
+import org.junit.jupiter.api.Timeout
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -90,5 +93,50 @@ class SongPartsTest {
         val grounded = (GroundingCheck.check(reply, setOf("W1"), false) as InsightReply.Written).grounded
         assertTrue(grounded.paragraphs.flatten().none { it.heading })
         assertEquals(1, grounded.counts.uncited)
+    }
+
+    @Test
+    fun `a line is read as a heading as the pass-by-pass trim before did, over varied lines`() {
+        // The trim before #1291 took one mark off each end a pass at a time, a copy of the line for each.
+        fun before(line: String): String? {
+            var bare = line.trimJs()
+            while (true) {
+                val next = bare.trimStart('#', '*', '_').trimEnd { it in "*_:.\u2014\u2013-" }.trimJs()
+                if (next == bare) break
+                bare = next
+            }
+            return SongParts.HEADINGS.firstOrNull { it.equals(bare, ignoreCase = true) }
+        }
+
+        val random = Random(SEED)
+
+        fun marks(): String = String(CharArray(random.nextInt(MAX_MARKS + 1)) { MARKS[random.nextInt(MARKS.length)] })
+        repeat(LINES) {
+            val middle = listOf("The music", "THIS RECORDING", "music", "#", "The music: on", "").random(random)
+            val line = marks() + middle + marks()
+            assertEquals(before(line), SongParts.heading(line), line)
+        }
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun `a long line of marks is read in linear time`() {
+        // 2M characters of `# `, alone, before a heading, or of ` -` after one: the trim before took time
+        // growing with the square of the length, about a minute and a half at this one on a laptop.
+        val marks = "# ".repeat(LONG)
+        assertNull(SongParts.heading(marks))
+        assertEquals(SongParts.MUSIC, SongParts.heading(marks + SongParts.MUSIC))
+        assertEquals(SongParts.RECORDING, SongParts.heading(SongParts.RECORDING + " -".repeat(LONG)))
+    }
+
+    private companion object {
+        /** What may come around a heading, and what may not: marks, spaces, line breaks, letters. */
+        const val MARKS = "##**__::..\u2014\u2013-- \t\n\u00A0a,"
+        const val MAX_MARKS = 6
+        const val SEED = 1291
+        const val LINES = 20_000
+
+        /** A million `# ` or ` -`: 2M characters. */
+        const val LONG = 1_000_000
     }
 }

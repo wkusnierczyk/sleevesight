@@ -1,5 +1,6 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.text.isJsWhitespace
 import app.sleevesight.core.text.trimJs
 
 /**
@@ -27,12 +28,12 @@ object SongParts {
      * music —`), which the prompt asks for none of; null for any other line.
      */
     fun heading(line: String): String? {
-        var bare = line.trimJs()
-        while (true) {
-            val next = bare.trimStart('#', '*', '_').trimEnd { it in TRAILING }.trimJs()
-            if (next == bare) break
-            bare = next
-        }
+        // One scan from each end, not a pass and a copy of the line for each mark (#1291).
+        var start = 0
+        var end = line.length
+        while (start < end && (line[start] in LEADING || isJsWhitespace(line[start]))) start++
+        while (end > start && (line[end - 1] in TRAILING || isJsWhitespace(line[end - 1]))) end--
+        val bare = line.substring(start, end)
         return HEADINGS.firstOrNull { it.equals(bare, ignoreCase = true) }
     }
 
@@ -66,6 +67,9 @@ object SongParts {
         paragraphs.filterIndexed { i, paragraph ->
             !isHeading(paragraph) || paragraphs.getOrNull(i + 1)?.let(isHeading) == false
         }
+
+    // What may come before a heading the prompt does not ask for: a Markdown heading's `#`s, emphasis.
+    private const val LEADING = "#*_"
 
     // What may follow a heading the prompt does not ask for: emphasis, a colon, a stop, a dash.
     private const val TRAILING = "*_:.\u2014\u2013-"
