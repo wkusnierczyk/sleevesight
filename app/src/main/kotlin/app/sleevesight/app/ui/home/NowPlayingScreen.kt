@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.CallId
@@ -360,12 +361,17 @@ internal fun NowPlayingContent(
                     settings?.let { writingChoice(it, actions) },
                     insightReading(actions.readAloud, track),
                 )
-                HomeItems(state, shown, header, itemMemory, cite, actions) { t, w, i -> reporting = Reported(t, w, i) }
+                val rows = homeItemRows(shown, header, actions)
+                // One width for every chip under *Key insights*: the rows' and *Sources*' (#1286).
+                val column = keyInsightsWidth(rows, ai = settings?.writeInsights == true)
+                HomeItems(state, shown, rows, column, itemMemory, cite, actions) { t, w, i ->
+                    reporting = Reported(t, w, i)
+                }
                 if (settings != null) {
                     // A dim line between the song's, the artist's and the album's rows and *Sources* (#894),
                     // under either layout; nothing a screen reader stops on.
                     PanelRule(Modifier.testTag(SOURCES_LINE_TAG).clearAndSetSemantics {})
-                    SourcesItem(pages, shown.sources(lines, retries::ofAll), focus, fold, actions)
+                    SourcesItem(pages, shown.sources(lines, retries::ofAll), focus, fold, column, actions)
                 }
             }
         }
@@ -383,19 +389,22 @@ private fun insightReading(
         if (track != null && written != null) readAloud?.readInsight(track, written)
     }
 
-// *Sources* on Home: its chip, the way to its page, under *Separate pages* ([pages]), else the box (#623).
+// *Sources* on Home: its chip, the way to its page, under *Separate pages* ([pages]), else the box
+// (#623); the chip [width] wide, as the rows' above it (#1286).
+@Suppress("LongParameterList") // What *Sources* shows, how wide its chip is, and where its taps go.
 @Composable
 private fun SourcesItem(
     pages: Boolean,
     shown: SourcesShown,
     focus: LineFocus,
     fold: SourcesFold,
+    width: Dp,
     actions: NowPlayingActions,
 ) {
     if (pages) {
-        SourcesChip(opensPage = true) { actions.openPage(HomePage.Sources()) }
+        SourcesChip(opensPage = true, width = width) { actions.openPage(HomePage.Sources()) }
     } else {
-        SourcesSection(shown, focus, fold, actions.openSettings)
+        SourcesSection(shown, focus, fold, actions.openSettings, width)
     }
 }
 

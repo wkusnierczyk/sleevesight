@@ -32,7 +32,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -52,6 +51,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import kotlin.math.max
 
 // *Sources*' chip on Home (#623), its table of the sources (#662) and its note (#440).
 
@@ -60,12 +60,14 @@ import app.sleevesight.core.model.SourceId
  * *Expandable boxes* it opens the section's panel ([SourcesSection]), and a screen reader reads it
  * as the heading *Sources*, a button, collapsed; under *Separate pages* ([opensPage], #447) it opens
  * *Sources*' page, and a screen reader names its action "open page", with no state, as it does a
- * genre chip's there. [modifier] goes on the chip's outside: a focus requester.
+ * genre chip's there. [modifier] goes on the chip's outside: a focus requester. With [width], as
+ * wide as the chips of the rows above it ([keyInsightsWidth], #1286), its name centred in it.
  */
 @Composable
 internal fun SourcesChip(
     opensPage: Boolean,
     modifier: Modifier = Modifier,
+    width: Dp? = null,
     onClick: () -> Unit,
 ) {
     PanelChip(
@@ -75,6 +77,7 @@ internal fun SourcesChip(
         action = stringResource(R.string.home_page_open).takeIf { opensPage },
         collapsed = !opensPage,
         heading = true,
+        width = width,
         onClick = onClick,
     )
 }
@@ -85,9 +88,12 @@ internal fun SourcesChip(
  * screen reader reads it as a button, named [description] ([name] unless given: the song's row's
  * "Song, Paper Boats", #894), a [heading] when it is one, collapsed while [collapsed] (its panel
  * opens in its place, so it is only ever collapsed: an artist's under the artist's panel too,
- * #1288), its action named [action] when given. With [width], it is that wide, its name centred in
- * it (the rows of the song, the artist and the album, #894), with the **AI** mark after it when
- * [ai] (#948, [AiLabel]; [description] then says "uses AI").
+ * #1288), its action named [action] when given. With [width], it is that wide (the chips under
+ * *Key insights*, #894, #1286; an artist's chip, #1199), with the **AI** mark at its end when [ai]
+ * (#948, #1286), its name centred in the room left of the mark, or in the whole chip without it
+ * ([ColumnChipLabel]; [description] then says "uses AI"). Not [markAtEnd] (an artist's chip, which
+ * is no column), its name's lines from their start, wrapping inside its width, the mark right after
+ * the last ([AiLabel]).
  * [modifier] goes on the chip's outside: a focus requester.
  */
 @Suppress("LongParameterList") // What the chip says and is, each its own.
@@ -102,6 +108,7 @@ internal fun PanelChip(
     description: String = name,
     width: Dp? = null,
     ai: Boolean = false,
+    markAtEnd: Boolean = true,
     onClick: () -> Unit,
 ) {
     val folded = stringResource(R.string.home_fold_collapsed)
@@ -120,23 +127,18 @@ internal fun PanelChip(
     ) {
         if (width == null) {
             Text(name, style = MaterialTheme.typography.labelLarge, color = content)
-        } else if (ai) {
-            // The mark after the name, centred with it; read in [description], with the rest.
+        } else if (!markAtEnd) {
+            // The mark after the name's last line; read in [description], with the rest.
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 CompositionLocalProvider(LocalContentColor provides content) {
-                    ProvideTextStyle(MaterialTheme.typography.labelLarge) { AiLabel(name, described = description) }
+                    ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                        if (ai) AiLabel(name, described = description) else Text(name)
+                    }
                 }
             }
         } else {
-            Text(
-                name,
-                style = MaterialTheme.typography.labelLarge,
-                color = content,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.weight(1f),
-            )
+            // The mark, if any, read in [description] with the rest.
+            ColumnChipLabel(name, content, ai, Modifier.weight(1f))
         }
     }
 }
@@ -445,25 +447,30 @@ private fun LetterChip(
 
 /**
  * A column of chips as wide as the widest of [labels] as a chip draws them ([LetterChip], [PanelChip]):
- * its text, on one line, with the **AI** mark after it as [AiLabel] sets it when [mark] (#948), and
- * [CHIP_PADDING] at each side, each side rounded as it is laid out. The letters' column of *Sources*'
- * table (#662); the buttons of the song's, the artist's and the album's rows (#894).
+ * its text, on one line, with the **AI** mark after it, as [ColumnChipLabel] sets it, when [mark]
+ * (#948), and [CHIP_PADDING] at each side, each side rounded as it is laid out; [unmarked] are
+ * labels in the same column that never carry the mark (*Sources* under the rows, #1286). The
+ * widest chip fits its content exactly. The letters' column of *Sources*' table (#662); the chips
+ * under *Key insights* ([keyInsightsWidth], #894, #1286).
  */
 @Composable
 internal fun chipColumnWidth(
     labels: List<String>,
     mark: Boolean = false,
+    unmarked: List<String> = emptyList(),
 ): Dp {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
     val small = MaterialTheme.typography.labelSmall
     val ai = stringResource(R.string.home_ai_mark)
     val density = LocalDensity.current
-    return remember(labels, mark, style, small, ai, density) {
-        val widest = labels.maxOfOrNull { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width } ?: 0
+    return remember(labels, mark, unmarked, style, small, ai, density) {
+        fun widest(of: List<String>) =
+            of.maxOfOrNull { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width } ?: 0
         val gap = with(density) { MARK_GAP.roundToPx() }
         val marked = if (mark) measurer.markWidth(ai, small) + gap else 0
-        with(density) { (widest + marked + 2 * CHIP_PADDING.roundToPx()).toDp() }
+        val content = max(widest(labels) + marked, widest(unmarked))
+        with(density) { (content + 2 * CHIP_PADDING.roundToPx()).toDp() }
     }
 }
 

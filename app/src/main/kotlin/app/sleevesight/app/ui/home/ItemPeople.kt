@@ -190,6 +190,7 @@ private fun PeopleChips(
                         description = if (ai) stringResource(R.string.home_uses_ai, name) else name,
                         width = width,
                         ai = ai,
+                        markAtEnd = false,
                     ) { onTap(name) }
                 }
             }
