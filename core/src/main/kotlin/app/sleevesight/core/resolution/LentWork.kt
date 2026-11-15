@@ -2,7 +2,8 @@ package app.sleevesight.core.resolution
 
 import app.sleevesight.core.model.NormalizedTrack
 
-// The work a recording that links none borrows from another recording of the track's artists (#1289).
+// The work a recording that links none borrows from another recording of the track's artists (#1289), or
+// finds by a search of the composer's works (#1299).
 
 /**
  * The work a resolution reads (#1289): the recording's [own], else the one [lent] by another recording of
@@ -12,21 +13,27 @@ import app.sleevesight.core.model.NormalizedTrack
  * too), and `Schubert: Ave Maria` is not Verdi's `Otello` aria. Without one, only a work of a classical
  * form ([MbWorkLink.classical]). One that does not count is dropped with its lookup; one whose
  * lookup failed, dropped with the failure kept, so the resolution is asked again later.
+ *
+ * With that composer and no work so far, and no lookup failed, the composer's work of the title is
+ * searched for ([searchedWork], #1299), read by the composer's MusicBrainz id when the recording gives it
+ * ([composerMbid]).
  */
 internal suspend fun MusicBrainzLookup.workOf(
     names: NameMatcher,
     track: NormalizedTrack,
     own: MbWorkLink?,
     lent: Lent?,
+    composerMbid: String? = null,
 ): Pair<MbWorkLink?, Lookup<MbWork>?> {
     val link = own ?: lent?.link
     // A lent work's lookup made while it was weighed is not made again.
     val lookup = if (own == null && lent?.work != null) lent.work else link?.let { work(it.mbid) }
     val written = (lookup as? Lookup.Found)?.value?.let { names.writtenByLead(track, it) } == true
     return when {
-        own != null || lent == null || (if (track.composer == null) lent.link.classical else written) -> link to lookup
+        own != null -> link to lookup
+        lent != null && (if (track.composer == null) lent.link.classical else written) -> link to lookup
         lookup is Lookup.Failed -> null to lookup
-        else -> null to null
+        else -> searchedWork(names, track, composerMbid)
     }
 }
 

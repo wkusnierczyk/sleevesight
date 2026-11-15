@@ -1,0 +1,273 @@
+{
+ "created": "2026-11-15T20:36:35.010Z",
+ "count": 14,
+ "offset": 0,
+ "works": [
+  {
+   "id": "487527b9-a525-33f4-b948-ea41b9a2672f",
+   "score": 100,
+   "title": "Boléro",
+   "type": "Ballet",
+   "aliases": [
+    {
+     "name": "Boléro, ballet for orchestra"
+    },
+    {
+     "name": "Boléro, poème choréographique"
+    },
+    {
+     "name": "Bolero for Orchestra"
+    },
+    {
+     "name": "Bolero - Maurice Ravel"
+    },
+    {
+     "name": "Boléro, op. 81"
+    },
+    {
+     "name": "Boléro, poème choréographique"
+    },
+    {
+     "name": "Boléro, Op. 81"
+    },
+    {
+     "name": "Boléro, M.81"
+    },
+    {
+     "name": "Boléro, M. 81"
+    },
+    {
+     "name": "Boléro"
+    },
+    {
+     "name": "Boléro: Tempo di Boléro, moderato assai"
+    },
+    {
+     "name": "Boléro, Ballet for Orchestra (or Piano)"
+    },
+    {
+     "name": "Bolero"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f0e7f441-5b79-4e99-85a5-4877f7efef86",
+   "score": 95,
+   "title": "Boléro",
+   "disambiguation": "catch-all for arrangements",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "0d202827-0972-3383-bb6b-a0387b8ee93c",
+   "score": 91,
+   "title": "Boléro",
+   "type": "Ballet",
+   "disambiguation": "arr. Ravel for 2 pianos",
+   "aliases": [
+    {
+     "name": "Boléro (pianos: Jaques Fray & Mario Braggiotto)"
+    },
+    {
+     "name": "Boléro (pianos: Jacques Fray & Mario Braggiotti)"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    },
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2fe6c807-4538-4284-acc2-478e993cd1f5",
+   "score": 86,
+   "title": "Boléro",
+   "disambiguation": "arr. Ravel for piano 4-hands",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ae4bf2d9-1d78-4f95-a6c8-6be42c1a0d46",
+   "score": 85,
+   "title": "Boléro",
+   "type": "Opera",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "18518d08-6f45-4af6-a62c-2eccc9035dd4",
+   "score": 85,
+   "title": "Boléro",
+   "disambiguation": "pour orchestre, édition révisée 2018 “Ravel Edition”, vol. I",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "6773fe69-0729-4c64-b5c1-e666de89814f",
+   "score": 77,
+   "title": "Bolero",
+   "disambiguation": "Starink version",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "fc8b6db8-695c-4faf-a9f6-3d9051eab587",
+      "name": "Ed Starink"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "aa1cde00-449d-4992-b778-5052e50e4a0f",
+   "score": 77,
+   "title": "Bolero",
+   "disambiguation": "arr. James Last",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    },
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
+      "name": "James Last"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b6612b2f-c722-401f-b52b-3750c17de7d2",
+   "score": 74,
+   "title": "Bolero",
+   "disambiguation": "Pink Martini version",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "113e0972-077f-423b-9b5f-3cc8a5bafa0f",
+      "name": "Pink Martini"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5f6d5eae-d2f3-4756-aa2f-9f5a2fab058c",
+   "score": 71,
+   "title": "Bolero",
+   "disambiguation": "arr. Hans Hasso Stamer",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+      "name": "Maurice Ravel"
+     }
+    },
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "167a1e3f-765c-4105-8499-2003f4d6c94d",
+      "name": "Hans-Hasso Stamer"
+     }
+    }
+   ]
+  }
+ ]
+}

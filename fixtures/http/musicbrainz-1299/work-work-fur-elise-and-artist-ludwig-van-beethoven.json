@@ -1,0 +1,259 @@
+{
+ "created": "2026-11-15T20:36:26.792Z",
+ "count": 7,
+ "offset": 0,
+ "works": [
+  {
+   "id": "32d34921-61b1-44d1-8142-6c0ad250bb39",
+   "score": 100,
+   "title": "Für Elise",
+   "disambiguation": "production music version, Rasquin",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "a77496d9-39d4-4c68-88dd-3a6beec9e861",
+      "name": "Giscard Rasquin"
+     }
+    }
+   ]
+  },
+  {
+   "id": "3d9e2225-fe67-47ca-913a-cb4ea6de1632",
+   "score": 100,
+   "title": "Fur Elise",
+   "type": "Song",
+   "disambiguation": "Arr: Steve Gray",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "c78fcfcb-8a33-49a4-9758-47bc2b107d3b",
+      "name": "Steve Gray"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    }
+   ]
+  },
+  {
+   "id": "aced4197-c0f2-3964-b0b3-d71288bf5b20",
+   "score": 91,
+   "title": "Bagatelle for Piano in A minor, WoO 59 “Für Elise”: Poco moto",
+   "aliases": [
+    {
+     "name": "Fur Elize"
+    },
+    {
+     "name": "Para Elisa"
+    },
+    {
+     "name": "Bagatelle for Piano in A minor “Für Elise”, WoO 59"
+    },
+    {
+     "name": "Bagatelle No. 25 A minor WoO 59 Für Elise"
+    },
+    {
+     "name": "Bagatelle No. 59 en La mineur \"Pour Elise\""
+    },
+    {
+     "name": "Pour Élise"
+    },
+    {
+     "name": "Til Elise"
+    },
+    {
+     "name": "Bagatelle No. 25 in A minor, WoO 59 \"Für Elise\""
+    },
+    {
+     "name": "Klavierstück a-Moll, WoO 59 \"Für Elise\""
+    },
+    {
+     "name": "Bagatelle No. 25, \"Für Elise\""
+    },
+    {
+     "name": "Bagatelle in a-Moll \"Für Elise\", WoO 59"
+    },
+    {
+     "name": "Bagatelle in A minor, WoO 59 \"Für Elise\": Poco moto"
+    },
+    {
+     "name": "Bagatelle a-Moll, WoO 59 \"Für Elise\""
+    },
+    {
+     "name": "Bagatelle \"Fur Elise\", WoO 59"
+    },
+    {
+     "name": "Für Elise"
+    },
+    {
+     "name": "Bagatelle for Piano in A minor, WoO 59 \"Für Elise\""
+    },
+    {
+     "name": "Bagatelle für Klavier in a-moll, WoO 59 \"Für Elise\""
+    },
+    {
+     "name": "Für Elise (From The Film 'Immortal Beloved')"
+    },
+    {
+     "name": "Bagatelle in A minor, WoO 59 \"Für Elise\" (piano: Evelyne Dubourg)"
+    },
+    {
+     "name": "Für Elise, WoO 59"
+    },
+    {
+     "name": "Pour elise"
+    },
+    {
+     "name": "Bagatelle a-Moll, WoO 59 \"Für Elise\". Poco moto"
+    },
+    {
+     "name": "Für Elise in A Minor"
+    },
+    {
+     "name": "Bagatelle No. 25, G. 173 \"Fur Elise\""
+    },
+    {
+     "name": "Für Elise (EUGENE ORMANDY)"
+    },
+    {
+     "name": "Bagatelle in A minor, WoO 59 \"Für Elise\""
+    },
+    {
+     "name": "Für Elise, WoO 59: Poco moto"
+    },
+    {
+     "name": "Rosemary's Baby - Für Elise"
+    },
+    {
+     "name": "Lettre à Élise, Bagatelle en La mineur, WoO. 59"
+    },
+    {
+     "name": "Lettre à Élise"
+    },
+    {
+     "name": "Albumblatt 'Für Elise'"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a0279c7e-0cfa-4e8f-ac38-fdb4347a2136",
+   "score": 87,
+   "title": "Für Elise - Batiste",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "a2a72dba-3a08-43c4-859c-4c7f5fcc9599",
+      "name": "Jon Batiste"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b85679f3-4eb9-47df-922e-fbbfff04c265",
+   "score": 86,
+   "title": "Bagatelle for Piano in A minor, WoO 59 “Für Elise”: Poco moto",
+   "disambiguation": "catch-all for arrangements",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    }
+   ]
+  },
+  {
+   "id": "901e96c1-8154-4a01-947d-7d611ae17435",
+   "score": 79,
+   "title": "Beethoven's Für Elise (The Classics II)",
+   "type": "Song",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    },
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "c5d338df-8ee6-4fbe-a4c8-64e8372b2c5d",
+      "name": "Hennie Bekker"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b7085366-1019-4bdd-a83d-ac571d4b7241",
+   "score": 77,
+   "title": "Bagatelle for Piano in A minor, WoO 59 “Für Elise”: Poco moto",
+   "disambiguation": "less common 1822 revision",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    },
+    {
+     "type": "revised by",
+     "direction": "backward",
+     "artist": {
+      "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+      "name": "Ludwig van Beethoven"
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -153,13 +153,15 @@ credited to him alone too, whose relationships do not name Mehta or the orchestr
 Aria "Nessun dorma"*, names Puccini its composer, and the recording names Mehta (`conductor`) and the
 orchestra (`performing orchestra`): Puccini is the composer, the other three the performers.
 **When nothing fits** (#1289; `RecordingFallbacks.kt`, `fixtures/http/musicbrainz-1289/`), three
-bounded fallbacks. A track that resolved before keeps its recording, and the alias lookup and the loose
-search run only when nothing fits in any form (by name, as a band, under an honorific variant, in a
-joint credit), so it makes neither, and a part-of-work reading is then not weighed as its recording;
-what it can gain is a lent work (the third), only when its recording links no work and another
-recording of its artists of MusicBrainz's `Work: “Part”` shape fits: at most two more lookups without a
-composer lead (the other recording's detail, then its work), up to six with one (three recordings'
-details and the works they link, each work looked up once).
+bounded fallbacks, and a fourth for the work of a recording that links none (#1299). A track that
+resolved before keeps its recording, and the alias lookup and the loose search run only when nothing
+fits in any form (by name, as a band, under an honorific variant, in a joint credit), so it makes
+neither, and a part-of-work reading is then not weighed as its recording; what it can gain is a lent
+work (the third), only when its recording links no work and another recording of its artists of
+MusicBrainz's `Work: “Part”` shape fits: at most two more lookups without a composer lead (the other
+recording's detail, then its work), up to six with one (three recordings' details and the works they
+link, each work looked up once); and, with a composer lead, when its recording still has no work, a
+work found by a search (the fourth): one search more, and the lookup of the work it takes.
 - *An alias of a credited artist.* With a composer lead, a recording whose title, length and a
   performer fit, but whose credit names someone none of the track's artists is by name, has that
   artist's other names looked up (`artist/<id>?inc=aliases`, core data; at most two artists, only while
@@ -205,6 +207,57 @@ details and the works they link, each work looked up once).
   the resolution provisional. *Nessun Dorma* by Pavarotti, from an album MusicBrainz does not have: the
   earliest `Nessun Dorma` that fits (`d303669a`, 1994) links no work; his `Turandot: “Nessun dorma”` of
   1993 (`2dede7cc`) links the aria, which `d303669a` borrows. Five requests, where it made three.
+- *A work search* (#1299; `WorkSearch.kt`). With a composer the title leads with, when the chosen
+  recording links no work and none is lent it, one search of MusicBrainz's works by the title without
+  the lead and the composer's name (`MusicBrainzLookup.searchWorks`, `work:"…" AND artist:"…"`, at most
+  10 works, each with its disambiguation, aliases and artist relationships: core data; the search gives no
+  relationships between works, nor to URLs, so no Wikidata item to tell the piece by). MusicBrainz keeps
+  a work for each arrangement, version and setting of a much-played piece, most of the same title and
+  composer, and negative checks alone kept missing kinds of them (`canonicalWork`, `WorkSearch.kt`). So a
+  work is taken only with evidence that it is the piece itself, and none against it:
+  - *Known by many names*: at least three aliases (`CANONICAL_ALIASES`). The pieces looked at have many,
+    in the languages they are known in and their catalogue forms (Barber's *Adagio for Strings* 12,
+    Ravel's *Boléro* 13, *Für Elise* 31, *Eine kleine Nachtmusik* 19 to 48); their arrangements,
+    versions and catch-alls none to two. A lesser-known piece with fewer is given no work: the safe way.
+  - *Only the composer composed it*: every `composer` or `writer` relationship names the lead, and one
+    does (*Für Elise*'s production music version credits Giscard Rasquin as a composer too). A lyricist
+    alone does not count against it: an art song or an aria has one.
+  - *No arrangement*: no `arranger`, `instrument arranger`, `vocal arranger` or `orchestrator`, but the
+    composer as its orchestrator (Barber orchestrated his own Adagio); the composer's own `arranger`
+    credit is an arrangement (`arr. Ravel for 2 pianos`).
+  - *No named version*: the disambiguation names none of its related artists but the composer (the last
+    word of the name: `production music version, Rasquin`, `with lyrics by Georg Kreisler`), and does not
+    mark it a catch-all for arrangements. No other words of it count (`original orchestration` names
+    arrangements and is none).
+  - *Its title fits the track's*, either way. Segment by segment: the titles split at a part's separators
+    (a colon with whitespace after it, so not a catalogue number's `Hob. XVI:52`), as many segments, each
+    alike as a recording's title, with the same numbers (`NameMatcher.numberWords`: Barber's *Essay for
+    Orchestra No. 1* or *Third Essay* is not his *No. 2*); not the titles joined, which a whole work and
+    its unnumbered movement pass (*Variations on an Original Theme, op. 36: “Enigma”* and its *:
+    Nimrod*, as alike as titles that fit, with the same numbers). Or as the part a part of a work quotes
+    (`pieceSimilarity`: `Vanessa: Act I. “Must the winter come so soon?”` for its aria's own title), with
+    the same numbers.
+
+  Of the searches recorded (`fixtures/http/musicbrainz-1299/`): *Boléro* takes the ballet (`487527b9`),
+  not Ravel's own arrangement for two pianos; *Für Elise* and *Eine kleine Nachtmusik* take none, since
+  the piece is titled by its catalogue form (`Bagatelle for Piano in A minor, WoO 59 “Für Elise”: Poco
+  moto`, `Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“`), which the track's
+  title does not fit, and the works of the short title are versions (Rasquin's, Gray's, Kreisler's song).
+  Matching the track's title against a work's aliases would reach those pieces; it would widen what is
+  taken, and is left for later.
+  Only a single candidate is taken: with two, nothing tells which is the track's, and the recording
+  keeps no work. It is linked as the recording's own performance of it
+  (no cover, not instrumental) and looked up as any work, so the resolution keeps it as its work
+  (`Resolution.work`), and the search's answer is held in memory with MusicBrainz's others
+  (`RememberedMusicBrainz`). Without a lead, no search: a pop recording linking no work makes no request
+  more. A search that fails leaves the resolution provisional. *Barber: Adagio for Strings* by Rattle and
+  the Berlin Philharmonic: the search finds five works titled *Adagio for Strings*, all Barber's: the
+  piece (`1ebe1abf`, which he orchestrated himself; composed 1936, Wikidata `Q346715`), a catch-all for
+  its arrangements, and three arrangements (for organ, woodwind band and clarinet choir, each with its
+  arranger); the piece, the one left, is taken. Six requests, where it made four. A much-recorded
+  composer's answer is large, since each work comes with the recordings it links, which are not read
+  (Beethoven's *Symphony No. 5*, 10 works: about half a megabyte), but the search is made only for a
+  recording that links no work.
 The roles then leave out a credited artist the work names its lyricist or librettist (by name) who does
 not play on the recording, and on a classical work put the performers the recording has first, so the
 lead is one who plays (Spotify credits *Nessun dorma*'s librettists before Pavarotti; its "Carlo

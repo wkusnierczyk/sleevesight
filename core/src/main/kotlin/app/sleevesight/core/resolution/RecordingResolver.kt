@@ -328,8 +328,10 @@ class RecordingResolver(
                 )
             }
         val recordingCredits = recordingCredits(detail.artistRelations)
-        // The recording's own work, else one lent by another recording of the track's artists (#1289).
-        val (link, lookup) = musicBrainz.workOf(names, track, detail.works.firstOrNull(), lent)
+        // The recording's own work, else one lent by another recording of the track's artists (#1289), else
+        // one a search of the composer's works finds (#1299), by the composer's id when the recording gives it.
+        val composerMbid = artists.firstOrNull { it.name == track.composer?.name }?.mbid
+        val (link, lookup) = musicBrainz.workOf(names, track, detail.works.firstOrNull(), lent, composerMbid)
         val work = (lookup as? Lookup.Found)?.value
         val withRecording =
             base.copy(
