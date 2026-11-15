@@ -20,3 +20,19 @@ __pycache__/
 
 # The words `keys-qr --words-from words.txt` reads, as the README shows (#590)
 words.txt
+
+# Keys and key files, which push protection does not always recognise (a PKCS12 keystore is binary):
+# the upload keystore (design/release.md), certificates and private keys, the CLI's keys file
+# (`~/.config/sleevesight/keys.env`), environment files, and a Google service account's JSON key
+# (the release uses Workload Identity Federation and needs none; `sleevesight-release` is its account)
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+keys.env
+.env*
+*service-account*.json
+sleevesight-release*.json
+google-services.json
