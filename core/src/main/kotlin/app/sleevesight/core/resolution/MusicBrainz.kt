@@ -274,7 +274,10 @@ data class MbWorkLink(
     val languages: List<String> = emptyList(),
     val instrumental: Boolean = false,
     val type: String? = null,
-)
+) {
+    /** Whether the work is of a classical form ([RecordingResolver.COMPOSED_FORMS]) by its [type] (#1289). */
+    val classical: Boolean get() = type?.lowercase() in RecordingResolver.COMPOSED_FORMS
+}
 
 /**
  * A recording looked up by id, with its relationships.

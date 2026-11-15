@@ -69,7 +69,7 @@ internal class FakeMusicBrainz(
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> {
         recordingsAsked += mbid
-        if (mbid in failingRecordings) return Lookup.Failed("Timeout")
+        if (mbid in failingRecordings || failingOnce.remove(mbid)) return Lookup.Failed("Timeout")
         return recordingFailure?.let { Lookup.Failed(it) }
             ?: recordings[mbid]?.let { Lookup.Found(it) }
             ?: Lookup.NotFound
@@ -94,6 +94,9 @@ internal class FakeMusicBrainz(
 
     /** The recordings whose lookup fails (#1289), whatever [recordings] holds. */
     val failingRecordings = mutableSetOf<String>()
+
+    /** The recordings whose first lookup fails and later ones answer (#1289). */
+    val failingOnce = mutableSetOf<String>()
 
     override suspend fun searchRecordingsLoosely(
         words: List<String>,

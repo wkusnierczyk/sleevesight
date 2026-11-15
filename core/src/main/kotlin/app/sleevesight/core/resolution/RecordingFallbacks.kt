@@ -147,6 +147,34 @@ internal suspend fun MusicBrainzLookup.loosely(
     }
 }
 
+/**
+ * The work a resolution reads (#1289): the recording's [own], else the one [lent] by another recording of
+ * the track's artists (`RecordingResolver.Leaders.lentWork`), with its lookup. A lent work not of a
+ * classical form ([MbWorkLink.classical]) counts only when its composer relationship names the composer
+ * the title leads with ([NormalizedTrack.composer]): a lead is only a credited artist's name before a
+ * colon, and `Band: Song` has one too. One that does not count is dropped with its lookup; one whose
+ * lookup failed, dropped with the failure kept, so the resolution is asked again later.
+ */
+internal suspend fun MusicBrainzLookup.workOf(
+    names: NameMatcher,
+    track: NormalizedTrack,
+    own: MbWorkLink?,
+    lent: MbWorkLink?,
+): Pair<MbWorkLink?, Lookup<MbWork>?> {
+    val link = own ?: lent
+    val lookup = link?.let { work(it.mbid) }
+    val lead = track.composer?.name
+    val written =
+        (lookup as? Lookup.Found)?.value?.artistRelations.orEmpty().any {
+            lead != null && it.type == "composer" && names.sameName(it.artistName, lead)
+        }
+    return when {
+        own != null || lent == null || lent.classical || written -> link to lookup
+        lookup is Lookup.Failed -> null to lookup
+        else -> null to null
+    }
+}
+
 // How many of [artists] the credits of [recording] stand for ([standsFor]): a joint credit standing for one
 // artist ("Ann Lee & Bo Day") counts once, however many MusicBrainz artists it credits (#1289).
 private fun NameMatcher.represented(

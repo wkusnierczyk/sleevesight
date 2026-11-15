@@ -108,15 +108,17 @@ class MusicBrainzClassicalFoundTest {
         }
 
     @Test
-    fun `a recording that links no work gives way to the artist's own that does - Nessun Dorma by Pavarotti`() =
+    fun `a recording that links no work is lent the aria the artist's own links - Nessun Dorma by Pavarotti`() =
         runTest {
             // The album is not on MusicBrainz. Of Pavarotti's recordings titled `Nessun Dorma` that fit, the
             // earliest (`d303669a`, 1994) links no work; his `Turandot: “Nessun dorma”` of 1993, which fits
-            // too, links the aria, and is taken instead.
+            // too, links the aria, which is lent to it: the recording and its dates stay `d303669a`'s.
             val track = RecordedTracks.normalize("Nessun Dorma", "Luciano Pavarotti")
             val resolution = resolver.resolve(track, 196_360.milliseconds)
             assertEquals(Outcome.SongArticle, resolution.outcome)
-            assertEquals("2dede7cc-05a6-4ed5-9274-bc7a18c0e3ad", resolution.recordingMbid)
+            assertEquals("d303669a-786f-423e-a3ed-f638e7f58018", resolution.recordingMbid)
+            assertEquals("1994", resolution.recordingFirstReleased)
+            assertEquals(false, resolution.provisional)
             assertEquals("876aa6e9-0a0a-3408-bbfa-0565582cf8e0", resolution.work?.mbid)
             assertEquals(
                 listOf(

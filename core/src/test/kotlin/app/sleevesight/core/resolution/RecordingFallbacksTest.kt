@@ -116,10 +116,20 @@ class RecordingFallbacksTest {
         emptyList(),
     )
 
+    // A recording's work lookup naming [composer] its composer.
+    private fun work(composer: String) =
+        MbWork(
+            "w",
+            "Winter Rose",
+            listOf(MbArtistRelation("composer", "mbid-$composer", composer, emptyList())),
+            emptyList(),
+            emptyList(),
+        )
+
     @Test
-    fun `a pop recording that links no work is not replaced by the artist's live one that links a song`() =
+    fun `a pop recording that links no work is not lent the work the artist's live one links, a song`() =
         runTest {
-            // Neither a composer lead nor a classical work: a pop match stays, whatever the other links.
+            // Neither a composer lead nor a classical work: a pop match keeps no work, whatever the other links.
             val plain = recording("plain", "Winter Rose", "Ann Lee", 200, "2001")
             val piece = recording("piece", "Live: “Winter Rose”", "Ann Lee", 201, "1999")
             val musicBrainz =
@@ -127,14 +137,37 @@ class RecordingFallbacksTest {
                     search = Lookup.Found(listOf(plain, piece)),
                     recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Song")),
                 )
-            assertEquals("plain", resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200).recordingMbid)
+            val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200)
+            assertEquals("plain", resolution.recordingMbid)
+            assertNull(resolution.work)
         }
 
     @Test
-    fun `a duet is not replaced by a part of a work credited to one of its two artists`() =
+    fun `a title leading with a credited artist is no classical context - a song they did not compose is not lent`() =
         runTest {
-            // The aria is a classical work, but its recording names Ann Lee alone: Bo Day's identity would
-            // be lost.
+            // `Ann Lee: Winter Rose` names a credited artist before a colon, as `Band: Song` does; the song
+            // `Ann Lee: Live: “Winter Rose”` links is Cy Kay's, so it is not this track's composer's work.
+            val plain = duo("plain", "Ann Lee: Winter Rose", 200)
+            val piece = duo("piece", "Ann Lee: Live: “Winter Rose”", 201)
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, piece)),
+                    recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Song")),
+                    works = mapOf("w" to work("Cy Kay")),
+                )
+            val resolution = resolve(musicBrainz, track("Ann Lee: Winter Rose", "Ann Lee, Bo Day"), 200)
+            assertEquals("plain", resolution.recordingMbid)
+            assertNull(resolution.work)
+            // The same work composed by the artist the title leads with is lent.
+            val theirs = FakeMusicBrainz(musicBrainz.search, musicBrainz.recordings, mapOf("w" to work("Ann Lee")))
+            val lent = resolve(theirs, track("Ann Lee: Winter Rose", "Ann Lee, Bo Day"), 200)
+            assertEquals("plain", lent.recordingMbid)
+            assertEquals("w", lent.work?.mbid)
+        }
+
+    @Test
+    fun `a duet keeps both its artists and is lent no work by a part of a work credited to one of them`() =
+        runTest {
             val plain = duo("plain", "Winter Rose", 200)
             val piece = recording("piece", "Opera: “Winter Rose”", "Ann Lee", 201, "1999")
             val musicBrainz =
@@ -142,11 +175,14 @@ class RecordingFallbacksTest {
                     search = Lookup.Found(listOf(plain, piece)),
                     recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Aria")),
                 )
-            assertEquals("plain", resolve(musicBrainz, track("Winter Rose", "Ann Lee, Bo Day"), 200).recordingMbid)
+            val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee, Bo Day"), 200)
+            assertEquals("plain", resolution.recordingMbid)
+            assertEquals(listOf("mbid-Ann Lee", "mbid-Bo Day"), resolution.artists.map { it.mbid })
+            assertNull(resolution.work)
         }
 
     @Test
-    fun `a part of a work by the same artists, linking an aria, stands in for a recording that links none`() =
+    fun `a recording linking no work is lent the aria its artists' part of a work links, and is kept`() =
         runTest {
             val plain = recording("plain", "Winter Rose", "Ann Lee", 200, "2001")
             val piece = recording("piece", "Opera: “Winter Rose”", "Ann Lee", 201, "1999")
@@ -156,7 +192,29 @@ class RecordingFallbacksTest {
                     recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Aria")),
                 )
             val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200)
-            assertEquals("piece", resolution.recordingMbid)
+            assertEquals("plain", resolution.recordingMbid)
+            assertEquals("2001", resolution.firstReleaseDate)
+            assertEquals("w", resolution.work?.mbid)
+        }
+
+    @Test
+    fun `a conductor the chosen recording names keeps his id when the work is lent`() =
+        runTest {
+            // Both credit Ann Lee alone; the chosen recording names Bo Day its conductor, the other does not.
+            val plain = recording("plain", "Winter Rose", "Ann Lee", 200, "2001")
+            val piece = recording("piece", "Opera: “Winter Rose”", "Ann Lee", 201, "1999")
+            val conducted =
+                detail(plain, null).copy(
+                    artistRelations = listOf(MbArtistRelation("conductor", "bo-id", "Bo Day", emptyList())),
+                )
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, piece)),
+                    recordings = mapOf("plain" to conducted, "piece" to detail(piece, "w", "Aria")),
+                )
+            val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee, Bo Day"), 200)
+            assertEquals("plain", resolution.recordingMbid)
+            assertEquals(listOf("mbid-Ann Lee", "bo-id"), resolution.artists.map { it.mbid })
             assertEquals("w", resolution.work?.mbid)
         }
 
@@ -173,6 +231,41 @@ class RecordingFallbacksTest {
             musicBrainz.failingRecordings += "piece"
             val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200)
             assertEquals("plain", resolution.recordingMbid)
+            assertTrue(resolution.provisional)
+        }
+
+    @Test
+    fun `the chosen recording's lookup failing once, answered when asked again, leaves it provisional`() =
+        runTest {
+            // Whether it links a work was not known when the others were weighed.
+            val plain = recording("plain", "Winter Rose", "Ann Lee", 200, "2001")
+            val piece = recording("piece", "Opera: “Winter Rose”", "Ann Lee", 201, "1999")
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(listOf(plain, piece)),
+                    recordings = mapOf("plain" to detail(plain, null), "piece" to detail(piece, "w", "Aria")),
+                )
+            musicBrainz.failingOnce += "plain"
+            val resolution = resolve(musicBrainz, track("Winter Rose", "Ann Lee"), 200)
+            assertEquals("plain", resolution.recordingMbid)
+            assertTrue(resolution.provisional)
+        }
+
+    @Test
+    fun `the loose search's choice weighed with a lookup that failed is provisional`() =
+        runTest {
+            // Two recordings by the pair: the later one's relationships could not be weighed.
+            val early = duo("early", "Winter Rose", 200).copy(firstReleaseDate = "1999")
+            val late = duo("late", "Winter Rose", 200).copy(firstReleaseDate = "2005")
+            val musicBrainz =
+                FakeMusicBrainz(
+                    search = Lookup.Found(emptyList()),
+                    recordings = mapOf("early" to detail(early, null)),
+                )
+            musicBrainz.loose = Lookup.Found(listOf(early, late))
+            musicBrainz.failingRecordings += "late"
+            val resolution = resolve(musicBrainz, track("Winter Rse", "Ann Lee, Bo Day"), 200)
+            assertEquals("early", resolution.recordingMbid)
             assertTrue(resolution.provisional)
         }
 

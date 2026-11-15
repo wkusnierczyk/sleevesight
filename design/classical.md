@@ -174,14 +174,18 @@ bounded fallbacks, each leaving a track that resolved before as it was:
 - *A title read as a part of a work.* MusicBrainz titles a part of a classical work `Work: “Part”`,
   often after an act (`Turandot: Atto III. “Nessun dorma”`); the player's title is weighed against the
   quoted part, as written or without the work before a colon or after a dash (`pieceSimilarity`). Such
-  a reading counts only when no recording read as written fits; when one does but links no work, up to
-  three of the artist's recordings read so, of a known length that fits and naming the track's artists
-  exactly as the chosen one does, are looked up for one that does (`Leaders.withWork`), and taken only
-  in a classical context: the title leads with a credited composer, or the work is of a classical form
-  (its type as the recording's relationship gives it, an `Aria`, not a `Song`), so a pop match is never
-  replaced. A lookup that fails keeps the chosen recording, the resolution provisional. *Nessun Dorma* by Pavarotti, from an album MusicBrainz does not have: the
-  earliest `Nessun Dorma` that fits (`d303669a`, 1994) links no work; his `Turandot: “Nessun dorma”` of
-  1993 (`2dede7cc`) links the aria, and is taken. Five requests, where it made three.
+  a reading counts only when no recording read as written fits. When one does but links no work, up to
+  three of the artist's recordings read so, of a known length that fits and standing for the same of
+  the track's artists as the chosen one, are looked up for one that does (`Leaders.lentWork`), and that
+  work is lent to the chosen recording, which is kept with its credits, relationships, resolved ids and
+  dates: only the work is borrowed, never the recording swapped. Only a work of a classical form (its
+  type as the recording's relationship gives it, an `Aria`, not a `Song`), or one whose composer
+  relationship names the composer the title leads with (`workOf`; a lead alone is only a credited
+  name before a colon, as in `Band: Song`), so a pop match is never lent a song. A lookup that fails on
+  the way (the chosen recording's, another's, or one weighed for the choice) leaves the resolution
+  provisional. *Nessun Dorma* by Pavarotti, from an album MusicBrainz does not have: the earliest
+  `Nessun Dorma` that fits (`d303669a`, 1994) links no work; his `Turandot: “Nessun dorma”` of 1993
+  (`2dede7cc`) links the aria, which `d303669a` borrows. Five requests, where it made three.
 The roles then leave out a credited artist the work names its lyricist or librettist (by name) who does
 not play on the recording, and on a classical work put the performers the recording has first, so the
 lead is one who plays (Spotify credits *Nessun dorma*'s librettists before Pavarotti; its "Carlo
