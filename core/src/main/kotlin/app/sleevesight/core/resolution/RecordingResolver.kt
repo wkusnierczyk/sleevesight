@@ -67,6 +67,16 @@ class RecordingResolver(
      * MusicBrainz credits the performers. A recording only those searches found counts only when every
      * name its credit gives is one of the track's (`performedBy`): a soloist's search finds their
      * recordings with other orchestras and conductors.
+     *
+     * Two bounded fallbacks when nothing found fits (#1289):
+     * - With a composer the title names, a recording whose title, length and a performer fit but whose
+     *   credit names someone none of the track's artists is by name (the Berliner Philharmoniker for the
+     *   player's Berlin Philharmonic) has that artist's other names looked up (`withAliases`, at most two
+     *   artists): an alias that is a track artist's name counts as theirs.
+     * - With the player's length and two or more credited artists, one search by the title's words,
+     *   loosely, and every credited artist at once (`loosely`): a title misspelled by a letter, or a
+     *   performer credited after the composer and librettists, beyond the searches above. Of what it
+     *   finds, only a recording credited to two or more of the track's artists and to no one else counts.
      */
     suspend fun resolve(
         track: NormalizedTrack,
@@ -77,8 +87,18 @@ class RecordingResolver(
         val measured = duration != null
         val ours: (MbRecording) -> Boolean = { track.composer == null || names.performedBy(it, track) }
         val fits: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fits }
+        // The fallbacks (#1289) only when nothing fits in any form, a weaker one included, so a track that
+        // resolved before makes none of their requests and keeps its choice.
+        val fitsAtAll: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fitsAtAll }
         val first = musicBrainz.searched(title, searchArtist(track), measured, fits)
-        val searched = musicBrainz.further(track, first, measured, fits) { names.performedBy(it, track) }
+        val further = musicBrainz.further(track, first, measured, fits) { names.performedBy(it, track) }
+        val aliased =
+            if (further.found.any(fitsAtAll)) {
+                further
+            } else {
+                musicBrainz.withAliases(names, track, duration, further) { candidate(track, duration, it).matches }
+            }
+        val searched = musicBrainz.loosely(names, track, duration, aliased, fitsAtAll)
         return when (val answer = searched.answer) {
             is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(answer.reason)
@@ -97,9 +117,17 @@ class RecordingResolver(
         later: Boolean,
     ): Resolution {
         val all = found.map { candidate(track, duration, it) }
+        // A recording read as a part of a work (`Turandot: “Nessun dorma”` for `Nessun Dorma`, #1289)
+        // counts only when none read otherwise fits in any form (a weaker one included, so a track that
+        // resolved before keeps its recording); then those that fit are kept aside, for the work the chosen
+        // recording may not link (`Leaders.lentWork`), with the player's length only those whose own length
+        // is known.
+        val plainFits = all.any { it.fitsAtAll }
+        val read = if (plainFits) all.filterNot { it.workLed } else all
+        val pieces = all.filter { plainFits && it.isPiece(measured = duration != null) }
         // A recording read without the composer's lead counts only when none read as the player writes
         // the title fits (#1129): for `Band: Song` by Band, Band's older `Song` is not their `Band: Song`.
-        val searched = if (all.any { it.asWritten && it.fits }) all.filter { it.asWritten } else all
+        val searched = if (read.any { it.asWritten && it.matches }) read.filter { it.asWritten } else read
         val leaders = Leaders(musicBrainz, names)
         val confirmed =
             leaders.confirm(searched.filter { it.titleMatches && it.durationMatches && it.led.isNotEmpty() })
@@ -112,11 +140,18 @@ class RecordingResolver(
         val accepted = narrowed(credited, duration)
         val collision = collision(track, (narrowed(fitting, duration) + accepted).distinct())
         val chosen = leaders.choice(accepted, track, later)
-        return when {
-            collision != null -> collision
-            chosen == null -> weaker(track, duration, candidates, leaders, fitting) ?: unmatched(track, candidates)
-            else -> accept(track, chosen, leaders.details[chosen.recording.mbid], accepted)
-        }
+        // A lookup that failed on the way (#1289: a detail weighed for the choice or for the work) leaves
+        // what was chosen provisional, so a later run asks again.
+        return leaders.applied(
+            when {
+                collision != null -> collision
+                chosen == null -> weaker(track, duration, candidates, leaders, fitting) ?: unmatched(track, candidates)
+                else -> {
+                    val lent = leaders.lentWork(track, chosen, pieces)
+                    accept(track, chosen, leaders.details[chosen.recording.mbid], accepted, lent)
+                }
+            },
+        )
     }
 
     // The weaker forms of a credit, each weighed only when no candidate whose title and length fit
@@ -177,6 +212,15 @@ class RecordingResolver(
             if (track.searchTitle == track.title) written else names.titleSimilarity(track.searchTitle, recording.title)
         val asWritten = written >= stripped
         val artists = if (asWritten) track.artists else track.performers
+        // Read as a part of a work (#1289) only when it does not fit as the title is written.
+        val plain = if (asWritten) written else stripped
+        // Read as a part of a work only with its own length known when the player's is (#1289).
+        val piece =
+            names.pieceSimilarity(track.searchTitle, recording.title)?.takeIf {
+                plain < ResolutionThresholds.TITLE_SIMILARITY &&
+                    it >= ResolutionThresholds.TITLE_SIMILARITY &&
+                    (duration == null || recording.lengthMs != null)
+            }
 
         // Every matching credit's id, so two same-name artists on one recording are both seen.
         fun matching(matches: (MbCredit, String) -> Boolean): Map<String, Set<String>> =
@@ -191,12 +235,14 @@ class RecordingResolver(
         val any = matching { credit, artist -> credits(credit, artist) }
         val variants =
             matching { credit, artist ->
-                listOf(credit.name, credit.artistName).any { names.honorificVariant(it, artist) }
+                credit.names.any { names.honorificVariant(it, artist) }
             }
         return Candidate(
             recording = recording,
-            titleSimilarity = if (asWritten) written else stripped,
+            titleSimilarity = piece ?: plain,
             asWritten = asWritten,
+            workLed = piece != null,
+            jointly = artists.any { names.jointCredits(recording.credits, it).isNotEmpty() },
             artists = artists,
             named = named,
             // A band credit counts beside a credit by name: "Alex Smith" and "Alex Smith and His
@@ -229,12 +275,14 @@ class RecordingResolver(
     // [pool]: the candidates the choice was made from (title and length fit, the track's artists
     // credited, narrowed by length as the choice is), whose releases give the album's year (#556). The
     // same-name check passed over them, so each artist they credit has one identity among them, the
-    // accepted one: never a namesake's recording.
+    // accepted one: never a namesake's recording. [lent]: the work another recording of the track's artists
+    // links, for a chosen one that links none (#1289, [Leaders.lentWork]).
     private suspend fun accept(
         track: NormalizedTrack,
         chosen: Candidate,
         fetched: MbRecordingDetail?,
         pool: List<Candidate>,
+        lent: Lent? = null,
     ): Resolution {
         val recording = chosen.recording
         // The pool's releases: the album's sentences and the first release's date weigh the same ones.
@@ -258,7 +306,7 @@ class RecordingResolver(
         // MusicBrainz has no such recording; when the lookup failed, not known, and the resolution
         // provisional (#728), so a later run asks again.
         return when (val lookup = fetched?.let { Lookup.Found(it) } ?: musicBrainz.recording(recording.mbid)) {
-            is Lookup.Found -> withDetail(track, chosen, base, lookup.value)
+            is Lookup.Found -> withDetail(track, chosen, base, lookup.value, lent)
             Lookup.NotFound -> base.copy(lyrics = WorkLyrics())
             is Lookup.Failed -> base.copy(provisional = true)
         }
@@ -269,6 +317,7 @@ class RecordingResolver(
         chosen: Candidate,
         base: Resolution,
         detail: MbRecordingDetail,
+        lent: Lent?,
     ): Resolution {
         val recording = chosen.recording
         val artists =
@@ -279,8 +328,8 @@ class RecordingResolver(
                 )
             }
         val recordingCredits = recordingCredits(detail.artistRelations)
-        val link = detail.works.firstOrNull()
-        val lookup = link?.let { musicBrainz.work(it.mbid) }
+        // The recording's own work, else one lent by another recording of the track's artists (#1289).
+        val (link, lookup) = musicBrainz.workOf(names, track, detail.works.firstOrNull(), lent)
         val work = (lookup as? Lookup.Found)?.value
         val withRecording =
             base.copy(
@@ -401,7 +450,7 @@ class RecordingResolver(
         artist: String,
         byName: Boolean = false,
     ): Boolean =
-        listOf(credit.name, credit.artistName).any {
+        credit.names.any {
             names.sameName(it, artist) || (!byName && names.leads(it, artist))
         }
 
@@ -432,12 +481,16 @@ class RecordingResolver(
      * [bands] holds the ids of the bands whose leader is confirmed. [asWritten]: whether it is read by
      * the title as the player writes it, against every credited artist, or, being closer to the
      * title without a composer's lead, by that title, against the performers (#1129); [artists] the
-     * track's artists it is weighed against, so read.
+     * track's artists it is weighed against, so read. [workLed]: its title, fitting neither way, fits
+     * read as a part of a work (`Turandot: “Nessun dorma”` for `Nessun Dorma`, #1289, `pieceSimilarity`),
+     * [titleSimilarity] then that reading's.
      */
     private data class Candidate(
         val recording: MbRecording,
         val titleSimilarity: Double,
         val asWritten: Boolean,
+        val workLed: Boolean = false,
+        val jointly: Boolean = false,
         val artists: List<String>,
         val named: Map<String, Set<String>>,
         val led: Map<String, Set<String>>,
@@ -519,7 +572,24 @@ class RecordingResolver(
         val titleMatches: Boolean get() = titleSimilarity >= ResolutionThresholds.TITLE_SIMILARITY
 
         /** Whether its title and length fit and it credits one of its [artists], by name or as a band. */
-        val fits: Boolean get() = titleMatches && durationMatches && (named.isNotEmpty() || led.isNotEmpty())
+        val matches: Boolean get() = titleMatches && durationMatches && (named.isNotEmpty() || led.isNotEmpty())
+
+        /** Whether it [matches], its title read as written or without the composer's lead, not as a part of a work. */
+        val fits: Boolean get() = matches && !workLed
+
+        /**
+         * Whether it fits as a recording read so in any form, a weaker one ([variants], a joint credit,
+         * [jointly]) included (#1289): whether it could have been chosen before the fallbacks.
+         */
+        val fitsAtAll: Boolean get() =
+            fits || (!workLed && titleMatches && durationMatches && (variants.isNotEmpty() || jointly))
+
+        /**
+         * Whether it [matches] read as a part of a work (#1289), its length known when the player's is
+         * ([measured]): one that may give the work a recording read otherwise does not link.
+         */
+        fun isPiece(measured: Boolean): Boolean = workLed && matches && (!measured || durationGap != null)
+
         val durationMatches: Boolean get() =
             durationGap == null ||
                 durationGap <= ResolutionThresholds.DURATION_TOLERANCE
@@ -550,6 +620,13 @@ class RecordingResolver(
     ) {
         /** The recordings fetched, so the chosen one is not fetched twice. */
         val details: MutableMap<String, MbRecordingDetail> = mutableMapOf()
+
+        /** Whether a lookup of a recording's detail failed (#1289): what is chosen is then provisional. */
+        var incomplete: Boolean = false
+            private set
+
+        // Whether a work's lookup [lendable] made failed, which ends [firstLinked]'s search.
+        private var workFailed: Boolean = false
 
         /** The reason of the lookup that made [confirm] return null. */
         var failure: String? = null
@@ -649,9 +726,105 @@ class RecordingResolver(
             return best
         }
 
+        /**
+         * When the [chosen] recording links no work, the work the first of up to [TRIES] of [pieces] links
+         * (read as a part of a work, their title and length fitting, #1289), of those performed by the
+         * track's own artists that stand for the same of them as [chosen] does: MusicBrainz links the work
+         * to some of an artist's recordings of it and not to others (Pavarotti's `Nessun Dorma` on *The
+         * Great Tenors* links none; his `Turandot: “Nessun dorma”` of 1993 links the aria). The chosen
+         * recording is kept, with its credits, relationships and dates: only the work is lent to it.
+         *
+         * Only a work of a classical form ([COMPOSED_FORMS], as the relationship gives its type: an `Aria`,
+         * not a `Song`), or, with a composer the title leads with, one [workOf] then finds that composer
+         * wrote. Null for none, no lookup made without such a piece; a lookup failing, null and [applied]
+         * provisional.
+         */
+        suspend fun lentWork(
+            track: NormalizedTrack,
+            chosen: Candidate,
+            pieces: List<Candidate>,
+        ): Lent? {
+            val others =
+                pieces
+                    .filter { names.performedBy(it.recording, track) }
+                    .map { it.identified(emptyMap()) }
+                    .filter { it.ids.isNotEmpty() && sameArtists(it, chosen) }
+                    .sortedWith(PREFERENCE)
+                    .take(TRIES)
+            val own = if (others.isEmpty()) null else detail(chosen.recording.mbid)
+            val workless = (own as? Lookup.Found)?.value?.works?.isEmpty() == true
+            return if (workless) firstLinked(track, others) else null
+        }
+
+        // Whether [piece] stands for the same of the track's artists as [chosen], and for the same people:
+        // for each, one of the ids it gives them is one [chosen] gives, so a namesake's lends nothing.
+        private fun sameArtists(
+            piece: Candidate,
+            chosen: Candidate,
+        ): Boolean =
+            piece.ids.keys == chosen.ids.keys &&
+                piece.ids.all { (artist, ids) -> ids.any { it in chosen.ids[artist].orEmpty() } }
+
+        // The work the first of [pieces] links that may be lent ([lentWork], [lendable]). Without a composer
+        // lead, only the first piece found is weighed, so a pop match costs two lookups at most (its detail,
+        // then, lent, the work); with one, each in turn, its work looked up to check the composer, until one
+        // is that composer's. Null for none, or once a lookup fails.
+        private suspend fun firstLinked(
+            track: NormalizedTrack,
+            pieces: List<Candidate>,
+        ): Lent? {
+            var lent: Lent? = null
+            var i = 0
+            workFailed = false
+            while (lent == null && i < pieces.size) {
+                val detail = detail(pieces[i].recording.mbid)
+                lent =
+                    (detail as? Lookup.Found)
+                        ?.value
+                        ?.works
+                        ?.firstOrNull()
+                        ?.let { lendable(track, it) }
+                val last = detail is Lookup.Failed || workFailed || (detail is Lookup.Found && track.composer == null)
+                i = if (last) pieces.size else i + 1
+            }
+            return lent
+        }
+
+        // [link] as lent, this recording's performance of it (no cover, not instrumental, no languages of the
+        // other's): without a composer lead, a work of a classical form; with one, a work whose lookup names
+        // that composer (`writtenByLead`), its lookup kept for [workOf]. Null otherwise; a lookup that fails
+        // marks the choice [incomplete] and stops the search ([workFailed]).
+        private suspend fun lendable(
+            track: NormalizedTrack,
+            link: MbWorkLink,
+        ): Lent? {
+            val own = link.copy(cover = false, instrumental = false, languages = emptyList())
+            val work = if (track.composer == null) null else musicBrainz.work(link.mbid)
+            if (work is Lookup.Failed) {
+                incomplete = true
+                workFailed = true
+            }
+            return when {
+                work == null -> Lent(own).takeIf { link.classical }
+                work is Lookup.Found && names.writtenByLead(track, work.value) -> Lent(own, work)
+                else -> null
+            }
+        }
+
+        /** [resolution], provisional when a lookup of [detail] failed ([incomplete]). */
+        fun applied(resolution: Resolution): Resolution =
+            resolution.copy(provisional = resolution.provisional || incomplete)
+
+        // A recording's detail, kept once found; a lookup that fails marks the choice [incomplete].
         private suspend fun detail(mbid: String): Lookup<MbRecordingDetail> =
             details[mbid]?.let { Lookup.Found(it) }
-                ?: musicBrainz.recording(mbid).also { if (it is Lookup.Found) details[mbid] = it.value }
+                ?: musicBrainz.recording(mbid).also {
+                    when (it) {
+                        is Lookup.Found -> details[mbid] = it.value
+                        is Lookup.Failed -> incomplete = true
+                        Lookup.NotFound -> Unit
+                    }
+                }
 
         private companion object {
             const val TRIES = 3
@@ -947,29 +1120,6 @@ private fun lyricsOf(
 // The work's relationships that credit its words (#998): a `writer` covers both words and music.
 private val WORDS_TYPES = setOf("lyricist", "librettist", "writer")
 
-// Whether [recording] is a performance by [track]'s own artists (#1129): every credit stands for one
-// of them, by name, as a band one of them leads, under an honorific variant or in a joint credit, and
-// one for a performer ([NormalizedTrack.performers]).
-private fun NameMatcher.performedBy(
-    recording: MbRecording,
-    track: NormalizedTrack,
-): Boolean {
-    val credits = recording.credits
-
-    fun standsFor(artists: List<String>): (MbCredit) -> Boolean {
-        val joint = artists.flatMap { jointCredits(credits, it) }.flatten().toSet()
-        return { credit ->
-            credit in joint ||
-                artists.any { artist ->
-                    listOf(credit.name, credit.artistName).any {
-                        sameName(it, artist) || leads(it, artist) || honorificVariant(it, artist)
-                    }
-                }
-        }
-    }
-    return credits.isNotEmpty() && credits.all(standsFor(track.artists)) && credits.any(standsFor(track.performers))
-}
-
 // The credited artist [RecordingResolver.resolve] searches by (#1129): the first credited, but the
 // artists a title with a composer names (the composer, an arranger) moved last, since MusicBrainz
 // credits a classical recording to its performers and their search would rarely find it.
@@ -984,7 +1134,7 @@ private fun searchArtist(track: NormalizedTrack): String {
 // One search's recordings: its first page and, when that is full, those [earlierThan] found;
 // [incomplete] when those may not be all; [later] when a credited artist after the first was searched
 // by (`further`, #1180).
-private class Searched(
+internal class Searched(
     val answer: Lookup<List<MbRecording>>,
     val found: List<MbRecording>,
     val incomplete: Boolean,

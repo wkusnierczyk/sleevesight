@@ -73,6 +73,27 @@ class MusicBrainzClient(
             Lookup.Failed("InvalidDate")
         }
 
+    override suspend fun searchRecordingsLoosely(
+        words: List<String>,
+        artists: List<String>,
+    ): Lookup<List<MbRecording>> {
+        val terms = words.map { it.lowercase().filter(Char::isLetterOrDigit) }.filter { it.isNotEmpty() }.distinct()
+        val names = artists.filter { it.isNotBlank() }.distinct()
+        // Nothing to search by is nothing found: no request.
+        if (terms.isEmpty() || names.isEmpty()) return Lookup.NotFound
+        val title = terms.joinToString(" ") { if (it.length >= MusicBrainzLookup.FUZZY_LENGTH) "$it~" else it }
+        return search("recording:($title) AND artist:(${names.joinToString(" OR ") { phrase(it) }})")
+    }
+
+    override suspend fun artistNames(mbid: String): Lookup<List<String>> {
+        val request = NetRequest("$BASE/artist/$mbid", query = mapOf("inc" to "aliases", "fmt" to "json"))
+        return net.lookup(request) { response ->
+            val json = parseObject(response.body)
+            (listOf(json.required("name")) + json.array("aliases").mapNotNull { it.string("name")?.ifEmpty { null } })
+                .distinct()
+        }
+    }
+
     private suspend fun search(query: String): Lookup<List<MbRecording>> {
         val request =
             NetRequest(
@@ -113,6 +134,7 @@ class MusicBrainzClient(
                                     cover = "cover" in attributes,
                                     languages = languages(work),
                                     instrumental = "instrumental" in attributes,
+                                    type = work.string("type")?.ifEmpty { null },
                                 )
                             }
                         },

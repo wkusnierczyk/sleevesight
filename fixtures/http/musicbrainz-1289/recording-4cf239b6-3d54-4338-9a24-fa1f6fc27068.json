@@ -1,0 +1,147 @@
+{
+ "title": "Turandot: “Nessun dorma” (Vincerò)",
+ "id": "4cf239b6-3d54-4338-9a24-fa1f6fc27068",
+ "video": false,
+ "length": 171666,
+ "relations": [
+  {
+   "attributes": [],
+   "begin": "1990-05-27",
+   "attribute-ids": {},
+   "artist": {
+    "type": "Person",
+    "id": "0a470c25-de1c-4042-b7cb-828b13b68c43",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Magiera, Leone",
+    "name": "Leone Magiera",
+    "country": "IT",
+    "disambiguation": "conductor, pianist"
+   },
+   "target-type": "artist",
+   "ended": true,
+   "end": "1990-05-27",
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "234670ce-5f22-4fd0-921b-ef1662695c5d",
+   "attribute-values": {},
+   "type": "conductor"
+  },
+  {
+   "type-id": "3b6616c5-88ba-4341-b4ee-81ce1e6d7ebb",
+   "attribute-values": {},
+   "type": "performing orchestra",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "end": "1990-05-27",
+   "attribute-ids": {},
+   "artist": {
+    "country": "IT",
+    "disambiguation": "",
+    "name": "Orchestra da camera di Bologna",
+    "sort-name": "Orchestra da camera di Bologna",
+    "id": "452c4f17-7428-4aed-a213-7b58650eedd2",
+    "type-id": "a0b36c92-3eb1-3839-a4f9-4799823f54a5",
+    "type": "Orchestra"
+   },
+   "target-type": "artist",
+   "ended": true,
+   "attributes": [],
+   "begin": "1990-05-27"
+  },
+  {
+   "type": "vocal",
+   "attribute-values": {},
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "end": "1990-05-27",
+   "ended": true,
+   "target-type": "artist",
+   "attribute-ids": {},
+   "artist": {
+    "type": "Person",
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Pavarotti, Luciano",
+    "name": "Luciano Pavarotti",
+    "disambiguation": "tenor",
+    "country": "IT"
+   },
+   "begin": "1990-05-27",
+   "attributes": []
+  },
+  {
+   "direction": "forward",
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "end": "1990-05-27",
+   "source-credit": "",
+   "begin": "1990-05-27",
+   "attributes": [],
+   "work": {
+    "attributes": [],
+    "disambiguation": "",
+    "languages": [
+     "ita"
+    ],
+    "title": "Turandot: Atto III, scena 1. Aria “Nessun dorma” (Calaf)",
+    "type": "Aria",
+    "iswcs": [],
+    "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9",
+    "id": "876aa6e9-0a0a-3408-bbfa-0565582cf8e0",
+    "language": "ita"
+   },
+   "ended": true,
+   "target-type": "work",
+   "attribute-ids": {}
+  }
+ ],
+ "first-release-date": "1995",
+ "disambiguation": "",
+ "artist-credit": [
+  {
+   "joinphrase": ", ",
+   "artist": {
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Pavarotti, Luciano",
+    "country": "IT",
+    "disambiguation": "tenor",
+    "name": "Luciano Pavarotti"
+   },
+   "name": "Luciano Pavarotti"
+  },
+  {
+   "joinphrase": ", ",
+   "artist": {
+    "sort-name": "Orchestra da camera di Bologna",
+    "name": "Orchestra da camera di Bologna",
+    "disambiguation": "",
+    "country": "IT",
+    "type": "Orchestra",
+    "id": "452c4f17-7428-4aed-a213-7b58650eedd2",
+    "type-id": "a0b36c92-3eb1-3839-a4f9-4799823f54a5"
+   },
+   "name": "Orchestra da camera di Bologna"
+  },
+  {
+   "joinphrase": "",
+   "name": "Leone Magiera",
+   "artist": {
+    "id": "0a470c25-de1c-4042-b7cb-828b13b68c43",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Magiera, Leone",
+    "country": "IT",
+    "disambiguation": "conductor, pianist",
+    "name": "Leone Magiera"
+   }
+  }
+ ]
+}

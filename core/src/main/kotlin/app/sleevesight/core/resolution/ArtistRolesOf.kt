@@ -22,7 +22,11 @@ import app.sleevesight.core.sources.ResolvedArtist
  * imported from a streaming service's artists, composer first. For any other work (a `Song`, …) the
  * recording's credit shows it too, so a songwriter who sings their own song is a performer, and so is
  * the band of `Band: Song`. The others are performers, but an artist the
- * title names beside its composer (an arranger in `(Arr. Busoni)`) whom the recording does not have.
+ * title names beside its composer (an arranger in `(Arr. Busoni)`) whom the recording does not have, and
+ * a credited artist the work names its lyricist or librettist (by name) who does not play on it, shown
+ * as for a composer (#1289: Spotify credits *Nessun dorma*'s librettists before Pavarotti). On a
+ * classical work the performers the recording has come first, in the track's order, so the lead
+ * ([ArtistRoles.lead]) is one who plays on it, not a name the player lists before them.
  * Whether the work is of a classical form is kept with them ([ArtistRoles.classical], #1199).
  * Null when the work names no composer: the title's lead then decides ([ArtistRoles.of]).
  */
@@ -61,13 +65,42 @@ internal fun NameMatcher.rolesOf(
             .filter { it in byWork || it == lead }
             .filterNot { if (strict(it)) it in performing else it in onRecording }
             .distinct()
+    val wrote = wordsOnly(track, work, if (classical) performing else onRecording)
+    return ArtistRoles(composed, performersOf(track, composed.toSet() + wrote, onRecording, classical), classical)
+}
+
+// [track]'s performers: its credited artists but those who [wrote] the work and an artist the title names
+// whom the recording does not have ([onRecording]); on a [classical] work, those it has first (#1289).
+private fun performersOf(
+    track: NormalizedTrack,
+    wrote: Set<String>,
+    onRecording: Set<String>,
+    classical: Boolean,
+): List<String> {
     val titled = track.titleArtists.toSet()
-    val performers = track.artists.filter { it !in composed && (it !in titled || it in onRecording) }
-    return ArtistRoles(composed, performers, classical)
+    return track.artists
+        .filter { it !in wrote && (it !in titled || it in onRecording) }
+        .sortedBy { classical && it !in onRecording }
+}
+
+// The credited artists of [track] whom [work] names its lyricist or librettist (#1289), but those of [playing].
+private fun NameMatcher.wordsOnly(
+    track: NormalizedTrack,
+    work: MbWork,
+    playing: Set<String>,
+): Set<String> {
+    val writers = work.artistRelations.filter { it.type in WORDS }
+    return track.artists
+        .filter { artist ->
+            artist !in playing && writers.any { sameName(it.artistName, artist) }
+        }.toSet()
 }
 
 // A work's relationship naming who composed it.
 private const val COMPOSER = "composer"
+
+// A work's relationships naming who wrote its words alone (#1289): a `writer` wrote the music too.
+private val WORDS = setOf("lyricist", "librettist")
 
 // MusicBrainz's work types, lower case, of a song and of a song cycle (a Lied of *Winterreise*).
 private const val SONG = "song"

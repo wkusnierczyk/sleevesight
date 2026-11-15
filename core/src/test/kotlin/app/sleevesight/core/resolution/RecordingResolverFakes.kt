@@ -67,16 +67,57 @@ internal class FakeMusicBrainz(
         return beforeAnswers.removeFirstOrNull() ?: before
     }
 
-    override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
-        recordingFailure?.let { Lookup.Failed(it) } ?: recordings[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+    override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> {
+        recordingsAsked += mbid
+        if (mbid in failingRecordings || failingOnce.remove(mbid)) return Lookup.Failed("Timeout")
+        return recordingFailure?.let { Lookup.Failed(it) }
+            ?: recordings[mbid]?.let { Lookup.Found(it) }
+            ?: Lookup.NotFound
+    }
 
     override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> {
         releasesAsked += mbid
         return releases[mbid] ?: Lookup.NotFound
     }
 
-    override suspend fun work(mbid: String): Lookup<MbWork> =
-        workFailure?.let { Lookup.Failed(it) } ?: works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+    /** The works looked up, in order. */
+    val worksAsked = mutableListOf<String>()
+
+    /** The artists whose names were looked up (#1289), in order. */
+    val artistNamesAsked = mutableListOf<String>()
+
+    override suspend fun work(mbid: String): Lookup<MbWork> {
+        worksAsked += mbid
+        return workFailure?.let { Lookup.Failed(it) } ?: works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+    }
+
+    override suspend fun artistNames(mbid: String): Lookup<List<String>> {
+        artistNamesAsked += mbid
+        return Lookup.NotFound
+    }
+
+    /** The loose search's answer (#1289), whatever is asked. */
+    var loose: Lookup<List<MbRecording>> = Lookup.NotFound
+
+    /** The loose searches made, as (words, artists), in order. */
+    val looseSearched = mutableListOf<Pair<List<String>, List<String>>>()
+
+    /** The recordings looked up, in order. */
+    val recordingsAsked = mutableListOf<String>()
+
+    /** The recordings whose lookup fails (#1289), whatever [recordings] holds. */
+    val failingRecordings = mutableSetOf<String>()
+
+    /** The recordings whose first lookup fails and later ones answer (#1289). */
+    val failingOnce = mutableSetOf<String>()
+
+    override suspend fun searchRecordingsLoosely(
+        words: List<String>,
+        artists: List<String>,
+    ): Lookup<List<MbRecording>> {
+        looseSearched += words to artists
+        return loose
+    }
 
     // Resolution never searches for artists.
     override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> = error("unexpected artist search")

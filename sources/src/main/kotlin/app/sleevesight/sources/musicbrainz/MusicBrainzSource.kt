@@ -79,7 +79,8 @@ class MusicBrainzSource(
      * composed is kept (`SourceResult.composed`, #1132), released in the same version as 17, whose
      * upgrade asks every kept result again, so it costs no further request. 19: the work's
      * librettists are kept (`WorkLyrics.librettists`, #1274), and its lines name them, released in
-     * the same version as 17 too.
+     * the same version as 17 too. 20: classical recordings found by the fallbacks, a lent work,
+     * librettists out of the performers (#1289), released in the same version as 17.
      * Without [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart
      * ([WITHOUT_GENRES_VERSION]).
      */
@@ -120,4 +121,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 19
+private const val EXTRACTION_VERSION = 20

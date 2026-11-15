@@ -15,8 +15,8 @@ import kotlin.time.TimeSource
  * after sends no request (`design/architecture.md`, *Preparing the next track*, D13). Each question
  * is answered by [musicBrainz] once; a search by name, one for the recordings released by a date
  * (#906), a recording, a recording's releases (#724), a work, an artist search, and a release group's
- * releases, its official ones and a release's tracklist (#984), and a release group's first release
- * (#1099) are each kept by
+ * releases, its official ones and a release's tracklist (#984), a release group's first release
+ * (#1099), and a loose search and an artist's names (#1289) are each kept by
  * what was asked, at most [capacity] of each kind, the least recently used dropped first. An answer
  * that could not be obtained ([Lookup.Failed]) is not kept, so the next question asks again; one that
  * MusicBrainz gave, found or not, is.
@@ -62,6 +62,8 @@ class RememberedMusicBrainz(
     private val official = Memory<String, List<MbRelease>>()
     private val tracklists = Memory<String, MbTracklist>()
     private val firsts = Memory<String, MbGroupFirst>()
+    private val loose = Memory<Pair<List<String>, List<String>>, List<MbRecording>>()
+    private val names = Memory<String, List<String>>()
 
     override suspend fun searchRecordings(
         title: String,
@@ -101,6 +103,15 @@ class RememberedMusicBrainz(
     override suspend fun groupFirst(mbid: String): Lookup<MbGroupFirst> =
         firsts.answer(mbid) { musicBrainz.groupFirst(mbid) }
 
+    override suspend fun searchRecordingsLoosely(
+        words: List<String>,
+        artists: List<String>,
+    ): Lookup<List<MbRecording>> =
+        loose.answer(words to artists) { musicBrainz.searchRecordingsLoosely(words, artists) }
+
+    override suspend fun artistNames(mbid: String): Lookup<List<String>> =
+        names.answer(mbid) { musicBrainz.artistNames(mbid) }
+
     /** Forgets every answer kept, for *Clear history* (#547): the next question asks again. */
     suspend fun forget() {
         searches.forget()
@@ -113,6 +124,8 @@ class RememberedMusicBrainz(
         official.forget()
         tracklists.forget()
         firsts.forget()
+        loose.forget()
+        names.forget()
     }
 
     // One kind of question's answers, by what was asked.
