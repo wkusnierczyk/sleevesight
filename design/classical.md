@@ -253,6 +253,13 @@ artist lines put the composer on a line of their own under the performers
 the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about
 that artist, so a genre their page names goes to that artist's described row.
 
+A performer's or an author's chip gives way to its insight (#1288, the 0.7.0 phone check's pick):
+the tap puts in the chip's place a panel titled with the name, *Close* at its top right, then the
+insight, so the name is not shown twice; *Close* puts the chip back where it was. Each chip opens
+and closes on its own, several at once, under both layouts (the panel's and the page's content is
+the same). The screen reader's focus goes to the panel's *Close* on opening and back to the chip on
+closing.
+
 ## 4. Classical regression tracks
 
 As Spotify reports them (Spotify search, 2026-11-10); MusicBrainz recordings from free searches the

@@ -84,11 +84,10 @@ internal fun SourcesChip(
  * ([ChipFrame]): *Sources*' ([SourcesChip], #623) and *Dates*' (#724). Named [name], tagged [tag]; a
  * screen reader reads it as a button, named [description] ([name] unless given: the song's row's
  * "Song, Paper Boats", #894), a [heading] when it is one, collapsed while [collapsed] (its panel
- * opens in its place, so it is only ever collapsed), expanded while [expanded] (a chip that stays
- * beside what it opened: an artist's under the artist's panel, #1199), its action named [action]
- * when given. With [width], it is that wide, its name centred in it (the rows of the song, the
- * artist and the album, #894), with the **AI** mark after it when [ai] (#948, [AiLabel];
- * [description] then says "uses AI").
+ * opens in its place, so it is only ever collapsed: an artist's under the artist's panel too,
+ * #1288), its action named [action] when given. With [width], it is that wide, its name centred in
+ * it (the rows of the song, the artist and the album, #894), with the **AI** mark after it when
+ * [ai] (#948, [AiLabel]; [description] then says "uses AI").
  * [modifier] goes on the chip's outside: a focus requester.
  */
 @Suppress("LongParameterList") // What the chip says and is, each its own.
@@ -103,11 +102,9 @@ internal fun PanelChip(
     description: String = name,
     width: Dp? = null,
     ai: Boolean = false,
-    expanded: Boolean = false,
     onClick: () -> Unit,
 ) {
     val folded = stringResource(R.string.home_fold_collapsed)
-    val unfolded = stringResource(R.string.home_fold_expanded)
     val (fill, content) = chipColours(marked = false)
     ChipFrame(
         fill,
@@ -119,7 +116,6 @@ internal fun PanelChip(
                     if (heading) heading()
                     contentDescription = description
                     if (collapsed) stateDescription = folded
-                    if (expanded) stateDescription = unfolded
                 },
     ) {
         if (width == null) {
