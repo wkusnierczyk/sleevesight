@@ -13,7 +13,8 @@
 #    and libraries for themselves: the same two passes, each nested build writing into a copy of the
 #    metadata that the next one builds on (`build-logic/src/functionalTest/.../Probe.kt`).
 # 4. `tools/dependency-verification.py finish`: each trusted key narrowed to the groups it signed,
-#    the checksums of the `aapt2` jars of the platforms this run is not on, and the key servers off.
+#    the keyring's keys the metadata no longer names dropped, the checksums of the `aapt2` jars of
+#    the platforms this run is not on, and the key servers off.
 #
 # On a failure, the verification files are put back as they were. It needs the network: Maven
 # Central, Google's Maven, the Gradle Plugin Portal and the key servers. Review the diff before

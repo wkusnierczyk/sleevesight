@@ -5,8 +5,9 @@
           artifacts) and drops its keys and entries, with the key servers on, for Gradle to write
           the rest again.
   finish  Narrows each trusted key to the groups it signed (and fails on a key trusted for a group
-          none of whose files it signed), adds the checksums of the `aapt2` jars
-          of the platforms the refresh did not run on, and turns the key servers off.
+          none of whose files it signed), drops the keyring's keys the metadata no longer names, adds the
+          checksums of the `aapt2` jars of the platforms the refresh did not run on, and turns the
+          key servers off.
 
 Gradle's regular-expression trust (`^com[.]google($|([.].*))`) lets a key sign any group under a
 prefix, so a key that signs one library would be trusted for every other publisher's under it, for
@@ -223,6 +224,29 @@ def unsigned_trusts(text, signed):
     ]
 
 
+def prune_keyring(text):
+    """Drops the keyring's keys that the metadata no longer names, by the key or one of its subkeys,
+    as a trusted key or as the signer of one file (`<pgp value=...>`): Gradle exports a refresh's
+    keys on top of the keyring it found, so a key no longer used (a library removed, a key rotated)
+    would stay. Returns the ids dropped."""
+    named = re.findall(r'<trusted-key id="([0-9A-F]+)"', text) + re.findall(r'<pgp value="([0-9A-F]+)"', text)
+    trusted = {key[-16:] for key in named}
+    keyring = KEYRING.read_text(encoding="utf-8")
+    blocks = re.split(r"(?m)^(?=pub\s)", keyring)
+    kept, dropped = [], []
+    for block in blocks:
+        ids = re.findall(r"(?m)^(?:pub|sub)\s+([0-9A-F]{16})$", block)
+        if not ids or trusted & set(ids):
+            kept.append(block)
+        else:
+            dropped.append(ids[0])
+    missing = trusted - set(re.findall(r"(?m)^(?:pub|sub)\s+([0-9A-F]{16})$", "".join(kept)))
+    if missing:
+        fail(f"keys the metadata names but {KEYRING} lacks: {', '.join(sorted(missing))}")
+    KEYRING.write_text("".join(kept), encoding="utf-8")
+    return dropped
+
+
 def finish(text):
     signed = signed_groups(text)
     text, report = narrow(text, signed)
@@ -234,6 +258,8 @@ def finish(text):
         fail(f"no {KEYRING_FORMAT.strip()} line to put the key-server setting after")
     if KEY_SERVERS_OFF not in text:
         text = text.replace(KEYRING_FORMAT, KEYRING_FORMAT + KEY_SERVERS_OFF)
+    for key in prune_keyring(text):
+        print(f"Key dropped from the keyring, no longer named: {key}")
     for line in report:
         print(f"Trust narrowed: {line}")
     for name in added:
