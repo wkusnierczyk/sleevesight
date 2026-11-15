@@ -62,6 +62,8 @@ data class SelfCorrection(
             // so a blank line before the line ends a single quotation left open; read once, on from
             // one line's start to the next (#1258).
             val quotations = Quotations.Reader(text)
+            // What follows a line that is read alone ([isComment]), looked at once for all the lines.
+            val following = Quotations.Lookahead(text)
             var lineStart = 0
             var found: SelfCorrection? = null
             while (lineStart <= text.length) {
@@ -71,7 +73,7 @@ data class SelfCorrection(
                 // What the line tells first, then what needs all the text before and after it, so a
                 // reply of many lines reads the whole of it again only at a line that reads as a
                 // comment (#1258).
-                if (lineStart > 0 && isComment(line, quotations.open) { text.substring(lineEnd) }) {
+                if (lineStart > 0 && isComment(line, quotations.open) { following.closes(lineEnd) }) {
                     val before = text.substring(0, lineStart).trimJs()
                     val after = text.substring(minOf(lineEnd + 1, text.length)).trimJs()
                     val whole = before.isNotEmpty() && SENTENCE_END.containsMatchIn(before)
@@ -110,11 +112,11 @@ data class SelfCorrection(
         // Whether [line] is the model's comment on its own reply, as far as the line itself tells
         // (whether the text before it ends a sentence is weighed in [of]): it ends a sentence, sits
         // inside no quotation (none [open] before it), cites nothing, and says it corrects the reply.
-        // [ahead] is the text after it, where a quotation that opens in it may close.
+        // [ahead]: whether a single quotation that opens in it may close in the lines after it.
         private fun isComment(
             line: String,
             open: Boolean,
-            ahead: () -> String,
+            ahead: () -> Boolean,
         ): Boolean {
             val l = line.trimJs()
             val bare = l.trimStart('(', '*', '_', ' ')
@@ -134,15 +136,12 @@ data class SelfCorrection(
         }
 
         // [line] with what it quotes taken out, each quotation as an ellipsis; null when a quotation
-        // opens in it and does not close (a single one may close in the lines [ahead] of it, read
-        // only when a mark that may open one is in the line), or a closing `”` comes with none open.
+        // opens in it and does not close (a single one may close in the lines after it: [ahead]), or
+        // a closing `”` comes with none open.
         private fun unquotedText(
             line: String,
-            ahead: () -> String,
-        ): String? {
-            val read = if (line.any { it in SINGLE_OPENING }) line + ahead() else line
-            return Quotations.of(read, end = line.length).takeIf { !it.open && !it.stray }?.outside
-        }
+            ahead: () -> Boolean,
+        ): String? = Quotations.of(line, beyond = ahead).takeIf { !it.open && !it.stray }?.outside
 
         // [text] without quotation marks around the whole of it: the opening mark's partner is the
         // last character (the text's only two straight double quotes, or its only curly pair), and
@@ -197,9 +196,6 @@ data class SelfCorrection(
 
         private val QUOTE_MARKS = setOf('"', '“', '”')
 
-        /** The marks that may open a single quotation ([Quotations.of]). */
-        private const val SINGLE_OPENING = "'‘"
-
         /** The share of a version's first sentence's words that must be the draft's ([revises]). */
         private const val RESTATED = 0.75
 
@@ -235,11 +231,17 @@ internal class Quotations(
          * it does not close at a plural's apostrophe before a word (`‘For the lovers’ sake, …’`)
          * when another mark follows that closes it; and it ends at a blank line at the latest, so
          * a stray apostrophe hides nothing after its paragraph.
+         *
+         * [beyond], when given, stands for lines after [text], as if they followed it from a line
+         * break: whether a mark that may close a single quotation comes in them, before a blank line
+         * (a line read alone, as if followed by the lines after it, in `SelfCorrection.of`). It is
+         * asked only for a quotation that does not close in [text] itself.
          */
         fun of(
             text: String,
             end: Int = text.length,
-        ): Quotations = Reader(text, end).apply { readTo(end) }.quotations()
+            beyond: (() -> Boolean)? = null,
+        ): Quotations = Reader(text, end, beyond).apply { readTo(end) }.quotations()
 
         // The mark that closes the quotation [opening] opens.
         private fun partner(opening: Char): Char =
@@ -315,24 +317,20 @@ internal class Quotations(
      * [end], and asked on the way whether a quotation is [open]: a text asked so at the start of each
      * of its lines (`SelfCorrection.of`) is read once, not again from its start for each (#1258). The
      * mark that may close a single quotation and the blank line ahead are each looked for once
-     * ([closer]), not again for each mark that may open one, so the read takes time in step with the
-     * text's length.
+     * ([Lookahead]), not again for each mark that may open one, so the read takes time in step with
+     * the text's length. [beyond] as in [Quotations.of].
      */
     internal class Reader(
         private val text: String,
         end: Int = text.length,
+        private val beyond: (() -> Boolean)? = null,
     ) {
         private val out = StringBuilder()
         private val sources = IntArray(end)
         private var close: Char? = null
         private var stray = false
         private var at = 0
-
-        // The first blank line, and the first mark that may close a single quotation before it,
-        // from where [closer] last looked (each the blank line's place when there is none); -1
-        // before it first looks.
-        private var blank = -1
-        private var closing = -1
+        private val ahead = Lookahead(text)
 
         /** Whether a quotation is open where the read has got to. */
         val open: Boolean
@@ -368,17 +366,41 @@ internal class Quotations(
 
         // Whether [text] at [i] opens a single quotation: a mark that may, with one after it to
         // close it.
-        private fun startsSingle(i: Int): Boolean = opensSingle(text, i) && closer(i + 1) != null
+        private fun startsSingle(i: Int): Boolean = opensSingle(text, i) && closer(i + 1)
 
         // Whether [text] at [i] closes the single quotation open: a mark that may, unless it may
         // be a plural's apostrophe and another mark after it may close the quotation.
-        private fun endsSingle(i: Int): Boolean = closesSingle(text, i) && !(plural(text, i) && closer(i + 1) != null)
+        private fun endsSingle(i: Int): Boolean = closesSingle(text, i) && !(plural(text, i) && closer(i + 1))
 
-        // Where, from [from] on, the first mark that may close a single quotation is, before the
-        // next blank line; null for none. [from] only grows from one call to the next (it is the
-        // character after the one read), so what the last call found ahead of it still holds
-        // unless [from] has passed it.
-        private fun closer(from: Int): Int? {
+        // Whether a mark that may close a single quotation comes from [from] on, before the next
+        // blank line: in [text], else, with no blank line to its end, in what [beyond] stands for.
+        // [from] is the character after the one read, so it only grows ([Lookahead]).
+        private fun closer(from: Int): Boolean = ahead.closes(from) || (ahead.toEnd && beyond?.invoke() == true)
+    }
+
+    /**
+     * Whether a mark that may close a single quotation comes in [text] from a place on, before the
+     * next blank line ([closes]), asked from places that only grow: what was found ahead of one place
+     * holds for the next until it is passed, so each part of the text is looked at once (#1258).
+     */
+    internal class Lookahead(
+        private val text: String,
+    ) {
+        // The first blank line, and the first mark that may close a single quotation before it,
+        // from where [closes] last looked (each the blank line's place when there is none); -1
+        // before it first looks.
+        private var blank = -1
+        private var closing = -1
+        private var last = 0
+
+        /** Whether no blank line comes between where [closes] last looked and the end of [text]. */
+        val toEnd: Boolean
+            get() = blank == text.length
+
+        /** Whether a mark that may close a single quotation comes from [from] on, before a blank line. */
+        fun closes(from: Int): Boolean {
+            require(from >= last) { "$from is before $last, where it last looked" }
+            last = from
             if (blank < from) {
                 var k = from
                 while (k < text.length && !blankLineAt(text, k)) k++
@@ -389,7 +411,7 @@ internal class Quotations(
                 while (k < blank && !closesSingle(text, k)) k++
                 closing = k
             }
-            return closing.takeIf { it < blank }
+            return closing < blank
         }
     }
 }

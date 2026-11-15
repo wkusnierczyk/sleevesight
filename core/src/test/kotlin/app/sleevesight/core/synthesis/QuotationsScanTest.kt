@@ -31,12 +31,28 @@ class QuotationsScanTest {
                 reader.readTo(end)
                 assertEquals(expected.open, reader.open, "$text, read on to $end")
             }
-            // With no mark in it that may open a single quotation, what follows a text changes nothing
-            // read in it: SelfCorrection reads a line without the text after it then.
-            if (text.none { it in "'‘" }) {
-                val ahead = String(CharArray(random.nextInt(MAX_LENGTH + 1)) { MARKS[random.nextInt(MARKS.length)] })
-                val read = Quotations.of(text + ahead, text.length)
-                assertEquals(Before.of(text).outside to Before.of(text).open, read.outside to read.open, text + ahead)
+        }
+    }
+
+    @Test
+    fun `a line read alone, with what follows it looked at once for all lines, reads as with it`() {
+        // SelfCorrection reads a line as if the text after it followed (`line + ahead`); the text after
+        // each line is looked at once for all of them, from one line's end on to the next's.
+        val random = Random(SEED)
+
+        fun piece(marks: String): String =
+            String(CharArray(random.nextInt(MAX_LENGTH + 1)) { marks[random.nextInt(marks.length)] })
+        repeat(TEXTS) {
+            val text = piece(MARKS)
+            val following = Quotations.Lookahead(text)
+            for (lineEnd in (0..text.length).filter { it == text.length || text[it] == '\n' }) {
+                val line = piece(MARKS.filter { it != '\n' })
+                val expected = Before.of(line + text.substring(lineEnd), line.length)
+                val read = Quotations.of(line) { following.closes(lineEnd) }
+                val what = "$line before ${text.substring(lineEnd)}"
+                assertEquals(expected.outside, read.outside, what)
+                assertEquals(expected.open to expected.stray, read.open to read.stray, what)
+                assertContentEquals(expected.sources, read.sources, what)
             }
         }
     }
@@ -72,6 +88,9 @@ class QuotationsScanTest {
         // Lines that each end a sentence, before a line that cites: each was weighed as a comment
         // against all the text before and after it, which took about half a minute at this length.
         assertNull(SelfCorrection.of("The song [W1].\n" + "x.\n".repeat(LINES) + "The song [W1]."))
+        // ` 'a.` lines, each read alone as a comment may be, with the text after it: 320k characters,
+        // where a read of the text after each line again took about half a minute.
+        assertNull(SelfCorrection.of("The song [W1].\n" + " 'a.\n".repeat(STOPPED_LINES) + "The song [W1]."))
     }
 
     @Test
@@ -198,6 +217,9 @@ class QuotationsScanTest {
 
         /** 30k characters of ` 'a` lines. */
         const val LINES = 7_500
+
+        /** 320k characters of ` 'a.` lines. */
+        const val STOPPED_LINES = 64_000
 
         /** 240k characters of ` 'a`. */
         const val LONG_LINE = 80_000
