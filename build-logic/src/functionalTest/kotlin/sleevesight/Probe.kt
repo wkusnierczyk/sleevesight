@@ -19,7 +19,11 @@ object Probe {
     private val verificationFiles = listOf("verification-metadata.xml", "verification-keyring.keys")
     private val writeMode = System.getenv("SLEEVESIGHT_WRITE_VERIFICATION_METADATA")?.takeIf { it.isNotBlank() }
 
-    /** Whether the nested builds write the metadata rather than check it. */
+    /**
+     * Whether the nested builds write the metadata rather than check it. Such a build does not reuse
+     * the configuration cache, so a test skips what it asserts about reuse then; any other failure
+     * still fails the refresh.
+     */
     val writing: Boolean get() = writeMode != null
 
     /** A runner for the project in [dir], with the verification files copied in on its first run. */

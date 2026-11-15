@@ -72,8 +72,12 @@ class ModuleGraphTest {
         project(bToC = "implementation")
         runner(":a:checkModuleGraph", "--configuration-cache").build()
         val again = runner(":a:checkModuleGraph", "--configuration-cache").build()
-        assertTrue("Reusing configuration cache." in again.output, again.output)
-        assertEquals(TaskOutcome.UP_TO_DATE, again.task(":a:checkModuleGraph")?.outcome)
+        // A build that writes the verification metadata (`Probe.writing`) does not reuse the
+        // configuration cache, so the reuse is checked only in an ordinary run.
+        if (!Probe.writing) {
+            assertTrue("Reusing configuration cache." in again.output, again.output)
+            assertEquals(TaskOutcome.UP_TO_DATE, again.task(":a:checkModuleGraph")?.outcome)
+        }
     }
 
     @Test

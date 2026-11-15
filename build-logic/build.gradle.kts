@@ -110,10 +110,6 @@ tasks.register<Test>("functionalTest") {
         .withPropertyName("verification")
         .withPathSensitivity(PathSensitivity.NONE)
     jvmArgumentProviders += VerificationDir(verification.asFile)
-    // While `tools/refresh-dependency-verification.sh` has the nested builds write the metadata, a
-    // test that expects a task up to date sees it run again: those runs are for the metadata, and
-    // the tests' verdicts come from the ordinary run.
-    ignoreFailures = providers.environmentVariable("SLEEVESIGHT_WRITE_VERIFICATION_METADATA").isPresent
 }
 
 // The TestKit home as a system property, kept out of the task's inputs so the cache key does not
