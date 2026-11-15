@@ -214,7 +214,7 @@ class GenreBroaderScreenTest {
             compose.onNodeWithText(rnb.text).assertExists()
             // Its credit links "Wikipedia" alone, not "From" (#1285), to the broader genre's article.
             assertEquals(
-                listOf("Wikipedia" to rnb.url, "CC BY-SA 4.0" to WIKIPEDIA_LICENCE),
+                listOf("Wikipedia" to rnb.url, "CC\u00A0BY-\u2060SA\u00A04.0" to WIKIPEDIA_LICENCE),
                 compose.linkedRanges(GENRE_DEFINITION_CREDIT_TAG),
             )
             assertEquals(0, compose.onAllNodesWithText(contemporary.text).fetchSemanticsNodes().size)

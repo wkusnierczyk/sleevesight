@@ -251,18 +251,25 @@ private fun NoDefinition() =
     QuietNote(stringResource(R.string.genre_definition_none), Modifier.testTag(GENRE_NO_DEFINITION_TAG))
 
 // The definition, then its credit: "From Wikipedia", the source's name alone a link to the article
-// (#1285: "From" plain, as every From line is), and the licence a link of its own.
+// (#1285: "From" plain, as every From line is), and the licence a link of its own. The line wraps as
+// the From line of genres from the web does ([FromSites]): "From" held to the name after it, the dot
+// to the part before it, and the licence's name never broken.
 @Composable
 private fun Definition(definition: GenreDefinition) {
     Column(modifier = Modifier.testTag(GENRE_DEFINITION_TAG), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(definition.text, style = MaterialTheme.typography.bodyMedium)
         val article = TextPart.Link(stringResource(R.string.genre_definition_source), definition.url)
+        val from = linkedParts(stringResource(R.string.genre_definition_from), article)
+        val licence = unbroken(stringResource(R.string.genre_definition_licence).replace(" ", NO_BREAK_SPACE))
         LinkedText(
-            linkedParts(stringResource(R.string.genre_definition_from), article) +
-                listOf(
-                    TextPart.Words(" · "),
-                    TextPart.Link(stringResource(R.string.genre_definition_licence), WIKIPEDIA_LICENCE),
-                ),
+            from.mapIndexed { i, part ->
+                val beforeName = from.getOrNull(i + 1) === article
+                if (beforeName && part is TextPart.Words && part.text.endsWith(" ")) {
+                    TextPart.Words(part.text.dropLast(1) + NO_BREAK_SPACE)
+                } else {
+                    part
+                }
+            } + listOf(TextPart.Words(SITE_SEPARATOR), TextPart.Link(licence, WIKIPEDIA_LICENCE)),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.testTag(GENRE_DEFINITION_CREDIT_TAG),
