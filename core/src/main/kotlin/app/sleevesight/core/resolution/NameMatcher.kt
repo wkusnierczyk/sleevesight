@@ -48,6 +48,12 @@ class NameMatcher(
             }.joinToString(" ")
     }
 
+    /**
+     * The words of [text]'s [key] that number something (#1289): digits, a Roman numeral, or a single
+     * letter, as [albumKey] reads a volume's number. In the order they come.
+     */
+    fun numberWords(text: String): List<String> = key(text).split(' ').filter(::numbers)
+
     /** Whether [a] and [b] name the same artist: equal keys, a leading `the` aside. */
     fun sameName(
         a: String,

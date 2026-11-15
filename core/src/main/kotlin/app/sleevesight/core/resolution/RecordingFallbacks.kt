@@ -137,7 +137,9 @@ internal suspend fun MusicBrainzLookup.loosely(
     val more = if (asked) searchRecordingsLoosely(words, artists) else null
     val kept =
         (more as? Lookup.Found)?.value.orEmpty().filter { r ->
-            names.represented(r, artists) >= 2 && names.performedBy(r, track)
+            names.represented(r, artists) >= 2 &&
+                names.performedBy(r, track) &&
+                names.sameNumbers(track.searchTitle, r.title)
         }
     val found = (searched.found + kept).distinctBy { it.mbid }
     return when {
@@ -149,10 +151,11 @@ internal suspend fun MusicBrainzLookup.loosely(
 
 /**
  * The work a resolution reads (#1289): the recording's [own], else the one [lent] by another recording of
- * the track's artists (`RecordingResolver.Leaders.lentWork`), with its lookup. A lent work not of a
- * classical form ([MbWorkLink.classical]) counts only when its composer relationship names the composer
- * the title leads with ([NormalizedTrack.composer]): a lead is only a credited artist's name before a
- * colon, and `Band: Song` has one too. One that does not count is dropped with its lookup; one whose
+ * the track's artists (`RecordingResolver.Leaders.lentWork`), with its lookup. With a composer the title
+ * leads with ([NormalizedTrack.composer]), a lent work counts only when its composer relationship names
+ * them, whatever its type: a lead is only a credited artist's name before a colon (`Band: Song` has one
+ * too), and `Schubert: Ave Maria` is not Verdi's `Otello` aria. Without one, only a work of a classical
+ * form ([MbWorkLink.classical]). One that does not count is dropped with its lookup; one whose
  * lookup failed, dropped with the failure kept, so the resolution is asked again later.
  */
 internal suspend fun MusicBrainzLookup.workOf(
@@ -169,10 +172,22 @@ internal suspend fun MusicBrainzLookup.workOf(
             lead != null && it.type == "composer" && names.sameName(it.artistName, lead)
         }
     return when {
-        own != null || lent == null || lent.classical || written -> link to lookup
+        own != null || lent == null || (if (lead == null) lent.classical else written) -> link to lookup
         lookup is Lookup.Failed -> null to lookup
         else -> null to null
     }
+}
+
+// Whether [title] and [recordingTitle] have the same numbers ([NameMatcher.numberWords]: digits, Roman
+// numerals, single letters), in any order, the recording's title read whole or as the part of a work it
+// names (#1289): a title found loosely may differ from the track's by little else (`Gymnopédie No. 1`
+// and `No. 2`, `Part 1` and `Part 2`), which its similarity alone would let pass.
+private fun NameMatcher.sameNumbers(
+    title: String,
+    recordingTitle: String,
+): Boolean {
+    val wanted = numberWords(title).sorted()
+    return listOfNotNull(recordingTitle, quotedPart(recordingTitle)).any { numberWords(it).sorted() == wanted }
 }
 
 // How many of [artists] the credits of [recording] stand for ([standsFor]): a joint credit standing for one
@@ -194,17 +209,7 @@ internal fun NameMatcher.pieceSimilarity(
     recordingTitle: String,
 ): Double? {
     val lead = PIECE_LEAD.find(recordingTitle)
-    val quoted =
-        lead
-            ?.let {
-                PIECE_QUOTED.find(
-                    recordingTitle.substring(it.range.last + 1),
-                )
-            }?.groupValues
-            ?.drop(1)
-            ?.firstOrNull {
-                it.isNotBlank()
-            }
+    val quoted = quotedPart(recordingTitle)
     return if (lead == null || quoted == null) {
         null
     } else {
@@ -223,6 +228,23 @@ internal fun NameMatcher.pieceSimilarity(
             .maxOf { titleSimilarity(it, quoted) }
     }
 }
+
+// The part's own title in [recordingTitle] of a part of a work's shape ([pieceSimilarity]): the one quoted
+// title after the work, with nothing after it but a parenthetical (`Turandot: “Nessun dorma” (Vincerò)`);
+// null for another shape, and for a title quoting two (`Medley: “Yesterday” / “Michelle”`).
+private fun quotedPart(recordingTitle: String): String? {
+    val lead = PIECE_LEAD.find(recordingTitle) ?: return null
+    val rest = recordingTitle.substring(lead.range.last + 1)
+    val quoted = PIECE_QUOTED.find(rest)
+    val after = quoted?.let { rest.substring(it.range.last + 1) }
+    return quoted?.groupValues?.drop(1)?.firstOrNull { it.isNotBlank() }?.takeIf {
+        after != null &&
+            PIECE_TAIL.matches(after)
+    }
+}
+
+// What may follow a part's quoted title: nothing, or one parenthetical, with whitespace around.
+private val PIECE_TAIL = Regex("$JS_WHITESPACE_CLASS*(\\([^()]*\\))?$JS_WHITESPACE_CLASS*")
 
 // At most this many artists' other names looked up for one track (#1289, `withAliases`).
 private const val ALIAS_LOOKUPS = 2
