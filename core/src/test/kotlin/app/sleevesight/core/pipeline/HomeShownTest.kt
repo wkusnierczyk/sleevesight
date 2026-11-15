@@ -10,11 +10,13 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.MusicBrainzEvidence
+import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedWork
+import app.sleevesight.core.sources.WorkLyrics
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -37,11 +39,13 @@ class HomeShownTest {
     private fun nothingBeyond(
         lines: List<EvidenceDraft>,
         nowPlaying: NowPlaying = playing,
+        authors: List<String> = emptyList(),
     ): Boolean =
         HomeShown.nothingBeyond(
             EvidenceSet.of(playerLines(nowPlaying, AT) + lines, JvmHasher),
             nowPlaying,
             Normalizer(JvmAccentFolder).normalize(nowPlaying),
+            authors,
         )
 
     // MusicBrainz's lines for the track, as its templates write them.
@@ -134,6 +138,75 @@ class HomeShownTest {
     }
 
     @Test
+    fun `a performer's instruments or role add something beyond the name Home shows`() {
+        val playing = Credit(CreditRole.PERFORMER, EDWYN, "mb-edwyn", listOf("guitar", "vocals"))
+        val lines = musicBrainz(listOf(playing))
+        assertEquals(
+            "Edwyn Collins performs on this recording of “The Campaign for Real Rock” (guitar, vocals).",
+            lines.last().text,
+        )
+        assertFalse(nothingBeyond(lines))
+        assertTrue(nothingBeyond(musicBrainz(listOf(credit(CreditRole.PERFORMER, EDWYN)))))
+    }
+
+    @Test
+    fun `an aria's librettists the Composer row names are shown, though the player does not name them`() {
+        val aria =
+            NowPlaying(
+                title = "Turandot: Nessun dorma",
+                artists = "Giacomo Puccini, Luciano Pavarotti",
+                album = "Pavarotti's Greatest Hits",
+                player = "p",
+                duration = 200.seconds,
+            )
+        val normalized = Normalizer(JvmAccentFolder).normalize(aria)
+        val roles = ArtistRoles(listOf("Giacomo Puccini"), listOf("Luciano Pavarotti"), classical = true)
+        val libretto = WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni"))
+        val split = ArtistSplit.of(normalized, roles, libretto)
+        val authors = checkNotNull(split).authors
+        assertEquals(listOf("Giacomo Puccini", "Giuseppe Adami", "Renato Simoni"), authors)
+        val lines =
+            listOf(
+                draft(
+                    SourceId.MUSICBRAINZ,
+                    Scope.SONG,
+                    "The libretto of this aria was written by Giuseppe Adami and Renato Simoni.",
+                ),
+                draft(SourceId.MUSICBRAINZ, Scope.SONG, "The music of “Nessun dorma” was composed by Giacomo Puccini."),
+            )
+        assertTrue(nothingBeyond(lines, aria, authors))
+        assertFalse(nothingBeyond(lines, aria), "with no Composer row, the librettists are not shown")
+    }
+
+    @Test
+    fun `Wikidata's date is shown only when Dates shows it`() {
+        // *Dates* shows MusicBrainz's first release, on 1 July 1994.
+        val release = musicBrainz()
+        for (date in listOf("on 1 July 1994", "in 1994")) {
+            val line = draft(SourceId.WIKIDATA, Scope.SONG, "“The Campaign for Real Rock” was first published $date.")
+            assertTrue(nothingBeyond(release + line), date)
+        }
+        for (date in listOf("in 1960", "on 2 July 1994", "in July 1994")) {
+            val line = draft(SourceId.WIKIDATA, Scope.SONG, "“The Campaign for Real Rock” was created $date.")
+            assertFalse(nothingBeyond(release + line), date)
+        }
+        // With no date shown, none is.
+        val alone = draft(SourceId.WIKIDATA, Scope.SONG, "“The Campaign for Real Rock” was first published in 1994.")
+        assertFalse(nothingBeyond(listOf(alone)))
+    }
+
+    @Test
+    fun `MusicBrainz's line on the album is read whatever its type, the secondary types first`() {
+        for (type in listOf("an album", "a live album", "a compilation album", "a mixtape/street album", "an EP")) {
+            val text = "“Gorgeous George” is $type by $EDWYN, first released in July 1994."
+            val line = draft(SourceId.MUSICBRAINZ, Scope.RELEASE, text)
+            assertTrue(nothingBeyond(listOf(line)), type)
+        }
+        val other = draft(SourceId.MUSICBRAINZ, Scope.RELEASE, "“Demos” is a live album by $EDWYN.")
+        assertFalse(nothingBeyond(listOf(other)))
+    }
+
+    @Test
     fun `the release is the player's album, a single or an EP only when the player names it so`() {
         val single = musicBrainz(release = SINGLE)
         assertFalse(nothingBeyond(single), "a single before the album is an earlier release")
@@ -162,11 +235,13 @@ class HomeShownTest {
                     credit(CreditRole.COMPOSER, "A"),
                     credit(CreditRole.LYRICIST, "B"),
                     credit(CreditRole.PRODUCER, "C"),
-                    Credit(CreditRole.PERFORMER, "D", "d", listOf("guitar", "vocals")),
+                    credit(CreditRole.PERFORMER, "D"),
+                    Credit(CreditRole.PERFORMER, "E", "e", listOf("guitar", "vocals")),
                 ),
             ).map { it.text }
+        // A performer's with its detail is more than a name (#1142).
         assertEquals(
-            listOf(null, "A", "B", "C", "D"),
+            listOf(null, "A", "B", "C", "D", null),
             lines.map(MusicBrainzEvidence::creditedNames),
         )
         assertEquals("album" to "Gorgeous George", MusicBrainzEvidence.firstRelease(lines.first()))

@@ -56,6 +56,8 @@ internal class InsightWriter(
     private val sink: RunSink,
     // Who composed the work and who performs it, once the sources are in (#1180): the prompt names them.
     private val roles: ArtistRoles,
+    // The authors the Composer row names on Home (`ArtistSplit.authors`, #1142), none without that row.
+    authors: List<String> = emptyList(),
 ) {
     private val settings = input.settings
     private val nowPlaying = input.nowPlaying
@@ -68,7 +70,7 @@ internal class InsightWriter(
 
     // Whether the evidence holds nothing beyond what Home shows (#1142): decided before the call, from
     // the whole evidence, the card's key's, so a card served again says it as the one written did.
-    private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track)
+    private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track, authors)
 
     // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
     // Its dates in the form the parts give as each call is made (#957), not when the run began: a tap may

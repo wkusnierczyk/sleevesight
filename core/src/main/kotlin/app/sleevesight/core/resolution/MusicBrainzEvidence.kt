@@ -69,8 +69,9 @@ object MusicBrainzEvidence {
 
     /**
      * The names a credit line of [lines] gives, as written (`EvidenceText.list`'s "A, B and C"): the
-     * writers', composers', lyricists', librettists' and producers' lines, and a performer's. Null for
-     * any other line (#1142, `HomeShown`).
+     * writers', composers', lyricists', librettists' and producers' lines, and a performer's without
+     * its detail. Null for any other line, a performer's with its instruments or role ("(guitar,
+     * vocals)") among them: the detail is more than a name (#1142, `HomeShown`).
      */
     fun creditedNames(text: String): String? = CREDITS.firstNotNullOfOrNull { it.find(text)?.groupValues?.get(1) }
 
@@ -82,7 +83,7 @@ object MusicBrainzEvidence {
             Regex("^The lyrics of “.*” were written by (.+)\\.$"),
             Regex("^The libretto of this [a-z]+ was written by (.+)\\.$"),
             Regex("^This recording of “.*” was produced by (.+)\\.$"),
-            Regex("^(.+?) performs on this recording of “.*”(?: \\(.*\\))?\\.$"),
+            Regex("^(.+?) performs on this recording of “.*”\\.$"),
         )
 
     /** The lines for [resolution], dated [retrievedAt]; none when no recording was accepted. */
