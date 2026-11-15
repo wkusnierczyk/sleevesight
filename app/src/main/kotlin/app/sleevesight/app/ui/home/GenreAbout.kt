@@ -12,7 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -41,7 +44,9 @@ import app.sleevesight.core.synthesis.SearchKind
  * What the genre [genre] is and why [track] has it, as [shown]'s notes give them (#523; `design/design.md`,
  * *Genre labels*), at the top of the genre's panel, in this order: the definition, from Wikipedia,
  * in each of its states ([GenreDefinitionNote], #786: looking, found with its credit, failed with
- * *Retry*, or none with *Search with AI* from [search]; nothing with Wikipedia off); for a genre of
+ * *Retry*, or none with *Search with AI* from [search]; nothing with Wikipedia off); for a genre the
+ * vocabulary gives a broader genre, a line naming it ([BroaderLine], #1127), whose link opens the
+ * broader genre in this one's place ([BroaderAbout]) until its *Back*; for a genre of
  * weak evidence, why it is weak ([WeakEvidenceNote], #875); for a genre an artist's description
  * names, where, quoted and cited ([DescribedNote], #1000); then *Why is
  * this …?*, a button carrying the **AI** mark ([AiLabel]), or, once asked for, the reason, under the
@@ -72,10 +77,6 @@ internal fun GenreAbout(
 ) {
     val notes = shown.notes
     val onCite = shown.onCite
-    val modelAllowed = shown.modelAllowed
-    val reader = shown.readAloud
-    val openSettingsAt = shown.openSettingsAt
-    val sources = shown.lines
     // The track its reason is asked and read on: for a genre an artist's description names (#1000),
     // with the lines it was read from, those *Sources* lists.
     val asked = reasonedOn(track, genre, shown.asked)
@@ -97,11 +98,17 @@ internal fun GenreAbout(
         track.genres.everyLabel
             .firstOrNull { it.genre.identity == genre }
             ?.genre ?: return
-    val said = inSentence(named.label)
-    val question = stringResource(R.string.genre_why, said)
+    // Its broader genre (#1127), opened in its place by the line under the definition, until *Back*.
+    val broader = notes.vocabulary?.broader(genre)
+    var opened by rememberSaveable(genre) { mutableStateOf(false) }
+    if (opened && broader != null) {
+        BroaderAbout(asked, named, broader, shown, afterRetry) { opened = false }
+        return
+    }
     // The check of the track's vocals (#998), for Instrumental: its line under the weak genre's.
     val vocals = vocalsOf(track, notes).takeIf { genre == TrackGenres.INSTRUMENTAL }
     GenreDefinitionNote(named, notes, search, afterRetry)
+    if (broader != null) BroaderLine(named, broader) { opened = true }
     // Why its evidence is weak, for a weak genre (#875), under the definition, unless the check of the
     // track's vocals, asked by a tap, says what it found in its place (#998); for a genre the
     // artist's description names (#1000), where, unless the weak line says it.
@@ -111,25 +118,46 @@ internal fun GenreAbout(
     VocalsNote(vocals, named, shown.lines ?: track.evidence, onCite)
     // While the check runs, no *Why is this …?*: a tap runs it, then the reason. Once a tap's check
     // found vocals, none for the play either: an explanation of the genre would contradict it.
-    if (vocals?.state == VocalsState.Checking || vocalsTapped(vocals)) return
+    if (vocals?.state != VocalsState.Checking && !vocalsTapped(vocals)) {
+        GenreReasonBlock(reason, asked, named, shown, afterRetry)
+    }
+}
+
+/**
+ * *Why is this …?* for [named], [asked]'s genre, as [reason] has it ([GenreAbout]): offered, a
+ * button; unavailable, disabled with why; asked for, the reason with its credit and *Read aloud*.
+ */
+@Composable
+internal fun GenreReasonBlock(
+    reason: GenreReason,
+    asked: TrackState,
+    named: GenreLabel,
+    shown: PanelNotes,
+    afterRetry: () -> Unit,
+) {
+    val notes = shown.notes
+    val genre = named.identity
+    val reader = shown.readAloud
+    val said = inSentence(named.label)
+    val question = stringResource(R.string.genre_why, said)
     val explain = { notes.explain(asked, genre) }
-    when (val shown = reason) {
+    when (reason) {
         GenreReason.None -> Unit
         GenreReason.Offered -> WhyButton(question, onClick = explain)
-        is GenreReason.Unavailable -> ReasonUnavailable(question, said, shown.why, openSettingsAt)
+        is GenreReason.Unavailable -> ReasonUnavailable(question, said, reason.why, shown.openSettingsAt)
         is GenreReason.Shown -> {
             val readAloud =
                 readAloudControl(reader, Reading.genreReason(genre)) {
                     // Read aloud follows the reason as the notes give it, whatever screen shows.
-                    (shown.state as? InsightState.Written)?.let { written ->
+                    (reason.state as? InsightState.Written)?.let { written ->
                         reader?.readGenreReason(asked, genre, question, written, notes.reason(asked, genre))
                     }
                 }
             ReasonShown(
-                shown,
+                reason,
                 question,
-                InsightContext(asked, true, true, modelAllowed, InsightOffers()),
-                ReasonActions(onCite, readAloud, explain, afterRetry, openSettingsAt, sources),
+                InsightContext(asked, true, true, shown.modelAllowed, InsightOffers()),
+                ReasonActions(shown.onCite, readAloud, explain, afterRetry, shown.openSettingsAt, shown.lines),
             )
         }
     }

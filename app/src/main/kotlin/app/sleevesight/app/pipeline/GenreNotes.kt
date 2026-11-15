@@ -1142,13 +1142,20 @@ class AppGenreNotes private constructor(
             } else {
                 listsOf(made).key(track, now)?.let { listed(it, lists.value, now.historyLifetime) }
             }
-        return (track.genres.everyLabel.map { it.genre } + list?.genres.orEmpty())
+        // A broader genre (#1127) as the vocabulary names it.
+        val broader =
+            track.genres.everyLabel.firstNotNullOfOrNull { label ->
+                vocabulary.broader(label.genre.identity)?.takeIf { it.identity == genre }
+            }
+        return (track.genres.everyLabel.map { it.genre } + list?.genres.orEmpty() + listOfNotNull(broader))
             .firstOrNull { it.identity == genre }
             ?.label ?: genre
     }
 
     private fun reasonsOf(made: PipelineParts) =
-        GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch, made.dateForm)
+        GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch, made.dateForm) {
+            vocabulary.broader(it)?.identity
+        }
 
     private fun listsOf(made: PipelineParts) =
         GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock, made.webSearch)

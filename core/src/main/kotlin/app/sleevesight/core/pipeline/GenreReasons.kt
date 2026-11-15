@@ -77,8 +77,10 @@ sealed interface ReasonPath {
  * Each state written comes with its time by [clock]; a reply kept is kept with the time it is shown
  * with, so the screen and the cache count *Keep history for* from the same time, as the insight's
  * (#643). The prompt asks for dates in the form [dates] gives as it is built (#957), which no key holds.
+ * [broader] gives a genre's broader genre, by identity (#1127, `GenreVocabulary.broader`): the reason
+ * for a track's genre's broader genre is asked as one for the track's own, where [allowed].
  */
-@Suppress("TooManyFunctions") // Each step of a reason: its key, its path, its calls with and without the web.
+@Suppress("TooManyFunctions", "LongParameterList") // Each step of a reason; and what it is built on.
 class GenreReasons(
     private val ai: AiAccess?,
     private val cache: PipelineCache,
@@ -86,6 +88,7 @@ class GenreReasons(
     private val clock: Clock = Clock.System,
     private val web: WebSearcher? = null,
     private val dates: () -> DateForm = { DateForm.APP },
+    private val broader: (String) -> String? = { null },
 ) {
     /**
      * The key of [genre]'s reason for [track] under [settings] ([GenreLabel.identity]), or null when
@@ -99,7 +102,7 @@ class GenreReasons(
         settings: Settings,
         listed: Set<String>? = null,
     ): CardKey? {
-        val access = ready(track, settings)?.takeIf { prompted(track, genre) || listed?.contains(genre) == true }
+        val access = ready(track, settings)?.takeIf { allowed(track, genre, listed) }
         val model = access?.let { settings.model(it.provider.id) }
         val evidence = track.evidence
         if (access == null || model == null || evidence == null) return null
@@ -126,11 +129,13 @@ class GenreReasons(
      * AI's genre list for the track ([lists]) known as [listed] (by identity; null while not known):
      *
      * - nothing ([ReasonPath.None]) with *Show insights* off, before the evidence is in, or for a
-     *   genre the track does not have;
+     *   genre the track does not have, its own or the broader genre of one of its own ([broader],
+     *   #1127); for such a broader genre, also where only MusicBrainz's tags lead to it ([allowed]):
+     *   it is never asked through the AI's list;
      * - with no AI service ready (none switched on, no key, no model), nothing, and the panel says
      *   where one is enabled ([ReasonPath.NoService]);
      * - path A ([ReasonPath.Reason]): the reason, for a genre a source other than MusicBrainz gives,
-     *   or one on the AI's list;
+     *   or one on the AI's list, or the broader genre of one such;
      * - path B ([ReasonPath.Listing]): for a genre only MusicBrainz gives, the AI's list first, while
      *   it is not known and it can run; [ReasonPath.CannotList] when it cannot ([GenreLists.mode]);
      *   once known without the genre, [ReasonPath.NotListed], and no call.
@@ -143,14 +148,41 @@ class GenreReasons(
         listed: Set<String>?,
     ): ReasonPath {
         val key = key(track, genre, settings, listed)
+        val own = track.genres.everyLabel.any { it.genre.identity == genre }
         return when {
-            !offered(track, settings) || track.genres.everyLabel.none { it.genre.identity == genre } -> ReasonPath.None
+            !offered(track, settings) || !(own || broadens(track, genre)) -> ReasonPath.None
             key != null -> ReasonPath.Reason(key)
+            // Only a broader genre (#1127): asked only as a source other than MusicBrainz allows it,
+            // never through the AI's list.
+            !own && !allowed(track, genre, listed) -> ReasonPath.None
             ready(track, settings) == null -> ReasonPath.NoService
+            !own -> ReasonPath.None
             listed != null -> ReasonPath.NotListed
             else -> lists.key(track, settings)?.let(ReasonPath::Listing) ?: ReasonPath.CannotList
         }
     }
+
+    /**
+     * Whether [genre]'s reason may reach a prompt for [track], [listed] the AI's genre list for it,
+     * by identity, where known (#762): a source other than MusicBrainz gives it, or the list does
+     * ([prompted]); or it is the broader genre ([broader], #1127) of one of [track]'s genres that may.
+     * Never a broader genre only MusicBrainz's tags lead to: derived from them, it is theirs (D12).
+     */
+    fun allowed(
+        track: TrackState,
+        genre: String,
+        listed: Set<String>? = null,
+    ): Boolean {
+        fun own(identity: String) = prompted(track, identity) || listed?.contains(identity) == true
+        return own(genre) ||
+            track.genres.everyLabel.any { broader(it.genre.identity) == genre && own(it.genre.identity) }
+    }
+
+    // Whether [genre] is the broader genre (#1127) of one of [track]'s genres.
+    private fun broadens(
+        track: TrackState,
+        genre: String,
+    ): Boolean = track.genres.everyLabel.any { broader(it.genre.identity) == genre }
 
     // The AI service, when one with a model is ready under [settings] and [track]'s evidence is in;
     // what [key] and [path] ask for besides the genre's sources.
