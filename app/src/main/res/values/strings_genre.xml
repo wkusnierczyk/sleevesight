@@ -111,6 +111,12 @@
          users. %1$s is the genre, in italics, as its chip names it. No clause on other levels'
          tags: the mark is the track's alone. -->
     <string name="genre_weak_library">Only LRCLIB’s user-submitted records mark this track %1$s.</string>
+    <!-- When only Wikidata's statements give Instrumental (#1292): they are edited by its users. %1$s
+         is the genre, in italics, as its chip names it. No clause on other levels' tags. -->
+    <string name="genre_weak_wikidata">Only Wikidata’s user-edited statements mark this track %1$s.</string>
+    <!-- When only LRCLIB's mark and Wikidata's statements back Instrumental, nothing else (#1292):
+         both are edited by their users. %1$s is the genre, in italics, as its chip names it. -->
+    <string name="genre_weak_library_wikidata">Only LRCLIB’s user-submitted records and Wikidata’s user-edited statements mark this track %1$s.</string>
     <!-- How a screen reader reads a genre the artist's description names (#1000), as a chip and in
          its Bio row of Genre tags (#1066): %1$s is the genre ("Instrumental, from the artist’s
          bio"). -->
