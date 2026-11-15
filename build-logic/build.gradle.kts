@@ -103,6 +103,17 @@ tasks.register<Test>("functionalTest") {
     classpath = functionalTest.runtimeClasspath
     useJUnitPlatform()
     jvmArgumentProviders += TestKitDir(layout.buildDirectory.dir("testkit").get().asFile)
+    // Each nested build checks its downloads against the repository's verification files (`Probe`).
+    val verification = layout.projectDirectory.dir("../gradle")
+    inputs
+        .files(verification.file("verification-metadata.xml"), verification.file("verification-keyring.keys"))
+        .withPropertyName("verification")
+        .withPathSensitivity(PathSensitivity.NONE)
+    jvmArgumentProviders += VerificationDir(verification.asFile)
+    // While `tools/refresh-dependency-verification.sh` has the nested builds write the metadata, a
+    // test that expects a task up to date sees it run again: those runs are for the metadata, and
+    // the tests' verdicts come from the ordinary run.
+    ignoreFailures = providers.environmentVariable("SLEEVESIGHT_WRITE_VERIFICATION_METADATA").isPresent
 }
 
 // The TestKit home as a system property, kept out of the task's inputs so the cache key does not
@@ -111,4 +122,11 @@ class TestKitDir(
     @get:Internal val dir: File,
 ) : CommandLineArgumentProvider {
     override fun asArguments() = listOf("-Dtestkit.dir=${dir.path}")
+}
+
+// Where the repository's verification files are, as `TestKitDir`; their contents are the task's input.
+class VerificationDir(
+    @get:Internal val dir: File,
+) : CommandLineArgumentProvider {
+    override fun asArguments() = listOf("-Dverification.dir=${dir.path}")
 }

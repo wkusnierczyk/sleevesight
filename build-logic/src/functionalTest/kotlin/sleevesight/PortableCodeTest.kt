@@ -1,6 +1,6 @@
 package sleevesight
 
-import org.gradle.testkit.runner.GradleRunner
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.Test
@@ -54,13 +54,10 @@ class PortableCodeTest {
         text: String,
     ) = resolve(path).apply { parentFile.mkdirs() }.writeText(text)
 
-    private fun runner(vararg arguments: String) =
-        GradleRunner
-            .create()
-            .withProjectDir(dir)
-            .withTestKitDir(File(System.getProperty("testkit.dir")))
-            .withPluginClasspath()
-            .withArguments(*arguments, "--stacktrace")
+    private fun runner(vararg arguments: String) = Probe.runner(dir, *arguments)
+
+    @AfterEach
+    fun collectVerification() = Probe.collect(dir)
 
     private fun assertFailsNaming(
         main: String,
