@@ -88,7 +88,8 @@ internal class Applied(
 internal suspend fun SettingsStore.applyChoices(choices: Map<SecretId, Boolean>): Applied? {
     var result: Applied? = null
     return try {
-        update { before -> before.applied(choices).also { result = Applied(before, it) } }
+        // In line with the screens' saves (#1146): a switch made before, still waiting, cannot undo it.
+        saveOrder.inTurn { update { before -> before.applied(choices).also { result = Applied(before, it) } } }
         result
     } catch (_: IOException) {
         null
