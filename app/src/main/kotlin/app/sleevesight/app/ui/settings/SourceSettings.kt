@@ -248,7 +248,7 @@ internal fun GenresSection(
         summary = stringResource(R.string.settings_show_genres_summary),
         checked = settings.showGenres,
     ) { on -> update { it.copy(showGenres = on) } }
-    for (source in LabelSource.entries) {
+    for (source in labelSourcesByName()) {
         val why =
             when {
                 !settings.showGenres -> stringResource(R.string.settings_labels_genres_off)

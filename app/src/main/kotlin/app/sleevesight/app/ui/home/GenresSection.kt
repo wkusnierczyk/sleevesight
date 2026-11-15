@@ -187,11 +187,11 @@ internal fun GenresContent(
     GenresSearch(track, shown, search, notes)
 }
 
-// [sources] named together, in their order: "Last.fm", "Last.fm and MusicBrainz", "Last.fm, MusicBrainz
-// and Wikidata" (#1098).
+// [sources] named together, alphabetically, whatever order they are declared or combine in (#1098):
+// "Last.fm", "Last.fm and MusicBrainz", "Last.fm, MusicBrainz and Wikidata".
 @Composable
 private fun sourcesNamed(sources: List<LabelSource>): String {
-    val names = sources.map { sourceName(it.source) }
+    val names = sources.map { sourceName(it.source) }.sortedBy { it.lowercase() }
     if (names.size <= 2) {
         return names.drop(1).fold(names.first()) { all, next -> stringResource(R.string.home_sources_two, all, next) }
     }

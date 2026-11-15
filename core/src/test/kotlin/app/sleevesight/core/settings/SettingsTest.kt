@@ -200,8 +200,7 @@ class SettingsTest {
     }
 
     @Test
-    fun `every label source is on by default, Last fm first and Wikidata last`() {
-        assertEquals(listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ, LabelSource.WIKIDATA), LabelSource.entries)
+    fun `every label source is on by default`() {
         assertEquals(LabelSource.entries.toSet(), defaults.labelSources)
         assertTrue(LabelSource.entries.all(defaults::givesLabels))
     }
