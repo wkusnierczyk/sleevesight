@@ -36,11 +36,14 @@ internal suspend fun SecretStore.missing(): Set<SecretId> = SecretId.entries.fil
  * (`servicesOff`): before a key is saved where none is stored, so whatever the keys' gate could not
  * write when the key was removed, the key saved never brings a service back on; and after *Purge
  * keys* deletes the Keystore key, for every key. Across a restart too, since it is the stored
- * settings it writes. False when the settings could not be written; a key is then not saved.
+ * settings it writes. False when the settings could not be written; a key is then not saved. In
+ * line with the settings' saves (#1146, [SettingsStore.saveOrder]), so a choice to switch a service
+ * on that was waiting its turn cannot switch it back on after a purge; the key store's lock is held
+ * meanwhile, which nothing in a turn takes.
  */
 internal suspend fun SettingsStore.servicesOff(ids: Set<SecretId>): Boolean =
     try {
-        update { it.keylessOff(ids) }
+        saveOrder.inTurn { update { it.keylessOff(ids) } }
         true
     } catch (_: IOException) {
         false
