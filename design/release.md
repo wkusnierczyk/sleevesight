@@ -229,7 +229,13 @@ In Play Console, once the developer account exists:
 1. *Create app*: name *Sleevesight*, an app, free, with the declarations it asks for. The package name, `app.sleevesight`, is fixed by the first upload and cannot change afterwards.
 2. Tag the remote `main`, not a local branch: `git fetch origin && git tag v0.1.0 origin/main && git push origin v0.1.0`. Approve the `bundle` job, download the artifact, and reject the `upload` job, which cannot reach the API before the app exists. A tag on a commit that is not on `main`, `dev-*` included (`main` takes squash merges), is rejected by the workflow, and once the rulesets exist it cannot be deleted, so its version is spent.
 3. *Test and release*, *Testing*, *Internal testing*, *Create new release*. Play App Signing is on for a new app: keep *Use Google-generated key* for the app signing key. Upload `app-release.aab`. The key that signed this first upload becomes the upload key.
-4. *Test and release*, *App integrity*, *App signing*: the *Upload key certificate*'s SHA-256 fingerprint must equal the one the run printed in *Check the signature*, in its `upload` job.
+4. *Test and release*, *App integrity*, *App signing*: the *Upload key certificate*'s SHA-256 fingerprint must equal the bundle's signer's. The run prints it in *Check the signature*, a step of the `upload` job, rejected here; so read it from the downloaded bundle instead, with the JDK's tools. The first command must end with `jar verified.` (it succeeds on an unsigned bundle too), and the second prints the signer's certificate, with its `SHA256:` line:
+
+   ```sh
+   jarsigner -verify app-release.aab
+   keytool -printcert -jarfile app-release.aab
+   ```
+
 5. Record it as a variable of the environment, not a secret (a certificate's fingerprint is public), so that every later run fails if the bundle is signed with any other key. Colons and case do not matter:
 
    ```sh
