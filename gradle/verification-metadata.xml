@@ -16,9 +16,12 @@
       <trusted-keys>
          <trusted-key id="03C123038C20AAE9E286C857479D601F3A7B5C1A" group="com.github.ajalt.clikt"/>
          <trusted-key id="04543577D6A9CC626239C50C7ECBD740FF06AEB5">
+            <trusting group="com.sun.istack"/>
+            <trusting group="com.sun.xml.bind"/>
+            <trusting group="com.sun.xml.bind.mvn"/>
+            <trusting group="com.sun.xml.fastinfoset"/>
             <trusting group="org.glassfish.jaxb"/>
             <trusting group="org.jvnet.staxex" name="stax-ex" version="1.8.1"/>
-            <trusting group="^com[.]sun($|([.].*))" regex="true"/>
          </trusted-key>
          <trusted-key id="0785B3EFF60B1B1BEA94E0BB7C25280EAE63EBE5" group="org.apache.httpcomponents"/>
          <trusted-key id="09939C73246B4BA7444CAA453D002DBC5EA9615F" group="dev.drewhamilton.poko"/>
@@ -26,6 +29,12 @@
          <trusted-key id="0E225917414670F4442C250DFD533C07C264648F">
             <trusting group="androidx.activity"/>
             <trusting group="androidx.collection"/>
+            <trusting group="androidx.compose"/>
+            <trusting group="androidx.compose.animation"/>
+            <trusting group="androidx.compose.foundation"/>
+            <trusting group="androidx.compose.material"/>
+            <trusting group="androidx.compose.runtime"/>
+            <trusting group="androidx.compose.ui"/>
             <trusting group="androidx.core"/>
             <trusting group="androidx.databinding"/>
             <trusting group="androidx.datastore"/>
@@ -34,8 +43,18 @@
             <trusting group="androidx.navigationevent"/>
             <trusting group="androidx.sqlite"/>
             <trusting group="androidx.tracing"/>
-            <trusting group="^androidx[.]compose($|([.].*))" regex="true"/>
-            <trusting group="^com[.]android($|([.].*))" regex="true"/>
+            <trusting group="com.android"/>
+            <trusting group="com.android.databinding"/>
+            <trusting group="com.android.tools"/>
+            <trusting group="com.android.tools.analytics-library"/>
+            <trusting group="com.android.tools.androidtest"/>
+            <trusting group="com.android.tools.build"/>
+            <trusting group="com.android.tools.ddms"/>
+            <trusting group="com.android.tools.external.com-intellij"/>
+            <trusting group="com.android.tools.external.org-jetbrains"/>
+            <trusting group="com.android.tools.layoutlib"/>
+            <trusting group="com.android.tools.lint"/>
+            <trusting group="com.android.tools.utp"/>
          </trusted-key>
          <trusted-key id="0F06FF86BEEAF4E71866EE5232EE5355A6BC6E42">
             <trusting group="androidx.annotation"/>
@@ -45,14 +64,19 @@
             <trusting group="androidx.lifecycle"/>
             <trusting group="androidx.navigationevent"/>
             <trusting group="androidx.savedstate"/>
+            <trusting group="androidx.test"/>
+            <trusting group="androidx.test.espresso"/>
+            <trusting group="androidx.test.services"/>
             <trusting group="androidx.window"/>
-            <trusting group="^androidx[.]test($|([.].*))" regex="true"/>
          </trusted-key>
          <trusted-key id="120D6F34E627ED3A772EBBFE55C7E5E701832382" group="org.snakeyaml" name="snakeyaml-engine" version="2.7"/>
          <trusted-key id="19BEAB2D799C020F17C69126B16698A4ADF4D638" group="org.checkerframework" name="checker-qual" version="2.5.8"/>
          <trusted-key id="1A55F091AD28C07F831FA44D7905DE25C78AD456" group="com.google.protobuf"/>
          <trusted-key id="1D0A8B5E77C678A7C724445ABF984B4145EA13F7" group="com.squareup" name="javapoet" version="1.13.0"/>
-         <trusted-key id="1D217F8475EEE9F19AB8DD6B793FD5751A0F0780" group="^com[.]squareup($|([.].*))" regex="true"/>
+         <trusted-key id="1D217F8475EEE9F19AB8DD6B793FD5751A0F0780">
+            <trusting group="com.squareup"/>
+            <trusting group="com.squareup.okio"/>
+         </trusted-key>
          <trusted-key id="244B43D81B6ADEDFD264DC7697A78536F00F32C3" group="com.materialkolor"/>
          <trusted-key id="2BAB4466B44F54F8F99BBBDD5ED22F661BBF0ACC" group="com.almworks.sqlite4java" name="sqlite4java" version="1.0.392"/>
          <trusted-key id="2DB4F1EF0FA761ECC4EA935C86FDC7E2A11262CB">
@@ -65,7 +89,10 @@
          <trusted-key id="2FC53E6B1F681184F4CCD637F5C81DE10A0B8ECC" group="org.yaml" name="snakeyaml" version="2.6"/>
          <trusted-key id="3051D45031E13516A6E8FAFF280D66A55F5316C5" group="org.bitbucket.b_c" name="jose4j" version="0.9.7"/>
          <trusted-key id="31BAE2E51D95E0F8AD9B7BCC40A3C4432BD7308C" group="com.googlecode.juniversalchardet" name="juniversalchardet" version="1.0.3"/>
-         <trusted-key id="33FD4BFD33554634053D73C0C2148900BCD3C2AF" group="org.jetbrains" name="annotations" version="23.0.0"/>
+         <trusted-key id="33FD4BFD33554634053D73C0C2148900BCD3C2AF">
+            <trusting group="org.jetbrains" name="annotations" version="23.0.0"/>
+            <trusting group="org.jetbrains" name="annotations" version="24.0.0"/>
+         </trusted-key>
          <trusted-key id="34441E504A937F43EB0DAEF96A65176A0FB1CD0B" group="org.apache.groovy"/>
          <trusted-key id="41CD49B4EF5876F9E9F691DABAC30622339994C4" group="org.jspecify" name="jspecify"/>
          <trusted-key id="44FBDBBC1A00FE414F1C1873586654072EAD6677" group="org.sonatype.oss" name="oss-parent" version="9"/>
@@ -80,8 +107,9 @@
          <trusted-key id="5767F9CDE920750621875079A40E24B5B408DBD5" group="org.robolectric"/>
          <trusted-key id="5DD80B0DDCCBE005F0A47FD66751E1A6E2001B8D">
             <trusting group="app.cash.sqldelight"/>
+            <trusting group="com.squareup.okhttp3"/>
+            <trusting group="com.squareup.okio"/>
             <trusting group="dev.lysine.sql-psi"/>
-            <trusting group="^com[.]squareup($|([.].*))" regex="true"/>
          </trusted-key>
          <trusted-key id="5F459557BD5F70C12DF0BB91274E4517777B86B2" group="org.jheaps" name="jheaps" version="0.14"/>
          <trusted-key id="5F6C2148AD4911FE308110E5F0D0AE433308B042" group="io.gitlab.arturbosch.detekt"/>
@@ -90,8 +118,12 @@
             <trusting group="org.slf4j"/>
          </trusted-key>
          <trusted-key id="638DBA7FF338F537EACB7AC0AE1B9D6007DDFA7C" group="com.google.testparameterinjector"/>
-         <trusted-key id="694621A7227D8D5289699830ABE9F3126BB741C1" group="^com[.]google($|([.].*))" regex="true"/>
+         <trusted-key id="694621A7227D8D5289699830ABE9F3126BB741C1">
+            <trusting group="com.google.guava"/>
+            <trusting group="com.google.jimfs"/>
+         </trusted-key>
          <trusted-key id="6DD3B8C64EF75253BEB2C53AD908A43FB7EC07AC" group="jakarta.activation"/>
+         <trusted-key id="6F538074CCEBF35F28AF9B066A0975F8B1127B83" group="org.jetbrains.kotlin"/>
          <trusted-key id="7440F1F7D27BAC115F953D55EB095DA7D2F6AC0E" group="org.tensorflow" name="tensorflow-lite-metadata" version="0.2.0"/>
          <trusted-key id="7616EB882DAF57A11477AAF559A252FB1199D873" group="com.google.code.findbugs" name="jsr305" version="3.0.2"/>
          <trusted-key id="78DF98EF7F95578FD545B9A159A7C2A1BD98C013" group="org.jdom" name="jdom2" version="2.0.6.1"/>
@@ -126,7 +158,10 @@
          <trusted-key id="C0612048F3393B80B22639B4F067A2FD751AE3E4" group="io.github.davidburstrom.contester" name="contester-breakpoint" version="0.2.0"/>
          <trusted-key id="C1CBA75EC9BD0BAF8061935459E05CE618187ED4" group="org.xerial" name="sqlite-jdbc" version="3.53.4.0"/>
          <trusted-key id="C3259D20DAEC4ACE6D57CC83340B090F727518D8" group="com.google.j2objc" name="j2objc-annotations" version="3.1"/>
-         <trusted-key id="C7BE5BCC9FEC15518CFDA882B0F3710FA64900E7" group="^com[.]google($|([.].*))" regex="true"/>
+         <trusted-key id="C7BE5BCC9FEC15518CFDA882B0F3710FA64900E7">
+            <trusting group="com.google.auto.value"/>
+            <trusting group="com.google.code.gson"/>
+         </trusted-key>
          <trusted-key id="CE3285F320685193D11FEA01F6CE9695C9318406" group="com.google.zxing"/>
          <trusted-key id="E1188CE08349E884A5C4B8458A583BB0ED7ADE95" group="org.apfloat"/>
          <trusted-key id="E52F07877A5805F9AF4AB0ACD46C5610D06E7001" group="com.ibm.icu" name="icu4j" version="78.3"/>
@@ -1734,6 +1769,14 @@
             <sha256 value="8a08b2aa18b687c6b53ce18cfde09537f1a1d1779dbf911a174525f48bee3ffa" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="ch.qos.logback" name="logback-classic" version="1.3.14">
+         <artifact name="logback-classic-1.3.14.jar">
+            <sha256 value="f9b07a6dba4df3899381df7e597df450134e1879b1f3a757456b3cd1c8d94e2f" origin="Generated by Gradle"/>
+         </artifact>
+         <artifact name="logback-classic-1.3.14.pom">
+            <sha256 value="232ae1c31f05e90ae4e4bba1846492318de1519d60d2b873b43a18f6c261a3a2" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
       <component group="ch.qos.logback" name="logback-classic" version="1.6.6">
          <artifact name="logback-classic-1.6.6.jar">
             <sha256 value="5230217ccba7a9d31dda1dd878e5606037a7972282c7d3f8eac1efa80e9463d9" origin="Generated by Gradle"/>
@@ -1742,12 +1785,25 @@
             <sha256 value="e3c14a0a5ab76cb0ffebd08ed19a5766964c52195ede15bdd5408707142d9cc1" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="ch.qos.logback" name="logback-core" version="1.3.14">
+         <artifact name="logback-core-1.3.14.jar">
+            <sha256 value="9f53159af18a9d438bc398c970db3bb7e17ddb07b04bbb3b01dfe3454dd18862" origin="Generated by Gradle"/>
+         </artifact>
+         <artifact name="logback-core-1.3.14.pom">
+            <sha256 value="f5f0e306475d0b9b6a055e130b1a0c4fb9d222034c93f0d1dd35461e3bc2e1da" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
       <component group="ch.qos.logback" name="logback-core" version="1.6.6">
          <artifact name="logback-core-1.6.6.jar">
             <sha256 value="5458415d5d58a97ab670632f9b2bdac2d6f7e0e11455b45dd4e64e90d12670ab" origin="Generated by Gradle"/>
          </artifact>
          <artifact name="logback-core-1.6.6.pom">
             <sha256 value="741545bf1c537ad4f9328ff96cddbc53e9a0f1da8476655590ba071a2f1fe284" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
+      <component group="ch.qos.logback" name="logback-parent" version="1.3.14">
+         <artifact name="logback-parent-1.3.14.pom">
+            <sha256 value="796dcc4cbfd42aeb7f72432445f5364619678928242b9f3e4749d4c4e0dd9dc4" origin="Generated by Gradle"/>
          </artifact>
       </component>
       <component group="ch.qos.logback" name="logback-parent" version="1.6.6">
@@ -1908,8 +1964,14 @@
          </artifact>
       </component>
       <component group="com.android.tools.build" name="aapt2" version="9.4.1-15978811">
+         <artifact name="aapt2-9.4.1-15978811-linux.jar">
+            <sha256 value="f5bebd466ecf14d341fd465f2756a16d86052f29eb4532003d5ff7bcffd08de5" origin="Google Maven, for the platforms the refresh did not run on"/>
+         </artifact>
          <artifact name="aapt2-9.4.1-15978811-osx.jar">
             <sha256 value="eb93ce9d0fa121333f12395b3ab30822c5cdb9155737f20d342fe71809757059" origin="Generated by Gradle"/>
+         </artifact>
+         <artifact name="aapt2-9.4.1-15978811-windows.jar">
+            <sha256 value="5fe3c8ee5c6b3f47efd1fced1d6418084037f54f13290816c5db717e6b5c92aa" origin="Google Maven, for the platforms the refresh did not run on"/>
          </artifact>
          <artifact name="aapt2-9.4.1-15978811.pom">
             <sha256 value="8a84707f3dcf60c5ab7fd4638f60dafdf9d0345217e3b35141628f00684e55d0" origin="Generated by Gradle"/>
@@ -3715,6 +3777,14 @@
             <sha256 value="c9490f655132328df2cfbcfdf743f53fc3916d6c1d10437175a6ca6e3a67771c" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="org.jetbrains" name="annotations" version="24.0.0">
+         <artifact name="annotations-24.0.0.jar">
+            <sha256 value="ff112f54ce874b8ae899cfd68f0315d96c9f406a338b8eca80c76d10e2e5a2f7" origin="Generated by Gradle"/>
+         </artifact>
+         <artifact name="annotations-24.0.0.pom">
+            <sha256 value="ab878ddac3fab5e078f0da951eabd67fbeddd3d2af1739feb7f9471602755f0b" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
       <component group="org.jetbrains.intellij.deps" name="trove4j" version="1.0.20200330">
          <artifact name="trove4j-1.0.20200330.jar">
             <sha256 value="c5fd725bffab51846bf3c77db1383c60aaaebfe1b7fe2f00d23fe1b7df0a439d" origin="Generated by Gradle"/>
@@ -4943,6 +5013,14 @@
             <sha256 value="b04a4843eaa29966807cc9508a9f2513fa563d0d0794cb0edd6a8d2c8f4620d0" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="org.slf4j" name="slf4j-api" version="2.0.7">
+         <artifact name="slf4j-api-2.0.7.jar">
+            <sha256 value="5d6298b93a1905c32cda6478808ac14c2d4a47e91535e53c41f7feeb85d946f4" origin="Generated by Gradle"/>
+         </artifact>
+         <artifact name="slf4j-api-2.0.7.pom">
+            <sha256 value="2d403ccf0e0a02d5c1a8667b0e2a33c8dfc6038ab287b9671dd681c205267981" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
       <component group="org.slf4j" name="slf4j-bom" version="2.0.19">
          <artifact name="slf4j-bom-2.0.19.pom">
             <sha256 value="e14a9ab180f60247f347de369b7a44ccd591d0c47f4d96bc644056c4f83b51a0" origin="Generated by Gradle"/>
@@ -4956,6 +5034,11 @@
       <component group="org.slf4j" name="slf4j-parent" version="2.0.19">
          <artifact name="slf4j-parent-2.0.19.pom">
             <sha256 value="452831ef96fbebe64d855dd5c98ec6086d7478a9e568422c8343c6da00b2750d" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
+      <component group="org.slf4j" name="slf4j-parent" version="2.0.7">
+         <artifact name="slf4j-parent-2.0.7.pom">
+            <sha256 value="c182bb36cd3af1c93c1603cdfefe7889157db30ba8b584f4a44535fcd22e45e7" origin="Generated by Gradle"/>
          </artifact>
       </component>
       <component group="org.snakeyaml" name="snakeyaml-engine" version="2.7">
