@@ -114,6 +114,7 @@ class MusicBrainzClient(
                     title = work.required("title"),
                     type = work.string("type")?.ifEmpty { null },
                     disambiguation = work.string("disambiguation")?.ifEmpty { null },
+                    aliases = work.array("aliases").size,
                     // The search's relationships carry no `target-type`: an artist's is the one with an artist.
                     artistRelations =
                         work.array("relations").mapNotNull { relation ->

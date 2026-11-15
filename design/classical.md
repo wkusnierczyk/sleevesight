@@ -210,21 +210,43 @@ work found by a search (the fourth): one search more, and the lookup of the work
 - *A work search* (#1299; `WorkSearch.kt`). With a composer the title leads with, when the chosen
   recording links no work and none is lent it, one search of MusicBrainz's works by the title without
   the lead and the composer's name (`MusicBrainzLookup.searchWorks`, `work:"…" AND artist:"…"`, at most
-  10 works, each with its disambiguation and artist relationships: core data; the search gives no
-  relationships between works). A work found is a candidate only when its composer relationship names
-  that composer; when it is no arrangement: no arranger or orchestrator but the composer among its
-  artist relationships, and no disambiguation marking it a catch-all for arrangements (MusicBrainz keeps
-  a work for each arrangement of a much-arranged piece, of the same title and composer; no other words
-  of a disambiguation count, since `original orchestration` names arrangements and is none); and when
-  its title fits the track's, either way. Segment by segment: the titles split at a part's separators (a
-  colon with whitespace after it, so not a catalogue number's `Hob. XVI:52`), as many segments, each
-  alike as a recording's title, with the same numbers (`NameMatcher.numberWords`: Barber's *Essay for
-  Orchestra No. 1* or *Third Essay* is not his *No. 2*); not the titles joined, which a whole work and
-  its unnumbered movement pass (*Variations on an Original Theme, op. 36: “Enigma”* and its *: Nimrod*,
-  as alike as titles that fit, with the same numbers). Or as the part a part of a work quotes
-  (`pieceSimilarity`: `Vanessa: Act I. “Must the winter come so soon?”` for its aria's own title), with
-  the same numbers. Only a single candidate is taken: with two, nothing tells which
-  is the track's, and the recording keeps no work. It is linked as the recording's own performance of it
+  10 works, each with its disambiguation, aliases and artist relationships: core data; the search gives no
+  relationships between works, nor to URLs, so no Wikidata item to tell the piece by). MusicBrainz keeps
+  a work for each arrangement, version and setting of a much-played piece, most of the same title and
+  composer, and negative checks alone kept missing kinds of them (`canonicalWork`, `WorkSearch.kt`). So a
+  work is taken only with evidence that it is the piece itself, and none against it:
+  - *Known by many names*: at least three aliases (`CANONICAL_ALIASES`). The pieces looked at have many,
+    in the languages they are known in and their catalogue forms (Barber's *Adagio for Strings* 12,
+    Ravel's *Boléro* 13, *Für Elise* 31, *Eine kleine Nachtmusik* 19 to 48); their arrangements,
+    versions and catch-alls none to two. A lesser-known piece with fewer is given no work: the safe way.
+  - *Only the composer composed it*: every `composer` or `writer` relationship names the lead, and one
+    does (*Für Elise*'s production music version credits Giscard Rasquin as a composer too). A lyricist
+    alone does not count against it: an art song or an aria has one.
+  - *No arrangement*: no `arranger`, `instrument arranger`, `vocal arranger` or `orchestrator`, but the
+    composer as its orchestrator (Barber orchestrated his own Adagio); the composer's own `arranger`
+    credit is an arrangement (`arr. Ravel for 2 pianos`).
+  - *No named version*: the disambiguation names none of its related artists but the composer (the last
+    word of the name: `production music version, Rasquin`, `with lyrics by Georg Kreisler`), and does not
+    mark it a catch-all for arrangements. No other words of it count (`original orchestration` names
+    arrangements and is none).
+  - *Its title fits the track's*, either way. Segment by segment: the titles split at a part's separators
+    (a colon with whitespace after it, so not a catalogue number's `Hob. XVI:52`), as many segments, each
+    alike as a recording's title, with the same numbers (`NameMatcher.numberWords`: Barber's *Essay for
+    Orchestra No. 1* or *Third Essay* is not his *No. 2*); not the titles joined, which a whole work and
+    its unnumbered movement pass (*Variations on an Original Theme, op. 36: “Enigma”* and its *:
+    Nimrod*, as alike as titles that fit, with the same numbers). Or as the part a part of a work quotes
+    (`pieceSimilarity`: `Vanessa: Act I. “Must the winter come so soon?”` for its aria's own title), with
+    the same numbers.
+
+  Of the searches recorded (`fixtures/http/musicbrainz-1299/`): *Boléro* takes the ballet (`487527b9`),
+  not Ravel's own arrangement for two pianos; *Für Elise* and *Eine kleine Nachtmusik* take none, since
+  the piece is titled by its catalogue form (`Bagatelle for Piano in A minor, WoO 59 “Für Elise”: Poco
+  moto`, `Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“`), which the track's
+  title does not fit, and the works of the short title are versions (Rasquin's, Gray's, Kreisler's song).
+  Matching the track's title against a work's aliases would reach those pieces; it would widen what is
+  taken, and is left for later.
+  Only a single candidate is taken: with two, nothing tells which is the track's, and the recording
+  keeps no work. It is linked as the recording's own performance of it
   (no cover, not instrumental) and looked up as any work, so the resolution keeps it as its work
   (`Resolution.work`), and the search's answer is held in memory with MusicBrainz's others
   (`RememberedMusicBrainz`). Without a lead, no search: a pop recording linking no work makes no request

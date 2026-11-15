@@ -8,6 +8,11 @@
    "score": 100,
    "title": "Adagio for Strings",
    "disambiguation": "catch‐all for arrangements",
+   "aliases": [
+    {
+     "name": "Adagio"
+    }
+   ],
    "relations": [
     {
      "type": "composer",
@@ -23,6 +28,44 @@
    "id": "1ebe1abf-daf2-3e5e-b3ad-b6c5a4ec5727",
    "score": 82,
    "title": "Adagio for Strings",
+   "aliases": [
+    {
+     "name": "Adagio für Steicher, op. 11"
+    },
+    {
+     "name": "Adagio for Strings (original version)"
+    },
+    {
+     "name": "Adagio for Strings (Ferry Corsten remix)"
+    },
+    {
+     "name": "Adagio for Strings (ATB remix)"
+    },
+    {
+     "name": "Barber's Adagio for Strings (Ferry Corsten remix)"
+    },
+    {
+     "name": "Adagio for Strings: Molto adagio"
+    },
+    {
+     "name": "Adagio for Strings, Op. 11a"
+    },
+    {
+     "name": "'Adagio for Strings'"
+    },
+    {
+     "name": "Adagio for Strings, Op. 11"
+    },
+    {
+     "name": "Adagio for strings (or string quartet; arr. from 2nd mvt. of String Quartet), Op. 11"
+    },
+    {
+     "name": "Adagio for Strings"
+    },
+    {
+     "name": "Adagio pour cordes"
+    }
+   ],
    "relations": [
     {
      "type": "premiere",
@@ -63,6 +106,7 @@
    "score": 82,
    "title": "Adagio for Strings",
    "disambiguation": "for organ, Strickland",
+   "aliases": [],
    "relations": [
     {
      "type": "composer",
@@ -87,6 +131,7 @@
    "score": 77,
    "title": "Adagio for Strings",
    "disambiguation": "arr. Lucien Cailliet for clarinet choir",
+   "aliases": [],
    "relations": [
     {
      "type": "composer",
@@ -111,6 +156,7 @@
    "score": 77,
    "title": "Adagio for Strings",
    "disambiguation": "arr. John O'Reilly for woodwind band",
+   "aliases": [],
    "relations": [
     {
      "type": "composer",

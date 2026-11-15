@@ -56,7 +56,8 @@ class WorkSearchTest {
         emptyList(),
     )
 
-    // A work as the search finds it: [title], by [composer], [others] by their relationships' types.
+    // A work as the search finds it: [title], by [composer], [others] by their relationships' types, with as
+    // many aliases as Barber's Adagio has.
     private fun found(
         mbid: String,
         title: String,
@@ -70,6 +71,7 @@ class WorkSearchTest {
         disambiguation,
         listOf(MbArtistRelation("composer", "mbid-$composer", composer, emptyList())) +
             others.map { (type, name) -> MbArtistRelation(type, "mbid-$name", name, emptyList()) },
+        aliases = 12,
     )
 
     // The track `Barber: [title]` by Barber, Rattle and the orchestra, resolved with the search finding [works].
@@ -150,6 +152,73 @@ class WorkSearchTest {
             for (said in listOf("catch‐all for arrangements", "catch-all", "Catchall")) {
                 assertNull(resolved("Adagio for Strings", found("all", "Adagio for Strings", said)).first.work, said)
             }
+        }
+
+    @Test
+    fun `a work known by fewer than three names is not taken for the piece`() =
+        runTest {
+            for (aliases in 0 until CANONICAL_ALIASES) {
+                val (resolution, musicBrainz) =
+                    resolved(
+                        "Adagio for Strings",
+                        found("piece", "Adagio for Strings").copy(aliases = aliases),
+                    )
+                assertNull(resolution.work, "$aliases")
+                assertTrue(musicBrainz.worksAsked.isEmpty())
+            }
+            assertEquals(
+                "piece",
+                resolved("Adagio for Strings", found("piece", "Adagio for Strings").copy(aliases = 3)).first.work?.mbid,
+            )
+        }
+
+    @Test
+    fun `a work another composed or wrote too is not taken, one with a lyricist is`() =
+        runTest {
+            // `Für Elise`, production music version, credits Giscard Rasquin as a composer beside Beethoven.
+            for (type in listOf("composer", "writer")) {
+                val shared = found("shared", "Adagio for Strings", others = mapOf(type to "Giscard Rasquin"))
+                assertNull(resolved("Adagio for Strings", shared).first.work, type)
+            }
+            // An art song or an aria names its lyricist: no reason to doubt it is the piece.
+            val song = found("song", "Adagio for Strings", others = mapOf("lyricist" to "Ann Lee"))
+            assertEquals("song", resolved("Adagio for Strings", song).first.work?.mbid)
+        }
+
+    @Test
+    fun `the composer's own arrangement is an arrangement - Ravel's Bolero for two pianos`() =
+        runTest {
+            val pianos =
+                found("pianos", "Adagio for Strings", "arr. Barber for 2 pianos", others = mapOf("arranger" to barber))
+            assertNull(resolved("Adagio for Strings", pianos).first.work)
+        }
+
+    @Test
+    fun `a disambiguation naming one of the work's other artists marks a version of it`() =
+        runTest {
+            val kreisler =
+                found(
+                    "kreisler",
+                    "Adagio for Strings",
+                    "with lyrics by Georg Kreisler",
+                    others =
+                        mapOf(
+                            "lyricist" to "Georg Kreisler",
+                        ),
+                )
+            assertNull(resolved("Adagio for Strings", kreisler).first.work)
+            // Naming the composer, or someone the work does not relate to, is no version.
+            val named =
+                found(
+                    "named",
+                    "Adagio for Strings",
+                    "Barber's own, premiered by Toscanini",
+                    others =
+                        mapOf(
+                            "lyricist" to "Ann Lee",
+                        ),
+                )
+            assertEquals("named", resolved("Adagio for Strings", named).first.work?.mbid)
         }
 
     @Test
@@ -298,6 +367,11 @@ class WorkSearchTest {
                 "aria",
                 "dorabella",
                 "all",
+                "shared",
+                "song",
+                "pianos",
+                "kreisler",
+                "named",
             )
     }
 }

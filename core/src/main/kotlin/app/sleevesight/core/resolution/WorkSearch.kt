@@ -8,19 +8,10 @@ import app.sleevesight.core.text.isJsWhitespace
 /**
  * The work of a recording that links none, nor is lent one (#1299): with a composer the title leads with
  * ([NormalizedTrack.composer]), one search of MusicBrainz's works by the title without the lead
- * ([NormalizedTrack.searchTitle]) and the composer's name ([MusicBrainzLookup.searchWorks]). A work found
- * is a candidate only when:
- * - its composer relationship names that composer;
- * - it is no arrangement ([arranged]): no arranger or orchestrator but the composer among its artist
- *   relationships, and no disambiguation marking it a catch-all for arrangements. MusicBrainz keeps a work
- *   for each arrangement of a much-arranged piece (Barber's *Adagio for Strings* for organ, for clarinet
- *   choir, and a catch-all for the rest), of the same title and composer;
- * - its title fits the track's ([titleFits]): segment by segment, or as the part it quotes.
- *
- * Only a single candidate is taken: with two or more, nothing tells which is the track's, and none is. It
- * is linked as this recording's own performance of it (no cover, not instrumental), and looked up as any
- * work. Without a composer, none, no request made; a search that fails, none with the failure, so the
- * resolution is asked again later.
+ * ([NormalizedTrack.searchTitle]) and the composer's name ([MusicBrainzLookup.searchWorks]), of which
+ * [canonicalWork] takes one or none. It is linked as this recording's own performance of it (no cover, not
+ * instrumental), and looked up as any work. Without a composer, none, no request made; a search that fails,
+ * none with the failure, so the resolution is asked again later.
  */
 internal suspend fun MusicBrainzLookup.searchedWork(
     names: NameMatcher,
@@ -32,29 +23,88 @@ internal suspend fun MusicBrainzLookup.searchedWork(
         is Lookup.Failed -> null to found
         Lookup.NotFound -> null to null
         is Lookup.Found ->
-            found.value
-                .filter { work ->
-                    work.artistRelations.any { it.type == COMPOSER && names.sameName(it.artistName, composer) } &&
-                        !names.arranged(work, composer) &&
-                        names.titleFits(title, work.title)
-                }.singleOrNull()
+            names
+                .canonicalWork(title, composer, found.value)
                 ?.let { MbWorkLink(it.mbid, it.title, cover = false, type = it.type) to work(it.mbid) }
                 ?: (null to null)
     }
 }
 
-// Whether [work] is an arrangement ([searchedWork]): an arranger or an orchestrator other than [composer]
-// among its artist relationships, or a disambiguation marking it a catch-all for arrangements (`catch‐all
-// for arrangements`). No other words of a disambiguation count: `original orchestration` and `original
-// version, not an arrangement` name arrangements and are none.
-private fun NameMatcher.arranged(
+/**
+ * Of the works a search by [title] and [composer] [found] (#1299, [MusicBrainzLookup.searchWorks]), the one
+ * that is the piece itself, not one derived from it, when it is the only one; null otherwise. MusicBrainz
+ * keeps a work for each arrangement, version and setting of a much-played piece, most of the same title
+ * and composer (Barber's *Adagio for Strings* for organ, *Für Elise* as production music, *Eine kleine
+ * Nachtmusik* with lyrics by Georg Kreisler, Ravel's own *Boléro* for two pianos), so a work is taken only
+ * when all of these hold:
+ * - *It is known by many names*: at least [CANONICAL_ALIASES] aliases, the evidence that it is the piece
+ *   itself. A lesser-known piece with fewer is then given no work, which errs the safe way.
+ * - *Only the composer composed it*: every `composer` or `writer` relationship names [composer], and one does.
+ *   A lyricist alone does not count against it: an art song or an aria has one.
+ * - *It is no arrangement*: no `arranger`, `instrument arranger`, `vocal arranger` or `orchestrator`
+ *   relationship, but the composer as its `orchestrator` (Barber orchestrated his own Adagio); the
+ *   composer's own `arranger` credit is an arrangement (`arr. Ravel for 2 pianos`).
+ * - *It is no named version*: its disambiguation names none of its related artists but the composer (by the
+ *   last word of their name: `production music version, Rasquin`, `with lyrics by Georg Kreisler`), and
+ *   does not mark it a catch-all for arrangements.
+ * - *Its title fits the track's* ([titleFits]): segment by segment, or as the part it quotes.
+ *
+ * With two or more left, nothing tells which is the track's, and none is taken.
+ */
+fun NameMatcher.canonicalWork(
+    title: String,
+    composer: String,
+    found: List<MbFoundWork>,
+): MbFoundWork? =
+    found
+        .filter { work ->
+            work.aliases >= CANONICAL_ALIASES &&
+                composedByLeadAlone(work, composer) &&
+                !arranged(work, composer) &&
+                !namedVersion(work, composer) &&
+                titleFits(title, work.title)
+        }.singleOrNull()
+
+/**
+ * The fewest aliases a work needs to be taken for the piece itself ([canonicalWork], #1299). The pieces
+ * looked at have many, in the languages they are known in and their catalogue forms: Barber's *Adagio for
+ * Strings* 12, Ravel's *Boléro* 13, Beethoven's *Für Elise* 31, Mozart's *Eine kleine Nachtmusik* 19 to 48
+ * (2026-11-15); the arrangements, versions and catch-alls of them none to two.
+ */
+const val CANONICAL_ALIASES: Int = 3
+
+// Whether every `composer` or `writer` relationship of [work] names [composer], and one does ([canonicalWork]).
+private fun NameMatcher.composedByLeadAlone(
     work: MbFoundWork,
     composer: String,
 ): Boolean {
-    val words = key(work.disambiguation.orEmpty()).split(' ')
-    return CATCH_ALL in words.zipWithNext() ||
-        CATCH_ALL_JOINED in words ||
-        work.artistRelations.any { it.type in ARRANGER_TYPES && !sameName(it.artistName, composer) }
+    val writers = work.artistRelations.filter { it.type in WRITER_TYPES }
+    return writers.isNotEmpty() && writers.all { sameName(it.artistName, composer) }
+}
+
+// Whether [work] is an arrangement ([canonicalWork]): an arranger of any kind, but [composer] as its
+// orchestrator.
+private fun NameMatcher.arranged(
+    work: MbFoundWork,
+    composer: String,
+): Boolean =
+    work.artistRelations.any {
+        it.type in ARRANGER_TYPES && !(it.type == ORCHESTRATOR && sameName(it.artistName, composer))
+    }
+
+// Whether [work]'s disambiguation names a version of it ([canonicalWork]): one of its related artists but
+// [composer], by the last word of their name, or a catch-all for arrangements (`catch‐all`, `catch-all`,
+// `catchall`).
+private fun NameMatcher.namedVersion(
+    work: MbFoundWork,
+    composer: String,
+): Boolean {
+    val words = key(work.disambiguation.orEmpty()).split(' ').filter { it.isNotEmpty() }
+    val others =
+        work.artistRelations
+            .filterNot { sameName(it.artistName, composer) }
+            .mapNotNull { nameKey(it.artistName).split(' ').lastOrNull()?.ifEmpty { null } }
+    return CATCH_ALL in words.zipWithNext() || CATCH_ALL_JOINED in words || others.any { it in words }
 }
 
 // Whether a work's title [workTitle] fits [title] ([searchedWork]), either way:
@@ -99,10 +149,13 @@ internal fun segments(title: String): List<String> {
     return found.map { it.trim { c -> isJsWhitespace(c) } }
 }
 
-private const val COMPOSER = "composer"
+// MusicBrainz's work-artist relationships of someone who wrote the music.
+private val WRITER_TYPES = setOf("composer", "writer")
+
+private const val ORCHESTRATOR = "orchestrator"
 
 // MusicBrainz's work-artist relationships of someone who arranged the work.
-private val ARRANGER_TYPES = setOf("arranger", "instrument arranger", "vocal arranger", "orchestrator")
+private val ARRANGER_TYPES = setOf("arranger", "instrument arranger", "vocal arranger", ORCHESTRATOR)
 
 // A catch-all for a piece's arrangements, as its disambiguation's key has it (`catch‐all`, `catch-all`), or
 // written as one word.

@@ -1,0 +1,35 @@
+[
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work",
+  "query": {
+   "query": "work:\"Boléro\" AND artist:\"Maurice Ravel\"",
+   "limit": "10",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-work-bolero-and-artist-maurice-ravel.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work",
+  "query": {
+   "query": "work:\"Eine kleine Nachtmusik\" AND artist:\"Wolfgang Amadeus Mozart\"",
+   "limit": "10",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-work-eine-kleine-nachtmusik-and-artist-wolfgang-amadeus-mozart.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work",
+  "query": {
+   "query": "work:\"Für Elise\" AND artist:\"Ludwig van Beethoven\"",
+   "limit": "10",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-work-fur-elise-and-artist-ludwig-van-beethoven.json"
+ }
+]

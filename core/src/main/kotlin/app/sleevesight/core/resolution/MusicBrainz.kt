@@ -357,8 +357,9 @@ data class MbWork(
 /**
  * A work as MusicBrainz's work search gives it (#1299, [MusicBrainzLookup.searchWorks]): its [title], its
  * [type] (null when it gives none), its [disambiguation] (null when it gives none: `for organ, Strickland`,
- * `catch‐all for arrangements`), and its [artistRelations] (the composer's and any arranger's among them,
- * with no dates: the search gives none). Core data, CC0. The search gives no relationships between works.
+ * `catch‐all for arrangements`), its [artistRelations] (the composer's and any arranger's among them, with
+ * no dates: the search gives none), and how many [aliases] it has. Core data, CC0. The search gives no
+ * relationships between works, nor to URLs.
  */
 data class MbFoundWork(
     val mbid: String,
@@ -366,6 +367,7 @@ data class MbFoundWork(
     val type: String?,
     val disambiguation: String?,
     val artistRelations: List<MbArtistRelation>,
+    val aliases: Int = 0,
 )
 
 /**
