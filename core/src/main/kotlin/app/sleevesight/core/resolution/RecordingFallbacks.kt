@@ -203,20 +203,21 @@ internal fun NameMatcher.pieceSimilarity(
 
 // The part's own title in [recordingTitle] of a part of a work's shape ([pieceSimilarity]): the one quoted
 // title after the work, with nothing after it but a parenthetical (`Turandot: “Nessun dorma” (Vincerò)`);
-// null for another shape, and for a title quoting two (`Medley: “Yesterday” / “Michelle”`).
+// null for another shape, for a title quoting two (`Medley: “Yesterday” / “Michelle”`), and for a title
+// longer than [PIECE_TITLE_MAX] (#1304).
 private fun quotedPart(recordingTitle: String): String? {
-    val lead = PIECE_LEAD.find(recordingTitle) ?: return null
+    val lead = recordingTitle.takeIf { it.length <= PIECE_TITLE_MAX }?.let { PIECE_LEAD.find(it) } ?: return null
     val rest = recordingTitle.substring(lead.range.last + 1)
-    val quoted = PIECE_QUOTED.find(rest)
-    val after = quoted?.let { rest.substring(it.range.last + 1) }
-    return quoted?.groupValues?.drop(1)?.firstOrNull { it.isNotBlank() }?.takeIf {
-        after != null &&
-            PIECE_TAIL.matches(after)
+    return firstQuoted(rest)?.let { quoted ->
+        rest.substring(quoted.first + 1, quoted.last).takeIf {
+            it.isNotBlank() && fitsPieceTail(rest.substring(quoted.last + 1))
+        }
     }
 }
 
-// What may follow a part's quoted title: nothing, or one parenthetical, with whitespace around.
-private val PIECE_TAIL = Regex("$JS_WHITESPACE_CLASS*(\\([^()]*\\))?$JS_WHITESPACE_CLASS*")
+// The longest recording title read as a part of a work (#1304): far longer than any work, act and part
+// together, short enough that reading a hostile one costs nothing to speak of.
+private const val PIECE_TITLE_MAX = 300
 
 // At most this many artists' other names looked up for one track (#1289, `withAliases`).
 private const val ALIAS_LOOKUPS = 2
@@ -226,13 +227,6 @@ private const val LOOSE_WORDS = 8
 
 // The work before the first colon of a part's title, and the colon with the whitespace after it.
 private val PIECE_LEAD = Regex("^([^:]+):$JS_WHITESPACE_CLASS+")
-
-// The first quoted title after the work: in English quotes, straight ones, German ones or guillemets. No
-// braces: ICU reads the pattern as the JVM does.
-private val PIECE_QUOTED =
-    Regex(
-        "“([^”]+)”|\"([^\"]+)\"|„([^“”]+)[“”]|«([^»]+)»",
-    )
 
 // A dash between a part's title and its work, with whitespace either side: a hyphen, an en dash or an em dash.
 private val PIECE_DASH = Regex("$JS_WHITESPACE_CLASS[-–—]$JS_WHITESPACE_CLASS")
