@@ -16,7 +16,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -58,6 +57,12 @@ import kotlin.time.Duration.Companion.seconds
  * first read takes the store's init lock on the caller's dispatcher, and a collector on the main
  * thread would then hold it until the main looper runs again, which a test blocked on the store
  * from that thread never lets happen. IO in the app; a test on virtual time passes its own.
+ *
+ * **The screens' saves are made in the order asked for** (#1146; [saving], [writingModeChooser],
+ * [themeChooser]): each waits for the one asked for before it to end, so two quick changes to a
+ * setting (a fast drag on a slider, two quick taps on a button group) end at the second. Unordered,
+ * each save's hop to [dispatcher] could reach DataStore first, and the setting end at the first
+ * while the screen showed the second.
  */
 class SettingsStore(
     private val dataStore: DataStore<Preferences>,
@@ -66,6 +71,9 @@ class SettingsStore(
 ) {
     private val stored: Flow<Settings> =
         dataStore.data.map { SettingsCodec.read(it, defaults) }.collectedOn(dispatcher)
+
+    /** The screens' saves, one after another, in the order asked for (#1146; [saving]). */
+    internal val saveOrder = SaveOrder()
 
     /** The current settings, and each change to them; nothing while the file cannot be read. */
     val settings: Flow<Settings> = stored.retryReads {}.distinctUntilChanged()
@@ -132,8 +140,9 @@ class SettingsStore(
 
     /**
      * *Reactive*'s mode chosen, in the insight card's menu (#615, beside *Write insight*) or in the
-     * settings (#625): each choice is saved in [saves], which outlives the screen, and the result
-     * says whether it was saved. A save that fails leaves the setting, and so the menu, as it was.
+     * settings (#625): each choice is saved in [saves], which outlives the screen, in the order the
+     * choices come (#1146), and the result says whether it was saved. A save that fails leaves the
+     * setting, and so the menu, as it was.
      * Each choice, the mode chosen already included, is told to [chosen] at once (#625: the
      * pipeline), and the function [chosen] returns is told, once the save has ended, saved or not,
      * what the store then holds ([storedMode]): the pipeline then writes by the narrower of the
@@ -146,7 +155,7 @@ class SettingsStore(
     ): (WriteAutomatically) -> Deferred<Boolean> =
         { mode ->
             val settled = chosen(mode)
-            saves.async {
+            saveOrder.async(saves) {
                 val saved =
                     try {
                         update { it.copy(writeAutomatically = mode) }
@@ -188,13 +197,13 @@ class SettingsStore(
     }
 
     /**
-     * Home's theme menu (#771): each call stores the theme given as *Theme*. Saved in [saves], which
-     * outlives the screen: from Android 12 the change restarts the activity in the new theme. A save
-     * that fails leaves *Theme*, and so the button, as it was.
+     * Home's theme menu (#771): each call stores the theme given as *Theme*, in the order asked
+     * for. Saved in [saves], which outlives the screen: from Android 12 the change restarts the
+     * activity in the new theme. A save that fails leaves *Theme*, and so the button, as it was.
      */
     fun themeChooser(saves: CoroutineScope): (ThemeChoice) -> Unit =
         { theme ->
-            saves.launch {
+            saveOrder.launch(saves) {
                 try {
                     update { it.copy(theme = theme) }
                 } catch (_: IOException) {
@@ -228,21 +237,6 @@ class SettingsStore(
         }
 
     companion object {
-        /**
-         * Runs [save] in this scope, its result whether it was saved: false after an I/O error,
-         * which leaves the settings as they were. Any other failure fails the save, and reaches this
-         * scope, as the settings screen's saves do.
-         */
-        internal fun CoroutineScope.saving(save: suspend () -> Unit): Deferred<Boolean> =
-            async {
-                try {
-                    save()
-                    true
-                } catch (_: IOException) {
-                    false
-                }
-            }
-
         /**
          * The settings' defaults in this build: `:core`'s, with developer mode's as the build sets
          * it (`BuildConfig.DEVELOPER_MODE_DEFAULT`, #451): on in a build for Play's testing tracks,
