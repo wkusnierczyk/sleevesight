@@ -60,6 +60,14 @@ class RememberedMusicBrainzTest {
             return inner.work(mbid)
         }
 
+        override suspend fun searchWorks(
+            title: String,
+            composer: String,
+        ): Lookup<List<MbFoundWork>> {
+            asked += "works $title by $composer"
+            return Lookup.Found(emptyList())
+        }
+
         override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> {
             asked += "artists $name"
             return Lookup.Found(MbArtistSearch(1, listOf(MbArtist("mbid-$name", name))))
@@ -127,6 +135,24 @@ class RememberedMusicBrainzTest {
             remembered.searchRecordingsBefore("Song", "Artist", "1973")
             assertEquals(
                 listOf("search Song by 1973", "search Song by 1974", "search Song by 1973"),
+                counting.asked,
+            )
+        }
+
+    @Test
+    fun `a work search is kept by its title and composer, and forgotten with the rest`() =
+        runTest {
+            remembered.searchWorks("Adagio for Strings", "Samuel Barber")
+            remembered.searchWorks("Adagio for Strings", "Samuel Barber")
+            remembered.searchWorks("Adagio for Strings", "Tomaso Albinoni")
+            remembered.forget()
+            remembered.searchWorks("Adagio for Strings", "Samuel Barber")
+            assertEquals(
+                listOf(
+                    "works Adagio for Strings by Samuel Barber",
+                    "works Adagio for Strings by Tomaso Albinoni",
+                    "works Adagio for Strings by Samuel Barber",
+                ),
                 counting.asked,
             )
         }

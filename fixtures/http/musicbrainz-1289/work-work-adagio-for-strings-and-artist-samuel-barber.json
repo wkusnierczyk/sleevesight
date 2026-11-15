@@ -1,0 +1,180 @@
+{
+ "created": "2026-11-15T19:29:31.622Z",
+ "count": 5,
+ "offset": 0,
+ "works": [
+  {
+   "id": "78823d85-3148-409e-b903-af9f0cfaf02d",
+   "score": 100,
+   "title": "Adagio for Strings",
+   "disambiguation": "catch‐all for arrangements",
+   "aliases": [
+    {
+     "name": "Adagio"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a",
+      "name": "Samuel Barber"
+     }
+    }
+   ]
+  },
+  {
+   "id": "1ebe1abf-daf2-3e5e-b3ad-b6c5a4ec5727",
+   "score": 82,
+   "title": "Adagio for Strings",
+   "aliases": [
+    {
+     "name": "Adagio für Steicher, op. 11"
+    },
+    {
+     "name": "Adagio for Strings (original version)"
+    },
+    {
+     "name": "Adagio for Strings (Ferry Corsten remix)"
+    },
+    {
+     "name": "Adagio for Strings (ATB remix)"
+    },
+    {
+     "name": "Barber's Adagio for Strings (Ferry Corsten remix)"
+    },
+    {
+     "name": "Adagio for Strings: Molto adagio"
+    },
+    {
+     "name": "Adagio for Strings, Op. 11a"
+    },
+    {
+     "name": "'Adagio for Strings'"
+    },
+    {
+     "name": "Adagio for Strings, Op. 11"
+    },
+    {
+     "name": "Adagio for strings (or string quartet; arr. from 2nd mvt. of String Quartet), Op. 11"
+    },
+    {
+     "name": "Adagio for Strings"
+    },
+    {
+     "name": "Adagio pour cordes"
+    }
+   ],
+   "relations": [
+    {
+     "type": "premiere",
+     "direction": "backward",
+     "artist": {
+      "id": "da96be23-ef88-420e-8173-3efb7fd995cc",
+      "name": "Arturo Toscanini"
+     }
+    },
+    {
+     "type": "premiere",
+     "direction": "backward",
+     "artist": {
+      "id": "229d5a97-b8e1-4195-a696-d74bc8db90ed",
+      "name": "NBC Symphony Orchestra"
+     }
+    },
+    {
+     "type": "orchestrator",
+     "direction": "backward",
+     "artist": {
+      "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a",
+      "name": "Samuel Barber"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a",
+      "name": "Samuel Barber"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5b4a02b6-848f-4596-ac78-8ee5970bfcea",
+   "score": 82,
+   "title": "Adagio for Strings",
+   "disambiguation": "for organ, Strickland",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a",
+      "name": "Samuel Barber"
+     }
+    },
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "05350367-7d01-4ea7-bca1-0ba4c9044d93",
+      "name": "William Strickland"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f2eeeeee-85a7-4b35-bb60-4f2673bad8e0",
+   "score": 77,
+   "title": "Adagio for Strings",
+   "disambiguation": "arr. Lucien Cailliet for clarinet choir",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a",
+      "name": "Samuel Barber"
+     }
+    },
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "a46249dd-5f73-4421-b284-d8e338ba7b98",
+      "name": "Lucien Cailliet"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5bebbf3e-3e1c-4e20-a2d4-5ba225056039",
+   "score": 77,
+   "title": "Adagio for Strings",
+   "disambiguation": "arr. John O'Reilly for woodwind band",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "74ed34ce-ee95-44e9-a87d-4d2d5056c24a",
+      "name": "Samuel Barber"
+     }
+    },
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "fe5b9eab-04bf-4761-950d-17d88d3ab19e",
+      "name": "John O'Reilly"
+     }
+    }
+   ]
+  }
+ ]
+}

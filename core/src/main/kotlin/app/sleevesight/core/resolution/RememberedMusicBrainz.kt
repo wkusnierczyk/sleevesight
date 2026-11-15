@@ -16,7 +16,7 @@ import kotlin.time.TimeSource
  * is answered by [musicBrainz] once; a search by name, one for the recordings released by a date
  * (#906), a recording, a recording's releases (#724), a work, an artist search, and a release group's
  * releases, its official ones and a release's tracklist (#984), a release group's first release
- * (#1099), and a loose search and an artist's names (#1289) are each kept by
+ * (#1099), a loose search and an artist's names (#1289), and a work search (#1299) are each kept by
  * what was asked, at most [capacity] of each kind, the least recently used dropped first. An answer
  * that could not be obtained ([Lookup.Failed]) is not kept, so the next question asks again; one that
  * MusicBrainz gave, found or not, is.
@@ -64,6 +64,7 @@ class RememberedMusicBrainz(
     private val firsts = Memory<String, MbGroupFirst>()
     private val loose = Memory<Pair<List<String>, List<String>>, List<MbRecording>>()
     private val names = Memory<String, List<String>>()
+    private val foundWorks = Memory<Pair<String, String>, List<MbFoundWork>>()
 
     override suspend fun searchRecordings(
         title: String,
@@ -112,6 +113,11 @@ class RememberedMusicBrainz(
     override suspend fun artistNames(mbid: String): Lookup<List<String>> =
         names.answer(mbid) { musicBrainz.artistNames(mbid) }
 
+    override suspend fun searchWorks(
+        title: String,
+        composer: String,
+    ): Lookup<List<MbFoundWork>> = foundWorks.answer(title to composer) { musicBrainz.searchWorks(title, composer) }
+
     /** Forgets every answer kept, for *Clear history* (#547): the next question asks again. */
     suspend fun forget() {
         searches.forget()
@@ -126,6 +132,7 @@ class RememberedMusicBrainz(
         firsts.forget()
         loose.forget()
         names.forget()
+        foundWorks.forget()
     }
 
     // One kind of question's answers, by what was asked.

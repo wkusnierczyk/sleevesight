@@ -119,6 +119,20 @@ internal class FakeMusicBrainz(
         return loose
     }
 
+    /** The work search's answer (#1299), whatever is asked. */
+    var foundWorks: Lookup<List<MbFoundWork>> = Lookup.NotFound
+
+    /** The work searches made, as (title, composer), in order. */
+    val worksSearched = mutableListOf<Pair<String, String>>()
+
+    override suspend fun searchWorks(
+        title: String,
+        composer: String,
+    ): Lookup<List<MbFoundWork>> {
+        worksSearched += title to composer
+        return foundWorks
+    }
+
     // Resolution never searches for artists.
     override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> = error("unexpected artist search")
 }

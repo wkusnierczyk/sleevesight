@@ -13,11 +13,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Classical recordings MusicBrainz holds that were not found (#1289), as Spotify names them, replayed
- * from `fixtures/http/musicbrainz-1289/`.
+ * Classical recordings MusicBrainz holds that were not found (#1289), and the work of one that links none
+ * (#1299), as Spotify names them, replayed from `fixtures/http/musicbrainz-1289/`.
  */
 class MusicBrainzClassicalFoundTest {
     private val net = ReplayNetClient("musicbrainz-1289")
@@ -53,11 +54,44 @@ class MusicBrainzClassicalFoundTest {
                     "recording:\"Barber: Adagio for Strings\" AND artist:\"Samuel Barber\"",
                     "/artist/dea28aa9-1086-4ffa-8739-0ccc759de1ce",
                     "/recording/53c2e131-de75-4ab4-a80e-164b3adfc28f",
+                    "work:\"Adagio for Strings\" AND artist:\"Samuel Barber\"",
+                    "/work/1ebe1abf-daf2-3e5e-b3ad-b6c5a4ec5727",
                 ),
                 asked,
             )
-            // MusicBrainz links this recording to no work: the title's lead tells the composer.
-            assertNull(resolution.work)
+        }
+
+    @Test
+    fun `a recording that links no work finds its composer's work by a search - Barber's Adagio for Strings`() =
+        runTest {
+            // MusicBrainz links `53c2e131` to no work (#1299). The search of Barber's works by the title finds
+            // five titled `Adagio for Strings`, each naming him its composer: the piece (`1ebe1abf`, which he
+            // orchestrated himself), a catch-all for its arrangements (its disambiguation says so), and three
+            // arrangements (for organ, woodwind band and clarinet choir, each with its arranger). The piece,
+            // the one work left, is taken.
+            val track =
+                RecordedTracks.normalize(
+                    "Barber: Adagio for Strings",
+                    "Samuel Barber, Sir Simon Rattle, Berlin Philharmonic",
+                )
+            val resolution = resolver.resolve(track, 537_426.milliseconds)
+            assertEquals("53c2e131-de75-4ab4-a80e-164b3adfc28f", resolution.recordingMbid)
+            assertEquals(false, resolution.provisional)
+            val work = assertNotNull(resolution.work)
+            assertEquals("1ebe1abf-daf2-3e5e-b3ad-b6c5a4ec5727", work.mbid)
+            assertEquals("Adagio for Strings", work.title)
+            assertEquals(false, resolution.cover)
+            assertNull(resolution.original)
+            // Barber composed it, in 1936 by the work's composer relationship; the others perform it. The
+            // work has no type, so the roles do not call it classical; the title's lead does (`ArtistSplit`).
+            val roles = assertNotNull(resolution.roles)
+            assertEquals(ArtistRoles(listOf("Samuel Barber"), listOf("Sir Simon Rattle", "Berlin Philharmonic")), roles)
+            val split = assertNotNull(ArtistSplit.of(track, roles, resolution.lyrics))
+            assertEquals(AuthorsName.COMPOSER, split.name)
+            assertEquals("Sir Simon Rattle", split.lead)
+            assertEquals("1936", resolution.composed?.from)
+            // The piece's Wikidata item, for its Wikipedia lines.
+            assertTrue("Q346715" in resolution.wikidataIds, "${resolution.wikidataIds}")
         }
 
     @Test

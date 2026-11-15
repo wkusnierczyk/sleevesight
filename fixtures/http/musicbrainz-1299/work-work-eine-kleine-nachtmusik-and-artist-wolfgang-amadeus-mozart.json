@@ -1,0 +1,684 @@
+{
+ "created": "2026-11-15T20:34:29.085Z",
+ "count": 20,
+ "offset": 0,
+ "works": [
+  {
+   "id": "c6065fd9-283f-4cc3-a64c-996d199cdf66",
+   "score": 100,
+   "title": "Eine kleine Nachtmusik",
+   "type": "Song",
+   "disambiguation": "arr. Lorenz Westphal",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "c402ec64-8cd4-4be3-865f-297e8c55b61e",
+      "name": "Lonzo"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "4e997d06-b00e-3b63-ba81-7a1e6e41b05e",
+   "score": 95,
+   "title": "Eine kleine Nachtmusik",
+   "type": "Song",
+   "disambiguation": "with lyrics by Georg Kreisler",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    },
+    {
+     "type": "lyricist",
+     "direction": "backward",
+     "artist": {
+      "id": "53dd8212-8586-439e-b8ed-29461a4a3a5d",
+      "name": "Georg Kreisler"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f334182c-42f7-4808-9576-6c73efe2c632",
+   "score": 80,
+   "title": "Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“",
+   "aliases": [
+    {
+     "name": "A Little Night Music"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: Allegro, Andante, Minuet, Rondo"
+    },
+    {
+     "name": "Serenade No. 13, K. 525 \"Eine kleine Nachtmusik\""
+    },
+    {
+     "name": "Eine kleine Nachtmusik, KV 525"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\""
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"A Little Night Music\""
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"A Little Night Music\""
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\""
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525"
+    },
+    {
+     "name": "Sérénade pour cordes No. 13 \"Une petite musique de nuit\""
+    },
+    {
+     "name": "Petite musique de nuit (Crédit Agricole)"
+    },
+    {
+     "name": "La petite musique de nuit"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525"
+    },
+    {
+     "name": "Eine kleine Nachtmusik"
+    },
+    {
+     "name": "Eine kleine Nachtmusik (Serenata no. 13 in D major)"
+    },
+    {
+     "name": "Eine kleine Nachtmusik (source)"
+    },
+    {
+     "name": "Eine Kleine Nacht Muzik"
+    },
+    {
+     "name": "Eine kleine Nachtmusik G-Dur - Molto Allegro"
+    },
+    {
+     "name": "Eine kleine nachtmusik"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "d5df21bd-ddc9-30d3-82c6-e0e5813d62cf",
+   "score": 80,
+   "title": "Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“: I. Allegro",
+   "aliases": [
+    {
+     "name": "Serenade No. 13 for Strings in G major, K. 525 \"Eine kleine Nachtmusik\": I. Allegro"
+    },
+    {
+     "name": "Serenade \"A little music\" no. 13 in G major KV 525: I. Allegro"
+    },
+    {
+     "name": "Serenade No. 13, KV 525, G-Dur / in G \"Eine kleine Nachtmusik / A Little Night Music\": 1. Allegro"
+    },
+    {
+     "name": "Une petite musique de nuit, K. 525: I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Allegro"
+    },
+    {
+     "name": "Serenade No. 13, K. 525 \"A Little Night Music\": I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik (\"A Little Night Music\") in G major, K. 525: I. Allegro"
+    },
+    {
+     "name": "Sérénade No. 13 en sol majeur, K. 525 \"Petite musique de nuit\": I. Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, KV 525 \"Eine kleine Nachtmusik\": I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: 1st Movement"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, KV 525: I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Allegro (from Amadeus)"
+    },
+    {
+     "name": "A Little Night Music, K. 525: I. Allegro"
+    },
+    {
+     "name": "セレナード第13番ト長調K.525（アイネ・クライネ・ナハトムジーク） 第1楽章"
+    },
+    {
+     "name": "Serenade No. 13 G-Dur, KV 525 \"Eine kleine Nachtmusik\": I. Allegro"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: I. Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\": I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Allegro"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": I. Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13, K. 525 \"Eine kleine Nachtmusik\": I. Allegro (The London Symphony Orchestra)"
+    },
+    {
+     "name": "Une petite musique de nuit en sol majeur, K. 525: I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: 1st Movement: Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: I. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik G-Dur, KV 525: I. Allegro"
+    },
+    {
+     "name": "Pequeña serenata nocturna en sol mayor, K525: I. Allegro"
+    },
+    {
+     "name": "Serenata No. 13 in G major, K.525 \"Eine kleine Nachtmusic\": I. Allegro"
+    },
+    {
+     "name": "Serenadi nro 13 G-duuri, KV 525 \"Pieni yösoitto\": I. Allegro"
+    },
+    {
+     "name": "Sérénade KV 525 « Eine Kleine Nachtmusik » : Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13 für Streicher G-Dur, KV 525 \"Eine kleine Nachtmusik\": I. Allegro"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "acd15f1e-e5b5-3e63-bb29-0a6d72b2b984",
+   "score": 78,
+   "title": "Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“: II. Romance. Andante",
+   "aliases": [
+    {
+     "name": "Serenade \"A little music\" no. 13 in G major KV 525: II. Romanze. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, KV 525: Romance"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\": II. Romance - Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: 2nd Movement"
+    },
+    {
+     "name": "Serenade No. 13, K. 525 \"A Little Night Music\": II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Second Movement"
+    },
+    {
+     "name": "Romance From Eine Kleine Nachtmusik, K. 525"
+    },
+    {
+     "name": "セレナード第13番ト長調K.525（アイネ・クライネ・ナハトムジーク） 第2楽章"
+    },
+    {
+     "name": "Serenade No. 13 for Strings in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romanze"
+    },
+    {
+     "name": "Eine kleine Nachtmusik G-Dur KV 525: II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Romance. Andante"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": II, Romanze, Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Romanze"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\": II. Romanze. Andante"
+    },
+    {
+     "name": "Second Movt from Serenade in G major, K. 525 \"Eine kleine Nachtmusik\""
+    },
+    {
+     "name": "Serenade in G major (Romance)"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"A Little Night Music\": Romance"
+    },
+    {
+     "name": "Serenade in G"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romanze. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: II. Romanza. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Andante"
+    },
+    {
+     "name": "Serenata No. 13 in G major, K.525 \"Eine kleine Nachtmusic\": II. Romanze (Andante)"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romance. Andante"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, KV 525 \"Eine kleine Nachtmusik\": II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Romanze"
+    },
+    {
+     "name": "Serenade No. 13 G-Dur, KV 525 \"Eine kleine Nachtmusik\": II. Romanze. Andante"
+    },
+    {
+     "name": "Serenade in G major, K. 525: Romance"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: II. Romance. Andante"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romanza (Andante)"
+    },
+    {
+     "name": "Serenade No. 13 for Strings in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romanze. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Romance (Andante)"
+    },
+    {
+     "name": "Serenadi nro 13 G-duuri, KV 525 \"Pieni yösoitto\": II. Romanssi - Andante"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: II. Romanza"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, KV 525: II. Romance. Andante"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romanze"
+    },
+    {
+     "name": "Eine kleine Nachtmusik (\"A Little Night Music\") in G major, K. 525: II. Romance. Andante"
+    },
+    {
+     "name": "Serenade Nr. 13 für Streicher G-dur, KV 525 \"Eine kleine Nachtmusik\": II. Romanze (Andante)"
+    },
+    {
+     "name": "Une petite musique de nuit en sol majeur, K. 525: II. Romance"
+    },
+    {
+     "name": "Serenade No. 13, KV 525, G-Dur / in G \"Eine kleine Nachtmusik / A Little Night Music\": 2. Romance - Andante"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: II. Romanze. Andante"
+    },
+    {
+     "name": "Sérénade No. 13 en sol majeur, K. 525 \"Petite musique de nuit\": II. Romance - Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik G-Dur, KV 525: II. Romance. Andante"
+    },
+    {
+     "name": "Eine kleine Nachtmusik - Romance: Andante"
+    },
+    {
+     "name": "Sérénade KV 525 « Eine Kleine Nachtmusik » : Romanza (Andante)"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "4715bf5d-c261-3b30-906d-04ef27dc8f87",
+   "score": 78,
+   "title": "Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“: IV. Rondo. Allegro",
+   "aliases": [
+    {
+     "name": "Serenade \"A little music\" no. 13 in G major KV 525: IV. Rondo. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Rondo. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik G-Dur, KV 525: IV. Rondo. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, KV 525: IV. Rondo. Allegro"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": IV. Rondo. Allegro"
+    },
+    {
+     "name": "Rondo from Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\""
+    },
+    {
+     "name": "Eine kleine Nachtmusik (\"A Little Night Music\") in G major, K. 525: IV. Rondo. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik - Rondo"
+    },
+    {
+     "name": "Sérénade No. 13 en sol majeur, K. 525 \"Petite musique de nuit\": IV. Rondo - Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13 für Streicher G-dur, KV 525 \"Eine kleine Nachtmusik\": IV. Rondo (Allegro)"
+    },
+    {
+     "name": "Serenade No. 13 G-Dur, KV 525 \"Eine kleine Nachtmusik\": IV. Rondo. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: IV. Rondo. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: Last Movement"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: IV. Rondo. Allegro"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": IV. Rondo. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: IV. Rondò. Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Rondo"
+    },
+    {
+     "name": "Serenadi nro 13 G-duuri, KV 525 \"Pieni yösoitto\": IV. Rondo - Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, KV 525 \"Eine kleine Nachtmusik\": IV. Rondo. Allegro"
+    },
+    {
+     "name": "セレナード第13番ト長調K.525（アイネ・クライネ・ナハトムジーク） 第4楽章"
+    },
+    {
+     "name": "Une petite musique de nuit en sol majeur, K. 525: IV. Rondo"
+    },
+    {
+     "name": "Pequeña serenata nocturna en sol mayor, K525: IV. Rondo allegro"
+    },
+    {
+     "name": "Serenade No. 13, KV 525, G-Dur / in G \"Eine kleine Nachtmusik / A Little Night Music\": 4. Rondo - Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\": IV. Rondo - Allegro"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"A Little Night Music\": IV. Rondo. Allegro"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\": IV. Rondo. Allegro"
+    },
+    {
+     "name": "Sérénade KV 525 « Eine Kleine Nachtmusik » : Rondo (Allegro)"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "0e1515c9-86f4-49bc-8450-55b11c9fbaeb",
+   "score": 78,
+   "title": "Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“",
+   "disambiguation": "catch-all for arrangements",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "23f8d97b-c06e-3032-a01d-998842b11fc9",
+   "score": 75,
+   "title": "Serenade no. 13 for Strings in G major, K. 525 „Eine kleine Nachtmusik“: III. Minuetto. Allegretto & Trio",
+   "aliases": [
+    {
+     "name": "Serenade \"A little music\" no. 13 in G major KV 525: III. Menuetto allegretto"
+    },
+    {
+     "name": "Serenade No. 13 for Strings in G major, K. 525 \"Eine kleine Nachtmusik\": III. Menuetto. Allegro"
+    },
+    {
+     "name": "Serenade No. 13 for Strings in G major, K. 525 \"Eine kleine Nachtmusik\": III. Minuetto. Allegretto"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": III. Menuetto. Allegro - Trio"
+    },
+    {
+     "name": "Serenade No. 13, KV 525, G-Dur / in G \"Eine kleine Nachtmusik / A Little Night Music\": 3. Menuetto - Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: III. Menuetto. Allegretto"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\": III. Menuett. Allegretto"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: III. Menuetto"
+    },
+    {
+     "name": "Minuetto Allegro - Eine kleine Nachtmusik, K. 525"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: Menuetto. Allegretto"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": III. Menuetto. Allegretto / Trio: Menuetto da Capo"
+    },
+    {
+     "name": "Eine kleine Nachtmusik - Menuetto"
+    },
+    {
+     "name": "Serenade No. 13 for Strings in G major, K. 525 \"Eine kleine Nachtmusik\": III. Minuetto. Andante"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": III. Menuetto. Allegretto"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: III. Minuetto. Allegretto & Trio"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, K. 525 \"Eine kleine Nachtmusik\": III. Menuetto - Allegro"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: III. Menuetto. Allegretto - Trio"
+    },
+    {
+     "name": "Eine kleine Nachtmusik: III. Menuetto. Allegretto"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": III. Minuetto. Allegretto"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, KV 525: III. Minuetto. Allegretto"
+    },
+    {
+     "name": "Eine kleine Nachtmusik, K. 525: III. Minuetto. Allegretto"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": III. Minuetto (St. Petersburg Musical Theatre Chamber Orchestra)"
+    },
+    {
+     "name": "Une petite musique de nuit en sol majeur, K. 525: III. Menuetto"
+    },
+    {
+     "name": "Eine kleine Nachtmusik G-Dur, KV 525: III. Menuetto. Allegretto"
+    },
+    {
+     "name": "Serenade Nr. 13 G-dur, KV 525 \"Eine kleine Nachtmusik\": III. Menuetto. Allegretto"
+    },
+    {
+     "name": "Serenade No. 13 G-Dur, KV 525 \"Eine kleine Nachtmusik\": III. Menuetto. Allegretto - Trio"
+    },
+    {
+     "name": "Eine kleine Nachtmusik (\"A Little Night Music\") in G major, K. 525: III. Menuetto. Allegretto"
+    },
+    {
+     "name": "Serenade Nr. 13 für Streicher G-dur, KV 525 \"Eine kleine Nachtmusik\": III. Menuett (Allegretto)"
+    },
+    {
+     "name": "Sérénade No. 13 en sol majeur, K. 525 \"Petite musique de nuit\": III. Menuet - Allegretto"
+    },
+    {
+     "name": "セレナード第13番ト長調K.525（アイネ・クライネ・ナハトムジーク） 第3楽章"
+    },
+    {
+     "name": "Serenadi nro 13 G-duuri, KV 525 \"Pieni yösoitto\": III. Menuetti ja trio - Allegretto"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": III. Minuetto. Allegretto"
+    },
+    {
+     "name": "Serenade No. 13 in G major, K. 525 \"Eine kleine Nachtmusik\": III. Minuetto. Allegretto & Trio"
+    },
+    {
+     "name": "Serenade in G major, K. 525 \"Eine kleine Nachtmusik\": III. Menuetto. Allegretto - Trio"
+    },
+    {
+     "name": "Sérénade KV 525 « Eine Kleine Nachtmusik » : Menuetto (Allegretto)"
+    }
+   ],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "99d0d1bc-9b2b-4d8c-85f8-da541238ee9b",
+   "score": 75,
+   "title": "Eine kleine Nachtmusik KV 525 »Tuba Serenade«",
+   "type": "Song",
+   "disambiguation": "Arrangement for Tuba and Brass Ensemble",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "arranger",
+     "direction": "backward",
+     "artist": {
+      "id": "c78ae69b-a593-414b-a9ba-46c826245986",
+      "name": "John Fletcher"
+     }
+    },
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f3956b24-59f4-4c8b-ab61-8cd2a6f23619",
+   "score": 74,
+   "title": "Serenade no. 13 in G major, K. 525 „Eine kleine Nachtmusik“: IV. Rondo. Allegro",
+   "disambiguation": "catch-all for arrangements",
+   "aliases": [],
+   "relations": [
+    {
+     "type": "composer",
+     "direction": "backward",
+     "artist": {
+      "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+      "name": "Wolfgang Amadeus Mozart"
+     }
+    }
+   ]
+  }
+ ]
+}
