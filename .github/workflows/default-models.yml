@@ -3,10 +3,15 @@ name: Default models
 # Checks that each AI service's default model (`Settings.DEFAULT_MODELS`) is still listed for a key
 # and answers (#540): a default the service has retired would fail every insight of a user who
 # never chose a model, until an app update. Each provider's live test (`:ai`'s `*LiveTest`) lists
-# the models once and sends one short request, a few tokens, with a spend-limited key stored as a
-# repository secret; it fails when the default is gone, or (Anthropic) deprecated, which flags the
-# default for an update. A provider whose secret is absent (a fork, a secret removed) is skipped
-# with a notice, and the job passes.
+# the models once and sends one short request, a few tokens, with a spend-limited key; it fails
+# when the default is gone, or (Anthropic) deprecated, which flags the default for an update. A
+# provider whose secret is absent (a fork, a secret removed) is skipped with a notice, and the job
+# passes.
+#
+# The keys are secrets of the `default-models` environment, whose deployment branch policy admits
+# only `main` (#1048): repository secrets are open to a workflow on any branch. The job names the
+# environment, so a run from any other ref (a dispatch from a branch) is refused by GitHub before
+# it starts, and no key reaches it. The scheduled run is on the default branch, `main`.
 
 on:
   schedule:
@@ -24,6 +29,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # Its secrets also decide the `HAS_*` checks below: environment secrets are read when the job
+    # starts, and only by a job that names the environment.
+    environment: default-models
     timeout-minutes: 20
     steps:
       # Which keys are set, from whether each secret is empty, so the keys themselves reach only
@@ -43,7 +51,7 @@ jobs:
             if [ "${!variable}" = true ]; then
               tests+=("--tests" "app.sleevesight.ai.$test")
             else
-              echo "::notice title=Default models::The repository secret $secret is not set: its default model is not checked."
+              echo "::notice title=Default models::The secret $secret is not set in the default-models environment: its default model is not checked."
             fi
           done
           if [ "${#tests[@]}" -eq 0 ]; then
