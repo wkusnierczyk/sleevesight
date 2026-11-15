@@ -47,7 +47,8 @@ enum class VocalsAnswer(
  * Whether these genres call for the check of the track's vocals (#998; `design/design.md`, *Genre
  * labels*): Instrumental in doubt, and no free sign settling it. Its chip weak with a sign of vocals
  * ([WeakEvidence.SignOfVocals]: a vocalist, a lyricist of the work, its language, a featured artist),
- * or weak as the artist's hint (#1000, [WeakEvidence.ArtistHint]); or no row with Instrumental while
+ * or weak as the artist's hint (#1000, [WeakEvidence.ArtistHint]) or as Wikidata's statement alone
+ * (#1292, [WeakEvidence.WikidataStatement]: LRCLIB, asked first, may settle it); or no row with Instrumental while
  * the song's work credits composers alone and nothing says it is sung ([Singing.composersHint]: no
  * vocal credit, no language of the work). Not with the track marked
  * instrumental, lyrics found, the check applied already ([Singing.checked]), or Instrumental weak only
@@ -59,7 +60,7 @@ fun TrackGenres.wantsVocalsCheck(): Boolean {
     val tagged = everyLabel.any { it.genre.identity == TrackGenres.INSTRUMENTAL }
     return if (tagged) {
         when (weakEvidence(TrackGenres.INSTRUMENTAL)) {
-            is WeakEvidence.SignOfVocals, is WeakEvidence.ArtistHint -> true
+            is WeakEvidence.SignOfVocals, is WeakEvidence.ArtistHint, WeakEvidence.WikidataStatement -> true
             else -> false
         }
     } else {

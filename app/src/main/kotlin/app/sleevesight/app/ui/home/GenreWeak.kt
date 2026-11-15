@@ -91,7 +91,8 @@ private const val WEAK_SELECTED = 0.72f
  * for Instrumental only the artist's description gives (#1000, #998's artist hint), what it says,
  * quoted, and the citation of its line, a link to it in *Sources* ([onCite]);
  * for Instrumental weak as LRCLIB's mark alone (#1055, #1232), that only LRCLIB's user-submitted
- * records mark the track so. Nothing for a genre that is not weak.
+ * records mark the track so; for Instrumental only Wikidata states (#1292), that only its user-edited
+ * statements do, or, with LRCLIB's mark, that only the two do. Nothing for a genre that is not weak.
  */
 @Composable
 internal fun WeakEvidenceNote(
@@ -140,6 +141,8 @@ private fun WeakLine(
             // [WeakEvidenceNote]'s, with its citation.
             is WeakEvidence.ArtistHint -> return
             WeakEvidence.LibraryMark -> stringResource(R.string.genre_weak_library, ALBUM_MARK)
+            WeakEvidence.WikidataStatement -> stringResource(R.string.genre_weak_wikidata, ALBUM_MARK)
+            WeakEvidence.LibraryAndWikidata -> stringResource(R.string.genre_weak_library_wikidata, ALBUM_MARK)
         }
     Text(
         withAlbum(line, genre.label),
