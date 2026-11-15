@@ -131,6 +131,19 @@ class GenreBroaderReasonsTest {
     }
 
     @Test
+    fun `R&B only MusicBrainz gives, opened as itself, is written at once beside a Last-fm narrower genre`() {
+        // Contemporary R&B from Last.fm on the track's row, R&B from MusicBrainz alone on the artist's:
+        // Last.fm's genre and the CC0 relation let R&B reach a prompt, so its own chip skips the AI's
+        // genre list (#762's path B), the reason's key shared with the broader view's.
+        val given = track(listOf(LabelSource.LASTFM), also = "r&b" to LabelSource.MUSICBRAINZ)
+        val own =
+            assertIs<ReasonPath.Reason>(reasons.path(given, broader, knowing, lists, listed = null, asBroader = false))
+        val opened =
+            assertIs<ReasonPath.Reason>(reasons.path(given, broader, knowing, lists, listed = null, asBroader = true))
+        assertEquals(own.key, opened.key)
+    }
+
+    @Test
     fun `nothing is offered for a genre that is neither the track's nor the broader genre of one`() {
         val given = track(listOf(LabelSource.LASTFM))
         assertEquals(ReasonPath.None, reasons.path(given, "jazz", settings, lists, listed = null))

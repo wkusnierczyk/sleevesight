@@ -1,6 +1,9 @@
 package app.sleevesight.core.genres
 
 import app.sleevesight.core.platform.JvmResourceReader
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -35,11 +38,11 @@ class GenreVocabularyBroaderTest {
 
     @Test
     fun `each broader genre is in the vocabulary, never the genre itself, and none goes round`() {
-        var some = 0
+        val given = mutableSetOf<String>()
         for (tag in vocabulary.tags) {
             val identity = checkNotNull(vocabulary.identity(tag))
             val broader = vocabulary.broader(identity) ?: continue
-            some++
+            given += identity
             assertEquals(broader.identity, vocabulary.identity(broader.tag))
             assertNotEquals(identity, broader.identity)
             val seen = mutableSetOf(identity)
@@ -49,7 +52,18 @@ class GenreVocabularyBroaderTest {
                 at = vocabulary.broader(at.identity)
             }
         }
-        assertTrue(some > 0)
+        // Every entry of the file's `broader` is given, as written, and no genre beyond them.
+        val file =
+            Json
+                .parseToJsonElement(checkNotNull(JvmResourceReader.text(GenreVocabulary.RESOURCE)))
+                .jsonObject
+                .getValue("broader")
+                .jsonObject
+        for ((tag, wider) in file) {
+            val identity = checkNotNull(vocabulary.identity(tag)) { tag }
+            assertEquals(vocabulary.identity(wider.jsonPrimitive.content), vocabulary.broader(identity)?.identity, tag)
+        }
+        assertEquals(file.keys.mapNotNull(vocabulary::identity).toSet(), given)
     }
 
     @Test
