@@ -35,7 +35,7 @@ How a release is built, signed and uploaded to Google Play, and the one-time set
 
 `upload`:
 
-8. starts once `bundle` has succeeded and its approval is given; checks out only `.github/scripts` and `release-notes` of the tagged commit, with its history, so the scripts it runs and the notes it sends come from the commit, not from the build;
+8. starts once `bundle` has succeeded and its approval is given; checks out only `.github/scripts` and `release-notes` of the tagged commit (a sparse checkout, not in cone mode, so no file at the root either), with its history, so the scripts it runs and the notes it sends come from the commit, not from the build;
 9. decides the track again, as step 2 does, and stops unless the track and developer mode equal those `bundle` built for (its job outputs, set by step 2 before the build runs, so the build cannot change them): `PLAY_TRACK` may change between the two approvals, or before a re-run of `upload` alone, and a bundle built for a testing track, in developer mode, must not reach production. To upload to the new track, re-run all jobs, which builds for it;
 10. downloads the artifact, checks that the bundle is signed, and checks the signer: its certificate's SHA-256 fingerprint must equal the environment variable `UPLOAD_CERT_SHA256` once that is set (step 5 of [Play App Signing](#5-play-app-signing)); until then the run prints the fingerprint. The check is on the bundle that goes to Play, not where it was built;
 11. uploads the bundle to Google Play through the Play Developer API (`androidpublisher` v3), with `.github/scripts/play-upload.sh`, in one edit: it opens the edit, uploads the bundle, checks that Play read the `versionCode` the tag gives, sets the track to a release named for the version (`0.1.1`, not Play's default `1001 (0.1.1)`) with its notes and the status `completed` (or `draft`, below), and commits the edit. A failure discards the edit, so nothing reaches the track.
@@ -229,11 +229,12 @@ In Play Console, once the developer account exists:
 1. *Create app*: name *Sleevesight*, an app, free, with the declarations it asks for. The package name, `app.sleevesight`, is fixed by the first upload and cannot change afterwards.
 2. Tag the remote `main`, not a local branch: `git fetch origin && git tag v0.1.0 origin/main && git push origin v0.1.0`. Approve the `bundle` job, download the artifact, and reject the `upload` job, which cannot reach the API before the app exists. A tag on a commit that is not on `main`, `dev-*` included (`main` takes squash merges), is rejected by the workflow, and once the rulesets exist it cannot be deleted, so its version is spent.
 3. *Test and release*, *Testing*, *Internal testing*, *Create new release*. Play App Signing is on for a new app: keep *Use Google-generated key* for the app signing key. Upload `app-release.aab`. The key that signed this first upload becomes the upload key.
-4. *Test and release*, *App integrity*, *App signing*: the *Upload key certificate*'s SHA-256 fingerprint must equal the bundle's signer's. The run prints it in *Check the signature*, a step of the `upload` job, rejected here; so read it from the downloaded bundle instead, with the JDK's tools. The first command must end with `jar verified.` (it succeeds on an unsigned bundle too), and the second prints the signer's certificate, with its `SHA256:` line:
+4. *Test and release*, *App integrity*, *App signing*: the *Upload key certificate*'s SHA-256 fingerprint must equal the bundle's signer's. The run prints it in *Check the signature*, a step of the `upload` job, rejected here; so read it from the downloaded bundle instead, with the JDK's tools. Unzip the artifact, `sleevesight-<version>.zip`, and use its `bundle/release/app-release.aab`. The first command must print `jar verified.` (followed by warnings about the self-signed certificate; it also succeeds on an unsigned bundle), and the second prints the signer's certificate, with its `SHA256:` line:
 
    ```sh
-   jarsigner -verify app-release.aab
-   keytool -printcert -jarfile app-release.aab
+   unzip sleevesight-0.1.0.zip
+   jarsigner -verify bundle/release/app-release.aab
+   keytool -printcert -jarfile bundle/release/app-release.aab
    ```
 
 5. Record it as a variable of the environment, not a secret (a certificate's fingerprint is public), so that every later run fails if the bundle is signed with any other key. Colons and case do not matter:

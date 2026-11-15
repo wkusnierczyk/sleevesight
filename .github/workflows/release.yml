@@ -153,15 +153,17 @@ jobs:
       id-token: write
     steps:
       # The scripts and the notes come from the tagged commit, not from the `bundle` job, so nothing
-      # the build ran can change what runs here. Only those directories are checked out; the history
-      # and the tags are fetched for the track's check below.
+      # the build ran can change what runs here. Only those directories are checked out (not in cone
+      # mode, which would add every file at the root); the history and the tags are fetched for the
+      # track's check below.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+          sparse-checkout-cone-mode: false
           sparse-checkout: |
-            .github/scripts
-            release-notes
+            /.github/scripts/
+            /release-notes/
 
       - name: Version from the tag
         id: version
