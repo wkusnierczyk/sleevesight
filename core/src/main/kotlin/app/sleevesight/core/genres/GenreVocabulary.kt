@@ -20,6 +20,7 @@ class GenreVocabulary(
     synonyms: List<List<String>> = emptyList(),
     musicBrainz: Map<String, String> = emptyMap(),
     wikipedia: Map<String, String> = emptyMap(),
+    broader: Map<String, String> = emptyMap(),
 ) {
     // The tags, in the vocabulary's order.
     private val known: Set<String> =
@@ -62,6 +63,36 @@ class GenreVocabulary(
                 require(put(genre, title) == null) { "two Wikipedia articles for '$genre'" }
             }
         }
+
+    // Each genre's broader genre, by identity, as the tag that names it (#1127).
+    private val broaderOf: Map<String, String> =
+        buildMap {
+            for ((tag, wider) in broader) {
+                val genre = requireNotNull(identity(tag)) { "a broader genre for '$tag', not in the vocabulary" }
+                val of = requireNotNull(identity(wider)) { "broader genre '$wider' of '$tag', not in the vocabulary" }
+                require(of != genre) { "'$tag' is its own broader genre" }
+                require(put(genre, key(wider)) == null) { "two broader genres for '$genre'" }
+            }
+        }
+
+    init {
+        // No genre is broader than itself through others: the panel's link would go round.
+        for (start in broaderOf.keys) {
+            val seen = mutableSetOf(start)
+            var at = broaderOf[start]?.let(::identity)
+            while (at != null) {
+                require(seen.add(at)) { "broader genres go round from '$start'" }
+                at = broaderOf[at]?.let(::identity)
+            }
+        }
+    }
+
+    /**
+     * The broader genre of the genre [identity] stands for ([identity]), as its label (#1127: a style
+     * of it, *Contemporary R&B* of *R&B*), from MusicBrainz's genre relationships (*subgenre of*,
+     * CC0) as the vocabulary keeps them; null for a genre with none the vocabulary holds.
+     */
+    fun broader(identity: String): GenreLabel? = broaderOf[identity]?.let { labelsFor(listOf(it)).firstOrNull() }
 
     /**
      * The MusicBrainz genre (its MBID, CC0) of the genre [identity] stands for ([identity]), through
@@ -234,6 +265,7 @@ class GenreVocabulary(
                 file.synonyms,
                 file.musicbrainz,
                 file.wikipedia,
+                file.broader,
             )
         }
 
@@ -295,6 +327,7 @@ data class CountedTag(
 )
 
 @Serializable
+@Suppress("LongParameterList") // The file's keys, each a part of the vocabulary.
 private class VocabularyFile(
     @Suppress("unused") val about: String = "",
     val tags: List<String>,
@@ -302,4 +335,5 @@ private class VocabularyFile(
     val synonyms: List<List<String>> = emptyList(),
     val musicbrainz: Map<String, String> = emptyMap(),
     val wikipedia: Map<String, String> = emptyMap(),
+    val broader: Map<String, String> = emptyMap(),
 )

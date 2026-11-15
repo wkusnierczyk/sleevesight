@@ -257,6 +257,23 @@ interface GenreNotes : DefinitionFeed {
         genre: String,
     )
 
+    /**
+     * [track]'s reason for [genre] opened as the broader genre of one of its genres (#1127), in that
+     * genre's place: as [reason], but offered only where a source other than MusicBrainz gives the
+     * genre or the broader genre (`GenreReasons.allowed`), never through the AI's genre list, even
+     * where the track has the genre as its own; nothing by default.
+     */
+    fun broaderReason(
+        track: TrackState,
+        genre: String,
+    ): Flow<GenreReason> = flowOf(GenreReason.None)
+
+    /** A tap on [broaderReason]'s *Why is this …?* or its *Retry*: as [explain], on its path alone. */
+    fun explainBroader(
+        track: TrackState,
+        genre: String,
+    ) = Unit
+
     /** Neither: the panel shows its table alone (previews, tests). */
     object None : GenreNotes {
         override fun definition(genre: String): Flow<DefinitionState?> = flowOf(null)
@@ -835,11 +852,23 @@ class AppGenreNotes private constructor(
     override fun reason(
         track: TrackState,
         genre: String,
+    ): Flow<GenreReason> = reasonOf(track, genre, asBroader = false)
+
+    override fun broaderReason(
+        track: TrackState,
+        genre: String,
+    ): Flow<GenreReason> = reasonOf(track, genre, asBroader = true)
+
+    // [reason], or [broaderReason] with [asBroader] (#1127).
+    private fun reasonOf(
+        track: TrackState,
+        genre: String,
+        asBroader: Boolean,
     ): Flow<GenreReason> {
         // What a tap does, as the list known now has it.
         val paths =
             combine(parts, settings, lists) { made, now, known ->
-                if (made == null || now == null) ReasonPath.None else path(made, now, known, track, genre)
+                if (made == null || now == null) ReasonPath.None else path(made, now, known, track, genre, asBroader)
             }
         return paths
             .distinctUntilChanged()
@@ -962,6 +991,13 @@ class AppGenreNotes private constructor(
             else -> GenreReason.Shown(InsightState.Writing(""))
         }
 
+    // Opened as another genre's broader genre (#1127): no check of the track's vocals, and only a path
+    // [broaderReason] allows.
+    override fun explainBroader(
+        track: TrackState,
+        genre: String,
+    ) = explainNow(track, genre, asBroader = true)
+
     override fun explain(
         track: TrackState,
         genre: String,
@@ -1039,10 +1075,11 @@ class AppGenreNotes private constructor(
     private fun explainNow(
         track: TrackState,
         genre: String,
+        asBroader: Boolean = false,
     ) {
         val made = parts.value ?: return
         val now = settings.value ?: return
-        val start = synchronized(lock) { tap(made, now, track, genre) }
+        val start = synchronized(lock) { tap(made, now, track, genre, asBroader) }
         beforeLaunch()
         when (start) {
             is Start.Reason ->
@@ -1077,8 +1114,9 @@ class AppGenreNotes private constructor(
         now: Settings,
         track: TrackState,
         genre: String,
+        asBroader: Boolean,
     ): Start? {
-        val path = path(made, now, lists.value, track, genre)
+        val path = path(made, now, lists.value, track, genre, asBroader)
         if (path is ReasonPath.Listing || path is ReasonPath.NotListed) {
             tapped.update { (it + (heldKey(track) to genre)).toList().takeLast(KEPT).toSet() }
         }
@@ -1108,17 +1146,21 @@ class AppGenreNotes private constructor(
         genre: String,
     ) = waiting.update { it + (key to (it[key].orEmpty() + genre)) }
 
-    // What a tap on [genre]'s *Why is this …?* does for [track] under [now], the lists [known].
+    // What a tap on [genre]'s *Why is this …?* does for [track] under [now], the lists [known]; opened as
+    // another genre's broader genre with [asBroader] (#1127).
+    @Suppress("LongParameterList") // As [GenreReasons.path]'s, with the parts it is built on.
     private fun path(
         made: PipelineParts,
         now: Settings,
         known: Map<CardKey, Entry<GenreListState>>,
         track: TrackState,
         genre: String,
+        asBroader: Boolean = false,
     ): ReasonPath {
         val lists = listsOf(made)
         val listed = lists.key(track, now)?.let { listed(it, known, now.historyLifetime) }
-        return reasonsOf(made).path(track, genre, now, lists, listed?.genres?.map { it.identity }?.toSet())
+        val identities = listed?.genres?.map { it.identity }?.toSet()
+        return reasonsOf(made).path(track, genre, now, lists, identities, asBroader)
     }
 
     // [key]'s list in [known], when listed and not past *Keep history for* ([lifetime]).
@@ -1142,13 +1184,20 @@ class AppGenreNotes private constructor(
             } else {
                 listsOf(made).key(track, now)?.let { listed(it, lists.value, now.historyLifetime) }
             }
-        return (track.genres.everyLabel.map { it.genre } + list?.genres.orEmpty())
+        // A broader genre (#1127) as the vocabulary names it.
+        val broader =
+            track.genres.everyLabel.firstNotNullOfOrNull { label ->
+                vocabulary.broader(label.genre.identity)?.takeIf { it.identity == genre }
+            }
+        return (track.genres.everyLabel.map { it.genre } + list?.genres.orEmpty() + listOfNotNull(broader))
             .firstOrNull { it.identity == genre }
             ?.label ?: genre
     }
 
     private fun reasonsOf(made: PipelineParts) =
-        GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch, made.dateForm)
+        GenreReasons(made.ai, made.cache, made.hasher, clock, made.webSearch, made.dateForm) {
+            vocabulary.broader(it)?.identity
+        }
 
     private fun listsOf(made: PipelineParts) =
         GenreLists(made.ai, made.cache, made.hasher, vocabulary, clock, made.webSearch)
