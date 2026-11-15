@@ -124,9 +124,31 @@ class CatalogueAbbreviationTest {
                 first,
             )
         }
+        // Nor does a decade.
+        assertEquals(
+            listOf("Their answer was a firm no.", "1980s synth-pop then took over."),
+            LastFmBio.split("Their answer was a firm no. 1980s synth-pop then took over."),
+        )
         // A year-like number with more catalogue after it is still a catalogue number.
         val numbered = "The Sonata, Op. 1984, No. 2, is a made-up work."
         assertEquals(listOf(numbered), LastFmBio.split(numbered))
+    }
+
+    @Test
+    fun `a posthumous opus is not cut after posth`() {
+        // "Fantaisie-Impromptu".
+        val lead =
+            "Frédéric Chopin's Fantaisie-Impromptu (Polish: Fantazja-Impromptu) in C♯ minor, Op. posth. 66, " +
+                "WN 46 is a solo piano composition."
+        val composed =
+            "It was composed in 1834 and published posthumously in 1855 despite Chopin's instruction that none " +
+                "of his unpublished manuscripts be published."
+        assertEquals(listOf(lead, composed), WikipediaSource.split("$lead $composed"))
+        // Before a capital word, `posth.` ends its sentence.
+        assertEquals(
+            listOf("The opus was marked posth.", "Then it was printed."),
+            LastFmBio.split("The opus was marked posth. Then it was printed."),
+        )
     }
 
     @Test

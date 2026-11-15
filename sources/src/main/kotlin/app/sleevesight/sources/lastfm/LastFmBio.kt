@@ -71,19 +71,21 @@ internal object LastFmBio {
     /**
      * Catalogue abbreviations that end in a full stop without ending a sentence when a catalogue
      * number follows (#1192): `No. 2`, `Nos. 20 & 23`, `Op. 27`, `Opp. 1`, `Nr. 3`, `Hob. VIIe/1`,
-     * `K. Anh. 1` (Anhang), `Sz. 106` (Bartók), `Kk. 380` (Scarlatti), `Wq. 182` (C. P. E. Bach).
+     * `K. Anh. 1` (Anhang), `Sz. 106` (Bartók), `Kk. 380` (Scarlatti), `Wq. 182` (C. P. E. Bach),
+     * `Op. posth. 66` (a posthumous opus).
      * Single letters (`K. 545`, `D. 960`, `H. 1/94`) are initials already, and `BWV`, `HWV`, `RV`,
      * `WoO` take no full stop. Before anything else they end one: `The answer was No. He left.`
      */
-    private val CATALOGUE = setOf("no", "nos", "nr", "op", "opp", "hob", "anh", "sz", "kk", "wq")
+    private val CATALOGUE = setOf("no", "nos", "nr", "op", "opp", "posth", "hob", "anh", "sz", "kk", "wq")
 
     // A catalogue number after a [CATALOGUE] abbreviation and a space: a digit (`27`, `1007–1012`),
     // or Hoboken's Roman group, a letter for a subgroup maybe, then `:` or `/` and a number
     // (`XVI:52`, `VIIe/1`). A Roman numeral alone (`No. I`) is not taken: it may be the pronoun.
-    // A year, four digits from 1000 to 2099 and then a space or the end, is not taken either: it
-    // more likely opens the next sentence (`a photo op. 1984 saw …`) than numbers a work, whose
-    // numbers in these catalogues stay below 1000; with more after it (`Op. 1984, No. 2`) it is.
-    private val CATALOGUE_NUMBER = Regex("^(?:(?!(?:1[0-9]|20)[0-9]{2}(?: |$))\\p{N}|[IVXLC]+[a-z]?[:/]\\p{N})")
+    // A year, four digits from 1000 to 2099, or its decade (`1980s`), and then a space or the end,
+    // is not taken either: it more likely opens the next sentence (`a photo op. 1984 saw …`, `a firm
+    // no. 1980s synth-pop …`) than numbers a work, whose numbers in these catalogues stay below
+    // 1000; with more after it (`Op. 1984, No. 2`) it is.
+    private val CATALOGUE_NUMBER = Regex("^(?:(?!(?:1[0-9]|20)[0-9]{2}s?(?: |$))\\p{N}|[IVXLC]+[a-z]?[:/]\\p{N})")
 
     private val ENTITIES =
         mapOf("amp" to "&", "quot" to "\"", "apos" to "'", "lt" to "<", "gt" to ">", "nbsp" to " ")
