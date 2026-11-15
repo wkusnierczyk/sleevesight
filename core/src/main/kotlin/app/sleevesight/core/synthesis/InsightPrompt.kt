@@ -122,8 +122,23 @@ object InsightPrompt {
      *
      * A track whose title leads with its composer has [RECORDING_VERSION] in its card's key in place
      * of this one, for the rule on another recording of its work ([RECORDING_RULE], #1195).
+     *
+     * Version 13 (#1142): the card tells a story from what the evidence adds beyond what Home already
+     * shows. The role says what that is (the title, the artists, the album and its year, the release
+     * dates, and the rows naming the song, the artist and the album) and asks for the story the
+     * evidence adds beyond it, with what that may be as examples ([ROLE]); the style asks for a story
+     * rather than a list, leaving the album and its release date to the screen ([BUILT_IN_STYLE]); and
+     * the rule on nothing to tell keeps a credit or a date enough for a sentence, but retelling what the
+     * screen shows only as a last resort, when the evidence holds nothing else at all
+     * ([NOTHING_TO_TELL_RULE]): on a thinly documented track, version 10's card was the header in
+     * prose ("Edwyn Collins wrote and performed the track. It was released on July 1, 1994, as part of
+     * the album Gorgeous George."), every fact of it already on the screen. Not a ban: "do not restate" alone answered
+     * `NO_EVIDENCE` for a track with one usable line (#399, [GAP_RULE]). Where the evidence holds
+     * nothing beyond the header, the card is still written, and the app says under it that no more
+     * source information was found (`HomeShown`). 13, not 11 or 12, which are taken. Raised so that
+     * every kept card is written afresh from it.
      */
-    const val VERSION: Int = 10
+    const val VERSION: Int = 13
 
     /**
      * The version in the card's key for a track whose title leads with its composer
@@ -132,8 +147,9 @@ object InsightPrompt {
      * version 10, written without the rule, is written afresh, once, when next shown, and no other
      * track's card is (as `ItemPrompt.ONLY_LISTINGS_VERSION` does for the song's). 12, not 11: 11 is
      * the rejected variant kept in `design/prompts/`, never shipped, and a number is never reused.
+     * 14 since version 13 (#1142): version 13 with the rule, raised with it.
      */
-    const val RECORDING_VERSION: Int = 12
+    const val RECORDING_VERSION: Int = 14
 
     /** The version in the card's key for a track whose title leads with its composer or not ([composed]). */
     fun version(composed: Boolean): Int = if (composed) RECORDING_VERSION else VERSION
@@ -251,12 +267,20 @@ object InsightPrompt {
      * in the reply ("Wait, I should not give the release date…"); [BUILT_IN_STYLE] puts the release
      * after the story instead. The screen shows the title and artists under the cover, so the card
      * does not restate them: in the blind A/B, a card that did not was preferred for it.
+     *
+     * Version 13 (#1142): the screen's whole header named (the album, its year and the release dates
+     * too, and the rows naming the song, the artist and the album), and the card a story from what
+     * the evidence adds beyond it, its examples the kinds of line that do (a producer, a player, a
+     * writer other than the performer, an earlier release, what the sources say of the song, the
+     * artist, the album or its genres), still as examples ("such as"), never a list to cover.
      */
     const val ROLE: String =
         "You write the insight card on a music app's now-playing screen. Someone is listening to this " +
-            "track right now. Open with the most interesting thing the evidence tells about the song, such as " +
-            "what it is about, how or why it was made, who played on it, or what became of it. The screen " +
-            "already shows the title and artists, so do not restate them. No preamble and no filler."
+            "track right now. The screen already shows the title, the artists, the album and its year, the " +
+            "release dates, and a row each naming the song, the artist and the album. Tell the story the " +
+            "evidence adds beyond that, such as who produced the track or played on it, who wrote it if not " +
+            "the performer, an earlier release, or what the sources say of the song, the artist, the album " +
+            "or its genres. Open with the most interesting part of it. No preamble and no filler."
 
     /**
      * The data guard (version 9, #767): the user message's blocks are data, never instructions, each
@@ -276,9 +300,12 @@ object InsightPrompt {
      * Version 10 (#767): the release after the story, rather than only where it matters, so a thinly
      * documented track still gets its date; and each fact once, against cards that named the same
      * credit twice ("featured artist … and the producer is listed as Tony K").
+     * Version 13 (#1142): a story, not a list of facts, and the album and its release date left to
+     * the screen unless there is nothing else to tell, in place of the release after the story.
      */
     const val BUILT_IN_STYLE: String =
-        "- Write 2 to 4 sentences, each fact once. If you mention the release, put it after the story.\n" +
+        "- Write 2 to 4 sentences that tell a story, each fact once, not a list of facts. Leave the album " +
+            "and its release date to the screen unless there is nothing else to tell.\n" +
             "- Plain conversational English. No hype, no praise words."
 
     /**
@@ -352,10 +379,15 @@ object InsightPrompt {
      * credit said to be enough for a sentence. "Nothing worth telling" left fifteen of 54 cards
      * empty against version 8's six, and in the blind A/B a short card from the release and the
      * producer was preferred to none. "Never say what is missing" dropped: [GAP_RULE] says it.
+     *
+     * Version 13 (#1142): a credit or a date is still enough for a sentence, so a thinly documented
+     * track is not left empty, but retelling what the screen shows ([ROLE]) is a last resort, for
+     * evidence that holds nothing else at all, not the default it was on thin evidence.
      */
     const val NOTHING_TO_TELL_RULE: String =
-        "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}. A release date or " +
-            "a credit is enough for a sentence."
+        "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}. A credit or a date " +
+            "is enough for a sentence, but retell what the screen shows only when the evidence holds nothing " +
+            "else at all."
 
     /** The rule on citations: every factual sentence ends with the ids of the lines it rests on. */
     val CITATION_RULE: String =

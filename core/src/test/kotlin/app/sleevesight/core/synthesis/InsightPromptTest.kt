@@ -35,7 +35,7 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
-    fun `the stored prompts are version 10's`() {
+    fun `the stored prompts are version 13's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
         // synthesis cache keys cards by it): update both together. Version 7 (#722) added the rule
         // on the track's length, version 8 (#800) the rule on a genre from a web page, version 9
@@ -43,8 +43,9 @@ class InsightPromptTest {
         // fixes from its blind A/B. Each version's exact prompt is kept in `design/prompts/`. The rule
         // on a line found in the track's language (#902) came without a version: the lines'
         // languages are in the evidence fingerprint, part of every card's key. Nor did the rule on
-        // dates (#957): a card kept keeps its dates as written.
-        assertEquals(10, InsightPrompt.VERSION)
+        // dates (#957): a card kept keeps its dates as written. Version 13 (#1142): what Home shows,
+        // and the story beyond it.
+        assertEquals(13, InsightPrompt.VERSION)
     }
 
     @Test
@@ -63,9 +64,9 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `a composer-led track's prompt has its own version, any other track's is version 10's (#1195)`() {
-        // Never 11: the rejected variant kept in `design/prompts/` has it.
-        assertEquals(12, InsightPrompt.RECORDING_VERSION)
+    fun `a composer-led track's prompt has its own version, any other track's is version 13's (#1195)`() {
+        // Never 11: the rejected variant kept in `design/prompts/` has it; 12 was version 10's (#1142).
+        assertEquals(14, InsightPrompt.RECORDING_VERSION)
         assertEquals(InsightPrompt.RECORDING_VERSION, InsightPrompt.version(composed = true))
         assertEquals(InsightPrompt.VERSION, InsightPrompt.version(composed = false))
     }
@@ -330,9 +331,14 @@ class InsightPromptTest {
             assertFalse(contract.any { GroundingCheck.GAP_SENTENCE in it }, "version 2's gap sentence is gone")
             // No usable evidence: the exact reply the app turns into its own text, and a date or a
             // credit is enough for a card (#767, version 10); no sentence on the evidence itself.
+            // Retelling what the screen shows only as a last resort (#1142, version 13).
             assertEquals(InsightPrompt.NOTHING_TO_TELL_RULE, contract.last())
             assertTrue("reply with exactly: ${GroundingCheck.NO_EVIDENCE}." in contract.last(), contract.last())
-            assertTrue("A release date or a credit is enough" in contract.last(), contract.last())
+            assertTrue("A credit or a date is enough for a sentence" in contract.last(), contract.last())
+            assertTrue(
+                "retell what the screen shows only when the evidence holds nothing else at all" in contract.last(),
+                contract.last(),
+            )
             // A web page's reading is the page's, its facts stated plainly, ids only in citations (#767).
             assertTrue(InsightPrompt.WEB_FACT_RULE in contract, "the rule on a web page's facts")
             val webFact = InsightPrompt.WEB_FACT_RULE
@@ -353,12 +359,29 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `the role opens with the song, the release after it (#767)`() {
-        assertTrue(InsightPrompt.ROLE.startsWith("You write the insight card on a music app's now-playing screen."))
-        assertTrue("so do not restate them" in InsightPrompt.ROLE)
-        // Version 9 kept the release out of the opening; version 10 puts it after the story.
-        assertFalse("never open with when or where it was released" in InsightPrompt.ROLE)
-        assertTrue("If you mention the release, put it after the story." in InsightPrompt.BUILT_IN_STYLE)
+    fun `the role says what Home shows and asks for the story beyond it (#767, #1142)`() {
+        val role = InsightPrompt.ROLE
+        assertTrue(role.startsWith("You write the insight card on a music app's now-playing screen."))
+        // Version 13 (#1142): the whole header, not only the title and artists, and the rows under it.
+        assertTrue(
+            "The screen already shows the title, the artists, the album and its year, the release dates, and a " +
+                "row each naming the song, the artist and the album." in role,
+            role,
+        )
+        assertTrue("Tell the story the evidence adds beyond that, such as" in role, role)
+        for (beyond in listOf("produced", "played on it", "wrote it if not the performer", "an earlier release")) {
+            assertTrue(beyond in role, beyond)
+        }
+        assertTrue("what the sources say of the song, the artist, the album or its genres" in role, role)
+        // Version 9 kept the release out of the opening; version 10 put it after the story; version 13
+        // leaves the album and its date to the screen unless there is nothing else.
+        assertFalse("never open with when or where it was released" in role)
+        assertFalse("put it after the story" in InsightPrompt.BUILT_IN_STYLE)
+        assertTrue("tell a story" in InsightPrompt.BUILT_IN_STYLE)
+        assertTrue(
+            "Leave the album and its release date to the screen unless there is nothing else to tell." in
+                InsightPrompt.BUILT_IN_STYLE,
+        )
     }
 
     private companion object {
