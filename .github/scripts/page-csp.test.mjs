@@ -1,21 +1,18 @@
 // The Content Security Policy of the pages that handle keys (#1035): the API keys page
 // (`api-keys.html`, #436) and the keyboard page (`keyboard.html`, #394). Each page sets its policy
 // in a `<meta http-equiv>`, since the site (GitHub Pages) sends no headers of its own; the policy is
-// what keeps the page from fetching or running anything but its own files. A policy that changes,
-// is missing, set twice, inactive (not a child of the head: inside a `<template>` or `<noscript>`,
-// or after the head has ended) or set after a resource it governs fails here, so a change to it is
-// made on purpose, in the page and here together. `ci.yml` runs it in every CI run.
-// Node 22 or later: node --test .github/scripts/page-csp.test.mjs
+// what keeps the page from fetching or running anything but its own files. `ci.yml` runs this in
+// every CI run. Node 22 or later: node --test .github/scripts/page-csp.test.mjs
 //
-// Pages serves Jekyll's output, not the source read here. So that the two agree as far as the policy
-// goes, a page must have front matter with `layout: null` (no layout wraps it) and no Liquid tag or
-// output (`{%`, `{{`) from its start through the policy, which Liquid could otherwise use to drop or
-// change it. Not covered: site-wide build settings (`_config.yml`, a `.nojekyll`), which
-// `CODEOWNERS` covers instead, and the files the policy admits (`'self'`), likewise.
-//
-// The page is read by a small tokenizer, as an HTML parser reads it as far as the policy needs:
-// comments, raw-text elements (`script`, `style`, `title`, `noscript` …), attributes by exact name
-// (the first of a repeated one wins), quoted and unquoted values, and character references in them.
+// The test does not parse HTML. It pins each page's start, from the line after the front matter
+// through the end of the policy's `<meta>` tag, byte for byte, so anything inserted, reordered,
+// re-encoded or wrapped before or around the policy fails here, whatever a browser or Jekyll would
+// make of it. Changing a page's head therefore means changing its pin here too: a change to
+// `.github/`, which `CODEOWNERS` covers. A page must also name `Content-Security-Policy` only once,
+// so a second policy later in the page fails; and its front matter must set `layout: null` by plain
+// lines a YAML reader cannot turn into anything else, so that no layout wraps the page when Jekyll
+// builds it. Not covered: site-wide build settings (`_config.yml`, a `.nojekyll`, the theme) and the
+// files the policy admits (`'self'`), which `CODEOWNERS` covers instead.
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -23,215 +20,148 @@ import { test } from 'node:test';
 
 const ROOT = new URL('../../', import.meta.url);
 
-const POLICIES = {
-  'api-keys.html':
-    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; " +
-    "connect-src 'none'; base-uri 'none'; form-action 'none'",
-  'keyboard.html':
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; " +
-    "base-uri 'none'; form-action 'none'",
+const policy = (content) => `<meta http-equiv="Content-Security-Policy" content="${content}">`;
+
+// Each page's start, through its policy.
+const STARTS = {
+  'api-keys.html': [
+    '<!DOCTYPE html>',
+    '<html lang="en-US">',
+    '<head>',
+    '<meta charset="UTF-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    "<!-- API keys to a setup code (#436), for the app's Load keys, sealed with the five words the phone",
+    "     shows (#590), in the documentation pages' type, header and footer (#764), without their intro.",
+    '     The page connects to nothing: it fetches only its own scripts, style sheets and fonts, and the',
+    "     policy below forbids any other request, so the browser's network panel shows that nothing is",
+    "     sent. The policy admits no inline script or style, so the header's script and the pages' style",
+    "     come as files (`assets/site/`), built from the same includes as the documentation pages'. The",
+    "     keys and the words stay in the page's memory, never in storage, and go only into the QR code",
+    '     drawn here. Light only, as the documentation pages. -->',
+    policy(
+      "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; " +
+        "connect-src 'none'; base-uri 'none'; form-action 'none'",
+    ),
+  ].join('\n'),
+  'keyboard.html': [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<!-- Type on a computer (#394). The page connects to nothing: it fetches only its own script and',
+    "     style sheet, and the policy below forbids any other request, so the browser's network panel",
+    '     shows that nothing is sent. The text goes to the phone over Bluetooth alone, sealed with a key',
+    "     made here and shown only in the QR code. Its front matter is there only for the site's footer",
+    '     (`site-footer.html`, #1156), styled from `keyboard.css`, since the policy forbids inline styles. -->',
+    policy(
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; " +
+        "base-uri 'none'; form-action 'none'",
+    ),
+  ].join('\n'),
 };
 
-// Elements that may stay in the head; any other start tag (or text) ends it.
-const HEAD = new Set([
-  'base', 'basefont', 'bgsound', 'link', 'meta', 'title', 'noscript', 'noframes', 'style', 'script',
-  'template',
-]);
-// Elements whose content is text, not tags (`noscript` as in a browser that runs scripts).
-const RAW = new Set([
-  'script', 'style', 'title', 'textarea', 'xmp', 'iframe', 'noembed', 'noframes', 'noscript', 'plaintext',
-]);
-// What may come before the policy: nothing it would govern.
-const BEFORE_POLICY = new Set(['html', 'head', 'meta', 'title']);
+// A front matter line: blank, a comment, or a plain key (lower case, unquoted), optionally as a list
+// item, with a value or none. Anything else (a quoted or complex key, a merge key, a directive, a
+// document marker, a block scalar's text, a tab) is refused rather than read.
+const LINE = /^(?: *(?:#.*)?| *(?:- )?[a-z_][a-z0-9_]*:(?: .*)?)$/;
 
-const NAMED = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>' };
-
-function decode(value) {
-  return value.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (whole, ref) => {
-    if (ref[0] === '#') {
-      const code = ref[1] === 'x' || ref[1] === 'X' ? parseInt(ref.slice(2), 16) : parseInt(ref.slice(1), 10);
-      return String.fromCodePoint(code);
-    }
-    return NAMED[ref.toLowerCase()] ?? whole;
-  });
-}
-
-// A start tag at `at` (its `<`): its name, its attributes (the first of each name) and its end.
-function startTag(text, at) {
-  let i = at + 1;
-  const name = text.slice(i).match(/^[^\s/>]+/)[0];
-  i += name.length;
-  const attributes = new Map();
-  for (;;) {
-    while (i < text.length && /[\s/]/.test(text[i])) i++;
-    if (i >= text.length) break;
-    if (text[i] === '>') {
-      i++;
-      break;
-    }
-    const attribute = text.slice(i).match(/^[^\s/>][^\s/>=]*/)[0];
-    i += attribute.length;
-    while (/\s/.test(text[i] ?? '')) i++;
-    let value = '';
-    if (text[i] === '=') {
-      i++;
-      while (/\s/.test(text[i] ?? '')) i++;
-      const quote = text[i];
-      if (quote === '"' || quote === "'") {
-        const close = text.indexOf(quote, i + 1);
-        const stop = close < 0 ? text.length : close;
-        value = text.slice(i + 1, stop);
-        i = stop + 1;
-      } else {
-        value = text.slice(i).match(/^[^\s>]*/)[0];
-        i += value.length;
-      }
-    }
-    const key = attribute.toLowerCase();
-    if (!attributes.has(key)) attributes.set(key, decode(value));
-  }
-  return { name: name.toLowerCase(), attributes, end: i };
-}
-
-// The page's policies (every `<meta>` whose `http-equiv` is the policy's, active or not), each with
-// the start tags before it, read from the page's HTML (its source after the front matter).
-export function read(html) {
-  const policies = [];
-  const tags = [];
-  let head = 'before'; // 'before' | 'in' | 'after'
-  let templates = 0;
-  let i = 0;
-  while (i < html.length) {
-    if (html.startsWith('<!--', i)) {
-      const close = html.indexOf('-->', i + 4);
-      i = close < 0 ? html.length : close + 3;
-    } else if (html[i] === '<' && (html[i + 1] === '!' || html[i + 1] === '?')) {
-      const close = html.indexOf('>', i);
-      i = close < 0 ? html.length : close + 1;
-    } else if (html[i] === '<' && html[i + 1] === '/' && /[a-z]/i.test(html[i + 2] ?? '')) {
-      const name = html.slice(i + 2).match(/^[^\s/>]+/)[0].toLowerCase();
-      if (name === 'template' && templates > 0) templates--;
-      else if (name === 'head' && head === 'in' && templates === 0) head = 'after';
-      const close = html.indexOf('>', i);
-      i = close < 0 ? html.length : close + 1;
-    } else if (html[i] === '<' && /[a-z]/i.test(html[i + 1] ?? '')) {
-      const tag = startTag(html, i);
-      if (tag.name === 'head' && head === 'before') head = 'in';
-      else if (tag.name !== 'html' && head === 'before') head = HEAD.has(tag.name) ? 'in' : 'after';
-      else if (tag.name !== 'html' && head === 'in' && templates === 0 && !HEAD.has(tag.name)) head = 'after';
-      if (tag.name === 'meta' && tag.attributes.get('http-equiv')?.toLowerCase() === 'content-security-policy') {
-        policies.push({
-          content: tag.attributes.get('content') ?? null,
-          active: head === 'in' && templates === 0,
-          end: tag.end,
-          before: [...tags],
-        });
-      }
-      tags.push(tag.name);
-      if (tag.name === 'template') templates++;
-      i = tag.end;
-      if (RAW.has(tag.name)) {
-        const close = html.slice(i).search(new RegExp(`</${tag.name}[\\s/>]`, 'i'));
-        i = close < 0 ? html.length : i + close;
-      }
-    } else {
-      if (!/\s/.test(html[i]) && templates === 0 && head !== 'after') head = 'after';
-      i++;
-    }
-  }
-  return policies;
-}
-
-// What is wrong with a page's source against its pinned policy, as a list of reasons.
-export function problems(source, expected) {
-  const front = source.match(/^---\r?\n([\s\S]*?\r?\n)?---\r?\n/);
-  if (!front) return ['no front matter: Jekyll would not build the page'];
+function frontMatter(yaml) {
   const found = [];
-  if (!/^layout:[ \t]*null[ \t]*\r?$/m.test(front[1] ?? '')) found.push('front matter without `layout: null`');
-  const html = source.slice(front[0].length);
-  const policies = read(html);
-  if (policies.length !== 1) found.push(`${policies.length} policies, not one`);
-  if (policies.some((p) => !p.active)) found.push('a policy outside the head');
-  const policy = policies.find((p) => p.active);
-  if (!policy) return [...found, 'no active policy in the head'];
-  if (policy.content !== expected) found.push(`the policy changed: ${JSON.stringify(policy.content)}`);
-  const early = policy.before.filter((name) => !BEFORE_POLICY.has(name));
-  if (early.length > 0) found.push(`before the policy: ${early.join(', ')}`);
-  if (/\{[{%]/.test(html.slice(0, policy.end))) found.push('Liquid before or in the policy');
+  const lines = yaml.split('\n');
+  for (const line of lines) {
+    const shown = JSON.stringify(line);
+    if (!LINE.test(line)) found.push(`front matter line not a plain key: ${shown}`);
+    else if (line.includes('{')) found.push(`front matter with a flow mapping: ${shown}`);
+    else if (/: *[&*!]/.test(line)) found.push(`front matter with an anchor, alias or tag: ${shown}`);
+  }
+  const layouts = lines.filter((line) => /^ *(?:- )?layout *:/.test(line));
+  if (layouts.length !== 1 || layouts[0] !== 'layout: null') {
+    found.push(`front matter's layout not exactly one \`layout: null\`: ${JSON.stringify(layouts)}`);
+  }
   return found;
 }
 
-for (const [page, expected] of Object.entries(POLICIES)) {
-  test(`${page} sets exactly its pinned policy, once, in its head, before what it governs`, () => {
-    assert.deepEqual(problems(readFileSync(new URL(page, ROOT), 'utf8'), expected), []);
+// What is wrong with a page's source against its pinned start, as a list of reasons.
+export function problems(source, start) {
+  const front = source.match(/^---\n((?:.*\n)*?)---\n/);
+  if (!front) return ['no front matter: Jekyll would not build the page'];
+  const found = frontMatter(front[1].replace(/\n$/, ''));
+  const html = source.slice(front[0].length);
+  const named = html.toLowerCase().split('content-security-policy').length - 1;
+  if (named !== 1) found.push(`Content-Security-Policy named ${named} times, not once`);
+  if (!html.startsWith(start)) found.push("the page's start, through its policy, is not the pinned one");
+  return found;
+}
+
+const read = (page) => readFileSync(new URL(page, ROOT), 'utf8');
+
+for (const [page, start] of Object.entries(STARTS)) {
+  test(`${page} starts exactly as pinned, through its policy, and sets no other`, () => {
+    assert.deepEqual(problems(read(page), start), []);
   });
 }
 
-// Cases the checks must refuse, on a page built like the real ones.
-const P = "default-src 'none'";
-const page = (head, front = 'layout: null\n') =>
-  `---\n${front}---\n<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n${head}\n` +
-  '<script src="a.js"></script>\n</head>\n<body><p>Text</p></body>\n</html>\n';
-const csp = (content) => `<meta http-equiv="Content-Security-Policy" content="${content}">`;
+// Changes the checks must refuse, made to the real API keys page, each with the reason it is
+// refused for. `before` puts text just before the policy, `around` wraps it.
+const PAGE = read('api-keys.html');
+const START = STARTS['api-keys.html'];
+const POLICY = START.slice(START.lastIndexOf('\n') + 1);
+const swap = (from, to) => {
+  assert.equal(PAGE.split(from).length, 2, `once in the page: ${from}`);
+  return PAGE.replace(from, to);
+};
+const before = (text) => swap(POLICY, text + POLICY);
+const around = (open, close) => swap(POLICY, open + POLICY + close);
+const layout = (lines) => swap('layout: null\n', lines);
+const STARTED = 'is not the pinned one';
+const LAYOUT = 'layout not exactly one';
+const SCRIPT = '<script src="https://example.invalid/x.js"></script>';
 
-test('the checks pass a page built as the real ones are', () => {
-  assert.deepEqual(problems(page(csp(P)), P), []);
-  // Case, quoting and character references, as a browser reads them.
-  assert.deepEqual(problems(page(`<META HTTP-EQUIV=content-security-policy CONTENT="${P}">`), P), []);
-  assert.deepEqual(problems(page(`<meta content='default-src "none"' http-equiv='CSP'>${csp(P)}`), P), []);
-  assert.deepEqual(problems(page(csp('default-src &apos;none&#39;')), P), []);
-});
-
-// Each case with the reason it is refused for.
 const refused = {
-  'a changed policy': [page(csp("default-src 'none'; connect-src https:")), 'the policy changed'],
-  'no policy': [page(''), 'no active policy'],
-  'a second policy': [page(csp(P) + csp('script-src *')), '2 policies'],
-  'the policy only in a comment': [page(`<!-- ${csp(P)} -->`), 'no active policy'],
-  'the policy only inside a template': [page(`<template>${csp(P)}</template>`), 'outside the head'],
-  'the policy only inside noscript': [page(`<noscript>${csp(P)}</noscript>`), 'no active policy'],
-  'a decoy policy inside a template': [
-    page(csp(P) + `<template>${csp('script-src *')}</template>`),
-    'outside the head',
+  // The policy itself.
+  'a changed policy': [swap("connect-src 'none'", 'connect-src https:'), STARTED],
+  'no policy': [swap(POLICY, ''), STARTED],
+  'a second policy later in the page': [swap('</head>', `${policy('script-src *')}\n</head>`), 'named 2 times'],
+  'a pinned data-content beside a permissive content': [
+    swap('Policy" content=', 'Policy" content="script-src *" data-content='),
+    STARTED,
   ],
-  'data-http-equiv for http-equiv': [
-    page(`<meta data-http-equiv="Content-Security-Policy" content="${P}">`),
-    'no active policy',
-  ],
-  'data-content beside a permissive content': [
-    page(`<meta http-equiv="Content-Security-Policy" data-content="${P}" content="script-src *">`),
-    'the policy changed',
-  ],
-  'a repeated content attribute, the first permissive': [
-    page(`<meta http-equiv="Content-Security-Policy" content="script-src *" content="${P}">`),
-    'the policy changed',
-  ],
-  'the policy after the head ended': [page(`</head><body>${csp(P)}`), 'outside the head'],
-  'the policy after text ended the head': [page(`Text ${csp(P)}`), 'outside the head'],
-  'the policy after a body element': [page(`<div></div>${csp(P)}`), 'outside the head'],
-  'a script before the policy': [page(`<script src="x.js"></script>${csp(P)}`), 'before the policy: script'],
-  'a style sheet before the policy': [
-    page(`<link rel="stylesheet" href="x.css">${csp(P)}`),
-    'before the policy: link',
-  ],
-  // Liquid that would drop the policy from the served page, where the HTML alone is sound.
-  'Liquid that drops the policy': [
-    page(`<meta name="a" content="{% if false %}">${csp(P)}<meta name="b" content="{% endif %}">`),
-    'Liquid',
-  ],
-  'a Liquid comment around the policy': [
-    page(`<!-- {% comment %} -->${csp(P)}<!-- {% endcomment %} -->`),
-    'Liquid',
-  ],
-  'Liquid output in the policy': [page(csp('{{ page.policy }}')), 'Liquid'],
-  'a layout': [page(csp(P), 'layout: default\n'), 'layout: null'],
-  'no layout named': [page(csp(P), 'title: Keys\n'), 'layout: null'],
-  'no front matter': [page(csp(P)).replace(/^---\n[\s\S]*?---\n/, ''), 'no front matter'],
+  'data-http-equiv for http-equiv': [swap('<meta http-equiv=', '<meta data-http-equiv='), STARTED],
+  'a no-break space for a space in the tag': [swap('<meta http-equiv=', '<meta http-equiv='), STARTED],
+  'a character reference in the policy': [swap("script-src 'self'", 'script-src &APOS;self&APOS;'), STARTED],
+  // Where the policy is.
+  'the policy only in a comment': [around('<!-- ', ' -->'), STARTED],
+  'the policy inside a template': [around('<template>', '</template>'), STARTED],
+  'the policy inside noscript': [around('<noscript>', '</noscript>'), STARTED],
+  'the head ended before the policy': [before('</head><body>'), STARTED],
+  'the body ended before the policy': [before('</body>'), STARTED],
+  'text before the policy': [before('Text '), STARTED],
+  'an element of the body before the policy': [before('<div></div>'), STARTED],
+  'a script before the policy': [before(SCRIPT), STARTED],
+  'a style sheet before the policy': [before('<link rel="stylesheet" href="x.css">'), STARTED],
+  'a script after a comment closed by --!>': [before(`<!-- --!>${SCRIPT}<!-- -->`), STARTED],
+  // Liquid, which Jekyll runs before Pages serves the page.
+  'Liquid that drops the policy': [around('{% if false %}', '{% endif %}'), STARTED],
+  'a Liquid comment around the policy': [around('<!-- {% comment %} -->', '<!-- {% endcomment %} -->'), STARTED],
+  'Liquid output in the policy': [swap("default-src 'none'", '{{ page.policy }}'), STARTED],
+  // The front matter.
+  'another layout': [layout('layout: default\n'), LAYOUT],
+  'no layout named': [layout(''), LAYOUT],
+  '`layout: null` and then `layout: default`': [layout('layout: null\nlayout: default\n'), LAYOUT],
+  'a quoted layout key': [layout('layout: null\n"layout": default\n'), 'not a plain key'],
+  'an escaped layout key': [layout('layout: null\n"lay\\u006fut": default\n'), 'not a plain key'],
+  'a merge key': [layout('layout: null\nbase: &base\n  layout: default\n<<: *base\n'), 'anchor'],
+  'an alias': [layout('layout: null\nother: *base\n'), 'anchor'],
+  'a flow mapping': [layout('layout: null\nmore: {layout: default}\n'), 'flow mapping'],
+  'a document marker': [layout('layout: null\n...\n'), 'not a plain key'],
+  'a tab before a key': [layout('layout: null\n\tlayout: default\n'), 'not a plain key'],
+  'no front matter': [PAGE.replace(/^---\n(?:.*\n)*?---\n/, ''), 'no front matter'],
 };
 
 for (const [name, [source, reason]] of Object.entries(refused)) {
   test(`the checks refuse ${name}`, () => {
-    const found = problems(source, P);
+    const found = problems(source, START);
     assert.ok(found.some((problem) => problem.includes(reason)), `${name}: ${JSON.stringify(found)}`);
   });
 }
