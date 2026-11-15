@@ -207,6 +207,17 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
+   "query": "recording:(forever~ young~) AND artist:(\"dearoldfriend\" OR \"Winston Hunte\")",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-forever-young-and-artist-dearoldfriend-or-winston-hunte.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
    "query": "recording:\"Forever Young\" AND artist:\"dearoldfriend\"",
    "limit": "100",
    "fmt": "json"
@@ -350,6 +361,17 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
+   "query": "recording:(the ode to newfoundland~) AND artist:(\"Charles Cavendish Boyle\" OR \"Hubert Parry\" OR \"Cantus Vocum Chamber Choir\")",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-the-ode-to-newfoundland-and-artist-charles-cavendish-boyle-or-hubert-parry-or-ca.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
    "query": "recording:\"The Ode To Newfoundland\" AND artist:\"Charles Cavendish Boyle\"",
    "limit": "100",
    "fmt": "json"
@@ -378,6 +400,17 @@
   },
   "status": 200,
   "file": "recording-recording-the-veil-between-worlds-and-artist-die-hexen.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:(up down~) AND artist:(\"Peleboy\" OR \"Tony K\")",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-up-down-and-artist-peleboy-or-tony-k.json"
  },
  {
   "method": "GET",

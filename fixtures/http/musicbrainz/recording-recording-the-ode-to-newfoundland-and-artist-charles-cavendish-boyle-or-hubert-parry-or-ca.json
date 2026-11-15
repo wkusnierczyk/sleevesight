@@ -1,0 +1,2308 @@
+{
+ "created": "2026-11-15T14:04:27.761Z",
+ "count": 64,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "db48f2ed-d337-4344-b144-17fc5368e134",
+   "score": 100,
+   "title": "Job: Scene 1. And The Lord Said to Satan (Narrator)",
+   "length": 139866,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "90fdf040-762b-469e-8770-3f1a76db35bd",
+   "score": 99,
+   "title": "Invocation to Music: VI. Dirge. To me, to me, fair-hearted Goddess, come! Maestoso (Bass solo)",
+   "length": 484960,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b46975e2-d29d-4c04-9576-77d91614b01e",
+   "score": 99,
+   "title": "Invocation to Music: IV. The monstrous sea - Maestoso energico (Chorus)",
+   "length": 332000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "bfadd0c0-b936-4fb6-be23-e3f37f208a68",
+   "score": 98,
+   "title": "Overture to an Unwritten Tragedy",
+   "length": 625066,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "21d4a745-54fa-4752-aaf3-7758db5e2b07",
+     "title": "Boult conducts Parry",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "34b85881-f1a2-425c-988b-727f92884c30",
+      "title": "Boult conducts Parry",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "cf4674aa-a44a-420b-9371-7ba4995e03d7",
+   "score": 98,
+   "title": "King Arthur's Farewell to Guenever",
+   "length": 736933,
+   "first-release-date": "2007",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "3bf36b47-aa79-4c87-92ce-33bef201b147",
+     "title": "Sea Fever: Roderick Williams Sings Baritone Songs by British Composers",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "93eca909-c74a-4259-9d46-afdfcb3f1aa9",
+      "title": "Sea Fever: Roderick Williams Sings Baritone Songs by British Composers",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "545a04f3-3b4c-4859-8a76-4a4f6ee629f1",
+   "score": 97,
+   "title": "The Chivalry of the Sea",
+   "length": 845200,
+   "first-release-date": "2006",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "5bfbb09d-786d-430b-8c4d-42f71c34cf9f",
+     "title": "The Spirit of England",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "055638d9-a140-44de-a9ac-6f58bd8f4de2",
+      "title": "The Spirit of England",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "3f1f5f24-2b64-43b9-932b-78554e5318b9",
+   "score": 97,
+   "title": "Invocation to Music: V. Love to Love calleth - Andante appassionato (Soprano and tenor)",
+   "length": 316000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2d6edded-20cf-422f-8a8b-d96daad37f52",
+   "score": 95,
+   "title": "The Lotos-Eaters: III. Lo! in the middle of the wood (Soprano solo)",
+   "length": 159986,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2a86d276-4525-4f60-aa4c-e000e0baddf2",
+   "score": 94,
+   "title": "I sing the birth",
+   "length": 147440,
+   "first-release-date": "2008",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "36edcf30-17ec-4369-a1bc-f9b87117d610",
+     "title": "Christmas Choral Highlights 2",
+     "date": "2008",
+     "status": "Promotion",
+     "release-group": {
+      "id": "dbdcbb65-bb9f-4592-923d-22ee4cfc5028",
+      "title": "Christmas Choral Highlights 2",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "41e99ed6-128f-49bb-801b-57e4f18b51de",
+   "score": 94,
+   "title": "Invocation to Music: IX. O enter with me the gates of delight - Allegro vivace (Soprano, tenor, and bass)",
+   "length": 340000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "bc8b1a47-53b7-4a36-816d-eb4030dc3f87",
+   "score": 94,
+   "title": "The Soul's Ransom: Section 1. Who can number the sands of the sea - Lento (Chorus)",
+   "length": 497053,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a0f978f7-9e48-4e93-8226-106245ab57bf",
+   "score": 93,
+   "title": "Invocation to Music: VII. Man, born of desire - Moderato (Chorus)",
+   "length": 295413,
+   "first-release-date": "2006",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a60b92f6-f1bb-4229-b9e9-ad0fbced9f57",
+   "score": 93,
+   "title": "Invocation to Music: I. Introduction - Myriad voiced Queen! Moderato (Chorus)",
+   "length": 309840,
+   "first-release-date": "2006",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5721beed-e463-449e-8dd5-9d10a454d84a",
+   "score": 93,
+   "title": "Hymn: O Praise Ye the Lord! Praise Him in the Height!",
+   "length": 197840,
+   "first-release-date": "2002-12-09",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "b8676ed7-1596-4483-a9ad-b3df5b28aba1",
+     "title": "O For A Thousand Tongues",
+     "date": "2002-12-09",
+     "status": "Official",
+     "release-group": {
+      "id": "8c3ce7e3-f61f-41a6-9f28-1645a85edea2",
+      "title": "O For A Thousand Tongues",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "7141b6fa-c906-4fcc-a60c-3991ac5f41ec",
+   "score": 93,
+   "title": "Te Deum (1911): 'When thou tookest upon thee to deliver man'. Lento – 'We believe that thou shalt come: to be our Judge'. Andante –",
+   "length": 317346,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "01f75ff7-ad05-468d-9b95-7cc63a109a07",
+   "score": 93,
+   "title": "The Soul's Ransom: Section 3. The hand of the Lord was upon me - Maestoso (Bass solo and chorus)",
+   "length": 569026,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a14fa873-cee1-4fec-93d2-adf8f95c5b00",
+   "score": 93,
+   "title": "The Lotos-Eaters: VIII. The Lotos blooms below the barren peak - Allegro tranquillo, andante (Chorus and soprano solo)",
+   "length": 669426,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "11edf966-ec15-4f80-ae0f-b49eff74a5c1",
+   "score": 92,
+   "title": "The Lotos-Eaters: IV. Hateful is the dark-blue sky - Allegro moderato",
+   "length": 142866,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "094c83a1-ef86-4953-9ae2-b5da409411c7",
+   "score": 92,
+   "title": "Te Deum (1911): 'The glorious company of the Apostles: praise thee'. Allegro –",
+   "length": 162386,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "00571a5a-0923-4534-9637-57a3fd73f686",
+   "score": 92,
+   "title": "Invocation to Music: II. Turn, O return! Allegretto tranquillo (Chorus and Soprano solo)",
+   "length": 246613,
+   "first-release-date": "2006",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5a9606ee-67b7-499d-94c4-ecdfa0406560",
+   "score": 92,
+   "title": "Invocation to Music: X. Thou, O Queen of sinless grace - Allegro vivo (Chorus)",
+   "length": 312000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "0015cd06-475d-43eb-9e84-0ddfb4f7272a",
+   "score": 92,
+   "title": "Laudate Dominum “O Praise Ye the Lord”",
+   "length": 150266,
+   "first-release-date": "1991-10-10",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "ea57393d-31bd-428b-9f25-4920dbcb957f",
+     "title": "Famous Hymns of Praise",
+     "date": "1991-10-10",
+     "status": "Official",
+     "release-group": {
+      "id": "2e72f5fb-a592-441e-9b41-a2d472f0f16a",
+      "title": "Famous Hymns of Praise",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "65d60573-cbf5-486b-a3f6-dcfeddd1d320",
+   "score": 92,
+   "title": "O Praise Ye the Lord (Laudate Dominum)",
+   "length": 147960,
+   "first-release-date": "1995",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "17c79d77-f4c1-4e26-a7e5-a54908054c33",
+     "title": "Hymns and Psalms from Winchester",
+     "date": "1995",
+     "status": "Official",
+     "release-group": {
+      "id": "26caffa4-a4ca-4e52-855e-4d5a48895fb2",
+      "title": "Hymns and Psalms from Winchester",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a5078708-a882-45ef-a2ff-d7363f31e18a",
+   "score": 92,
+   "title": "Invocation to Music: III. Thee, fair Poetry oft hath sought - Allegretto tranquillo (Tenor solo)",
+   "length": 271000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "815c682d-116e-494f-982c-dc3d12c43dbf",
+   "score": 92,
+   "title": "The Soul's Ransom: Section 4. The people that walked in darkness - Moderato, energico (Soprano solo)",
+   "length": 299720,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f742d06b-7aaf-4c51-930c-0e7a2bf394fd",
+   "score": 92,
+   "title": "The Soul's Ransom: Section 4. See now, ye that love the light - Moderato, tranquillo (Chorus)",
+   "length": 313373,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "049cf41a-edcc-4975-bab4-39ed989f904f",
+   "score": 92,
+   "title": "The Birds of Aristophanes Suite: II. Entry of the Birds. Allegretto – Accelerando – Con fuoco",
+   "length": 150200,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "d83f2a83-0939-4332-b2e3-5964344bb1e6",
+   "score": 91,
+   "title": "Job: Scene 4. And It Was So, That The Lord Turned the Captivity of Job (Narrator)",
+   "length": 169466,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "da697f83-e879-4c92-bffc-0f4f38cd2af1",
+   "score": 91,
+   "title": "The Glories of Our Blood and State: 'The glories of our blood and state'. Maestoso – 'And in the dust be equal made'. Tranquillo –",
+   "length": 156133,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "43235397-b704-493c-ab99-f261c4d8b50d",
+   "score": 91,
+   "title": "The Lotos-Eaters: V. How sweet it were, hearing the downward stream - Andante tranquillo (Soprano solo)",
+   "length": 264906,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "e44edc3e-3911-45d7-8d77-1a65ad58da34",
+   "score": 91,
+   "title": "The Lotos-Eaters: VI. Dear is the memory of our wedded lives - Moderato, lento (Men's Chorus)",
+   "length": 268466,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2deefb85-7f14-4047-8cfc-6d24323492f5",
+   "score": 91,
+   "title": "The Soul's Ransom: Section 1. Introduction - Lento",
+   "length": 258320,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a0d0c85c-e879-41b9-9aae-9274a69b0f35",
+   "score": 91,
+   "title": "The Glories of Our Blood and State: 'Some men with swords may reap the field'. Allegro molto –",
+   "length": 101000,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "6130467f-99ea-4957-ab7d-7e327cefbe8b",
+   "score": 91,
+   "title": "The Glories of Our Blood and State: ' The garlands wither on your brow'. Maestoso come prima – 'Your heads must come'. Molto piu lento – 'Only the actions of the just'. Piu mosso, tranquillo – Meno mosso",
+   "length": 248600,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "59519395-eeca-4510-b97f-479a90591812",
+   "score": 91,
+   "title": "Job: Scene 2. And There Came a Messenger to Job, and Said (Narrator, Job, Satan, and Chorus)",
+   "length": 432440,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2c96ec3c-3d89-4eac-b6f6-d062a8e021f1",
+   "score": 91,
+   "title": "The Birds of Aristophanes Suite: V. Intermezzo. Andantino sostenuto",
+   "length": 201466,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "8b4e2905-b112-4eba-b8d6-8e3e2988fe57",
+   "score": 91,
+   "title": "Psalm 106 - O give thanks unto the Lord",
+   "length": 617666,
+   "first-release-date": "1990-01-12",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "e1b6fc67-0044-40c7-8e89-d0378f43e178",
+     "title": "The Earth is the Lord's - The Psalms of David - Volume 3",
+     "date": "1990-01-12",
+     "status": "Official",
+     "release-group": {
+      "id": "8972f4fb-289c-467f-9450-33ef6ca8a173",
+      "title": "The Earth is the Lord's - The Psalms of David - Volume 3",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "984cc021-7545-4fba-9c85-e6166739c14e",
+   "score": 91,
+   "title": "The Birds of Aristophanes Suite: III. Entr'acte. Lento sostenuto",
+   "length": 206800,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "79df65e7-a8aa-48ff-a633-f35a65c5a934",
+   "score": 91,
+   "title": "Invocation to Music: VIII. Rejoice, ye dead, where'er your spirits dwell - Piu lento (Soprano solo and chorus)",
+   "length": 374200,
+   "first-release-date": "2006",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "0a058b57-3cb7-40d7-a47e-a0979b38742a",
+   "score": 91,
+   "title": "Invocation to Music: I. Introduction. Chorus: Myriad voiced Queen! / II. Soprano Solo & Chorus: Turn, O return",
+   "length": 555000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "d13b71e6-3b94-4699-a1eb-a368921428e9",
+   "score": 90,
+   "title": "Job: Scene 4. Hast Thou Given the Horse Strength? (Chorus)",
+   "length": 104373,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "c167dce0-98e0-4a7a-9e59-32de022314f7",
+   "score": 90,
+   "title": "Job: Scene 4. Who Shut up the Sea with Doors? (Chorus)",
+   "length": 106026,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2fcabf8a-6971-47c7-91c7-089faf758587",
+   "score": 90,
+   "title": "Invocation to Music: VII. Chorus: Man, born of desire / VIII. Soprano Solo & Chorus: Rejoice, ye dead, where'er your spirits dwell",
+   "length": 665000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4338cb6c-c022-420c-a91a-0cbcabb9f3e1",
+     "title": "Invocation to Music",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "ee56c144-ed3c-4107-863b-a9d0db71628c",
+      "title": "Invocation to Music",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "17a57e67-65bc-454d-8e28-8d4e07b5df66",
+   "score": 90,
+   "title": "Job: Scene 4. Hast Thou Commanded the Morning Since Thy Days? (Chorus)",
+   "length": 306800,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "3f1b7108-eefc-46dd-bc1b-126feb7442ce",
+   "score": 90,
+   "title": "Entrance Into the Church - Anthem: \"I Was Glad\" (with Vivats) [live]",
+   "length": 391000,
+   "first-release-date": "2022-05-13",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "5d407aed-2076-4e15-b8c7-8ab846ac9eff",
+     "title": "The Coronation of Her Majesty Queen Elizabeth II (Live at Westminster Abbey, London, 2/6/1953)",
+     "status": "Official",
+     "release-group": {
+      "id": "78c2e471-816b-4eea-b7ae-ed37ea696971",
+      "title": "The Coronation of Her Majesty Queen Elizabeth II (Live at Westminster Abbey, London, 2/6/1953)",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f090c443-fcfc-491c-a1e5-f5ccb263959a",
+   "score": 90,
+   "title": "Job: Lamentations of Job. Why Died I Not from the Womb? (Job)",
+   "length": 174226,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "185cc072-2575-4894-aa55-af180cf9f9d0",
+   "score": 89,
+   "title": "Te Deum (1911): 'Vouchsafe, O Lord: to keep us this day without sin'. Lento – 'O Lord, let thy mercy lighten upon us'. Lento",
+   "length": 313733,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "14a0200c-ee57-4935-a772-8624ce1f9496",
+   "score": 89,
+   "title": "Job: Lamentations of Job. Let the Day Perish Wherein I was Born (Job)",
+   "length": 133266,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "52a76c13-0eb8-44a4-800b-093241fb0957",
+   "score": 89,
+   "title": "Job: Scene 1. There was a Man tn the Land of Uz (Narrator)",
+   "length": 315440,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f150621a-cb38-4a93-aa24-151965b24673",
+   "score": 89,
+   "title": "The Lotos-Eaters: II. Why are we weighed upon with heaviness - Allegro (Chorus)",
+   "length": 99466,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "12da4377-df9e-4e3c-98ef-a78c86b48ab3",
+   "score": 89,
+   "title": "Job: Scene 2. The Flocks of My Master are Blessed of God (Shepherd Boy)",
+   "length": 319400,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "04d8503e-1631-467c-81b4-cbf6f1d71242",
+   "score": 89,
+   "title": "Job: Lamentations of Job. O That I Were as in the Months Past (Job)",
+   "length": 144240,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "9b5053c6-cb3d-4fe2-8af4-50a60e2bb6cd",
+     "title": "Job",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "6356f932-eca2-4ea3-828c-7aa16932721d",
+      "title": "Job",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "251e6ee7-e5f9-4e36-8cd6-cb9ac1d36a53",
+   "score": 89,
+   "title": "The Birds of Aristophanes Suite: VI. Bridal March of the Birds. Allegro moderato – Più moto – Tempo I – Allargando – Più mosso – Animando – Allargando – Animato",
+   "length": 291733,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "9ffd2f22-ecd0-4815-a6ff-77a462e26f4c",
+   "score": 89,
+   "title": "The Soul's Ransom: Section 2. We look for light, but behold darkness - Moderato maestoso (Chorus)",
+   "length": 201426,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "967ef1bb-1847-42e7-ad97-e565e90f0199",
+   "score": 89,
+   "title": "The Lotos-Eaters: VII. But, prompt on beds of amaranth and moly - Andantino (Soprano solo)",
+   "length": 139706,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "728319e7-627e-4e99-b13e-ecf0cef14534",
+   "score": 89,
+   "title": "The Soul's Ransom: Section 2. Hear ye this, O ye people - Allegro agitato (Bass solo)",
+   "length": 261120,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "99160e77-f7b6-4a2d-bf1a-a85a5c43258e",
+   "score": 89,
+   "title": "The Birds of Aristophanes Suite: IV. Waltz. Moderato – Accelerando poco a poco – Più mosso",
+   "length": 154000,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "015795e0-cf55-42e8-9ef0-3b05466db26f",
+   "score": 89,
+   "title": "The Lotos-Eaters: I. There is sweet music here that softer falls - Andante tranquillo (Chorus)",
+   "length": 216120,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "32942a26-b167-4bb7-969a-e5dccb5595b0",
+   "score": 88,
+   "title": "The Birds of Aristophanes Suite: I. Introduction. Allegro – Poco meno mosso – Poco a poco meno mosso",
+   "length": 168266,
+   "first-release-date": "2012",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "262743c3-fc09-4aa8-b6dc-ed8cbedb9792",
+     "title": "A Lifetime on Chandos",
+     "date": "2018",
+     "status": "Official",
+     "release-group": {
+      "id": "9c0311c4-acce-4b84-9d91-68c5a05df800",
+      "title": "A Lifetime on Chandos",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "077205dc-e0de-4e47-8aae-c2776657418d",
+     "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "174df2a1-8fd6-4ca8-b464-601c76f48c72",
+      "title": "Jerusalem / The Birds of Aristophanes / England / The Glories of Our Blood and State / Te Deum / Magnificat",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "77bd0ffd-ad20-491b-9f41-d1e1c8438fa2",
+   "score": 88,
+   "title": "The Soul's Ransom: Section 2. Why are ye so fearful, O ye of little faith? - Lento (Soprano solo and chorus)",
+   "length": 432013,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1072eaf-ce15-4b67-a3a7-721274255eaa",
+     "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "0c422080-55b6-45c8-b3df-32822e64e1a1",
+      "title": "The Soul’s Ransom (Sinfonia Sacra) / The Lotos Eaters",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f05a0345-9b8f-4dd2-96be-482924397a65",
+     "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "83dc2035-e6b3-4a86-9276-8c0592590c2a",
+      "title": "Invocation to Music / The Soul's Ransom / The Lotos-Eaters / Blest Pair of Sirens / I was glad",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "004e22eb-00d9-4d20-96ce-74b74eb23b55",
+   "score": 82,
+   "title": "How sweet the answer",
+   "length": 161000,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Sir Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "8b918953-c8bf-44e8-9622-c76ff7e736a5",
+     "title": "Songs of Farewell",
+     "status": "Official",
+     "release-group": {
+      "id": "69093484-f1c0-48e9-bd29-3445650ee023",
+      "title": "Songs of Farewell",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "6ab1f70a-15a4-405c-a8c2-a34aad7616be",
+   "score": 82,
+   "title": "God Save the Queen",
+   "length": 205000,
+   "first-release-date": "1990-06-02",
+   "artist-credit": [
+    {
+     "name": "Sir Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a9e0cc38-dd75-4a20-9d60-98cec7f3a329",
+     "title": "Music for the Last Night of the Proms",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "f08c76c3-3e1d-4cbc-962f-c5996afe4a22",
+      "title": "Music for the Last Night of the Proms",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "c117cd1d-f830-465c-a9d8-40d983f14e8d",
+     "title": "Music for the Last Night of the Proms",
+     "date": "1990-06-02",
+     "status": "Official",
+     "release-group": {
+      "id": "f08c76c3-3e1d-4cbc-962f-c5996afe4a22",
+      "title": "Music for the Last Night of the Proms",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "6578e581-27d1-46d0-a5cc-64f145164ed8",
+   "score": 82,
+   "title": "There rolls the deep",
+   "length": 183000,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Sir Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "8b918953-c8bf-44e8-9622-c76ff7e736a5",
+     "title": "Songs of Farewell",
+     "status": "Official",
+     "release-group": {
+      "id": "69093484-f1c0-48e9-bd29-3445650ee023",
+      "title": "Songs of Farewell",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5a50e511-9e3e-43e8-b3a5-9c8d73b89e90",
+   "score": 80,
+   "title": "At the round earth's imagined corners",
+   "length": 479000,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Sir Hubert Parry",
+     "joinphrase": "",
+     "artist": {
+      "id": "e58a0544-2b32-47b2-955c-fa51887ec6c7",
+      "name": "Hubert Parry"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "8b918953-c8bf-44e8-9622-c76ff7e736a5",
+     "title": "Songs of Farewell",
+     "status": "Official",
+     "release-group": {
+      "id": "69093484-f1c0-48e9-bd29-3445650ee023",
+      "title": "Songs of Farewell",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  }
+ ]
+}

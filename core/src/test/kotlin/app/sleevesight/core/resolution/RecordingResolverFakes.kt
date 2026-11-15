@@ -67,8 +67,12 @@ internal class FakeMusicBrainz(
         return beforeAnswers.removeFirstOrNull() ?: before
     }
 
-    override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
-        recordingFailure?.let { Lookup.Failed(it) } ?: recordings[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+    override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> {
+        recordingsAsked += mbid
+        return recordingFailure?.let { Lookup.Failed(it) }
+            ?: recordings[mbid]?.let { Lookup.Found(it) }
+            ?: Lookup.NotFound
+    }
 
     override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> {
         releasesAsked += mbid
@@ -77,6 +81,23 @@ internal class FakeMusicBrainz(
 
     override suspend fun work(mbid: String): Lookup<MbWork> =
         workFailure?.let { Lookup.Failed(it) } ?: works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+
+    /** The loose search's answer (#1289), whatever is asked. */
+    var loose: Lookup<List<MbRecording>> = Lookup.NotFound
+
+    /** The loose searches made, as (words, artists), in order. */
+    val looseSearched = mutableListOf<Pair<List<String>, List<String>>>()
+
+    /** The recordings looked up, in order. */
+    val recordingsAsked = mutableListOf<String>()
+
+    override suspend fun searchRecordingsLoosely(
+        words: List<String>,
+        artists: List<String>,
+    ): Lookup<List<MbRecording>> {
+        looseSearched += words to artists
+        return loose
+    }
 
     // Resolution never searches for artists.
     override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> = error("unexpected artist search")

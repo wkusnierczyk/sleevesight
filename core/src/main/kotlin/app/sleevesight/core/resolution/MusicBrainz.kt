@@ -8,6 +8,7 @@ package app.sleevesight.core.resolution
  * ([MbRecordingDetail.tags], #439), which ride on its lookup for the track's genre labels, and
  * which resolution passes on without reading (`architecture.md`, *MusicBrainz tags and genres*).
  */
+@Suppress("TooManyFunctions") // One for each question resolution and the album's insight ask MusicBrainz.
 interface MusicBrainzLookup {
     /** Recordings matching [title] by [artist], as MusicBrainz's search ranks them: at most [SEARCH_PAGE]. */
     suspend fun searchRecordings(
@@ -77,6 +78,26 @@ interface MusicBrainzLookup {
      */
     suspend fun groupFirst(mbid: String): Lookup<MbGroupFirst> = Lookup.Failed("NotAsked")
 
+    /**
+     * Recordings whose title has any of [words] by any of [artists] (#1289), as MusicBrainz's search
+     * ranks them, those with more of both first: at most [SEARCH_PAGE]. A word of [FUZZY_LENGTH]
+     * letters or more is matched loosely (Lucene's `word~`), so a title misspelled by a letter may still
+     * be found; MusicBrainz does not always find it so, and ranks on the other words and the artists.
+     * The fallback when the searches by the title as written find nothing that fits. A stand-in that
+     * does not answer it finds nothing, so a resolution is what it was before.
+     */
+    suspend fun searchRecordingsLoosely(
+        words: List<String>,
+        artists: List<String>,
+    ): Lookup<List<MbRecording>> = Lookup.NotFound
+
+    /**
+     * The names the artist [mbid] goes by (#1289): its own and its aliases ("Berlin Philharmonic" for
+     * the Berliner Philharmoniker), core data. Not found for an id that is no artist's. A stand-in that
+     * does not answer it finds none, so a resolution is what it was before.
+     */
+    suspend fun artistNames(mbid: String): Lookup<List<String>> = Lookup.NotFound
+
     companion object {
         /** The most recordings a search gives, its one page: MusicBrainz's largest. */
         const val SEARCH_PAGE: Int = 100
@@ -86,6 +107,9 @@ interface MusicBrainzLookup {
          * a group with none of its 25 earliest releases official seldom has many official ones.
          */
         const val OFFICIAL_PAGES: Int = 3
+
+        /** The fewest letters a word of [searchRecordingsLoosely] needs to be matched loosely. */
+        const val FUZZY_LENGTH: Int = 4
     }
 }
 
@@ -121,13 +145,19 @@ sealed interface Lookup<out T> {
 /**
  * One name in an artist credit: [name] as credited, which can differ from the artist's own
  * [artistName], and the [joinPhrase] that follows it (` feat. `, ` & `, or empty for the last).
+ * [aliases]: other names the artist goes by that the resolution looked up and found among the track's
+ * artists (#1289, `MusicBrainzLookup.artistNames`); none as MusicBrainz's search gives the credit.
  */
 data class MbCredit(
     val name: String,
     val artistMbid: String,
     val artistName: String,
     val joinPhrase: String = "",
-)
+    val aliases: List<String> = emptyList(),
+) {
+    /** Every name the credit goes by: as credited, the artist's own, and the [aliases]. */
+    val names: List<String> get() = listOf(name, artistName) + aliases
+}
 
 /** A release group, the release's album, single or EP across its editions. */
 data class MbReleaseGroup(

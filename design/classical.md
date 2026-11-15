@@ -152,6 +152,39 @@ Philharmonic members and Magiera), which crediting others the rule leaves out, a
 credited to him alone too, whose relationships do not name Mehta or the orchestra; the work, *Turandot: Atto III, scena 1.
 Aria "Nessun dorma"*, names Puccini its composer, and the recording names Mehta (`conductor`) and the
 orchestra (`performing orchestra`): Puccini is the composer, the other three the performers.
+**When nothing fits** (#1289; `RecordingFallbacks.kt`, `fixtures/http/musicbrainz-1289/`), three
+bounded fallbacks, each leaving a track that resolved before as it was:
+- *An alias of a credited artist.* With a composer lead, a recording whose title, length and a
+  performer fit, but whose credit names someone none of the track's artists is by name, has that
+  artist's other names looked up (`artist/<id>?inc=aliases`, core data; at most two artists, only while
+  a performer of the track is left unnamed); an alias that is a track artist's name counts as theirs.
+  *Barber: Adagio for Strings* by Samuel Barber, Sir Simon Rattle and the Berlin Philharmonic:
+  MusicBrainz credits Rattle and the Berliner Philharmoniker, whose aliases include Berlin
+  Philharmonic. Four requests (two searches, the alias lookup, the recording), where it made two and
+  found nothing. MusicBrainz links that recording to no work, so the title's lead tells the composer.
+- *A loose search.* With the player's length and two or more credited artists, one search by the
+  title's words (`word~` from four letters on) and every credited artist at once
+  (`searchRecordingsLoosely`). Only a recording credited to two or more of the track's artists, and to
+  no one else, counts, its title then weighed as any other's. *Nessun doma - Turandot* (sic) by
+  Puccini, Adami, "Carlo Simoni", Pavarotti, Magiera and the Orchestra da camera di Bologna: the three
+  searches by name end at the librettists; the loose search ranks first `4cf239b6`, credited to the
+  last three. MusicBrainz's search does not always match a misspelled word loosely (`doma~` finds no
+  `dorma`: a common word has more close neighbours than Lucene expands), so the other words and the
+  artists carry it. Six requests, where it made three.
+- *A title read as a part of a work.* MusicBrainz titles a part of a classical work `Work: “Part”`,
+  often after an act (`Turandot: Atto III. “Nessun dorma”`); the player's title is weighed against the
+  quoted part, as written or without the work before a colon or after a dash (`pieceSimilarity`). Such
+  a reading counts only when no recording read as written fits; when one does but links no work, up to
+  three of the artist's recordings read so, of a known length that fits, are looked up for one that
+  does (`Leaders.withWork`). *Nessun Dorma* by Pavarotti, from an album MusicBrainz does not have: the
+  earliest `Nessun Dorma` that fits (`d303669a`, 1994) links no work; his `Turandot: “Nessun dorma”` of
+  1993 (`2dede7cc`) links the aria, and is taken. Five requests, where it made three.
+The roles then leave out a credited artist the work names its lyricist or librettist (by name) who does
+not play on the recording, and on a classical work put the performers the recording has first, so the
+lead is one who plays (Spotify credits *Nessun dorma*'s librettists before Pavarotti; its "Carlo
+Simoni" is MusicBrainz's Renato Simoni, so stays a performer, last). A composer the player does not
+credit (Puccini on *Nessun Dorma* by Pavarotti alone) is still not told apart: the work dates the music
+and names who wrote the words, but the Composer row shows only credited artists.
 **Where the first performer is read** (`ArtistRoles.lead`, the first performer, else the first
 credited artist): the key insight's and the *Key insights*' prompts (`Composer:` and `Performers:` in
 place of `Primary artist:`, `design.md`, *Appendix. Prompt contracts*), the song review search
