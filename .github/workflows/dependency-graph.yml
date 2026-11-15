@@ -4,7 +4,9 @@ name: Dependency graph
 # alerts and security updates (#236) cover them, transitive ones included; without it the graph
 # lists only the workflows' actions. Every configuration the build resolves is submitted: the app's
 # libraries, the build logic's plugins and the tests, since a build tool runs with the release's
-# secrets. On each push to `main`, the branch the alerts describe.
+# secrets. On each push to `main`, the branch the alerts describe. Dependency verification is off
+# here: `dependency-submission` runs Gradle with `-Dorg.gradle.dependency.verification=off`. The
+# job only resolves the graph for the submission; CI and the release build with it on.
 on:
   push:
     branches: [main]

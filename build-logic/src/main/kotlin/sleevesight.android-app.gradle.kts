@@ -18,6 +18,7 @@ import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckDependencyPage
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
+import sleevesight.checks.CheckVerificationMetadata
 import sleevesight.checks.ListLibraryLicences
 import sleevesight.checks.SecurityLint
 import sleevesight.checks.networkModules
@@ -91,6 +92,18 @@ val graphRules = rootProject.layout.projectDirectory.file("config/module-graph.p
 // debug builds the APK that CI publishes and phones install.
 val checkManifest = tasks.register("checkManifest") { group = "verification" }
 val checkDependencies = tasks.register("checkDependencies") { group = "verification" }
+// Every lockfile's versions recorded in the verification metadata (#1034): the repository's, held
+// here as the dependencies page is, so CI's `checkDependencies` fails on a bump made without the
+// refresh (`tools/refresh-dependency-verification.sh`).
+val checkVerificationMetadata =
+    tasks.register<CheckVerificationMetadata>("checkVerificationMetadata") {
+        group = "verification"
+        description = "Fails when a locked version has no entry in gradle/verification-metadata.xml."
+        val root = rootProject.layout.projectDirectory
+        lockfiles.from(root.asFileTree.matching { include("*gradle.lockfile", "*/*gradle.lockfile") })
+        metadata = root.file("gradle/verification-metadata.xml")
+    }
+checkDependencies.configure { dependsOn(checkVerificationMetadata) }
 val checkModuleGraph = tasks.register("checkModuleGraph") { group = "verification" }
 // In `check`, so CI's `build` packages and reads the APKs. It matters most for debug, the APK phones
 // install: R8 renames most of the release build's classes, and it fails on a missing class itself.
