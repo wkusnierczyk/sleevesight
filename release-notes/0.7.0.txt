@@ -1,0 +1,8 @@
+What's new in 0.7.0:
+- Classical: the composer gets a row and an insight of their own; the artist row reads Performer.
+- Classical recordings are found on MusicBrainz more often.
+- Dates: when the music was composed.
+- Song: on a classical track, the music and this recording in two parts.
+- Authors: an opera's librettists count too.
+- Genres: weighed across sources; Wikidata's genres added; a narrower genre names its broader one.
+- Neater Key insights buttons, Pages cited and source credits.
