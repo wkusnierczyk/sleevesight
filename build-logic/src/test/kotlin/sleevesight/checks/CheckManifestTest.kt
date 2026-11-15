@@ -54,6 +54,79 @@ class CheckManifestTest {
         assertEquals(listOf("android:usesCleartextTraffic is not \"false\""), CheckManifest.cleartextProblems(doc))
     }
 
+    private fun componentsManifest(componentsXml: String): Document =
+        DocumentBuilderFactory.newInstance()
+            .apply { isNamespaceAware = true }
+            .newDocumentBuilder()
+            .parse(
+                """
+                <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                    <application>$componentsXml</application>
+                </manifest>
+                """.trimIndent().byteInputStream(),
+            )
+
+    @Test
+    fun `components that say android exported true count as exported, of every kind`() {
+        val doc =
+            componentsManifest(
+                """
+                <activity android:name="a.Activity" android:exported="true" />
+                <activity-alias android:name="a.Alias" android:exported="true" />
+                <service android:name="a.Service" android:exported="true" />
+                <receiver android:name="a.Receiver" android:exported="true" />
+                <provider android:name="a.Provider" android:exported="true" />
+                """.trimIndent(),
+            )
+        assertEquals(
+            listOf(
+                CheckManifest.Component("activity", "a.Activity"),
+                CheckManifest.Component("activity-alias", "a.Alias"),
+                CheckManifest.Component("service", "a.Service"),
+                CheckManifest.Component("receiver", "a.Receiver"),
+                CheckManifest.Component("provider", "a.Provider"),
+            ),
+            CheckManifest.exportedComponents(doc),
+        )
+    }
+
+    @Test
+    fun `a component with an intent filter and no android exported counts, as older targets exported it`() {
+        val doc =
+            componentsManifest(
+                """
+                <receiver android:name="a.Implicit">
+                    <intent-filter><action android:name="a.ACTION" /></intent-filter>
+                </receiver>
+                <receiver android:name="a.Unexported" android:exported="false">
+                    <intent-filter><action android:name="a.ACTION" /></intent-filter>
+                </receiver>
+                <service android:name="a.Private" />
+                """.trimIndent(),
+            )
+        assertEquals(listOf(CheckManifest.Component("receiver", "a.Implicit")), CheckManifest.exportedComponents(doc))
+    }
+
+    @Test
+    fun `an allowlist entry with variants after it is allowed in those variants only`() {
+        val lines =
+            listOf(
+                "# a comment",
+                "a.Everywhere  # in every variant",
+                "",
+                "a.DebugOnly debug",
+                "\${applicationId}.Mine release debug",
+            )
+        assertEquals(
+            setOf("a.Everywhere", "a.DebugOnly", "app.x.debug.Mine"),
+            CheckManifest.allowedComponents(lines, "debug", "app.x.debug"),
+        )
+        assertEquals(
+            setOf("a.Everywhere", "app.x.Mine"),
+            CheckManifest.allowedComponents(lines, "release", "app.x"),
+        )
+    }
+
     private fun listenerManifest(metaDataXml: String): Document =
         DocumentBuilderFactory.newInstance()
             .apply { isNamespaceAware = true }
