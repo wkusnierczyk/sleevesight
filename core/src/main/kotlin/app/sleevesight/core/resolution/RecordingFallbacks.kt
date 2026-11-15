@@ -206,8 +206,8 @@ internal fun NameMatcher.pieceSimilarity(
 // null for another shape, for a title quoting two (`Medley: “Yesterday” / “Michelle”`), and for a title
 // longer than [PIECE_TITLE_MAX] (#1304).
 private fun quotedPart(recordingTitle: String): String? {
-    val lead = recordingTitle.takeIf { it.length <= PIECE_TITLE_MAX }?.let { PIECE_LEAD.find(it) } ?: return null
-    val rest = recordingTitle.substring(lead.range.last + 1)
+    val lead = if (recordingTitle.length <= PIECE_TITLE_MAX) PIECE_LEAD.find(recordingTitle) else null
+    val rest = lead?.let { recordingTitle.substring(it.range.last + 1) } ?: return null
     return firstQuoted(rest)?.let { quoted ->
         rest.substring(quoted.first + 1, quoted.last).takeIf {
             it.isNotBlank() && fitsPieceTail(rest.substring(quoted.last + 1))
