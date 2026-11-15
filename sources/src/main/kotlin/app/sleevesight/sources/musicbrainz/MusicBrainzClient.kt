@@ -109,14 +109,14 @@ class MusicBrainzClient(
             )
         return net.lookup(NetRequest("$BASE/work", query = query)) { response ->
             parseObject(response.body).array("works").map { work ->
-                // The search's relationships carry no `target-type`: an artist's is the one with an artist.
-                val relations = work.array("relations")
                 MbFoundWork(
                     mbid = work.required("id"),
                     title = work.required("title"),
                     type = work.string("type")?.ifEmpty { null },
+                    disambiguation = work.string("disambiguation")?.ifEmpty { null },
+                    // The search's relationships carry no `target-type`: an artist's is the one with an artist.
                     artistRelations =
-                        relations.mapNotNull { relation ->
+                        work.array("relations").mapNotNull { relation ->
                             relation.obj("artist")?.let { artist ->
                                 MbArtistRelation(
                                     type = relation.required("type"),
@@ -126,7 +126,6 @@ class MusicBrainzClient(
                                 )
                             }
                         },
-                    recordings = relations.count { it.obj("recording") != null },
                 )
             }
         }

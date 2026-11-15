@@ -65,9 +65,10 @@ class MusicBrainzClassicalFoundTest {
     fun `a recording that links no work finds its composer's work by a search - Barber's Adagio for Strings`() =
         runTest {
             // MusicBrainz links `53c2e131` to no work (#1299). The search of Barber's works by the title finds
-            // five titled `Adagio for Strings`, each naming him its composer: the piece (`1ebe1abf`, 313
-            // recordings), a catch-all for its arrangements (205), and three arrangements (for organ, woodwind
-            // band and clarinet choir). The piece, the most recorded, is taken.
+            // five titled `Adagio for Strings`, each naming him its composer: the piece (`1ebe1abf`, which he
+            // orchestrated himself), a catch-all for its arrangements (its disambiguation says so), and three
+            // arrangements (for organ, woodwind band and clarinet choir, each with its arranger). The piece,
+            // the one work left, is taken.
             val track =
                 RecordedTracks.normalize(
                     "Barber: Adagio for Strings",
