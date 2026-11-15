@@ -1,0 +1,24 @@
+{
+ "video": false,
+ "length": 192000,
+ "disambiguation": "",
+ "first-release-date": "1994",
+ "title": "Nessun Dorma",
+ "artist-credit": [
+  {
+   "artist": {
+    "sort-name": "Pavarotti, Luciano",
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "type": "Person",
+    "country": "IT",
+    "name": "Luciano Pavarotti",
+    "disambiguation": "tenor",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "joinphrase": "",
+   "name": "Luciano Pavarotti"
+  }
+ ],
+ "relations": [],
+ "id": "d303669a-786f-423e-a3ed-f638e7f58018"
+}

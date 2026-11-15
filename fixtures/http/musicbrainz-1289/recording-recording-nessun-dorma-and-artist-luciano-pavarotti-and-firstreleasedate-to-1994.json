@@ -1,0 +1,3858 @@
+{
+ "created": "2026-11-15T14:00:38.851Z",
+ "count": 36,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "1e859816-1d08-40aa-8388-d518719a6b56",
+   "score": 100,
+   "title": "NESSUN DORMA",
+   "length": 174000,
+   "first-release-date": "1986-06",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "2fa23175-27c2-4528-a52c-1efa10f773e4",
+     "title": "The Pavarotti Collection",
+     "status": "Official",
+     "release-group": {
+      "id": "70385b14-bcae-46b2-a2a9-953258db6693",
+      "title": "The Pavarotti Collection",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "d303669a-786f-423e-a3ed-f638e7f58018",
+   "score": 100,
+   "title": "Nessun Dorma",
+   "length": 192000,
+   "first-release-date": "1994",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "7fa5d767-ec99-4a0a-833b-fc135ac2295f",
+     "title": "The Three Tenors",
+     "date": "",
+     "release-group": {
+      "id": "bf8ad5af-f59e-402a-9d94-49b2de58bb4d",
+      "title": "The Three Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "47877812-e833-4ed8-90b2-8fdd1d6de384",
+     "title": "The Great Tenors Volume One",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "b085464e-8592-41b2-b93a-a0b2c813016d",
+      "title": "The Great Tenors Volume One",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "096925f9-020f-4911-a83c-d8124c7406b9",
+   "score": 100,
+   "title": "Nessun Dorma!",
+   "length": 183573,
+   "first-release-date": "1990",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "8a9ad07b-b887-49b6-a741-a916edb655b6",
+     "title": "Luciano Pavarotti Greatest Hits",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "23dbb92b-98e4-4b75-8d44-5d8035b06a2d",
+      "title": "Luciano Pavarotti Greatest Hits",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "53bbe13b-7fe5-4d89-ac29-3633711a705c",
+   "score": 93,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 183200,
+   "first-release-date": "1994",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "ac36418f-15bc-4925-8643-cab65798de5b",
+     "title": "The Golden Voices of The 3 Tenors",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "472fa97c-6fe0-4814-a61e-ee6cac8b1c6e",
+      "title": "The Golden Voices of The 3 Tenors",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "86b0f1f2-1066-4d56-a4bb-4e57e6db88cd",
+   "score": 93,
+   "title": "Turandot: Nessun dorma",
+   "length": 215574,
+   "first-release-date": "1992-04-14",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "12da32fd-5247-4239-872d-1ef1012f06e6",
+     "title": "Pavarotti in Hyde Park",
+     "date": "1992-04-14",
+     "status": "Official",
+     "release-group": {
+      "id": "443b6fb0-8bf0-359f-86fc-4a39349cb05a",
+      "title": "Pavarotti in Hyde Park",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "252ba9ff-18e2-438c-997a-7dee6b5bc673",
+     "title": "Pavarotti in Hyde Park",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "443b6fb0-8bf0-359f-86fc-4a39349cb05a",
+      "title": "Pavarotti in Hyde Park",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "df0374af-5b5e-4441-bdc7-17310015f961",
+   "score": 93,
+   "title": "Turandot: Nessun dorma",
+   "length": 185306,
+   "first-release-date": "1975",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a81e5f3d-b979-4657-acae-adeb315260ce",
+     "title": "The World's Favourite Tenor Arias",
+     "date": "2007-09-06",
+     "status": "Official",
+     "release-group": {
+      "id": "88a938ad-c8ab-441d-b0b3-b84831bbadd2",
+      "title": "The World's Favourite Tenor Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "32eeb04b-39b0-4753-9a21-50746d1a19a9",
+     "title": "The Studio Albums",
+     "date": "2007-10-08",
+     "status": "Official",
+     "release-group": {
+      "id": "faa6a8ce-ca57-45aa-829d-b16fe41fe27c",
+      "title": "The Studio Albums",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7fe9b397-d34f-476d-94a6-5a120434f551",
+     "title": "The Worlds Favorite Tenor Arias",
+     "date": "1975",
+     "status": "Official",
+     "release-group": {
+      "id": "88a938ad-c8ab-441d-b0b3-b84831bbadd2",
+      "title": "The World's Favourite Tenor Arias",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "e4cbd8a9-b849-4d67-8b1a-bb78ce540444",
+   "score": 93,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 185000,
+   "first-release-date": "1990",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "04974e40-f1e8-40ac-ac42-973ea53ba573",
+     "title": "In Belgium",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "ff1bf613-3901-47b6-a103-47ca81fbc75e",
+      "title": "In Belgium",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2dede7cc-05a6-4ed5-9274-bc7a18c0e3ad",
+   "score": 93,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 192933,
+   "first-release-date": "1993",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "55afcbd5-12ac-4c29-ba3f-251456d3594d",
+     "title": "The Three Tenors - The Best of Pavarotti, Domingo, Carreras",
+     "release-group": {
+      "id": "485cd0f3-f8cf-4b29-9ac7-f1c02fc7bb8b",
+      "title": "The Three Tenors - The Best of Pavarotti, Domingo, Carreras",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "247fe4b1-10a1-444e-9d24-fb2573ec2ee4",
+     "title": "The Three Tenors: Disc One",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "1f2ea19c-fbbd-4d36-83df-98357d637cc2",
+      "title": "The Three Tenors: Disc One",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a6a22c20-8739-4ccd-abcf-459b0cbb1758",
+     "title": "Encore",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "12762462-fff1-42ee-91e9-0b333267402c",
+      "title": "Encore",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "32aeec48-6f22-4dbc-af41-342637daa145",
+     "title": "Icons",
+     "date": "2006",
+     "status": "Official",
+     "release-group": {
+      "id": "e2fd4680-d73a-3656-9083-3711b6e0ad59",
+      "title": "Icons",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "97d97c18-e8bd-43dc-93e3-901d57e36155",
+     "title": "In Concert, Volume 1",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "9e134562-1cc2-3285-bf4a-6686e106ac1e",
+      "title": "In Concert, Volume 1",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d9984955-b1ee-418b-a434-ef33e750b0a7",
+     "title": "Three Legends in One Collection",
+     "status": "Official",
+     "release-group": {
+      "id": "89b3c21e-cd13-3a15-a2b6-4535cec43c03",
+      "title": "Three Legends in One Collection",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "eb267644-c4d2-477b-8388-290ca606037d",
+     "title": "Luciano Pavarotti",
+     "status": "Official",
+     "release-group": {
+      "id": "89b3c21e-cd13-3a15-a2b6-4535cec43c03",
+      "title": "Three Legends in One Collection",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d6a7f172-5381-4d39-aa9d-e1221d01c9bf",
+     "title": "The Word's Greatest Tenor (disc 1)",
+     "release-group": {
+      "id": "cf0908e5-f1f0-3f30-80a9-4f6b2cfc7865",
+      "title": "The Word's Greatest Tenor",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "0c62a6bb-85ea-483a-9673-31687a87b227",
+     "title": "The Magic Collection Volume I",
+     "date": "",
+     "release-group": {
+      "id": "d700d368-8552-4025-af2c-6d525d1f269e",
+      "title": "The Magic Collection Volume I",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "97c7d68c-77e1-4f9b-a3e5-36fd5d31a87e",
+     "title": "The Best of The Great Tenors",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "ea8e7e4a-e2f2-4e1a-b82e-13f0f868854e",
+      "title": "The Best of The Great Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "fca9b572-30d6-40fb-b030-97a13ccb0038",
+     "title": "Nessun Dorma",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "b66f108f-b53e-4e07-b016-66f6422a375b",
+      "title": "Nessun Dorma",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f91e3d54-eae9-4734-b21a-862c045b6a59",
+     "title": "Pavarotti: Encore, Finale, Bravissimo",
+     "date": "2002",
+     "status": "Official",
+     "release-group": {
+      "id": "df373005-ce2a-4ced-a2cc-4d0580afcc6c",
+      "title": "Pavarotti: Encore, Finale, Bravissimo",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "33572495-0d89-4529-9edc-aa60705ec16c",
+     "title": "The Great Pavarotti",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "182956b6-87b1-4bb3-96a2-e74cc7d5cc72",
+      "title": "The Great Pavarotti",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ee341db1-670a-4204-a911-0176461e2f12",
+   "score": 93,
+   "title": "Turandot: Nessun dorma",
+   "length": 177973,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "2b36803a-f2a3-4386-8c6a-81ab3d44b045",
+     "title": "Your Hundred Best Opera Tunes I",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "7591834e-6f70-41c1-9ddf-3f4f8895b448",
+      "title": "Your Hundred Best Opera Tunes I",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9bdcc4ae-5258-442a-8878-03ebdc999f74",
+     "title": "Italian Hits",
+     "date": "2016-06-24",
+     "status": "Official",
+     "release-group": {
+      "id": "d4a00233-5d4d-41b6-921b-075744d61b2b",
+      "title": "Italian Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "46d39df5-f5f2-464f-9d04-f8ae0e5194b3",
+     "title": "Ça s’en va & ça revient – Special Italie",
+     "date": "2009",
+     "status": "Official",
+     "release-group": {
+      "id": "1e6c69c6-338f-4349-a92e-4cef75dbb692",
+      "title": "Ça s’en va & ça revient – Special Italie",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b5bb01e9-ad63-4c69-8aa3-93b8e548a0f3",
+     "title": "The 3 Tenors",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "caf59f79-32a8-411d-81d7-e5967f847d8a",
+      "title": "The 3 Tenors",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "09046167-1c9f-48d1-8f3a-5e0edcf44274",
+   "score": 93,
+   "title": "Turandot: Nessun dorma",
+   "length": 180000,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "8dd5f4cf-2022-438b-9886-77d54cf3c646",
+     "title": "Le grandi melodie 4",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "fab4d887-7d12-48bf-80fd-f99bf8b1e1c9",
+      "title": "Le grandi melodie 4",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "38e73992-38de-43b1-ba07-420c9e2e9cc1",
+   "score": 93,
+   "title": "Turandot: “Nessun dorma!”",
+   "length": 204266,
+   "first-release-date": "1994-08-29",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "299ad099-0805-3fd1-a843-a1fb9ccac291",
+     "title": "The 3 Tenors in Concert 1994",
+     "date": "1994-08-30",
+     "status": "Official",
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "fd08e6b2-f6a0-4671-850e-cb119d7bfbaa",
+     "title": "The 3 Tenors in Concert 1994",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e1108ae9-5932-43af-be6b-4705affaf8cc",
+     "title": "The Complete Warner Recordings",
+     "status": "Official",
+     "release-group": {
+      "id": "89c8c874-29f1-45d4-a5ad-7a1fdf65a150",
+      "title": "The Complete Warner Recordings",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "82b0c690-7f6d-45cd-b04c-c2374ee6ee2d",
+     "title": "The 3 Tenors in Concert 1994",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2e01c66b-3f01-4863-9e58-8ef5b2f74167",
+     "title": "The 3 Tenors in Concert 1994",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "aeae95c0-79d1-4faa-b66e-4af42361853c",
+     "title": "The 3 Tenors in Concert 1994",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b556eef0-3c8e-3d7a-a4d0-944c3b5254c3",
+     "title": "The 3 Tenors in Concert 1994",
+     "date": "2004-08-30",
+     "status": "Official",
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9b5d0fb2-165c-37da-a08c-97aae87c2391",
+     "title": "The 3 Tenors in Concert 1994",
+     "date": "1994-08-30",
+     "status": "Official",
+     "release-group": {
+      "id": "1935104b-7402-3268-8a38-96c5eab45f4c",
+      "title": "The 3 Tenors in Concert 1994",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "1755d40a-ac52-4236-8af5-4f866170aefb",
+   "score": 93,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177667,
+   "first-release-date": "1993",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "16272d98-e77a-43d0-b437-46924301cd63",
+     "title": "The Singer & The Song",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "72a9d9ce-9f8a-3906-98ec-06dbbc5dbe88",
+      "title": "The Singer & The Song",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "e8525b71-36d6-4550-ab0a-dfd71fa7ae62",
+   "score": 93,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 181173,
+   "first-release-date": "1993-07-01",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "39de8d4c-711b-4b0f-84da-e7005da28d8a",
+     "title": "The Greatest Composer Series - The Tenors",
+     "date": "1993-07-01",
+     "status": "Official",
+     "release-group": {
+      "id": "6cfc88ba-7a3d-42e7-815a-73ecbc0aa45f",
+      "title": "The Greatest Composer Series: The Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "dc9b4320-db9a-40d4-93a0-6c8654820400",
+     "title": "The Greatest Composer Series: The Tenors",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "6cfc88ba-7a3d-42e7-815a-73ecbc0aa45f",
+      "title": "The Greatest Composer Series: The Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b0ff818b-2827-4a18-af0d-66ae0604523d",
+     "title": "Watchout... We've Got the Power",
+     "date": "2002",
+     "status": "Official",
+     "release-group": {
+      "id": "948efd4b-b8c8-38d7-b286-c1cd3d654a08",
+      "title": "Watchout... We've Got the Power",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "8b149a64-2d10-4ff0-ba8d-5b1d1f8c7a09",
+   "score": 93,
+   "title": "Turandot: Nessun dorma",
+   "length": 156000,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "959bfbab-91af-472f-807d-7a2f726d7a5a",
+     "title": "Favorite Arias by the World's Favorite Tenors",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "e65cfa1e-d9e0-3905-b7df-4dc544d6857a",
+      "title": "Favorite Arias by the World’s Favorite Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "1df8bfd5-834d-4e60-8fec-1a19d6f8c0da",
+     "title": "Favorite Arias by the World’s Favorite Tenors",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "e65cfa1e-d9e0-3905-b7df-4dc544d6857a",
+      "title": "Favorite Arias by the World’s Favorite Tenors",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "72ce02c0-b853-44ea-abc0-a095344ead3a",
+   "score": 93,
+   "title": "Turandot: “Nessun dorma!”",
+   "length": 191466,
+   "first-release-date": "1993",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "1a4dafc1-fdaf-46b2-acaa-e50c327fe32b",
+     "title": "Luciano Pavarotti, Vol. 2",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "94f7705a-9ab0-4032-8da7-e0170fd013bf",
+      "title": "Luciano Pavarotti, Vol. 2",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "c74ea699-13c3-4026-8111-ccc305c6248d",
+   "score": 93,
+   "title": "Puccini's Nessun Dorma",
+   "length": 177306,
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "1b04d920-c867-418d-9c3f-4328310025e0",
+     "title": "Digital Choice: Philips/Polygram Sampler",
+     "date": "1992",
+     "status": "Promotion",
+     "release-group": {
+      "id": "4066f18b-f7f7-4360-a2d6-9e74282b6783",
+      "title": "Digital Choice: Philips/Polygram Sampler",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "16485dba-309c-4a03-aa49-b92d1477d376",
+   "score": 83,
+   "title": "Puccini: Turandot - Nessun Dorma",
+   "length": 182533,
+   "first-release-date": "1994-07-12",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "1736d913-ac15-471b-b65b-ed2afa3ece40",
+     "title": "The Essential 3 Tenors",
+     "date": "1994-07-12",
+     "status": "Official",
+     "release-group": {
+      "id": "f929c156-18df-3c73-8530-00414c3534d1",
+      "title": "The Essential 3 Tenors",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "93104fc2-8e43-4ee5-b351-7a0212b810fe",
+   "score": 83,
+   "title": "Turandot: Atto III. “Nessun dorma!”",
+   "length": 180000,
+   "first-release-date": "1985",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "1f752026-39d8-4fb3-9faf-f9d55823ef4f",
+     "title": "Pavarotti's Greatest Hits",
+     "date": "1985",
+     "status": "Official",
+     "release-group": {
+      "id": "7bf2125e-d7c0-4835-838b-34214ab52ff7",
+      "title": "Pavarotti's Greatest Hits",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a8b3fca7-be2f-423e-9c29-e8fa327eb3be",
+   "score": 83,
+   "title": "Turandot: Atto III. “Nessun dorma”",
+   "first-release-date": "1992",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "2cf5c771-0af4-40ac-8323-451d3949e81e",
+     "title": "Luciano Pavarotti In Concerto",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "8002f4e9-2d0e-41a1-9620-6750984316f2",
+      "title": "Luciano Pavarotti In Concerto",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "c7b0a4f6-f198-4b00-9d5c-0497a009d2dc",
+   "score": 83,
+   "title": "Turandot: Atto III. “Nessun dorma”",
+   "length": 223800,
+   "first-release-date": "1993-05-25",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a1f8f58d-c62a-4ce3-93ca-c26add2a0a75",
+     "title": "Pavarotti Live",
+     "date": "1997",
+     "release-group": {
+      "id": "aab77f87-0c80-4370-8602-0d43f4412689",
+      "title": "Live in Modena, Verona, Parma",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "440231b8-8d73-4132-8ffa-154052a62f34",
+     "title": "Live in Modena, Verona, Parma",
+     "date": "1993-05-25",
+     "status": "Official",
+     "release-group": {
+      "id": "aab77f87-0c80-4370-8602-0d43f4412689",
+      "title": "Live in Modena, Verona, Parma",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5536ba32-fa0f-457e-a689-60cb4cb42ce7",
+   "score": 74,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177000,
+   "first-release-date": "1978",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "London Symphony Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "38712b4c-0fd4-4c65-8c7a-45676fecc973",
+      "name": "London Symphony Orchestra"
+     }
+    },
+    {
+     "name": "Zubin Mehta",
+     "joinphrase": "",
+     "artist": {
+      "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+      "name": "Zubin Mehta"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f3c0d4ca-b18c-4243-8466-5a98fcf5686e",
+     "title": "Hits From Lincoln Center",
+     "date": "1978",
+     "status": "Official",
+     "release-group": {
+      "id": "7cca41d3-f2f8-4ecc-8038-9f630706da62",
+      "title": "Hits From Lincoln Center",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "13017ffb-7b17-47e8-99be-3d6ecb865266",
+   "score": 74,
+   "title": "Nessun Dorma - Turandot",
+   "length": 219466,
+   "first-release-date": "1994",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": " & ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Katia Ricciarelli",
+     "joinphrase": "",
+     "artist": {
+      "id": "feb3595a-4504-492e-86f1-e1c2022e7bd6",
+      "name": "Katia Ricciarelli"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "8a825454-d398-45b4-a724-1a34c93e7902",
+     "title": "Live",
+     "release-group": {
+      "id": "74f5eb1c-20bf-44ae-9363-73d59c1be2af",
+      "title": "Live",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fb3bc98b-547e-4da3-b67c-572c3726df11",
+   "score": 73,
+   "title": "Turandot: Atto III. “Nessun dorma”",
+   "length": 219000,
+   "first-release-date": "1988",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "James Levine",
+     "joinphrase": "",
+     "artist": {
+      "id": "37a2d213-9c2b-4216-a02c-10b1e150c130",
+      "name": "James Levine"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "787c0b2e-26b9-46a7-af6c-62dde83154ca",
+     "title": "Music for Life",
+     "status": "Official",
+     "release-group": {
+      "id": "67841406-17fb-447a-80ef-2799166ce040",
+      "title": "Music for Life",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b57bb3f1-c974-4a33-b88c-12cf9085c709",
+   "score": 73,
+   "title": "Turandot: Atto III. “Nessun dorma”",
+   "length": 156000,
+   "first-release-date": "1991-01-29",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Emerson Buckley",
+     "joinphrase": "",
+     "artist": {
+      "id": "725be366-695c-4e4c-a3ba-66420ace6e0c",
+      "name": "Emerson Buckley"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "50e4ed07-7b31-483d-9535-1bccf8f8816a",
+     "title": "Opera Stoppers",
+     "date": "1991-01-29",
+     "status": "Official",
+     "release-group": {
+      "id": "25473135-f2dc-40b3-afb4-830ad8430654",
+      "title": "Opera Stoppers",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "42b17fe3-2abd-40d1-9ca4-82f50fbb0697",
+   "score": 73,
+   "title": "Turandot: Nessun dorma",
+   "length": 225306,
+   "first-release-date": "1983",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Royal Philharmonic Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "299597ae-3a20-4bf1-973e-03704af69f6b",
+      "name": "Royal Philharmonic Orchestra"
+     }
+    },
+    {
+     "name": "Kurt Herbert Adler",
+     "joinphrase": "",
+     "artist": {
+      "id": "1d0eb81c-3205-482e-90bc-382aba30f9b3",
+      "name": "Kurt Herbert Adler"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f57c708e-1554-4755-a5b2-2b2dbcc6c1c2",
+     "title": "Gala Concert",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "5071f183-5def-4f00-a844-76b56ad426f0",
+      "title": "Gala Concert at the Royal Albert Hall",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "24137752-14e2-4a2a-8e6d-69952968c603",
+     "title": "Gala Concert at the Royal Albert Hall",
+     "date": "1983",
+     "status": "Official",
+     "release-group": {
+      "id": "5071f183-5def-4f00-a844-76b56ad426f0",
+      "title": "Gala Concert at the Royal Albert Hall",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "45255a45-c74d-4df8-9328-cd8c7dd94428",
+   "score": 73,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 201866,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Royal Philharmonic Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "299597ae-3a20-4bf1-973e-03704af69f6b",
+      "name": "Royal Philharmonic Orchestra"
+     }
+    },
+    {
+     "name": "Kurt Herbert Adler",
+     "joinphrase": "",
+     "artist": {
+      "id": "1d0eb81c-3205-482e-90bc-382aba30f9b3",
+      "name": "Kurt Herbert Adler"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "37478287-990e-4fdf-b76c-acbc45368b76",
+     "title": "Essential Pavarotti II",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "a6cd2874-6185-31c7-b4d2-daf01784d43f",
+      "title": "Essential Pavarotti II",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "66f83c45-62b3-4ec6-91c9-63b923848cd4",
+     "title": "Essential Pavarotti II",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "a6cd2874-6185-31c7-b4d2-daf01784d43f",
+      "title": "Essential Pavarotti II",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "8f3545ee-2fc0-4fe2-bbde-f0e8d4ea0605",
+     "title": "Love at the Opera",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "6bdde237-b92b-4429-a2cd-bff45781ea43",
+      "title": "Love at the Opera",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "f1d0cb60-677f-448c-bb6a-38285b719ae3",
+   "score": 70,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 199266,
+   "first-release-date": "1993",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Members of the New York Philharmonic",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "7cdb68bc-c4f1-4a92-9bd2-739641c5eff0",
+      "name": "New York Philharmonic"
+     }
+    },
+    {
+     "name": "Leone Magiera",
+     "joinphrase": "",
+     "artist": {
+      "id": "0a470c25-de1c-4042-b7cb-828b13b68c43",
+      "name": "Leone Magiera"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "74d1a413-c775-48f1-9d9c-46ac628b80f0",
+     "title": "Pavarotti in Central Park",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "92a1847d-e7c2-3af6-83fb-cd05b6569a02",
+      "title": "Pavarotti in Central Park",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e55c1c16-8c94-410c-94eb-6c1461b3fb99",
+     "title": "Pavarotti in Central Park",
+     "date": "1994-10-25",
+     "status": "Official",
+     "release-group": {
+      "id": "92a1847d-e7c2-3af6-83fb-cd05b6569a02",
+      "title": "Pavarotti in Central Park",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "85d8d7ad-9ec2-4ab2-858d-98393c7ffed4",
+   "score": 69,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 191866,
+   "first-release-date": "1985",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Symphonic Orchestra of Emilia Romagna “Arturo Toscanini”",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "8abacc39-62f3-4dd9-b841-3fcbe153a4f4",
+      "name": "Orchestra Sinfonica dell’Emilia-Romagna ‘Arturo Toscanini’"
+     }
+    },
+    {
+     "name": "Emerson Buckley",
+     "joinphrase": "",
+     "artist": {
+      "id": "725be366-695c-4e4c-a3ba-66420ace6e0c",
+      "name": "Emerson Buckley"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "654c9778-d194-455a-b1f1-cf27fbda43d7",
+     "title": "Luciano Pavarotti in Concert",
+     "date": "1985",
+     "status": "Official",
+     "release-group": {
+      "id": "3a5f457b-8523-4605-9b5c-d18ef0bbe25e",
+      "title": "Luciano Pavarotti in Concert",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "7024f291-fd41-4164-b5ca-cd7d2a2fef84",
+   "score": 69,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 180800,
+   "first-release-date": "1987",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Symphonic Orchestra of Emilia Romagna “Arturo Toscanini”",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "8abacc39-62f3-4dd9-b841-3fcbe153a4f4",
+      "name": "Orchestra Sinfonica dell’Emilia-Romagna ‘Arturo Toscanini’"
+     }
+    },
+    {
+     "name": "Emerson Buckley",
+     "joinphrase": "",
+     "artist": {
+      "id": "725be366-695c-4e4c-a3ba-66420ace6e0c",
+      "name": "Emerson Buckley"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "d1895d1c-fd91-47c6-9c53-7b9360a1f008",
+     "title": "Nessun dorma",
+     "date": "2003",
+     "status": "Official",
+     "release-group": {
+      "id": "42c76bd6-69cd-48c9-8481-01b7ad484da8",
+      "title": "Nessun dorma",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "09c48f35-a5c0-419d-b45b-2d2b5be94b06",
+     "title": "The Very Best of Pavarotti",
+     "status": "Official",
+     "release-group": {
+      "id": "e729d409-17c6-4668-8c6d-7623eae301bd",
+      "title": "The Very Best of Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4c4cb821-b498-4baa-b58e-9dbdb8fa7bd4",
+     "title": "Pavarotti + Domingo",
+     "date": "1992",
+     "release-group": {
+      "id": "43b8f0f6-5a9d-4e74-b414-c7d1c6825c86",
+      "title": "Castle Masters Collection: Luciano Pavarotti / Placido Domingo",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d3982099-a5b3-4c89-9cf7-9734cffa1388",
+     "title": "The Tenors",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "a9d39bac-9eaf-49f1-be89-aa0d8451f1ac",
+      "title": "The Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "c26be578-c39c-48e7-8240-e219751f762f",
+     "title": "Castle Masters Collection: Luciano Pavarotti / Placido Domingo",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "43b8f0f6-5a9d-4e74-b414-c7d1c6825c86",
+      "title": "Castle Masters Collection: Luciano Pavarotti / Placido Domingo",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "06759dd7-401e-401d-92d0-92bcd433aa88",
+     "title": "Luciano Pavarotti in Concert",
+     "date": "1987",
+     "status": "Official",
+     "release-group": {
+      "id": "3a5f457b-8523-4605-9b5c-d18ef0bbe25e",
+      "title": "Luciano Pavarotti in Concert",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "e7b99901-c5e5-4fa6-892f-bb5071ec7897",
+   "score": 69,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 193240,
+   "first-release-date": "1988",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Symphonic Orchestra of Emilia Roma \"Arturo Toscanini\"",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "8abacc39-62f3-4dd9-b841-3fcbe153a4f4",
+      "name": "Orchestra Sinfonica dell’Emilia-Romagna ‘Arturo Toscanini’"
+     }
+    },
+    {
+     "name": "Emerson Buckley",
+     "joinphrase": "",
+     "artist": {
+      "id": "725be366-695c-4e4c-a3ba-66420ace6e0c",
+      "name": "Emerson Buckley"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "688f9bf1-16dc-4037-b093-0b5f23c7a539",
+     "title": "New Pavarotti Collection Live",
+     "date": "1988",
+     "status": "Official",
+     "release-group": {
+      "id": "49490d29-5ece-4f5d-96bc-09ac6bb19593",
+      "title": "New Pavarotti Collection Live",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "5f4b70fb-2fc0-421c-b4eb-dc8576e15e37",
+   "score": 65,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 185000,
+   "first-release-date": "1990-09-05",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Orchestra del Maggio Musicale Fiorentino",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "9a563a72-61ae-4b06-a9a9-6328e62d7ab0",
+      "name": "Orchestra del Maggio Musicale Fiorentino"
+     }
+    },
+    {
+     "name": "Orchestra del Teatro dell’Opera di Roma",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "1fcf253d-2587-47d5-9562-f18aff7edc9b",
+      "name": "Orchestra del Teatro dell’Opera di Roma"
+     }
+    },
+    {
+     "name": "Zubin Mehta",
+     "joinphrase": "",
+     "artist": {
+      "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+      "name": "Zubin Mehta"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f36cfe4e-489f-4a62-8ed3-15bb26423a26",
+     "title": "In Concert",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "668b973a-0a69-49ce-91ec-c3af6ef4cb3b",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "42f99787-3e8f-469e-958f-56590a950dad",
+     "title": "Pavarotti (Music from the Motion Picture)",
+     "date": "2019",
+     "status": "Official",
+     "release-group": {
+      "id": "5f9f2176-22b0-4d6a-a3aa-3291326d0116",
+      "title": "Pavarotti (Music from the Motion Picture)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "140eaefa-f984-41a4-a7ca-d011d930dc57",
+     "title": "In Concert",
+     "date": "2020",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ff257370-33f2-4c8b-8209-e1e0c9af2990",
+     "title": "Pavarotti (Music from the Motion Picture)",
+     "date": "2019-06-07",
+     "status": "Official",
+     "release-group": {
+      "id": "5f9f2176-22b0-4d6a-a3aa-3291326d0116",
+      "title": "Pavarotti (Music from the Motion Picture)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4c2193d6-b50a-4df8-897c-7a903e8e03ed",
+     "title": "Pavarotti (Music from the Motion Picture)",
+     "date": "2019",
+     "status": "Official",
+     "release-group": {
+      "id": "5f9f2176-22b0-4d6a-a3aa-3291326d0116",
+      "title": "Pavarotti (Music from the Motion Picture)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "56127bbf-7963-40a7-93e0-6ad028180d21",
+     "title": "Sublime Pavarotti",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "84cddc02-3167-4a1b-9e76-779ec3af7d11",
+      "title": "Sublime Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "1337fca8-0842-45aa-9122-11a57884438e",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4c935038-158a-39d7-b0fb-c66da0f332d3",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "bc66c936-1b5a-43c0-adc2-585e7358c850",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9268e584-6f95-4e28-b9e2-bf5e4494e038",
+     "title": "In Concert",
+     "date": "1993-09-15",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f6de79a6-8929-4f15-9d78-c3e45540c006",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "1fc59c0e-bcc9-4bba-85d2-36bf871a4344",
+     "title": "In Concert",
+     "date": "1990-09-05",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "00ec5a41-2c09-4d86-9516-f403a0766bb2",
+     "title": "The Decca Sound",
+     "date": "2011-10-03",
+     "status": "Official",
+     "release-group": {
+      "id": "1fa1b579-824d-4fef-968f-9b9bf990a704",
+      "title": "The Decca Sound",
+      "primary-type": "Other"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fa8b6c4b-913e-4507-a0b8-71662cb90701",
+   "score": 63,
+   "title": "Encore: Nessun dorma",
+   "length": 210160,
+   "first-release-date": "1990-09-05",
+   "artist-credit": [
+    {
+     "name": "José Carreras",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "7716ddac-2f24-44fa-81b1-bfa920811445",
+      "name": "José Carreras"
+     }
+    },
+    {
+     "name": "Plácido Domingo",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "521df2bd-01f6-456e-9d5f-f081068819c2",
+      "name": "Plácido Domingo"
+     }
+    },
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Orchestra del Maggio Musicale Fiorentino",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "9a563a72-61ae-4b06-a9a9-6328e62d7ab0",
+      "name": "Orchestra del Maggio Musicale Fiorentino"
+     }
+    },
+    {
+     "name": "Orchestra del Teatro dell’Opera di Roma",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "1fcf253d-2587-47d5-9562-f18aff7edc9b",
+      "name": "Orchestra del Teatro dell’Opera di Roma"
+     }
+    },
+    {
+     "name": "Zubin Mehta",
+     "joinphrase": "",
+     "artist": {
+      "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+      "name": "Zubin Mehta"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "f36cfe4e-489f-4a62-8ed3-15bb26423a26",
+     "title": "In Concert",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "668b973a-0a69-49ce-91ec-c3af6ef4cb3b",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "140eaefa-f984-41a4-a7ca-d011d930dc57",
+     "title": "In Concert",
+     "date": "2020",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9f0f9022-300c-4567-88ff-98a1545d7b11",
+     "title": "In paradisum: Music Made in Heaven",
+     "date": "2010-04-02",
+     "status": "Official",
+     "release-group": {
+      "id": "4bec3495-0c3c-4ece-b25b-32c64cbf7a57",
+      "title": "In Paradisum: Music Made in Heaven",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "509ae13c-b1c8-4dfe-843e-1424844a29a4",
+     "title": "Super Very Best",
+     "date": "1999",
+     "status": "Bootleg",
+     "release-group": {
+      "id": "266ef9b5-afdd-4628-9352-6524cb7e3408",
+      "title": "Super Very Best",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "15341371-5da0-47af-8ba6-a000455d7519",
+     "title": "The 50 Greatest Tracks",
+     "date": "2015",
+     "status": "Official",
+     "release-group": {
+      "id": "17565242-ebd7-4bb8-a3fe-c99d2c1e79b1",
+      "title": "The 50 Greatest Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b87b58b0-9843-43ea-a7c9-c498f4d1f342",
+     "title": "The Classical Album 2005",
+     "date": "2005",
+     "status": "Official",
+     "release-group": {
+      "id": "6468de36-dcfb-4579-845d-e0994e6ceac7",
+      "title": "The Classical Album 2005",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "1337fca8-0842-45aa-9122-11a57884438e",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4c935038-158a-39d7-b0fb-c66da0f332d3",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9268e584-6f95-4e28-b9e2-bf5e4494e038",
+     "title": "In Concert",
+     "date": "1993-09-15",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "bc66c936-1b5a-43c0-adc2-585e7358c850",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f6de79a6-8929-4f15-9d78-c3e45540c006",
+     "title": "In Concert",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "1fc59c0e-bcc9-4bba-85d2-36bf871a4344",
+     "title": "In Concert",
+     "date": "1990-09-05",
+     "status": "Official",
+     "release-group": {
+      "id": "e998acfb-9fec-338d-909b-3f0d31fe1406",
+      "title": "In Concert",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "00ec5a41-2c09-4d86-9516-f403a0766bb2",
+     "title": "The Decca Sound",
+     "date": "2011-10-03",
+     "status": "Official",
+     "release-group": {
+      "id": "1fa1b579-824d-4fef-968f-9b9bf990a704",
+      "title": "The Decca Sound",
+      "primary-type": "Other"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ea15861c-825c-4758-afd6-1e7aa8ffc12d",
+   "score": 57,
+   "title": "Turandot: Act III. “Nessun dorma” (Calàf)",
+   "length": 159933,
+   "first-release-date": "1990",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Orchestra Sinfonica dell’Emilia-Romagna ‘Arturo Toscanini’",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "8abacc39-62f3-4dd9-b841-3fcbe153a4f4",
+      "name": "Orchestra Sinfonica dell’Emilia-Romagna ‘Arturo Toscanini’"
+     }
+    },
+    {
+     "name": "Emerson Buckley",
+     "joinphrase": "",
+     "artist": {
+      "id": "725be366-695c-4e4c-a3ba-66420ace6e0c",
+      "name": "Emerson Buckley"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "73eafe16-07f2-4678-aa9d-a1b6e773a2fd",
+     "title": "Classic Opera",
+     "date": "2004-03-04",
+     "status": "Promotion",
+     "release-group": {
+      "id": "4f128507-14ed-33d6-9e08-92c420f081d7",
+      "title": "Classic Opera",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "87290edc-35b7-4ed9-a33e-89529c15a9c7",
+     "title": "Greatest Hits",
+     "date": "1995",
+     "status": "Official",
+     "release-group": {
+      "id": "76c583aa-8df9-463b-a9df-19ec228bef23",
+      "title": "Puccini: Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b44760e3-25b4-4acf-a57c-a5d6fd7029c9",
+     "title": "Puccini: Greatest Hits",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "76c583aa-8df9-463b-a9df-19ec228bef23",
+      "title": "Puccini: Greatest Hits",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "740e0b83-3714-4887-9045-ea068d768b8e",
+   "score": 56,
+   "title": "Turandot: Atto III. “Nessun dorma!”",
+   "length": 179680,
+   "first-release-date": "1982",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "The John Alldis Choir",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "b8e24052-7a68-42b0-bda1-606e5014ce9e",
+      "name": "The John Alldis Choir"
+     }
+    },
+    {
+     "name": "Wandsworth School Boys Choir",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "d6a35e7f-f297-4136-a140-a81cf6e0d167",
+      "name": "Wandsworth School Boys’ Choir"
+     }
+    },
+    {
+     "name": "London Philharmonic Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "fa37018e-3557-4cb7-973f-555003c30174",
+      "name": "London Philharmonic Orchestra"
+     }
+    },
+    {
+     "name": "Zubin Mehta",
+     "joinphrase": "",
+     "artist": {
+      "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+      "name": "Zubin Mehta"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a22300a6-78c4-4ffe-8f57-f3031d08793c",
+     "title": "Encore! the Greatest Classical Stars, the Greatest Classical Music",
+     "date": "2008",
+     "release-group": {
+      "id": "68be01e2-78b7-4e50-af40-cf3620ec521b",
+      "title": "Encore! the Greatest Classical Stars, the Greatest Classical Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "57f97f1b-ef1a-4acd-9a29-b0e22fdc1c49",
+     "title": "Italian Classics Unforgettable Songs",
+     "status": "Official",
+     "release-group": {
+      "id": "61634029-ad0d-424b-90a9-62e20e03f5cf",
+      "title": "Italian Classics Unforgettable Songs",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "084c0ec7-8ed1-4d7b-9317-330ffbf8e549",
+     "title": "Pavarotti The 50 Greatest Tracks",
+     "date": "2013-01-01",
+     "status": "Official",
+     "release-group": {
+      "id": "2dc2fb69-3ac1-4268-88b6-a0ca72dfa46f",
+      "title": "Pavarotti: The 50 Greatest Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "97e72dd6-dbdd-4113-a504-39bb113b33c3",
+     "title": "Opera Gold – 100 Great Tracks",
+     "date": "2016",
+     "status": "Official",
+     "release-group": {
+      "id": "fcd240cb-9b8b-4fc7-9bd0-bdc9c3bf2200",
+      "title": "Opera Gold - 100 Great Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "96fd5fc8-3e27-4586-8f10-54c8b15fddd3",
+     "title": "Die ultimative Chart Show: Die erfolgreichsten Pop-Hymnen aller Zeiten",
+     "date": "2010-01-08",
+     "status": "Official",
+     "release-group": {
+      "id": "7ec2e93c-3764-464e-9def-a07e3ce0cdc5",
+      "title": "Die ultimative Chart Show: Die erfolgreichsten Pop-Hymnen aller Zeiten",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ecea55fc-2fc1-43ad-b5e2-193bee4e3778",
+     "title": "The #1 Opera Album",
+     "date": "2000",
+     "status": "Official",
+     "release-group": {
+      "id": "0fbb6802-dcf2-3f02-b048-7642c5460b18",
+      "title": "The #1 Opera Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "86d0d710-f813-473a-9993-b3d7a801dcca",
+     "title": "Pavarotti: Greatest Hits",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "4a5e212f-453e-4d65-8ef3-da440028e58d",
+      "title": "Pavarotti: Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "79dc5bc5-b674-46a0-bd5f-f923c057a31d",
+     "title": "Pavarotti – The Greatest Hits",
+     "status": "Official",
+     "release-group": {
+      "id": "1ac61aff-3646-4608-a2f8-bae23e04fc72",
+      "title": "The Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "dc5ecad2-4bea-43ba-bc72-58d22c323eb4",
+     "title": "The Greatest Hits",
+     "date": "2019-06-07",
+     "status": "Official",
+     "release-group": {
+      "id": "1ac61aff-3646-4608-a2f8-bae23e04fc72",
+      "title": "The Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "317d20eb-a8c6-41f6-873b-71bfa3508fad",
+     "title": "Pavarotti: The Greatest Hits",
+     "status": "Official",
+     "release-group": {
+      "id": "1ac61aff-3646-4608-a2f8-bae23e04fc72",
+      "title": "The Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "3acbc68f-2983-4d23-b6af-7f36d4fca4ed",
+     "title": "The Pavarotti Collection Vol II",
+     "release-group": {
+      "id": "f4134730-e224-45cb-af6c-f75337891604",
+      "title": "The Pavarotti Collection Vol II",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "082b5985-3f2e-4ac3-ac09-6331df3b2538",
+     "title": "Nessun Dorma: Opera’s Greatest Hits",
+     "date": "2010-02-01",
+     "status": "Official",
+     "release-group": {
+      "id": "f2f27f7a-324f-4826-9d58-af8f59c50454",
+      "title": "Nessun Dorma: Opera's Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "762012f0-d0e0-46a9-a41c-b82ccef1e330",
+     "title": "Nessun Dorma: Opera's Greatest Hits",
+     "date": "2009",
+     "status": "Official",
+     "release-group": {
+      "id": "f2f27f7a-324f-4826-9d58-af8f59c50454",
+      "title": "Nessun Dorma: Opera's Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e17a720c-8401-4e13-8660-4f8121aa2484",
+     "title": "Essential Puccini",
+     "date": "2004",
+     "status": "Official",
+     "release-group": {
+      "id": "c278724e-562a-39e7-b9ad-b725dc2aff72",
+      "title": "Essential Puccini",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "fe251cfb-8a7a-4355-b33f-44edddc53ec6",
+     "title": "The Essential Puccini",
+     "status": "Official",
+     "release-group": {
+      "id": "c278724e-562a-39e7-b9ad-b725dc2aff72",
+      "title": "Essential Puccini",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a0342287-1626-4f8f-b7e6-0fec67be6890",
+     "title": "For Lovers Only",
+     "date": "2005",
+     "status": "Official",
+     "release-group": {
+      "id": "a6b9612d-5775-4d1b-91ec-1f2a76d232ff",
+      "title": "For Lovers Only: The Romantic Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "3c737b69-570d-4073-88b1-e2a6517f5113",
+     "title": "For Lovers Only: The Romantic Pavarotti",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "a6b9612d-5775-4d1b-91ec-1f2a76d232ff",
+      "title": "For Lovers Only: The Romantic Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a2f4533d-f9a8-49b2-8531-5fe2a9f5473b",
+     "title": "Pavarotti's Opera Made Easy: My Favorite Love Songs",
+     "date": "1994-08-23",
+     "status": "Official",
+     "release-group": {
+      "id": "61e5e7de-a5f9-4d5b-a59a-ee91cf89aec5",
+      "title": "Pavarotti's Opera Made Easy: My Favorite Love Songs",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "262a72e9-fd9a-4b2b-a843-5f3eed6e0a42",
+     "title": "My Favourite Love Songs",
+     "date": "2010-08-31",
+     "status": "Official",
+     "release-group": {
+      "id": "61e5e7de-a5f9-4d5b-a59a-ee91cf89aec5",
+      "title": "Pavarotti's Opera Made Easy: My Favorite Love Songs",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a0c2e016-1bfc-4cbb-a589-c0ae941869ce",
+     "title": "Pavarotti Forever",
+     "status": "Official",
+     "release-group": {
+      "id": "5e77a5f6-3ae7-462b-9a30-836931b92179",
+      "title": "Pavarotti Forever",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "8be88f8e-ba6c-457e-a0aa-3fcc624c14d1",
+     "title": "Puccini Gala",
+     "status": "Official",
+     "release-group": {
+      "id": "f24fce5f-7cf9-47e1-91dd-0062dd9589ed",
+      "title": "Puccini Gala",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "19616aaa-9a41-441f-96cc-b87a19bdef2b",
+     "title": "Puccini Gala",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "f24fce5f-7cf9-47e1-91dd-0062dd9589ed",
+      "title": "Puccini Gala",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7de93c6d-f06e-4017-ac7f-a509ea1f7cc5",
+     "title": "England Anthems",
+     "date": "2000-05-29",
+     "status": "Official",
+     "release-group": {
+      "id": "5fd8e939-b710-424a-9a44-7186f5b342de",
+      "title": "England Anthems",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "00c8250c-3e6a-4490-9e5f-96a0e7ae1688",
+     "title": "The Greatest Classical Stars On Earth",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "26da84e8-2033-4832-bd3e-6e1e58c20838",
+      "title": "The Greatest Classical Stars On Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "bf64c40f-ec67-4e74-be34-d757b064103a",
+     "title": "The 99 Most Essential Opera Classics",
+     "date": "2011-02-28",
+     "status": "Official",
+     "release-group": {
+      "id": "115e40a6-0a04-4f76-aed2-cccc9dfe377f",
+      "title": "The 99 Most Essential Opera Classics",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "666af7e2-e731-4628-b832-f09e872748b2",
+     "title": "Nessun Dorma: 20 Great Tenor Arias",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "04c3788a-5330-35fe-ac3f-c4cf8c5af808",
+      "title": "Nessun Dorma: 20 Great Tenor Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "c1c060e9-3a98-49c1-a03a-623454cf969a",
+     "title": "Pavarotti: 24 Greatest HD Tracks",
+     "date": "2013",
+     "status": "Official",
+     "release-group": {
+      "id": "4767343a-b9b1-40f8-ba83-e871f60f0535",
+      "title": "Pavarotti: 24 Greatest HD Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "c00c8188-8c71-46ef-9a9f-2365471f2426",
+     "title": "The Greatest Classical Stars on Earth (disc 2)",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "1eedaf12-4c03-4846-852b-095af0aade13",
+      "title": "The Greatest Classical Show on Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "65588be0-5d20-4df9-8532-713131896a3c",
+     "title": "Pavarotti: Ti amo: Puccini's Greatest Love Songs",
+     "release-group": {
+      "id": "d5154de8-67d4-36fd-beea-c2997f9e52cd",
+      "title": "Pavarotti: Ti amo: Puccini's Greatest Love Songs",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "06e1a35d-1370-4151-a672-3e757d346031",
+     "title": "The no. 1 Classical Album",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "26238698-765d-4392-9781-0ff4611abd73",
+      "title": "The no. 1 Classical Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "86af5886-8180-4949-8502-0d342aff8f45",
+     "title": "The Number One Opera Album 2004",
+     "date": "2004",
+     "status": "Official",
+     "release-group": {
+      "id": "26b98158-bae9-48d1-9857-6f7403f62ecd",
+      "title": "The Number One Opera Album 2004",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d54e4aab-c921-4737-82b1-096b76ba5f30",
+     "title": "The Opera Album 2006",
+     "date": "2006-04-24",
+     "status": "Official",
+     "release-group": {
+      "id": "07b4dc4e-9a9a-3beb-9df1-3c21d6946928",
+      "title": "The Opera Album 2006",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "74733d99-2716-45b2-9005-dd8aa2541ac4",
+     "title": "Dad’s Anthems: 35 Heroic Tracks",
+     "date": "2007-06-04",
+     "status": "Official",
+     "release-group": {
+      "id": "b65d1153-f4d8-47fd-9de8-d35bbd885db0",
+      "title": "Dad’s Anthems: 35 Heroic Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7acc6937-eee6-492f-8815-ea57f8cede8e",
+     "title": "The No. 1 Classical Album",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "7ff8115d-a51a-3576-9714-00437fe7b039",
+      "title": "The No. 1 Classical Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "387273ab-848c-4425-bf81-cefb15ccdd99",
+     "title": "Essential Opera",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "53235872-f4de-36f6-a967-331b434bd5ed",
+      "title": "Essential Opera",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "95acdf3c-9e89-4fd5-b3d3-2f0829bacfc0",
+     "title": "Classics of the Millenium",
+     "status": "Official",
+     "release-group": {
+      "id": "effcb586-e24a-4325-85c1-039e68738902",
+      "title": "Classics of the Millenium",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d6a7744b-2cef-465b-abe9-6fa6bd96c5e8",
+     "title": "Essential Classical",
+     "date": "2013-12-16",
+     "status": "Promotion",
+     "release-group": {
+      "id": "7bb6a689-614f-4f11-ac4f-755b1267e3af",
+      "title": "Essential Classical",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "daedee8f-e038-4455-8ef2-a04eb1f4bbe7",
+     "title": "Ultimate Voices",
+     "date": "2008",
+     "status": "Official",
+     "release-group": {
+      "id": "501543d7-8ef8-3289-8ea6-a05a0a76f2b2",
+      "title": "Ultimate Voices",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4daf6741-329e-4da5-9dfd-85ee0b92c2c6",
+     "title": "Every Classical Tune You'll Ever Want",
+     "status": "Official",
+     "release-group": {
+      "id": "d5bc80af-0725-3a35-b49b-3a03a9b7dd44",
+      "title": "Every Classical Tune You'll Ever Want",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9e4f0223-4185-424a-8ec5-0f05c14f4cb8",
+     "title": "Classics 2001",
+     "date": "2001",
+     "status": "Official",
+     "release-group": {
+      "id": "47eb3491-a9c9-40cc-a09d-f3e642f28754",
+      "title": "Classics 2001",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "47d0d126-e2ce-4596-85ad-25fff4b98c84",
+     "title": "Classics 2001",
+     "date": "2001",
+     "release-group": {
+      "id": "f7fc9c92-f9c2-3139-8841-5543d3f0e0c3",
+      "title": "Classics 2001",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "886dfef1-bdbc-4482-958e-b94cce691e51",
+     "title": "You Raise Me Up 2008",
+     "date": "2008-02-18",
+     "status": "Official",
+     "release-group": {
+      "id": "1db3ca03-121c-4e78-ab62-582e18136007",
+      "title": "You Raise Me Up 2008",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7aea1a96-115b-47ce-96ec-672b75d11285",
+     "title": "The Ultimate Moods Album",
+     "date": "2005-10-03",
+     "status": "Official",
+     "release-group": {
+      "id": "22b7b379-5ff0-35cc-bb9e-8a8e434b16ed",
+      "title": "The Ultimate Moods Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f2e2bb37-4d92-4369-b4fd-a43f986fcede",
+     "title": "Best Of Pavarotti",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "343ab6b5-e3ac-420d-8da1-f68fe4a9b151",
+      "title": "Best Of Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "c0cb63d4-9a2b-4e11-b44f-b5ed1dda4e36",
+     "title": "Classic FM: As Heard on TV",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "7e7b5f9c-4959-360b-8ce1-895dacab472a",
+      "title": "Classic FM: As Heard on TV",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ba77d1ba-5422-483c-9003-3684ee8154c3",
+     "title": "Hits & More",
+     "date": "1997-09-29",
+     "status": "Official",
+     "release-group": {
+      "id": "236c528a-68bc-3feb-a27d-c681d0733101",
+      "title": "Hits & More",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "510a4b4e-93a5-4f32-bfaf-0062094fc878",
+     "title": "Klara Top 75: 2009",
+     "date": "2009-11-16",
+     "status": "Official",
+     "release-group": {
+      "id": "7d6e0041-5aab-4d67-a502-b2f9d758f697",
+      "title": "Klara Top 75: 2009",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2e38e4ae-d6a6-4a44-8088-c9a195528265",
+     "title": "Le più belle romanze e canzoni",
+     "date": "1986",
+     "status": "Official",
+     "release-group": {
+      "id": "07f4d2bc-fa40-41a2-8c75-45e95a46ae7e",
+      "title": "Le più belle romanze e canzoni",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "083c9385-42b5-4ac5-908c-228ce3f88568",
+     "title": "Greatest Love VI: With Love From the Stars",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "c41b5b86-5d55-30d4-b851-29ab45c68e34",
+      "title": "Greatest Love VI: With Love From the Stars",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "26e3ddd7-a874-4f9f-a865-ca3d46a9d99e",
+     "title": "The Number One Musicals Album 2004",
+     "date": "2004-11-22",
+     "status": "Official",
+     "release-group": {
+      "id": "3e6a00bf-bdd6-3831-b0e1-dc8c488f67fe",
+      "title": "The Number One Musicals Album 2004",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "cb9456e5-d0ad-44a8-b3d0-54e4e1712ee8",
+     "title": "Turandot Highlights",
+     "date": "1989",
+     "status": "Official",
+     "release-group": {
+      "id": "aeb969c5-83e7-4160-9981-33991d54b991",
+      "title": "Turandot",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4e111e47-da04-4edc-a23f-ba9259a773ec",
+     "title": "Turandot Highlights",
+     "date": "1998-02-03",
+     "status": "Official",
+     "release-group": {
+      "id": "aeb969c5-83e7-4160-9981-33991d54b991",
+      "title": "Turandot",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "00ec5a41-2c09-4d86-9516-f403a0766bb2",
+     "title": "The Decca Sound",
+     "date": "2011-10-03",
+     "status": "Official",
+     "release-group": {
+      "id": "1fa1b579-824d-4fef-968f-9b9bf990a704",
+      "title": "The Decca Sound",
+      "primary-type": "Other"
+     }
+    },
+    {
+     "id": "0ee7086d-1be6-48e1-b1ee-c4946db98636",
+     "title": "The #1 Opera Album",
+     "status": "Official",
+     "release-group": {
+      "id": "0fbb6802-dcf2-3f02-b048-7642c5460b18",
+      "title": "The #1 Opera Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "92097217-cc00-4ba7-887a-f013d6ce93c0",
+     "title": "Classic Ads",
+     "date": "2002",
+     "status": "Official",
+     "release-group": {
+      "id": "97191094-0690-33de-a87b-23df350b8ddd",
+      "title": "Classic Ads",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "336b96a7-3488-4566-927d-326feb2549e8",
+     "title": "A Portrait of Pavarotti: Highlights from The Pavarotti Edition",
+     "status": "Official",
+     "release-group": {
+      "id": "eb1bb6b5-d005-3ca2-a54c-b5eb10db0290",
+      "title": "A Portrait of Pavarotti: Highlights from The Pavarotti Edition",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "c075aa08-e2ce-44a9-aa85-d6b23e2541a2",
+     "title": "The Pavarotti Edition",
+     "date": "2001",
+     "status": "Official",
+     "release-group": {
+      "id": "3d4f0677-7094-37a5-ba8b-f4dcd5754fcd",
+      "title": "The Pavarotti Edition",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "61527eb7-e573-4435-9632-50423eb45a7c",
+     "title": "Puccini Gold",
+     "date": "2007-12",
+     "status": "Official",
+     "release-group": {
+      "id": "2d40db94-42c0-4a85-a04d-1fd863cd2dda",
+      "title": "Puccini Gold",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4ed127be-cf4d-4956-aeb0-3dc2bd8eef40",
+     "title": "Puccini Gold",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "2d40db94-42c0-4a85-a04d-1fd863cd2dda",
+      "title": "Puccini Gold",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "64b17b8f-8335-4fae-bba5-e946d61dab2a",
+     "title": "Amore: Romantic Italian Love Songs",
+     "date": "1992-09-15",
+     "status": "Official",
+     "release-group": {
+      "id": "730bcfdf-926c-3224-bd04-6f906d6c0f55",
+      "title": "Amore: Romantic Italian Love Songs",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5e97f5c0-b29f-4183-8944-8714eedc3026",
+     "title": "Great Arias",
+     "date": "1988",
+     "status": "Official",
+     "release-group": {
+      "id": "48af5ad6-72de-3dfe-bce5-759f38e6393f",
+      "title": "Great Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "6f6bc28c-4273-465f-9b2b-492f5c037948",
+     "title": "Romantica: The Very Best of Luciano Pavarotti",
+     "status": "Official",
+     "release-group": {
+      "id": "ca4b4816-91e0-3a02-8c08-4cc87aeafbbd",
+      "title": "Romantica: The Very Best of Luciano Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a1e19320-45a7-4c76-bf57-751146fea2d6",
+     "title": "Commercial Classics: 20 Classical Themes From Australian Television Commercials",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "b794187e-1f3d-41eb-9622-ddc35078fc7c",
+      "title": "Commercial classics : 20 classical themes from Australian television commercials",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5236dc7d-3b06-4dd0-9fdd-5a3bbff020d0",
+     "title": "Great Arias",
+     "status": "Official",
+     "release-group": {
+      "id": "48af5ad6-72de-3dfe-bce5-759f38e6393f",
+      "title": "Great Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "53f28cb1-cd45-465e-a9a9-85005f10c049",
+     "title": "Amor - Opera's Great Love Songs",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "838871cc-5fb0-4c5b-bf30-671b24e5a550",
+      "title": "Amor - Opera's Great Love Songs",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "3c0a6942-86e4-4d2a-8ee7-4829e0d38ca3",
+     "title": "Pavarotti para sempre",
+     "date": "2007-09-13",
+     "release-group": {
+      "id": "6a9bb6c8-9f9d-3f87-bef0-4b0e43e69e5f",
+      "title": "Pavarotti para sempre",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "3a066e7c-ff60-4553-9a42-c7ba9189507b",
+     "title": "The #1 Classical Album",
+     "date": "2002",
+     "status": "Official",
+     "release-group": {
+      "id": "1eedaf12-4c03-4846-852b-095af0aade13",
+      "title": "The Greatest Classical Show on Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "53a84954-683c-42a2-b9c7-846419e536ab",
+     "title": "Pavarotti: The 50 Greatest Tracks",
+     "date": "2013",
+     "status": "Official",
+     "release-group": {
+      "id": "2dc2fb69-3ac1-4268-88b6-a0ca72dfa46f",
+      "title": "Pavarotti: The 50 Greatest Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f0569218-e8af-4392-9927-c83473e8d1f4",
+     "title": "Pavarotti: The 50 Greatest Tracks",
+     "date": "2013",
+     "status": "Official",
+     "release-group": {
+      "id": "2dc2fb69-3ac1-4268-88b6-a0ca72dfa46f",
+      "title": "Pavarotti: The 50 Greatest Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ac8999f5-8964-4333-9d0f-716a5fc384c8",
+     "title": "Lieblings… Hymnen",
+     "date": "2014-09-19",
+     "status": "Official",
+     "release-group": {
+      "id": "9eae9d26-bab5-407f-96c0-8768ee7d4a52",
+      "title": "Lieblings… Hymnen",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f9a1fae1-b92b-4d92-9b3e-242afae19cd3",
+     "title": "The Best of Domingo, Kiri Te Kanawa & Pavarotti",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "cb9f7b96-7bb9-43a2-bac2-185da1ee0430",
+      "title": "The Best of Domingo, Kiri Te Kanawa & Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ff257370-33f2-4c8b-8209-e1e0c9af2990",
+     "title": "Pavarotti (Music from the Motion Picture)",
+     "date": "2019-06-07",
+     "status": "Official",
+     "release-group": {
+      "id": "5f9f2176-22b0-4d6a-a3aa-3291326d0116",
+      "title": "Pavarotti (Music from the Motion Picture)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "987f188d-3b90-452c-8eef-b2133caf8574",
+     "title": "Palmarès du cinéma",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "89d4081a-d366-45f1-a98e-55689c73433b",
+      "title": "Palmarès du cinéma",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "81873643-d8be-474e-9c8e-6ba8aae2d4a0",
+     "title": "The #1 Puccini Album (disc 1)",
+     "date": "2004-08-10",
+     "status": "Official",
+     "release-group": {
+      "id": "9af479f8-a6d2-4ec0-a587-4f4638c28bd7",
+      "title": "The #1 Puccini Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2c2fa762-cc0b-4b47-bde7-b2f49db28c53",
+     "title": "Pavarotti's Opera Made Easy: My Favorite Showstoppers",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "92a07cee-e208-3847-8b63-26cbf638e1be",
+      "title": "Pavarotti's Opera Made Easy: My Favorite Showstoppers",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7b0c51b0-ede6-4aa4-8762-8567b7b16bfa",
+     "title": "Nessun Dorma",
+     "date": "2001",
+     "status": "Official",
+     "release-group": {
+      "id": "5fec5732-6e1b-4ad9-a2a0-26d173bd0bb0",
+      "title": "Nessun Dorma",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "63ad7d05-2186-4612-b1a4-08fab1163356",
+     "title": "The Opera 2011 Album",
+     "date": "2011-06-14",
+     "status": "Official",
+     "release-group": {
+      "id": "3e0cbce9-01a2-45ca-a0ec-03cc5d61f982",
+      "title": "The Opera 2011 Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2e082002-1619-4304-82e4-4c8aefbc8d5d",
+     "title": "The Essential Pavarotti",
+     "date": "1990-02-28",
+     "status": "Official",
+     "release-group": {
+      "id": "2084efde-494b-39e3-8d9f-426b4fafc881",
+      "title": "The Essential Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "6062d68e-9e0f-43ef-9655-423313f93d21",
+     "title": "Welt der Oper",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "fc0801e8-7a34-4a1e-8f5a-ce52098e10c3",
+      "title": "Welt der Oper",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5d631b4a-3464-4613-918a-b7b2fe232eb6",
+     "title": "O sole mio - The Recital",
+     "date": "2000",
+     "status": "Official",
+     "release-group": {
+      "id": "1ce81f02-f655-3e3e-930a-f975a6ecb74e",
+      "title": "O sole mio - The Recital",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2e81c3ea-bd00-4912-939a-ea5bd1777327",
+     "title": "The Best of Domingo, Kiri Te Kanawa & Pavarotti",
+     "status": "Official",
+     "release-group": {
+      "id": "cb9f7b96-7bb9-43a2-bac2-185da1ee0430",
+      "title": "The Best of Domingo, Kiri Te Kanawa & Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2c0f6dda-f988-439d-abf9-6f39ddb75244",
+     "title": "Arias",
+     "status": "Official",
+     "release-group": {
+      "id": "877f744c-7f2f-3b4c-8565-fa031126cb4c",
+      "title": "Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "73715c2b-c890-479d-9560-e2d49a9d4ece",
+     "title": "The Greatest Opera Show on Earth",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "d9e57c53-ddca-3a61-8695-641f773bb947",
+      "title": "The Greatest Opera Show on Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "58e44ae6-c79e-4b62-b95d-0c886923850b",
+     "title": "Le Ténor du siècle",
+     "date": "2017-09-01",
+     "status": "Official",
+     "release-group": {
+      "id": "3274459d-cc47-4c58-a1d1-563280e01d30",
+      "title": "Le Ténor du siècle",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "fe524f1a-97c5-49c8-ac97-a2e0ade36af4",
+     "title": "Tu Tu Amore: Puccini's Greatest Love Songs",
+     "date": "1999-09-14",
+     "status": "Official",
+     "release-group": {
+      "id": "5dfd58d2-ff12-43ec-8d1b-547dfb566f69",
+      "title": "Tu Tu Amore: Puccini's Greatest Love Songs",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "56127bbf-7963-40a7-93e0-6ad028180d21",
+     "title": "Sublime Pavarotti",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "84cddc02-3167-4a1b-9e76-779ec3af7d11",
+      "title": "Sublime Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9c4a0c2d-8ab0-47f7-b9ff-fc4e7d9d8b7e",
+     "title": "Greatest Hits: The Three Tenors",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "bf697eb1-1745-3e39-ae9b-e0480aef2a34",
+      "title": "Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "3eebff51-564e-4367-93eb-6f38c3e0cea8",
+     "title": "The Best",
+     "date": "2005-04",
+     "status": "Official",
+     "release-group": {
+      "id": "55cdc4f7-c941-3544-b38d-fddc26d694e0",
+      "title": "The Best",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ecc74584-847e-4648-abdf-9c66f0ea6111",
+     "title": "The Classical Album",
+     "date": "2000",
+     "status": "Official",
+     "release-group": {
+      "id": "9b061865-02f1-3339-806d-c3923c4ab0a2",
+      "title": "The Classical Album",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4c2193d6-b50a-4df8-897c-7a903e8e03ed",
+     "title": "Pavarotti (Music from the Motion Picture)",
+     "date": "2019",
+     "status": "Official",
+     "release-group": {
+      "id": "5f9f2176-22b0-4d6a-a3aa-3291326d0116",
+      "title": "Pavarotti (Music from the Motion Picture)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "0ede2dc9-9cb0-4fd7-b25e-944b631e2ff6",
+     "title": "Das goldene Opernarchiv 16",
+     "date": "1989",
+     "status": "Official",
+     "release-group": {
+      "id": "5e34e41e-7673-4bd6-8438-d2ccb434304d",
+      "title": "Das goldene Opernarchiv 16",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "fb808571-2622-43c8-878b-eb7a612e3363",
+     "title": "More Favourites From the Doug Aiton Program",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "2e2e3a51-fc96-4bfd-98a8-7335e31b776e",
+      "title": "More Favourites From the Doug Aiton Program",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "48402bee-cee6-4f6d-894f-044997c24145",
+     "title": "Now That's What I Call Classical",
+     "date": "2015-11-27",
+     "status": "Official",
+     "release-group": {
+      "id": "686958e7-436d-463b-a066-731d8c84efa0",
+      "title": "Now That's What I Call Classical",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7ff84def-b567-49b7-8d1d-e8cac9d340d8",
+     "title": "The Greatest Opera Show on Earth",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "d9e57c53-ddca-3a61-8695-641f773bb947",
+      "title": "The Greatest Opera Show on Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4d292814-4285-4913-8534-a843e912cd1d",
+     "title": "Puccini: Famous Arias",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "48af5ad6-72de-3dfe-bce5-759f38e6393f",
+      "title": "Great Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "71ce7af1-0feb-41e7-9e8a-a545e58386f3",
+     "title": "Com’ è bella la vita",
+     "date": "1997",
+     "status": "Promotion",
+     "release-group": {
+      "id": "ad8c984c-e358-4a31-8f43-aff96a3d78e4",
+      "title": "Com’ è bella la vita",
+      "primary-type": "Single"
+     }
+    },
+    {
+     "id": "0bdf3f84-61ce-4b45-8d78-8f26aa83ba0b",
+     "title": "Essential Opera",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "53235872-f4de-36f6-a967-331b434bd5ed",
+      "title": "Essential Opera",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "81583e50-ab64-40d6-b9a1-15090696df0b",
+     "title": "The Essential Pavarotti",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "2084efde-494b-39e3-8d9f-426b4fafc881",
+      "title": "The Essential Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "0d03cc66-e177-4c51-b281-4444229ea1b6",
+     "title": "Opera Arias",
+     "date": "2011-10-24",
+     "status": "Official",
+     "release-group": {
+      "id": "53f36d06-4563-4ee5-bfb9-efe01ac70b35",
+      "title": "Opera Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "615f846b-85ec-4526-8523-8490a7fb65c4",
+     "title": "Classic FM: Anthems 2008",
+     "date": "2008-07-14",
+     "status": "Official",
+     "release-group": {
+      "id": "ad10c8f0-2b94-35c4-a856-d103136b942e",
+      "title": "Classic FM: Anthems 2008",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "57eff451-bf53-4287-8686-fdfe836e5659",
+     "title": "Opera Gold",
+     "status": "Official",
+     "release-group": {
+      "id": "3032badb-aa34-318b-9ab1-d082d9151872",
+      "title": "Opera Gold",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5450db2a-dc2a-4162-a5dc-b3fe359ddc2b",
+     "title": "Italian Wedding Favorites",
+     "date": "2000-05-23",
+     "status": "Official",
+     "release-group": {
+      "id": "d6f4b27f-ed6b-4ba7-8de4-31c052875e3e",
+      "title": "Italian Wedding Favorites",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "aec7e2c8-fa5c-447f-9fed-bc11679d589a",
+     "title": "Now That’s What I Call Footie!",
+     "date": "2021-05-07",
+     "status": "Official",
+     "release-group": {
+      "id": "193c79be-ce2d-426e-a877-bb0f6580c9e7",
+      "title": "Now That’s What I Call Footie!",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b70e7934-21be-4e2b-a136-b8e18c8a761f",
+     "title": "No Reservations",
+     "date": "2007-07-12",
+     "status": "Official",
+     "release-group": {
+      "id": "23c33254-ecca-3f4e-9361-3b2f5cd04d3e",
+      "title": "No Reservations",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "0f4f8328-a0c1-45db-93c9-04520e473943",
+     "title": "Pavarotti: The 50 Greatest Tracks",
+     "date": "2013-10-22",
+     "status": "Official",
+     "release-group": {
+      "id": "2dc2fb69-3ac1-4268-88b6-a0ca72dfa46f",
+      "title": "Pavarotti: The 50 Greatest Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5db0b736-fb6d-4f1b-8020-0b9ea5bcc689",
+     "title": "the essential PAVAROTTI",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "2084efde-494b-39e3-8d9f-426b4fafc881",
+      "title": "The Essential Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f537e94f-9ad7-424e-b936-474308a3edc1",
+     "title": "Every Classical Tune You'll Ever Want",
+     "date": "2006-05-05",
+     "status": "Official",
+     "release-group": {
+      "id": "d5bc80af-0725-3a35-b49b-3a03a9b7dd44",
+      "title": "Every Classical Tune You'll Ever Want",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7eb1e8b1-56bf-4f86-9925-b52c4da8ce8c",
+     "title": "The Ultimate Classical Collection",
+     "date": "2018-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "40d6ca95-e7ca-4290-b1f6-16739cfb5f7d",
+      "title": "The Ultimate Classical Collection",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "983d956a-48b1-4567-907c-07eb4b92301f",
+     "title": "The Ultimate Puccini Collection",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "36c84806-fd9f-3ccc-a692-d3e48d2737aa",
+      "title": "The Ultimate Puccini Collection",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "85793029-080c-42e8-a6fb-9aa99495ee53",
+     "title": "England Anthems 2002",
+     "date": "2002-05-20",
+     "status": "Official",
+     "release-group": {
+      "id": "ae9e4718-8209-35a2-a2e9-405fe4c65975",
+      "title": "England Anthems 2002",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7b69595b-88f2-447b-af89-be6cbee5ac0d",
+     "title": "Pavarotti's Opera Made Easy: My Favorite Opera for Everyone",
+     "date": "1994",
+     "status": "Official",
+     "release-group": {
+      "id": "70472608-215a-4396-9f68-8e4f4d77e18b",
+      "title": "Pavarotti's Opera Made Easy: My Favorite Opera for Everyone",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2df5af79-ca80-41fc-9700-5f47a89bd1ff",
+     "title": "Cooking with Classical Music",
+     "status": "Official",
+     "release-group": {
+      "id": "f0836ec7-dff8-4efc-b2a5-418b661f6d45",
+      "title": "Cooking with Classical Music",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "925a7039-6e36-4839-8258-93495a12f3bc",
+     "title": "Pavarotti in the Amsterdam Arena",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "8045903d-e606-43b2-a1e1-dd3c33ba4717",
+      "title": "Pavarotti in the Amsterdam Arena",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "21fba5ea-95b0-47fa-a374-76fac6eabbdd",
+     "title": "Pavarotti: London Records Great Studio Recordings of his Central Park Program",
+     "status": "Official",
+     "release-group": {
+      "id": "528e45a9-0e5b-470c-b37d-de9e46d0d5ee",
+      "title": "Pavarotti: London Records Great Studio Recordings of his Central Park Program",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "67519932-5adb-4a75-9021-87cc22900dbd",
+     "title": "Pavarotti's Opera Made Easy: My Favorite Puccini",
+     "status": "Official",
+     "release-group": {
+      "id": "4eb457a9-b59d-45f7-9d56-f4ccbe17f94d",
+      "title": "Pavarotti's Opera Made Easy: My Favorite Puccini",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "bddf5142-86ca-4b62-a62b-0651dacfd1b1",
+     "title": "Essential Opera",
+     "date": "2006-02-13",
+     "status": "Official",
+     "release-group": {
+      "id": "7d603c21-1596-4588-81e2-b85fe9a390c2",
+      "title": "Essential Opera",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "10fadaa1-abcf-4242-9777-a210bd518239",
+     "title": "Music of the Night",
+     "date": "1999-11-15",
+     "status": "Official",
+     "release-group": {
+      "id": "c8ec9a39-fca9-3d9c-a741-0916948a640d",
+      "title": "Music of the Night",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b8d01624-8762-4a43-a78d-865ad94a152e",
+     "title": "Historic Italian Music - In America",
+     "status": "Promotion",
+     "release-group": {
+      "id": "ccd7ad2e-2c53-4390-a682-c467bf008301",
+      "title": "Historic Italian Music - In America",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5f81b7df-8e8c-44d2-9b0b-c7434e0affbd",
+     "title": "Puccini Gold",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "2d40db94-42c0-4a85-a04d-1fd863cd2dda",
+      "title": "Puccini Gold",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e6abc2bf-5a8d-4c3f-ab5f-241cc1b3b3e9",
+     "title": "Nessun Dorma: Puccini's Greatest Arias",
+     "date": "2008",
+     "status": "Official",
+     "release-group": {
+      "id": "011e54b3-b60b-4673-936e-011ba742e82d",
+      "title": "Nessun Dorma: Puccini's Greatest Arias",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9cde1b32-b779-4f9c-a0c3-71a9af3745f7",
+     "title": "The Greatest Classical Show on Earth",
+     "date": "1998-07-14",
+     "status": "Official",
+     "release-group": {
+      "id": "1eedaf12-4c03-4846-852b-095af0aade13",
+      "title": "The Greatest Classical Show on Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "cf9f5c64-5359-4002-a8eb-db7272007445",
+     "title": "The Greatest Classical Show on Earth",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "1eedaf12-4c03-4846-852b-095af0aade13",
+      "title": "The Greatest Classical Show on Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "73fac2fc-4fc6-4984-94be-7486119ff6d3",
+     "title": "The Greatest Classical Show on Earth",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "1eedaf12-4c03-4846-852b-095af0aade13",
+      "title": "The Greatest Classical Show on Earth",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "3ceed77f-df63-4ee0-9204-333901c0ba47",
+     "title": "The Three Tenors",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "bf8ad5af-f59e-402a-9d94-49b2de58bb4d",
+      "title": "The Three Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a95bbb11-ce69-4338-805a-759b2a3e18db",
+     "title": "Now That’s What I Call Footie!: Back of the Net",
+     "date": "2021-05-07",
+     "status": "Official",
+     "release-group": {
+      "id": "193c79be-ce2d-426e-a877-bb0f6580c9e7",
+      "title": "Now That’s What I Call Footie!",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5e2ca8fd-a19a-4dc8-9189-db93c6e1f821",
+     "title": "The 101 Most Essential Classical Music Pieces Ever",
+     "date": "2012-12-10",
+     "status": "Official",
+     "release-group": {
+      "id": "a2534685-33ac-445d-abfd-3ecaf800d053",
+      "title": "The 101 Most Essential Classical Music Pieces Ever",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e851041b-1d8d-41ce-b291-09ebfbfea804",
+     "title": "Best of Domingo, Pavarotti, Carreras",
+     "date": "1999",
+     "status": "Official",
+     "release-group": {
+      "id": "df26380f-d0a0-3c4e-a9a1-724b81f52786",
+      "title": "Best of Domingo, Pavarotti, Carreras",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "eaee1b9e-70b9-4826-8dac-b65492f271ff",
+     "title": "Classics II: Cinema Gala",
+     "status": "Official",
+     "release-group": {
+      "id": "9b19a3bd-c8ef-4831-a6a6-4d43f0c072ab",
+      "title": "Classics II: Cinema Gala",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "61c85356-81c0-4fc9-9a55-179f83921c6e",
+     "title": "Classics II: Cinema Gala",
+     "date": "1988",
+     "status": "Official",
+     "release-group": {
+      "id": "9b19a3bd-c8ef-4831-a6a6-4d43f0c072ab",
+      "title": "Classics II: Cinema Gala",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9a981098-accc-4ace-9466-3b9ae87764e7",
+     "title": "101 Film Classics",
+     "date": "2012-01-01",
+     "status": "Official",
+     "release-group": {
+      "id": "3adaaaae-0a22-464c-b424-29087c0ebce5",
+      "title": "101 Film Classics",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ff3706f5-9ee2-4c29-ba5f-3d19754d705c",
+     "title": "101 Film Classics",
+     "date": "2012",
+     "status": "Official",
+     "release-group": {
+      "id": "3adaaaae-0a22-464c-b424-29087c0ebce5",
+      "title": "101 Film Classics",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "32ec0edd-d6d4-4000-9179-53e86a3ba956",
+     "title": "Your Hundred Best Tunes, Volume 6",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "8b7440f6-60a2-4de4-994e-ced688da0a92",
+      "title": "Your Hundred Best Tunes, Volume 6",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "1c942c44-441a-3234-9d1b-290a5dd7a529",
+     "title": "No Reservations",
+     "date": "2007-07-24",
+     "status": "Official",
+     "release-group": {
+      "id": "23c33254-ecca-3f4e-9361-3b2f5cd04d3e",
+      "title": "No Reservations",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "472f7a82-f5b7-43fa-b48c-66ba658c0843",
+     "title": "The Best",
+     "date": "2005",
+     "status": "Official",
+     "release-group": {
+      "id": "55cdc4f7-c941-3544-b38d-fddc26d694e0",
+      "title": "The Best",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ecfd13b1-1579-43fd-9fd8-1002757a9dac",
+     "title": "Romantic Opera",
+     "status": "Official",
+     "release-group": {
+      "id": "1a0a405a-e596-447b-a43c-33dfc2295ae9",
+      "title": "Romantic Opera",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "5dd36a25-db24-4ffa-beda-6d0edeb6dca9",
+     "title": "Klassiskt - 27 kända klassiska mästerverk",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "7aff400d-0cc5-4a44-bce3-665534c1d486",
+      "title": "Klassiskt: 27 klassiska mästerverk",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d7c735ae-182e-4dd0-87e6-3f15ffdee944",
+     "title": "Klassiskt: 27 klassiska mästerverk",
+     "date": "2010",
+     "status": "Official",
+     "release-group": {
+      "id": "7aff400d-0cc5-4a44-bce3-665534c1d486",
+      "title": "Klassiskt: 27 klassiska mästerverk",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "42f99787-3e8f-469e-958f-56590a950dad",
+     "title": "Pavarotti (Music from the Motion Picture)",
+     "date": "2019",
+     "status": "Official",
+     "release-group": {
+      "id": "5f9f2176-22b0-4d6a-a3aa-3291326d0116",
+      "title": "Pavarotti (Music from the Motion Picture)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "59607a9f-1a6d-4b2d-98d7-8fcaf07c599a",
+     "title": "Three Famous Tenors",
+     "date": "2000",
+     "status": "Official",
+     "release-group": {
+      "id": "b056faa5-8446-429b-af45-f4c36a52785c",
+      "title": "Three Famous Tenors",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "43769116-c310-4eca-af20-2e5ee79d5c96",
+     "title": "Pavarotti: The 50+ Greatest Tracks (deluxe edition)",
+     "status": "Official",
+     "release-group": {
+      "id": "2dc2fb69-3ac1-4268-88b6-a0ca72dfa46f",
+      "title": "Pavarotti: The 50 Greatest Tracks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f350393e-2459-44c5-ae1b-cb71534780f3",
+     "title": "Tutto Pavarotti",
+     "date": "1989",
+     "status": "Official",
+     "release-group": {
+      "id": "014de0af-5066-3da8-8927-653a2e701112",
+      "title": "Tutto Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ce261b71-3095-4385-83f7-d720a642e3d9",
+     "title": "Tutto Pavarotti",
+     "date": "1989",
+     "status": "Official",
+     "release-group": {
+      "id": "014de0af-5066-3da8-8927-653a2e701112",
+      "title": "Tutto Pavarotti",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ccf6678e-5454-4daa-a2ea-a63ce49502f0",
+     "title": "Les Airs du Grand Échiquier",
+     "date": "1986",
+     "status": "Official",
+     "release-group": {
+      "id": "cef0ad30-798f-4955-96fa-a2458025283d",
+      "title": "Les Airs du Grand Échiquier",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "59768c3c-bff9-4424-8103-999efab783f8",
+     "title": "Classical Hits: The Best Music From Today's Classical Superstars",
+     "date": "2001-09-11",
+     "status": "Official",
+     "release-group": {
+      "id": "cdb36a29-c01c-4627-b587-4510d859dbb9",
+      "title": "Classical Hits: The Best Music From Today's Classical Superstars",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "8ff31570-116d-498d-a476-aa02c4798a98",
+     "title": "Pavarotti Forever",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "5e77a5f6-3ae7-462b-9a30-836931b92179",
+      "title": "Pavarotti Forever",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "99fc56ed-2c30-4849-97e4-6cc9c41d39d0",
+     "title": "50 Great Moments in Opera",
+     "date": "1992",
+     "status": "Official",
+     "release-group": {
+      "id": "16677c58-46a8-4695-b634-ef1fb8c63600",
+      "title": "50 Great Moments in Opera",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7be2e94a-4363-4da6-a2ea-47ec8acaebee",
+     "title": "Pavarotti: Greatest Hits",
+     "date": "1997-09-30",
+     "status": "Official",
+     "release-group": {
+      "id": "4a5e212f-453e-4d65-8ef3-da440028e58d",
+      "title": "Pavarotti: Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9559c4fb-10d7-40cb-a76e-0ddb47d224ac",
+     "title": "Pavarotti: Greatest Hits",
+     "date": "1997-10-07",
+     "status": "Official",
+     "release-group": {
+      "id": "4a5e212f-453e-4d65-8ef3-da440028e58d",
+      "title": "Pavarotti: Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "55a7141c-735b-40c4-b1f1-37e09a2f6e0b",
+     "title": "Pavarotti: Greatest Hits",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "4a5e212f-453e-4d65-8ef3-da440028e58d",
+      "title": "Pavarotti: Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "89e1e718-a317-4e80-b3c1-09dcba05e4ad",
+     "title": "The Number One Classical Album 2008 (disc 1)",
+     "date": "2008",
+     "release-group": {
+      "id": "ac615d26-df00-3053-9462-7636375603b4",
+      "title": "The Number One Classical Album 2008",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9788ba7e-c521-415c-a246-3ae7cbdc56cb",
+     "title": "The Number One Opera Album 2007",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "d158072b-aa24-3f0e-b272-a7c48c7788b2",
+      "title": "The Number One Opera Album 2007",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d73e4041-375c-4b9f-8366-46089bca304c",
+     "title": "The Number One Classical Album 2008",
+     "date": "2007-11-26",
+     "status": "Official",
+     "release-group": {
+      "id": "ac615d26-df00-3053-9462-7636375603b4",
+      "title": "The Number One Classical Album 2008",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "88231b56-8f57-498c-8e2a-b018d6f361c7",
+     "title": "Greatest Hits - The Ultimate Collection",
+     "date": "1997-09-30",
+     "status": "Official",
+     "release-group": {
+      "id": "4a5e212f-453e-4d65-8ef3-da440028e58d",
+      "title": "Pavarotti: Greatest Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "930d61f5-3c7c-4704-bfc0-098cc3be803f",
+     "title": "The Ultimate Collection",
+     "date": "2007-09-06",
+     "status": "Official",
+     "release-group": {
+      "id": "a77812fa-4e65-3186-8cf3-325e5fb125e6",
+      "title": "The Ultimate Collection",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ee620d0c-8488-47aa-9f34-b6e51db275fc",
+   "score": 56,
+   "title": "Nessun dorma (None Shall Sleep) (Turandot)",
+   "length": 169360,
+   "first-release-date": "1990",
+   "artist-credit": [
+    {
+     "name": "The John Alldis Choir",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "b8e24052-7a68-42b0-bda1-606e5014ce9e",
+      "name": "The John Alldis Choir"
+     }
+    },
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "London Philharmonic Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "fa37018e-3557-4cb7-973f-555003c30174",
+      "name": "London Philharmonic Orchestra"
+     }
+    },
+    {
+     "name": "Zubin Mehta",
+     "joinphrase": "",
+     "artist": {
+      "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+      "name": "Zubin Mehta"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "82dd91b6-c464-40e2-b4db-08ad80e5bfdb",
+     "title": "Caruso",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "41ba3e39-6955-36e4-99d7-32758319d5a2",
+      "title": "Caruso",
+      "primary-type": "Single"
+     }
+    },
+    {
+     "id": "49ce063d-c2aa-4e65-8c21-6561da7fbaae",
+     "title": "Your Hundred Best Tunes",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "244669e8-1307-45ef-9742-f25091a4374e",
+      "title": "Your Hundred Best Tunes",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "18602a42-bc3c-4d84-8ea6-aab154e98511",
+   "score": 39,
+   "title": "Turandot: Atto III, scena 1. “Nessun dorma!” … “Tu che guardi le stelle”",
+   "length": 402000,
+   "first-release-date": "1985-02-07",
+   "artist-credit": [
+    {
+     "name": "Tom Krause",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "93a9e415-37d4-498b-82b0-8a3a3e3e86c3",
+      "name": "Tom Krause"
+     }
+    },
+    {
+     "name": "Piero de Palma",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "1cd59445-7993-4eb4-afa3-443d886bdd83",
+      "name": "Piero de Palma"
+     }
+    },
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Pier Francesco Poli",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "9533e7db-05e6-4c31-b7c8-b7fbbd2aaea1",
+      "name": "Pier Francesco Poli"
+     }
+    },
+    {
+     "name": "London Philharmonic Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "fa37018e-3557-4cb7-973f-555003c30174",
+      "name": "London Philharmonic Orchestra"
+     }
+    },
+    {
+     "name": "Zubin Mehta",
+     "joinphrase": "",
+     "artist": {
+      "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+      "name": "Zubin Mehta"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "6799c028-29f0-4008-8605-8e2f572c8acd",
+     "title": "The Philharmonic Edition",
+     "status": "Official",
+     "release-group": {
+      "id": "40a55c26-1603-43c5-a459-d42c62d99077",
+      "title": "The Philharmonic Edition",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "acd22e5e-6682-474f-834d-be9daae4a24a",
+     "title": "Complete Decca Operas: The Operas 1971-1988",
+     "status": "Official",
+     "release-group": {
+      "id": "3312bd78-3421-453f-ba82-2e20318c80b9",
+      "title": "Complete Decca Operas: The Operas 1971-1988",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "70ecf04d-6778-4e8d-adb7-cfbb5dec2bae",
+     "title": "Turandot",
+     "date": "1985",
+     "status": "Official",
+     "release-group": {
+      "id": "aeb969c5-83e7-4160-9981-33991d54b991",
+      "title": "Turandot",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "51891e78-e49f-3946-952d-b61a8df29e9d",
+     "title": "Turandot",
+     "date": "1990",
+     "status": "Official",
+     "release-group": {
+      "id": "aeb969c5-83e7-4160-9981-33991d54b991",
+      "title": "Turandot",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a881cea8-b2aa-475b-abcb-f7d055e2bea5",
+     "title": "Turandot",
+     "date": "1985-02-07",
+     "status": "Official",
+     "release-group": {
+      "id": "aeb969c5-83e7-4160-9981-33991d54b991",
+      "title": "Turandot",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a74c7e0b-ad0a-471d-8b02-501b40d4da7c",
+     "title": "Luciano Pavarotti - The Complete Opera Recordings",
+     "date": "2017-11-10",
+     "status": "Official",
+     "release-group": {
+      "id": "0d674da8-2827-4354-9229-144cdfb0ce13",
+      "title": "Luciano Pavarotti - The Complete Opera Recordings",
+      "primary-type": "Other"
+     }
+    },
+    {
+     "id": "a74c7e0b-ad0a-471d-8b02-501b40d4da7c",
+     "title": "Luciano Pavarotti - The Complete Opera Recordings",
+     "date": "2017-11-10",
+     "status": "Official",
+     "release-group": {
+      "id": "0d674da8-2827-4354-9229-144cdfb0ce13",
+      "title": "Luciano Pavarotti - The Complete Opera Recordings",
+      "primary-type": "Other"
+     }
+    },
+    {
+     "id": "5aef2818-70f1-421c-a123-896319d3659d",
+     "title": "Puccini: The Definitive Collection",
+     "date": "2008-10-08",
+     "status": "Official",
+     "release-group": {
+      "id": "8529d068-dc87-44e7-b344-92f6eb165aef",
+      "title": "Puccini: The Definitive Collection",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  }
+ ]
+}

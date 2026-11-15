@@ -1,0 +1,84 @@
+{
+ "length": 192933,
+ "id": "2dede7cc-05a6-4ed5-9274-bc7a18c0e3ad",
+ "relations": [
+  {
+   "attribute-ids": {
+    "tenor vocals": "122c11da-651f-46cc-9118-c523a14afa1d"
+   },
+   "end": null,
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "attribute-credits": {},
+   "attributes": [
+    "tenor vocals"
+   ],
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "type": "vocal",
+   "source-credit": "",
+   "target-type": "artist",
+   "artist": {
+    "disambiguation": "tenor",
+    "sort-name": "Pavarotti, Luciano",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "name": "Luciano Pavarotti",
+    "type": "Person",
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "country": "IT"
+   },
+   "attribute-values": {}
+  },
+  {
+   "type": "performance",
+   "work": {
+    "languages": [
+     "ita"
+    ],
+    "title": "Turandot: Atto III, scena 1. Aria “Nessun dorma” (Calaf)",
+    "id": "876aa6e9-0a0a-3408-bbfa-0565582cf8e0",
+    "type": "Aria",
+    "type-id": "ae801f48-7a7f-3af6-91c7-456f82dae8a9",
+    "language": "ita",
+    "iswcs": [],
+    "disambiguation": "",
+    "attributes": []
+   },
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "attributes": [
+    "live"
+   ],
+   "direction": "forward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "end": null,
+   "attribute-values": {},
+   "target-type": "work",
+   "source-credit": ""
+  }
+ ],
+ "first-release-date": "1993",
+ "video": false,
+ "title": "Turandot: “Nessun dorma”",
+ "disambiguation": "",
+ "artist-credit": [
+  {
+   "joinphrase": "",
+   "name": "Luciano Pavarotti",
+   "artist": {
+    "name": "Luciano Pavarotti",
+    "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+    "country": "IT",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Pavarotti, Luciano",
+    "disambiguation": "tenor"
+   }
+  }
+ ]
+}

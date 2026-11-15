@@ -1,0 +1,733 @@
+{
+ "created": "2026-11-15T14:00:33.127Z",
+ "count": 279,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "4cf239b6-3d54-4338-9a24-fa1f6fc27068",
+   "score": 100,
+   "title": "Turandot: “Nessun dorma” (Vincerò)",
+   "length": 171666,
+   "first-release-date": "1995",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Orchestra da camera di Bologna",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "452c4f17-7428-4aed-a213-7b58650eedd2",
+      "name": "Orchestra da camera di Bologna"
+     }
+    },
+    {
+     "name": "Leone Magiera",
+     "joinphrase": "",
+     "artist": {
+      "id": "0a470c25-de1c-4042-b7cb-828b13b68c43",
+      "name": "Leone Magiera"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "ca29298a-e8ef-4287-8d51-d0375e731c17",
+     "title": "Greatest Hits - Vincerò",
+     "date": "1995",
+     "status": "Official",
+     "release-group": {
+      "id": "e9ea486d-b366-475c-963d-f2bd439d33a2",
+      "title": "Greatest Hits - Vincerò",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "1755d40a-ac52-4236-8af5-4f866170aefb",
+   "score": 67,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177667,
+   "first-release-date": "1993",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "16272d98-e77a-43d0-b437-46924301cd63",
+     "title": "The Singer & The Song",
+     "date": "1993",
+     "status": "Official",
+     "release-group": {
+      "id": "72a9d9ce-9f8a-3906-98ec-06dbbc5dbe88",
+      "title": "The Singer & The Song",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "4638d4a9-3324-4977-ae20-18dd32d50219",
+   "score": 67,
+   "title": "Turandot: Nessun dorma!",
+   "length": 177066,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "5c9a64e9-3908-436c-b4c7-573ad4d698d3",
+     "title": "Nights at the Opera; The Gold Collection",
+     "date": "1998",
+     "status": "Official",
+     "release-group": {
+      "id": "4a013b84-855e-4f37-b8dd-09be82559d22",
+      "title": "Nights at the Opera; The Gold Collection",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "e55f69c8-1f51-4779-a5b0-4544543da784",
+   "score": 67,
+   "title": "Turandot: Nessun dorma",
+   "length": 178000,
+   "first-release-date": "2003",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "d87c9ed1-55bb-4c7d-ab19-7beb611023eb",
+     "title": "Reflections of Silence",
+     "date": "2003",
+     "status": "Official",
+     "release-group": {
+      "id": "60665ab5-edab-37b5-8a46-78dc83169969",
+      "title": "Reflections of Silence",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "a15f4e27-f34c-4603-a73f-1a368f02cee7",
+   "score": 67,
+   "title": "Turandot: Nessun dorma",
+   "length": 178333,
+   "first-release-date": "2007-10-07",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "e3ab8f5d-6b4b-41eb-8b54-a17c935bec53",
+     "title": "The Legend",
+     "date": "2007-10-07",
+     "status": "Promotion",
+     "release-group": {
+      "id": "1d31c574-14d8-3b17-bd26-245472fd5b02",
+      "title": "The Legend",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "2e147979-3563-4903-8d42-4d424910ca6c",
+   "score": 67,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177423,
+   "first-release-date": "2001",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "4ba44501-b8db-42d9-854a-d891a5deea48",
+     "title": "Great Voices of the 20th Century",
+     "date": "2001",
+     "status": "Official",
+     "release-group": {
+      "id": "b016e3b7-d992-4347-a346-d10db97c3757",
+      "title": "Great Voices of the 20th Century",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "248f5dcc-d02d-42ff-808a-b0fbe0bfc6ed",
+   "score": 67,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177226,
+   "first-release-date": "1995",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "bc481035-73d1-490b-b6ae-1e87ccb6690f",
+     "title": "Arena di Verona",
+     "date": "1995",
+     "status": "Official",
+     "release-group": {
+      "id": "d56a3812-3f8a-4ffe-a60b-8102e806d556",
+      "title": "Arena di Verona",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ee341db1-670a-4204-a911-0176461e2f12",
+   "score": 67,
+   "title": "Turandot: Nessun dorma",
+   "length": 177973,
+   "first-release-date": "1991",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "2b36803a-f2a3-4386-8c6a-81ab3d44b045",
+     "title": "Your Hundred Best Opera Tunes I",
+     "date": "1991",
+     "status": "Official",
+     "release-group": {
+      "id": "7591834e-6f70-41c1-9ddf-3f4f8895b448",
+      "title": "Your Hundred Best Opera Tunes I",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9bdcc4ae-5258-442a-8878-03ebdc999f74",
+     "title": "Italian Hits",
+     "date": "2016-06-24",
+     "status": "Official",
+     "release-group": {
+      "id": "d4a00233-5d4d-41b6-921b-075744d61b2b",
+      "title": "Italian Hits",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "46d39df5-f5f2-464f-9d04-f8ae0e5194b3",
+     "title": "Ça s’en va & ça revient – Special Italie",
+     "date": "2009",
+     "status": "Official",
+     "release-group": {
+      "id": "1e6c69c6-338f-4349-a92e-4cef75dbb692",
+      "title": "Ça s’en va & ça revient – Special Italie",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b5bb01e9-ad63-4c69-8aa3-93b8e548a0f3",
+     "title": "The 3 Tenors",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "caf59f79-32a8-411d-81d7-e5967f847d8a",
+      "title": "The 3 Tenors",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "de7c5de8-08ab-49aa-ae5e-ae98c859cf73",
+   "score": 67,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177053,
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "ba86c6be-4dcc-47d4-8184-c018cc1334e4",
+     "title": "Legendary Tenor",
+     "date": "",
+     "release-group": {
+      "id": "3122d034-12a6-4437-8cb5-bd260624d6b1",
+      "title": "Legendary Tenor",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "0e305598-d0ff-463c-b8b6-31793f89199e",
+   "score": 67,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 178000,
+   "first-release-date": "2001-05-22",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "437319ba-72b3-47bb-b08e-fe8bfc806268",
+     "title": "Voices of the Century",
+     "date": "2001-05-22",
+     "status": "Official",
+     "release-group": {
+      "id": "a3684ba8-0d67-422e-8432-b2e82f5718f2",
+      "title": "Voices of the Century",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "557354f2-8464-48de-9a27-cadf61e14ca0",
+   "score": 67,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177000,
+   "first-release-date": "2018-04-27",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "ab4bc866-f980-4be7-b22b-9d34509a8b0e",
+     "title": "Radio 2: Italiaanse Klassiekers",
+     "date": "2018-04-27",
+     "status": "Official",
+     "release-group": {
+      "id": "1cbd3483-07db-4181-9b41-09ecf17e722e",
+      "title": "Radio 2: Italiaanse Klassiekers",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "d0946cfb-e138-4022-a319-3e5716b8afae",
+   "score": 67,
+   "title": "Turandot: Nessun dorma",
+   "length": 178333,
+   "first-release-date": "1995",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "c204b7f6-4b20-4492-950f-f42b78419e1a",
+     "title": "Essential Opera Highlights - The Virtuoso Collection",
+     "status": "Official",
+     "release-group": {
+      "id": "9db00975-9d2d-4c05-931f-6673d5dd9f5d",
+      "title": "Essential Opera Highlights - The Virtuoso Collection",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "7795e09c-054e-4311-b220-e2d4b3889331",
+   "score": 67,
+   "title": "Turandot: Nessun dorma",
+   "length": 178173,
+   "first-release-date": "2001",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "ed2a5165-f783-4ba3-975c-4fbf8448252c",
+     "title": "For the One You Love: The World's Favorite Romantic Melodies",
+     "date": "2001",
+     "status": "Official",
+     "release-group": {
+      "id": "0e0c94a0-c477-410f-b749-8aec42ea03ed",
+      "title": "For the One You Love: The World's Favorite Romantic Melodies",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "106407bf-551e-4613-a218-aa8a094556e1",
+   "score": 60,
+   "title": "Turandot: “Nessun dorma! All’alba vincerò”",
+   "length": 172000,
+   "first-release-date": "1995-12-01",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "d2039b81-d13e-4605-aa2e-2e21b3cc1c19",
+     "title": "Miniature d’opera",
+     "date": "1995-12-01",
+     "status": "Promotion",
+     "release-group": {
+      "id": "6b961b97-80de-3d13-ae92-4fe280d7d8bd",
+      "title": "Miniature d'opera",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "3bef7371-e77d-42ba-9cfb-e611696a2e54",
+   "score": 60,
+   "title": "Turandot: Atto III. “Nessun dorma”",
+   "length": 178586,
+   "first-release-date": "2011",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "aa4f58f2-0406-4fe3-bed3-8607c983017e",
+     "title": "Now That’s What I Call Classical",
+     "date": "2011",
+     "status": "Official",
+     "release-group": {
+      "id": "c0082996-d559-4fc9-bf4e-a7ca05e4672f",
+      "title": "Now That's What I Call Classical",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "c7c9abeb-93f0-4d7a-a0fe-8ea97a6785b7",
+   "score": 60,
+   "title": "Turandot: Atto III. “Nessun dorma”",
+   "length": 170991,
+   "first-release-date": "2005",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "5fd25171-74c3-4383-9a3d-e163be241871",
+     "title": "The Best of Luciano Pavarotti",
+     "date": "2005",
+     "release-group": {
+      "id": "b25a3ad3-e6ac-43eb-8c1e-13634bf794c6",
+      "title": "The Best of Luciano Pavarotti",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "6a9111dd-6a79-4226-ada1-5fa1e8a05995",
+   "score": 60,
+   "title": "Nessun dorma (Puccini – Turandot)",
+   "length": 178400,
+   "first-release-date": "2000",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "c2ab0006-f02b-41b1-9423-b5479f3fe72b",
+     "title": "The Greatest Opera Arias",
+     "status": "Official",
+     "release-group": {
+      "id": "69a2131d-d088-4a13-baf1-43d2807615f1",
+      "title": "The Greatest Opera Arias",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ea2e76ba-53ff-4d12-89ca-9cc0c04a446a",
+   "score": 60,
+   "title": "Turandot: Atto III. “Nessun dorma”",
+   "length": 173626,
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a5fc4bf8-6804-456f-9319-dde87f5943e4",
+     "title": "The Three Tenors Series 1",
+     "status": "Official",
+     "release-group": {
+      "id": "879f0278-debc-3027-bc23-f595d4284229",
+      "title": "The Three Tenors Series 1",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "62e7b57a-0cef-45b2-8621-c6a369bf58ad",
+   "score": 59,
+   "title": "Turandot: “Nessun dorma”",
+   "length": 177333,
+   "first-release-date": "1996-04-02",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    },
+    {
+     "name": "Zubin Mehta",
+     "joinphrase": "",
+     "artist": {
+      "id": "b83bb7b8-1b89-4b12-9af6-fd7ac29e2fae",
+      "name": "Zubin Mehta"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "e76a3a9b-00ae-4527-9b02-588cc428dcb6",
+     "title": "For The Children Of Bosnia",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "645d6a1f-dcbb-4a14-ab17-1106c160fcc4",
+      "title": "For The Children Of Bosnia",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9da1d642-397a-4ea2-8d40-f2c305795985",
+     "title": "For The Children Of Bosnia",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "645d6a1f-dcbb-4a14-ab17-1106c160fcc4",
+      "title": "For The Children Of Bosnia",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b8c292fd-dbbc-4154-89a2-011ad9d3e0ae",
+     "title": "Pavarotti & Friends: Together for the Children of Bosnia",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "b6ff8972-a1d9-3d4d-a868-f42931ee30e5",
+      "title": "Luciano Pavarotti & Friends: Together for the Children of Bosnia",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "932fe9cb-9cf6-490c-a704-7838daaa586d",
+     "title": "Pavarotti & Friends: Best",
+     "date": "1997",
+     "status": "Official",
+     "release-group": {
+      "id": "3e17086d-79f7-3e19-aff8-c1b6ed0b53c9",
+      "title": "Pavarotti & Friends: Best",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9c8e42bd-5a3e-4996-a5c0-960a9558320d",
+     "title": "Pavarotti & Friends: Together for the Children of Bosnia",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "b6ff8972-a1d9-3d4d-a868-f42931ee30e5",
+      "title": "Luciano Pavarotti & Friends: Together for the Children of Bosnia",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a1d74854-9307-4c0b-abdf-c93304e93b2b",
+     "title": "Luciano Pavarotti & Friends: Ensemble Pour Les Enfants de Bosnie",
+     "date": "1996",
+     "status": "Official",
+     "release-group": {
+      "id": "b6ff8972-a1d9-3d4d-a868-f42931ee30e5",
+      "title": "Luciano Pavarotti & Friends: Together for the Children of Bosnia",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "7fa4c7ff-97ac-4e5c-81f3-0d8d6d78f685",
+     "title": "The Voice of Romance",
+     "status": "Official",
+     "release-group": {
+      "id": "ac05e259-931a-3123-9d90-c4e4fd754e60",
+      "title": "The Voice of Romance",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "787e1072-50fb-4e1a-a420-84c9ac39de26",
+     "title": "Luciano Pavarotti & Friends: Together for the Children of Bosnia",
+     "date": "1996-04-02",
+     "status": "Official",
+     "release-group": {
+      "id": "b6ff8972-a1d9-3d4d-a868-f42931ee30e5",
+      "title": "Luciano Pavarotti & Friends: Together for the Children of Bosnia",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b419cdbb-eb06-463b-a65e-3585d80d02bc",
+   "score": 58,
+   "title": "Nessun dorma - Turandot - Puccini",
+   "length": 177066,
+   "first-release-date": "1998",
+   "artist-credit": [
+    {
+     "name": "Luciano Pavarotti",
+     "joinphrase": "",
+     "artist": {
+      "id": "705076ef-a0c5-472f-bebd-3e72174fcaf4",
+      "name": "Luciano Pavarotti"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "6950dda1-d239-4603-999f-3bcf59e19cf0",
+     "title": "Timeless Classics",
+     "date": "1998",
+     "status": "Promotion",
+     "release-group": {
+      "id": "e955d499-2338-40ef-9c43-4ae05c8361c3",
+      "title": "Timeless Classics",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,178 @@
+{
+ "type": "Orchestra",
+ "gender": null,
+ "type-id": "a0b36c92-3eb1-3839-a4f9-4799823f54a5",
+ "aliases": [
+  {
+   "ended": false,
+   "primary": null,
+   "end": null,
+   "type": null,
+   "name": "BPO",
+   "sort-name": "BPO",
+   "type-id": null,
+   "begin": null,
+   "locale": null
+  },
+  {
+   "begin": null,
+   "locale": "et",
+   "end": null,
+   "type": null,
+   "name": "Berliini Filharmoonia Orkester",
+   "sort-name": "Berliini Filharmoonia Orkester",
+   "type-id": null,
+   "ended": false,
+   "primary": true
+  },
+  {
+   "locale": "en",
+   "begin": null,
+   "name": "Berlin Philharmonic",
+   "type-id": null,
+   "sort-name": "Berlin Philharmonic",
+   "end": null,
+   "type": null,
+   "ended": false,
+   "primary": false
+  },
+  {
+   "begin": null,
+   "locale": "en",
+   "primary": true,
+   "ended": false,
+   "type": "Artist name",
+   "end": null,
+   "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+   "sort-name": "Berlin Philharmonic Orchestra",
+   "name": "Berlin Philharmonic Orchestra"
+  },
+  {
+   "type": null,
+   "end": null,
+   "type-id": null,
+   "sort-name": "Berlin Philharmoniker",
+   "name": "Berlin Philharmoniker",
+   "primary": null,
+   "ended": false,
+   "begin": null,
+   "locale": null
+  },
+  {
+   "name": "Berliner Philharmoniker",
+   "sort-name": "Berliner Philharmoniker",
+   "type-id": null,
+   "end": null,
+   "type": null,
+   "ended": false,
+   "primary": true,
+   "locale": "de",
+   "begin": null
+  },
+  {
+   "ended": false,
+   "primary": false,
+   "end": null,
+   "type": "Artist name",
+   "name": "Berliner Philharmonisches Orchester",
+   "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+   "sort-name": "Berliner Philharmonisches Orchester",
+   "begin": null,
+   "locale": "de"
+  },
+  {
+   "ended": false,
+   "primary": true,
+   "end": null,
+   "type": null,
+   "name": "Orchestre philharmonique de Berlin",
+   "type-id": null,
+   "sort-name": "Orchestre philharmonique de Berlin",
+   "begin": null,
+   "locale": "fr"
+  },
+  {
+   "begin": null,
+   "locale": "es",
+   "ended": false,
+   "primary": true,
+   "end": null,
+   "type": null,
+   "name": "Orquesta filarmónica de Berlín",
+   "type-id": null,
+   "sort-name": "Orquesta filarmónica de Berlín"
+  },
+  {
+   "end": null,
+   "type": null,
+   "name": "The Berlin Philharmonic Orchestra",
+   "sort-name": "Berlin Philharmonic Orchestra, The",
+   "type-id": null,
+   "ended": false,
+   "primary": false,
+   "begin": null,
+   "locale": "en"
+  },
+  {
+   "primary": false,
+   "ended": false,
+   "type": "Artist name",
+   "end": null,
+   "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+   "sort-name": "ベルリン・フィルハーモニー・ブラスオルケスター",
+   "name": "ベルリン・フィルハーモニー・ブラスオルケスター",
+   "begin": null,
+   "locale": "ja"
+  },
+  {
+   "begin": null,
+   "locale": "ja",
+   "type": null,
+   "end": null,
+   "sort-name": "ベルリン・フィルハーモニーかんげんがくだん",
+   "type-id": null,
+   "name": "ベルリン・フィルハーモニー管弦楽団",
+   "primary": true,
+   "ended": false
+  }
+ ],
+ "sort-name": "Berliner Philharmoniker",
+ "name": "Berliner Philharmoniker",
+ "country": "DE",
+ "disambiguation": "",
+ "area": {
+  "type": null,
+  "type-id": null,
+  "sort-name": "Berlin",
+  "name": "Berlin",
+  "id": "c9ac1239-e832-41bc-9930-e252a1fd1105",
+  "disambiguation": "",
+  "iso-3166-2-codes": [
+   "DE-BE"
+  ]
+ },
+ "gender-id": null,
+ "begin-area": {
+  "type": null,
+  "name": "Berlin",
+  "id": "c9ac1239-e832-41bc-9930-e252a1fd1105",
+  "type-id": null,
+  "sort-name": "Berlin",
+  "iso-3166-2-codes": [
+   "DE-BE"
+  ],
+  "disambiguation": ""
+ },
+ "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+ "life-span": {
+  "ended": false,
+  "end": null,
+  "begin": "1882"
+ },
+ "isnis": [
+  "0000000120191498",
+  "0000000121144247"
+ ],
+ "ipis": [],
+ "end-area": null
+}
