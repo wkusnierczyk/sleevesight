@@ -266,6 +266,9 @@ sealed interface InsightState {
      * what the call that wrote it as a rewrite (*Rewrite insight*, #854) used that the insight it
      * replaced did not, which its footer says ("Rewritten with …"), kept with the card so a later
      * play says it too; empty for an insight written the first time, and for one no rewrite wrote.
+     * [nothingBeyondHome] when the evidence it was written from holds nothing beyond what Home shows
+     * of the track (#1142, `HomeShown`), so the card says no more source information was found;
+     * decided from that evidence, which is in the card's key, so a card served again says it again.
      */
     data class Written(
         val grounded: GroundedText,
@@ -277,6 +280,7 @@ sealed interface InsightState {
         val writtenAt: Instant? = null,
         val searched: EvidenceSet? = null,
         val rewritten: Set<RewritePart> = emptySet(),
+        val nothingBeyondHome: Boolean = false,
     ) : InsightState
 
     /**

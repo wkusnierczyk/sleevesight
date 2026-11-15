@@ -56,6 +56,35 @@ object MusicBrainzEvidence {
             ?.get(2)
             ?.takeIf { it.isNotEmpty() }
 
+    /**
+     * The release a first-release line of [lines] names, with its type as written (`album`, `single`,
+     * `ep`, …; empty for a release of no type): `("single", "Sundown")` from "… was first released in
+     * 1974, on the single “Sundown”." Null when [text] is no first-release line. Read as
+     * [firstReleaseAlbum] reads it, from the release's own slot (#1142, `HomeShown`).
+     */
+    fun firstRelease(text: String): Pair<String, String>? =
+        FIRST_RELEASE.find(text)?.groupValues?.let { (_, type, title) ->
+            (type.removePrefix("the ").trim() to title).takeIf { title.isNotEmpty() }
+        }
+
+    /**
+     * The names a credit line of [lines] gives, as written (`EvidenceText.list`'s "A, B and C"): the
+     * writers', composers', lyricists', librettists' and producers' lines, and a performer's. Null for
+     * any other line (#1142, `HomeShown`).
+     */
+    fun creditedNames(text: String): String? = CREDITS.firstNotNullOfOrNull { it.find(text)?.groupValues?.get(1) }
+
+    // The credit lines as [writerLines] and [recordingLines] write them, the names in the group.
+    private val CREDITS: List<Regex> =
+        listOf(
+            Regex("^“.*” was written by (.+)\\.$"),
+            Regex("^The music of “.*” was composed by (.+)\\.$"),
+            Regex("^The lyrics of “.*” were written by (.+)\\.$"),
+            Regex("^The libretto of this [a-z]+ was written by (.+)\\.$"),
+            Regex("^This recording of “.*” was produced by (.+)\\.$"),
+            Regex("^(.+?) performs on this recording of “.*”(?: \\(.*\\))?\\.$"),
+        )
+
     /** The lines for [resolution], dated [retrievedAt]; none when no recording was accepted. */
     fun lines(
         resolution: Resolution,

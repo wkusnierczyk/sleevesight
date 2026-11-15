@@ -19,27 +19,29 @@ import kotlin.time.TimeMark
 
 /**
  * The home insight for one track, once its [evidence] is in: from the synthesis cache when it has
- * this exact card (R2), else written by the model when asked, and always checked
- * ([GroundingCheck]) before it is shown. When the evidence has nothing to narrate
- * ([EvidenceSet.nothingToNarrate]: no line, or only the player's own release, unless model
- * knowledge is on and the report names the artists), no call is made and the card shows the app's
- * own text: the call would be paid for a `NO_EVIDENCE` or a restatement of the release. The prompt
- * leaves out artist-level lines the insight should not dwell on (#239, [PromptEvidence]): all of
- * them for a track with enough of its own, else those other tracks' insights in the listening
- * session cited ([SessionFacts]); none, with *Don't repeat artist facts* off (#407,
- * `Settings.artistFactsOncePerSession`). Either way, it leaves out the player's release line when
- * MusicBrainz's first-release line names that album (#424). A fresh reply is checked against what
- * its prompt held, a card from the cache against the whole evidence (see `finish`); both cite the
- * whole evidence's ids. A reply that still revises itself where the card would show it
- * ([SelfRevision], #798) is cut to what follows the revision when that is usable, with no further
- * call; else it is asked for once more, a second paid call, and if that reply leaves nothing usable
- * either, the card shows the error state. A card kept from before is cut the same way, or, with
- * nothing usable, not served, as though there were none. With no card under its own key, the one
- * kept for the same track and evidence by another AI service, model or effort, the most recently
- * written, goes to the control with the question whether to write (#911): shown in place of none,
- * with *Rewrite insight* offered, when the run does not write by itself. While the selected model is
- * found unavailable (#540, [PipelineParts.modelUnavailable]), nothing is written, but the card kept
- * under the service and model selected, else another's, still shows, with nothing offered.
+ * this exact card (R2), else written by the model when asked, and always checked ([GroundingCheck])
+ * before it is shown. When the evidence has nothing to narrate ([EvidenceSet.nothingToNarrate]: no
+ * line, or only the player's own release, unless model knowledge is on and the report names the
+ * artists), no call is made and the card shows the app's own text: the call would be paid for a
+ * `NO_EVIDENCE` or a restatement of the release. With any other evidence the call is made, and when
+ * that evidence holds nothing beyond what Home shows ([HomeShown], #1142), the insight written says
+ * so under it ([InsightState.Written.nothingBeyondHome]). The prompt leaves out artist-level lines
+ * the insight should not dwell on (#239, [PromptEvidence]): all of them for a track with enough of
+ * its own, else those other tracks' insights in the listening session cited ([SessionFacts]); none,
+ * with *Don't repeat artist facts* off (#407, `Settings.artistFactsOncePerSession`). Either way, it
+ * leaves out the player's release line when MusicBrainz's first-release line names that album
+ * (#424). A fresh reply is checked against what its prompt held, a card from the cache against the
+ * whole evidence (see `finish`); both cite the whole evidence's ids. A reply that still revises
+ * itself where the card would show it ([SelfRevision], #798) is cut to what follows the revision
+ * when that is usable, with no further call; else it is asked for once more, a second paid call,
+ * and if that reply leaves nothing usable either, the card shows the error state. A card kept from
+ * before is cut the same way, or, with nothing usable, not served, as though there were none. With
+ * no card under its own key, the one kept for the same track and evidence by another AI service,
+ * model or effort, the most recently written, goes to the control with the question whether to
+ * write (#911): shown in place of none, with *Rewrite insight* offered, when the run does not write
+ * by itself. While the selected model is found unavailable (#540,
+ * [PipelineParts.modelUnavailable]), nothing is written, but the card kept under the service and
+ * model selected, else another's, still shows, with nothing offered.
  */
 @Suppress(
     "TooManyFunctions", // Each step of the insight: the card kept, the call, its reply, its check.
@@ -63,6 +65,10 @@ internal class InsightWriter(
     private val subject = subjectOf(CardEntity.Track(track, nowPlaying.duration), nowPlaying)
     private val key = track.lookupKey
     private val allowModel = settings.isEnabled(SourceId.MODEL)
+
+    // Whether the evidence holds nothing beyond what Home shows (#1142): decided before the call, from
+    // the whole evidence, the card's key's, so a card served again says it as the one written did.
+    private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track)
 
     // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
     // Its dates in the form the parts give as each call is made (#957), not when the run began: a tap may
@@ -126,7 +132,7 @@ internal class InsightWriter(
         val narrates = !evidence.nothingToNarrate(allowModel, artistsKnown = track.artists.isNotEmpty())
         val wanted = if (provider != null && model != null && narrates) cardKey(provider, model) else null
         if (wanted != null && served(wanted, control)) return
-        val other = wanted?.let { guard.keptByOther(it, evidence, allowModel, subject) }
+        val other = wanted?.let { guard.keptByOther(it, evidence, allowModel, subject, nothingBeyondHome) }
         if (other == null) {
             control.decidedWithoutCall()
             show(InsightState.Idle(canWrite = false))
@@ -183,7 +189,7 @@ internal class InsightWriter(
         if (served(wanted, control)) return
         // None under its own key: the one another service, model or effort wrote, if kept (#911),
         // which the control shows in its place unless the run writes anew.
-        val other = guard.keptByOther(wanted, evidence, allowModel, subject)
+        val other = guard.keptByOther(wanted, evidence, allowModel, subject, nothingBeyondHome)
         when {
             control.decide(settings, other, evidence) -> {
                 calls(ai, model, wanted, control)
@@ -438,6 +444,7 @@ internal class InsightWriter(
                     card.writtenBy(),
                     writtenAt,
                     rewritten = rewritten,
+                    nothingBeyondHome = nothingBeyondHome,
                 )
             }
         }
@@ -504,11 +511,13 @@ internal class InsightWriter(
 // is shown when the run offers Write, as the card paid for, not as the run's own; or, with the
 // selected model unavailable (`keptWithoutService`), as the run's own, with nothing offered. Its
 // sentences are checked for support with the run's [subject], the player's names among them (#1036).
+// [nothingBeyondHome] as the run decided it from the same evidence (#1142).
 private suspend fun CacheGuard.keptByOther(
     wanted: CardKey,
     evidence: EvidenceSet,
     allowModel: Boolean,
     subject: List<String>,
+    nothingBeyondHome: Boolean,
 ): InsightState.Written? {
     val others = attempt("read other insights") { keptByOthers(wanted) }.orEmpty()
     return others.firstNotNullOfOrNull { other ->
@@ -519,6 +528,7 @@ private suspend fun CacheGuard.keptByOther(
                 writtenBy = other.key.writtenBy(),
                 writtenAt = other.card.writtenAt,
                 rewritten = other.card.rewritten,
+                nothingBeyondHome = nothingBeyondHome,
             )
         }
     }
