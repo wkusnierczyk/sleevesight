@@ -1,6 +1,7 @@
-# Code owners (#1035): a pull request that changes one of these files asks its owner for a review,
-# which `main`'s protection requires. Paths starting with `/` are from the repository's root; a path
-# ending in `/` takes everything under it; where several lines match a file, the last one wins.
+# Code owners (#1035): names the owner of these files. Enforced only on pull requests into `main`,
+# which requires a code owner's review; work goes into `dev-*` branches, and gates bypass it by a
+# fast-forward. Paths starting with `/` are from the repository's root; a path ending in `/` takes
+# everything under it; where several lines match a file, the last one wins.
 
 # The pages that handle keys, served straight from `main`: the API keys page (`api-keys.html`, #436)
 # and the keyboard page (`keyboard.html`, #394), their scripts and style sheets, and the includes and
@@ -19,8 +20,10 @@
 
 # What else changes how the site builds or what it serves on those pages: the site's settings, the
 # layouts, a theme's style sheet or Sass overridden here (`assets/css/`, `_sass/`), the fonts and
-# icon the pages load, the gems that would choose the build, and a `.nojekyll` that would serve the
-# pages unbuilt. Some do not exist yet; a line for them takes effect when one is added.
+# icon the pages load, the gems that would choose the build, a `.nojekyll` that would serve the pages
+# unbuilt, and posts and drafts, which Jekyll builds wherever their permalink says (the site has no
+# other collection; one would be set in `_config.yml`). Some do not exist yet; a line for them takes
+# effect when one is added.
 /_config.yml @wkusnierczyk
 /_layouts/ @wkusnierczyk
 /_sass/ @wkusnierczyk
@@ -30,6 +33,8 @@
 /Gemfile @wkusnierczyk
 /Gemfile.lock @wkusnierczyk
 /.nojekyll @wkusnierczyk
+/_posts/ @wkusnierczyk
+/_drafts/ @wkusnierczyk
 
 # The workflows, the scripts they run (the pages' policy test among them), and this file.
 /.github/ @wkusnierczyk

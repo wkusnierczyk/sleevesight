@@ -7,16 +7,25 @@
 // The test does not parse HTML. It pins each page's start, from the line after the front matter
 // through the end of the policy's `<meta>` tag, byte for byte, so anything inserted, reordered,
 // re-encoded or wrapped before or around the policy fails here, whatever a browser or Jekyll would
-// make of it. Changing a page's head therefore means changing its pin here too: a change to
-// `.github/`, which `CODEOWNERS` covers. A page must also name `Content-Security-Policy` only once,
-// so a second policy later in the page fails; and its front matter must set `layout: null` by plain
-// lines a YAML reader cannot turn into anything else, so that no layout wraps the page when Jekyll
-// builds it. Not covered: site-wide build settings (`_config.yml`, a `.nojekyll`, the theme) and the
-// files the policy admits (`'self'`), which `CODEOWNERS` covers instead.
+// make of it. Changing a page's head therefore means changing its pin here too, in `.github/`, for
+// which `CODEOWNERS` names the owner (enforced only on pull requests into `main`, which gates
+// bypass). A page must also name `Content-Security-Policy` only once, so a second policy later in the
+// page fails; and its front matter must set `layout: null` in plain printable ASCII lines that a
+// YAML reader cannot turn into anything else, so that no layout wraps the page when Jekyll builds it.
+//
+// No other file may be served in a page's place: no file beside it at the root under the same name
+// (`api-keys.md` would build to `/api-keys.html`), and no front matter in the repository with a
+// `permalink:` to it, or one this test cannot read plainly (quoted, escaped, in a flow mapping, split
+// by a line break YAML knows and this test does not). `_posts/` documents and collections are among
+// the files read. Not covered: site-wide build settings (`_config.yml`, a `.nojekyll`, the theme, a
+// collection's permalink set there) and the files the policy admits (`'self'`).
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { closeSync, openSync, readFileSync, readSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = new URL('../../', import.meta.url);
 
@@ -68,6 +77,12 @@ const LINE = /^(?: *(?:#.*)?| *(?:- )?[a-z_][a-z0-9_]*:(?: .*)?)$/;
 
 function frontMatter(yaml) {
   const found = [];
+  // YAML also breaks lines at U+0085, U+2028 and U+2029, which a line here would run through.
+  const odd = yaml.match(/[^\x20-\x7e\n]/);
+  if (odd) {
+    const code = odd[0].codePointAt(0).toString(16).padStart(4, '0');
+    found.push(`front matter with U+${code}, outside printable ASCII`);
+  }
   const lines = yaml.split('\n');
   for (const line of lines) {
     const shown = JSON.stringify(line);
@@ -84,9 +99,9 @@ function frontMatter(yaml) {
 
 // What is wrong with a page's source against its pinned start, as a list of reasons.
 export function problems(source, start) {
-  const front = source.match(/^---\n((?:.*\n)*?)---\n/);
+  const front = source.match(/^---\n([\s\S]*?\n)?---\n/);
   if (!front) return ['no front matter: Jekyll would not build the page'];
-  const found = frontMatter(front[1].replace(/\n$/, ''));
+  const found = frontMatter((front[1] ?? '').replace(/\n$/, ''));
   const html = source.slice(front[0].length);
   const named = html.toLowerCase().split('content-security-policy').length - 1;
   if (named !== 1) found.push(`Content-Security-Policy named ${named} times, not once`);
@@ -101,6 +116,55 @@ for (const [page, start] of Object.entries(STARTS)) {
     assert.deepEqual(problems(read(page), start), []);
   });
 }
+
+// The paths the pages are served at, as Jekyll would write a permalink to them: without `.html`
+// (`/api-keys` is written as `api-keys.html`), in lower case.
+const SERVED = new Set(Object.keys(STARTS).map((page) => `/${page.replace(/\.html$/, '')}`));
+const PERMALINK = /^permalink: (\/[A-Za-z0-9_.\/-]*)\r?$/;
+const BREAKS = [0x85, 0x2028, 0x2029].map((code) => String.fromCodePoint(code));
+
+// What is wrong with another file of the repository (its path, and the start of its text), as a
+// list of reasons: a file Jekyll could serve in a page's place, or whose permalink cannot be read.
+export function elsewhere(path, head) {
+  const found = [];
+  if (!path.includes('/') && SERVED.has(`/${path.toLowerCase().split('.')[0]}`) && !(path in STARTS)) {
+    found.push(`${path}: beside a page under its name, which Jekyll could build in its place`);
+  }
+  const front = head.match(/^---[ \t]*\r?\n([\s\S]*?)^(?:---|\.\.\.)[ \t]*\r?$/m);
+  if (!front || front.index !== 0) return found;
+  const yaml = front[1];
+  if (BREAKS.some((b) => yaml.includes(b))) found.push(`${path}: front matter with a line break YAML knows`);
+  if (yaml.includes('\\')) found.push(`${path}: front matter with a backslash, which could escape a key`);
+  for (const line of yaml.split('\n').filter((l) => /permalink/i.test(l))) {
+    const plain = line.match(PERMALINK);
+    if (!plain) {
+      found.push(`${path}: a permalink not as \`permalink: /plain/path\`: ${JSON.stringify(line)}`);
+    } else if (/\/\/|(^|\/)\.\.?(\/|$)/.test(plain[1])) {
+      found.push(`${path}: a permalink with an empty, \`.\` or \`..\` segment: ${plain[1]}`);
+    } else if (SERVED.has(plain[1].toLowerCase().replace(/\.html$/, ''))) {
+      found.push(`${path}: a permalink to a page's path: ${plain[1]}`);
+    }
+  }
+  return found;
+}
+
+// The start of a file: front matter is short, and fixtures are not.
+function head(path) {
+  const buffer = Buffer.alloc(65536);
+  const fd = openSync(join(fileURLToPath(ROOT), path), 'r');
+  try {
+    return buffer.subarray(0, readSync(fd, buffer, 0, buffer.length, 0)).toString('utf8');
+  } finally {
+    closeSync(fd);
+  }
+}
+
+test('no other file in the repository would be served in a page\'s place', () => {
+  const files = execFileSync('git', ['ls-files', '-z'], { cwd: ROOT }).toString().split('\0').filter(Boolean);
+  assert.ok(files.length > 100, `git ls-files listed ${files.length} files`);
+  const found = files.filter((path) => !(path in STARTS)).flatMap((path) => elsewhere(path, head(path)));
+  assert.deepEqual(found, []);
+});
 
 // Changes the checks must refuse, made to the real API keys page, each with the reason it is
 // refused for. `before` puts text just before the policy, `around` wraps it.
@@ -128,7 +192,10 @@ const refused = {
     STARTED,
   ],
   'data-http-equiv for http-equiv': [swap('<meta http-equiv=', '<meta data-http-equiv='), STARTED],
-  'a no-break space for a space in the tag': [swap('<meta http-equiv=', '<meta http-equiv='), STARTED],
+  'a no-break space for a space in the tag': [
+    swap('<meta http-equiv=', `<meta${String.fromCodePoint(0xa0)}http-equiv=`),
+    STARTED,
+  ],
   'a character reference in the policy': [swap("script-src 'self'", 'script-src &APOS;self&APOS;'), STARTED],
   // Where the policy is.
   'the policy only in a comment': [around('<!-- ', ' -->'), STARTED],
@@ -156,6 +223,15 @@ const refused = {
   'a flow mapping': [layout('layout: null\nmore: {layout: default}\n'), 'flow mapping'],
   'a document marker': [layout('layout: null\n...\n'), 'not a plain key'],
   'a tab before a key': [layout('layout: null\n\tlayout: default\n'), 'not a plain key'],
+  // Line breaks YAML (Psych, which Jekyll uses) knows and a line here would run through.
+  'a NEL before a second layout': [
+    swap('docs_version: 0.6.5\n', `docs_version: 0.6.5${String.fromCodePoint(0x85)}layout: default\n`),
+    'outside printable ASCII',
+  ],
+  'a line separator before a second layout': [
+    swap('docs_version: 0.6.5\n', `docs_version: 0.6.5${String.fromCodePoint(0x2028)}layout: default\n`),
+    'outside printable ASCII',
+  ],
   'no front matter': [PAGE.replace(/^---\n(?:.*\n)*?---\n/, ''), 'no front matter'],
 };
 
@@ -165,3 +241,47 @@ for (const [name, [source, reason]] of Object.entries(refused)) {
     assert.ok(found.some((problem) => problem.includes(reason)), `${name}: ${JSON.stringify(found)}`);
   });
 }
+
+// Other files that the checks must refuse, each with its path, its text and the reason.
+const withFront = (...lines) => ['---', ...lines, '---', 'Text', ''].join('\n');
+const refusedElsewhere = {
+  'a Markdown page beside the API keys page': ['api-keys.md', 'Text\n', 'beside a page'],
+  'a page beside the keyboard page, in another case': ['Keyboard.markdown', withFront('title: K'), 'beside a page'],
+  'a permalink to the API keys page': ['docs/x/index.md', withFront('permalink: /api-keys.html'), "a page's path"],
+  'a permalink to the keyboard page without `.html`': ['docs/x.md', withFront('permalink: /keyboard'), "a page's path"],
+  'a permalink to the API keys page in another case': ['x.md', withFront('permalink: /API-Keys.html'), "a page's path"],
+  'a post with a permalink to the API keys page': [
+    '_posts/2026-01-01-x.md',
+    withFront('title: X', 'permalink: /api-keys.html'),
+    "a page's path",
+  ],
+  'a quoted permalink': ['x.md', withFront('permalink: "/api-keys.html"'), 'not as'],
+  'a permalink in a flow mapping': ['x.md', withFront('defaults: {permalink: /api-keys.html}'), 'not as'],
+  'a permalink under another key': ['x.md', withFront('base:', '  permalink: /api-keys.html'), 'not as'],
+  'a permalink through `..`': ['x.md', withFront('permalink: /x/../api-keys.html'), '`..`'],
+  'a permalink through an empty segment': ['x.md', withFront('permalink: //api-keys.html'), 'empty'],
+  'a permalink after a NEL': [
+    'x.md',
+    withFront(`title: X${String.fromCodePoint(0x85)}permalink: /api-keys.html`),
+    'line break',
+  ],
+  'a permalink after a paragraph separator': [
+    'x.md',
+    withFront(`title: X${String.fromCodePoint(0x2029)}permalink: /api-keys.html`),
+    'line break',
+  ],
+  'an escaped permalink key': ['x.md', withFront('"perma' + '\\' + 'u006cink": /api-keys.html'), 'backslash'],
+};
+
+for (const [name, [path, text, reason]] of Object.entries(refusedElsewhere)) {
+  test(`the checks refuse ${name}`, () => {
+    const found = elsewhere(path, text);
+    assert.ok(found.some((problem) => problem.includes(reason)), `${name}: ${JSON.stringify(found)}`);
+  });
+}
+
+test('the checks pass other files as the site has them', () => {
+  assert.deepEqual(elsewhere('privacy.md', withFront('title: Privacy', 'permalink: /privacy.html')), []);
+  assert.deepEqual(elsewhere('docs/x/index.md', withFront('permalink: /docs/x/')), []);
+  assert.deepEqual(elsewhere('assets/api-keys/api-keys.js', 'export {};\n'), []);
+});
