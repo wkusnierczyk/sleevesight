@@ -36,7 +36,6 @@ import app.sleevesight.app.ui.logo.SpinningRecord
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
-import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
@@ -51,12 +50,12 @@ import app.sleevesight.core.settings.Layout as LayoutSetting
 /**
  * The rows under *Key insights* (#522, #894), before *Sources*: [rows] as a table of two columns, no
  * lines between them. On the left each kind (*Song*, *Artist*, *Album*) as a button drawn as *Dates*'
- * is ([PanelChip]), with the **AI** mark after it while *Show insights* is on (#948), its tap writing
- * what it opens, all as wide as the widest, mark included, so both their edges line up and the names
- * start in one column; on the right its name, on one line clipped with an ellipsis, a tap showing it
- * whole and another clipping it again ([NameText]). A screen reader reads a row as one stop, its
- * button: "Song, Paper Boats, uses AI. Button. Double-tap to show the song's insight", the whole name,
- * clipped or not; with *Show insights* off, "Song, Paper Boats".
+ * is ([PanelChip]), with the **AI** mark at its end while *Show insights* is on (#948), its tap writing
+ * what it opens, all [width] wide, as *Sources*' chip under them ([keyInsightsWidth], #1286), so both
+ * their edges line up and the names start in one column; on the right its name, on one line clipped
+ * with an ellipsis, a tap showing it whole and another clipping it again ([NameText]). A screen
+ * reader reads a row as one stop, its button: "Song, Paper Boats, uses AI. Button. Double-tap to show
+ * the song's insight", the whole name, clipped or not; with *Show insights* off, "Song, Paper Boats".
  *
  * A closed row follows whether its item's insight is being written ([itemWrites], #948), on this track
  * or, for the same artist or album, on one before: meanwhile, the turning record before its name, and
@@ -85,6 +84,7 @@ internal fun ItemRows(
     pages: Boolean,
     folds: ItemFolds,
     context: ItemContext,
+    width: Dp = keyInsightsWidth(rows, ai = context.settings.writeInsights),
     openPage: (InsightItem) -> Unit,
 ) {
     val handoff = rememberFocusHandoff()
@@ -109,8 +109,6 @@ internal fun ItemRows(
     val kinds = rows.map { itemKind(it.item, it) }
     // The mark on every button while insights are written (#948): what each opens is AI-written.
     val ai = context.settings.writeInsights
-    // The widest kind sets every button's width, whichever rows are open, so nothing moves on opening.
-    val width = chipColumnWidth(kinds, mark = ai)
     Column(Modifier.fillMaxWidth().testTag(ITEM_ROWS_TAG), verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
         rows.forEachIndexed { index, row ->
             val item = row.item
@@ -313,17 +311,18 @@ private val RECORD_GAP = 8.dp
 private val NAME_CELL = 48.dp
 
 /**
- * The rows on Home (#522), of [header], the track shown: under *Expandable boxes* opening in place,
- * kept in [memory] and starting on a new track as *Song, Artist and Album on a new track* says; under
- * *Separate pages* each opening its page. A citation goes to [cite], a report to [onReport]. Nothing
- * until the settings are read, as *Sources*.
+ * The rows on Home (#522), [rows] of the track shown, their buttons [width] wide ([keyInsightsWidth]):
+ * under *Expandable boxes* opening in place, kept in [memory] and starting on a new track as *Song,
+ * Artist and Album on a new track* says; under *Separate pages* each opening its page. A citation
+ * goes to [cite], a report to [onReport]. Nothing until the settings are read, as *Sources*.
  */
 @Suppress("LongParameterList") // What the rows show, where they are kept, and where their taps go.
 @Composable
 internal fun HomeItems(
     state: NowPlayingState,
     shown: Showing,
-    header: NowPlaying,
+    rows: List<ItemRow>,
+    width: Dp,
     memory: ItemFoldMemory,
     cite: (String) -> Unit,
     actions: NowPlayingActions,
@@ -342,9 +341,7 @@ internal fun HomeItems(
             sourcesLines(actions.itemNotes, shown.track, actions.genreNotes, actions.aiSearches).evidence,
             onReport,
         )
-    val normalized = actions.normalize(header)
-    val rows = itemRows(header, normalized, remember(shown.track, normalized) { splitOf(shown.track, normalized) })
-    ItemRows(rows, pages, folds, context) { item -> actions.openPage(HomePage.Item(item.name)) }
+    ItemRows(rows, pages, folds, context, width) { item -> actions.openPage(HomePage.Item(item.name)) }
 }
 
 /** The test tag of the rows under *Key insights*. */

@@ -86,8 +86,9 @@ import app.sleevesight.core.pipeline.TrackState
  * While the phone is offline and a source is unreachable ([SourcesShown.offline], #192), it says
  * so: those sources are asked again once it is back online.
  *
- * This is the section as a box (*Layout*'s *Expandable boxes*, #447): its chip, or its panel with
- * [SourcesBody] in it, which a page of its own mounts under *Separate pages*.
+ * This is the section as a box (*Layout*'s *Expandable boxes*, #447): its chip, [width] wide as the
+ * chips above it on Home (#1286), or its panel with [SourcesBody] in it, which a page of its own
+ * mounts under *Separate pages*.
  */
 @Composable
 internal fun SourcesSection(
@@ -95,6 +96,7 @@ internal fun SourcesSection(
     focus: LineFocus,
     fold: SourcesFold,
     openSettings: () -> Unit = {},
+    width: Dp? = null,
 ) {
     val handoff = rememberFocusHandoff()
     val chip = remember { FocusRequester() }
@@ -111,7 +113,7 @@ internal fun SourcesSection(
         if (handBack) handoff.moveTo(chip)
     }
     if (folded) {
-        SourcesChip(opensPage = false, modifier = Modifier.handoffTarget(handoff, chip)) {
+        SourcesChip(opensPage = false, modifier = Modifier.handoffTarget(handoff, chip), width = width) {
             // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
             if (entriesOf(shown.track, shown.lines.evidence, focus.hidden, shown.details).isEmpty()) focus.showAll()
             fold.set(Fold.Pages(1))
