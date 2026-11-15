@@ -28,6 +28,11 @@ jobs:
     # No `id-token`: the job that runs the build cannot ask for the token that reaches Play.
     permissions:
       contents: read
+    # The track and developer mode the bundle is built for, decided before the build runs, so no
+    # step of the build can change them; `upload` checks its own decision against them.
+    outputs:
+      track: ${{ steps.track.outputs.name }}
+      developer-mode: ${{ steps.track.outputs.developer-mode }}
     steps:
       # No token kept in `.git/config`: nothing after the checkout pushes, and the repository is
       # public, so the fetch below needs none.
@@ -162,15 +167,31 @@ jobs:
         id: version
         run: echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      # The track, decided again as `bundle` decided it, from the same variable and tags, rather than
-      # taken from the build's output; its summary line is written by `bundle` already.
+      # The track, decided again as `bundle` decided it, from the same variable and tags, with the
+      # production check; its summary line is written by `bundle` already. `PLAY_TRACK` can change
+      # between the two approvals, or before a re-run of this job alone, so the decision must equal
+      # the one the bundle was built for: a bundle built for a testing track, in developer mode, never
+      # goes to production, and a track that differs only makes the upload fail.
       - name: Track
         id: track
         env:
           TRACK: ${{ vars.PLAY_TRACK }}
+          BUILT_TRACK: ${{ needs.bundle.outputs.track }}
+          BUILT_DEVELOPER_MODE: ${{ needs.bundle.outputs.developer-mode }}
         run: |
           git fetch --no-tags origin '+refs/tags/v*:refs/tags/v*'
-          GITHUB_STEP_SUMMARY='' .github/scripts/release-track.sh "$TRACK" "$GITHUB_REF_NAME" "$GITHUB_SHA"
+          if ! decided=$(GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' .github/scripts/release-track.sh "$TRACK" "$GITHUB_REF_NAME" "$GITHUB_SHA"); then
+            echo "$decided"
+            exit 1
+          fi
+          echo "$decided"
+          track=$(printf '%s\n' "$decided" | sed -n 's/^name=//p')
+          developer=$(printf '%s\n' "$decided" | sed -n 's/^developer-mode=//p')
+          if [ -z "$BUILT_TRACK" ] || [ "$track" != "$BUILT_TRACK" ] || [ "$developer" != "$BUILT_DEVELOPER_MODE" ]; then
+            echo "::error::The bundle was built for track '$BUILT_TRACK' (developer mode $BUILT_DEVELOPER_MODE), but PLAY_TRACK now gives '$track' (developer mode $developer); set PLAY_TRACK back and re-run this job, or re-run all jobs to build for the new track (design/release.md)"
+            exit 1
+          fi
+          echo "name=$track" >> "$GITHUB_OUTPUT"
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:

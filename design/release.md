@@ -36,7 +36,7 @@ How a release is built, signed and uploaded to Google Play, and the one-time set
 `upload`:
 
 8. starts once `bundle` has succeeded and its approval is given; checks out only `.github/scripts` and `release-notes` of the tagged commit, with its history, so the scripts it runs and the notes it sends come from the commit, not from the build;
-9. reads the track again, as step 2 does, rather than taking it from the build;
+9. decides the track again, as step 2 does, and stops unless the track and developer mode equal those `bundle` built for (its job outputs, set by step 2 before the build runs, so the build cannot change them): `PLAY_TRACK` may change between the two approvals, or before a re-run of `upload` alone, and a bundle built for a testing track, in developer mode, must not reach production. To upload to the new track, re-run all jobs, which builds for it;
 10. downloads the artifact, checks that the bundle is signed, and checks the signer: its certificate's SHA-256 fingerprint must equal the environment variable `UPLOAD_CERT_SHA256` once that is set (step 5 of [Play App Signing](#5-play-app-signing)); until then the run prints the fingerprint. The check is on the bundle that goes to Play, not where it was built;
 11. uploads the bundle to Google Play through the Play Developer API (`androidpublisher` v3), with `.github/scripts/play-upload.sh`, in one edit: it opens the edit, uploads the bundle, checks that Play read the `versionCode` the tag gives, sets the track to a release named for the version (`0.1.1`, not Play's default `1001 (0.1.1)`) with its notes and the status `completed` (or `draft`, below), and commits the edit. A failure discards the edit, so nothing reaches the track.
 
