@@ -17,6 +17,20 @@
 /_includes/site-footer.html @wkusnierczyk
 /_includes/made-in.html @wkusnierczyk
 
+# What else changes how the site builds or what it serves on those pages: the site's settings, the
+# layouts, a theme's style sheet or Sass overridden here (`assets/css/`, `_sass/`), the fonts and
+# icon the pages load, the gems that would choose the build, and a `.nojekyll` that would serve the
+# pages unbuilt. Some do not exist yet; a line for them takes effect when one is added.
+/_config.yml @wkusnierczyk
+/_layouts/ @wkusnierczyk
+/_sass/ @wkusnierczyk
+/assets/css/ @wkusnierczyk
+/assets/fonts/ @wkusnierczyk
+/assets/favicon.svg @wkusnierczyk
+/Gemfile @wkusnierczyk
+/Gemfile.lock @wkusnierczyk
+/.nojekyll @wkusnierczyk
+
 # The workflows, the scripts they run (the pages' policy test among them), and this file.
 /.github/ @wkusnierczyk
 
