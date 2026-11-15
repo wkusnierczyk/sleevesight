@@ -1,6 +1,5 @@
 package app.sleevesight.app.settings
 
-import app.sleevesight.app.settings.SettingsStore.Companion.saving
 import app.sleevesight.core.settings.Dismissable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +27,6 @@ class Dismissals(
  */
 fun SettingsStore.dismissals(saves: CoroutineScope): Dismissals =
     Dismissals(
-        dismiss = { item -> saves.saving { dismiss(item) } },
-        undo = { item -> saves.saving { undismiss(item) } },
+        dismiss = { item -> saving(saves) { dismiss(item) } },
+        undo = { item -> saving(saves) { undismiss(item) } },
     )
