@@ -503,11 +503,13 @@ class AlbumSource(
          *   anniversary"), whose article or Last.fm page an entry of 3 may have missed.
          * 5 (#1203): MusicBrainz's line says a January 1 first release as its year alone when a
          *   release of the group is out on a later day that year ([PlaceholderDay]).
+         * 6 (#1192): Wikipedia's and Last.fm's sentences no longer end at a catalogue abbreviation
+         *   before its number (`Piano Concertos Nos. 20 & 23 is an album …`, `LastFmBio.split`).
          */
         val PART: ArtistPart =
             ArtistPart(
                 "album.evidence",
-                extraction = 5,
+                extraction = 6,
                 encoding = 1,
                 sources = setOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WIKIDATA, SourceId.LASTFM),
             )
