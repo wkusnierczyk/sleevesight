@@ -2,18 +2,27 @@ package app.sleevesight.app.ui.home
 
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
@@ -27,6 +36,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.openWebLink
@@ -36,6 +49,7 @@ import app.sleevesight.core.synthesis.CheckedSentence
 import app.sleevesight.core.synthesis.CitedPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SentenceStatus
+import kotlin.math.roundToInt
 
 // *Explain the song*'s answer in the *Lyrics* panel (#908): its sentences, cited as an insight's are,
 // then the pages they cite.
@@ -85,8 +99,9 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
         color = colours.onSurfaceVariant,
         modifier = Modifier.testTag(LYRICS_PAGES_CITED_TAG),
     )
+    val columns = citedColumns(answer.pages.map { it.id })
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        for (page in answer.pages) CitedPageLink(page)
+        for (page in answer.pages) CitedPageLink(page, columns)
     }
 }
 
@@ -144,33 +159,81 @@ private fun spokenSentence(
     return if (doubtful(sentence)) "$words ($uncited)" else words
 }
 
+// How the cited pages line up (#1287): the ids' column as wide as the widest [idWidth], and the
+// height and first baseline of a line of the links ([lineHeight], [lineBaseline]), for the mark that
+// opens outside the app to sit on a link's first line.
+private class CitedColumns(
+    val idWidth: Dp,
+    val lineHeight: Dp,
+    val lineBaseline: Int,
+)
+
+// [CitedColumns] for the ids [ids], as [CitedPageLink] draws them and its links, at the font size the
+// system has.
+@Composable
+private fun citedColumns(ids: List<String>): CitedColumns {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val idStyle = MaterialTheme.typography.labelMedium
+    val linkStyle = MaterialTheme.typography.bodyLarge
+    return remember(ids, idStyle, linkStyle, measurer, density) {
+        val widest = ids.maxOfOrNull { measurer.measure(it, idStyle, maxLines = 1, softWrap = false).size.width } ?: 0
+        val line = measurer.measure("S", linkStyle, maxLines = 1, softWrap = false)
+        with(density) { CitedColumns(widest.toDp(), line.size.height.toDp(), line.firstBaseline.roundToInt()) }
+    }
+}
+
 // A page the explanation cites: its id, then its site ([siteOf]: its host, as *Sources* names a page,
 // #1040; not the title the page gives itself), as a link with the mark of a page that opens outside
-// the app.
+// the app. Two columns (#1287): the ids right-aligned in theirs, as wide as the widest of [columns],
+// the links left-aligned in theirs, a site breaking only after a dot; the id and the mark on the
+// link's first line, by its baseline, the mark right after that line's text, when the link wraps.
 @Composable
-private fun CitedPageLink(page: CitedPage) {
+private fun CitedPageLink(
+    page: CitedPage,
+    columns: CitedColumns,
+) {
+    // How far the link's first line ends before the link does (a site that wraps, or one narrower
+    // than the link's touch target), for the mark to follow the text; read when placing it.
+    var short by remember { mutableIntStateOf(0) }
     Row(
         modifier = Modifier.testTag(lyricsCitedPageTag(page.id)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
             page.id,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.widthIn(min = ID_WIDTH),
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            softWrap = false,
+            modifier =
+                Modifier
+                    .alignByBaseline()
+                    .padding(end = 4.dp)
+                    .width(columns.idWidth)
+                    .testTag(lyricsCitedPageIdTag(page.id)),
         )
-        Row(
-            modifier = Modifier.weight(1f, fill = false),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        LinkLabel(
+            TextPart.Link(siteOf(page.url), page.url),
+            onClickLabel = stringResource(R.string.link_open),
+            style = MaterialTheme.typography.bodyLarge,
+            // At least the touch target's width itself, so a short site ("x.com") starts at the
+            // column's left edge rather than centred in it.
+            modifier = Modifier.alignByBaseline().weight(1f, fill = false).widthIn(min = LINK_MIN_WIDTH),
+            breakAfterDots = true,
+            onTextLayout = { short = (it.size.width - it.getLineRight(0).roundToInt()).coerceAtLeast(0) },
+        )
+        // A box a line of the link high, its baseline where the link's first line has its own.
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .alignBy { columns.lineBaseline }
+                    .offset { IntOffset(-short, 0) }
+                    .height(columns.lineHeight)
+                    .testTag(lyricsCitedPageMarkTag(page.id)),
         ) {
-            LinkLabel(
-                TextPart.Link(siteOf(page.url), page.url),
-                onClickLabel = stringResource(R.string.link_open),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f, fill = false),
-            )
             Icon(
                 painterResource(R.drawable.ic_open_in_new),
                 contentDescription = null,
@@ -195,7 +258,14 @@ const val LYRICS_PAGES_CITED_TAG: String = "lyrics-explanation:pages"
 /** The test tag of the cited page with [id] ("S1") under the explanation. */
 fun lyricsCitedPageTag(id: String): String = "lyrics-explanation:page:$id"
 
-private val ID_WIDTH = 28.dp
+/** The test tag of the id ("S1") of the cited page with [id]. */
+fun lyricsCitedPageIdTag(id: String): String = "${lyricsCitedPageTag(id)}:id"
+
+/** The test tag of the mark of a page that opens outside the app, after the cited page with [id]. */
+fun lyricsCitedPageMarkTag(id: String): String = "${lyricsCitedPageTag(id)}:mark"
+
+// The minimum touch target's width, which a link takes itself (#1287).
+private val LINK_MIN_WIDTH = 48.dp
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
 

@@ -54,7 +54,8 @@ import java.io.File
  * dark, at the default font size and twice it, for the situations of the D-Classical mock-up: K. 545
  * resolved (1), *Nessun Dorma* with the roles MusicBrainz told (2), the roles unknown (4) and a pop
  * track (5). Each shows the artists under the title and the rows closed, then the Artist panel open
- * with another performer's chip opened, then the Composer panel open; each is checked, and with
+ * with another performer's chip opened, its panel in the chip's place (#1288), then that panel
+ * closed, the chip back, then the Composer panel open; each is checked, and with
  * `SLEEVESIGHT_PICTURES` set, also saved there as a picture, as `SongVersionPicturesTest` saves its
  * own. The Artist row is *Performer* where the Composer row shows (#1276), *Artist* otherwise.
  */
@@ -198,8 +199,16 @@ class ComposerPanelPicturesTest {
                 compose.onNodeWithTag(itemChipTag(chip)).performClick()
                 compose.waitForIdle()
                 compose.onNodeWithTag(itemPanelTag(InsightItem.named(chip))).assertExists()
+                compose.onNodeWithTag(itemChipTag(chip)).assertDoesNotExist()
             }
             save("$name-b-artist")
+            situation.chip?.let { chip ->
+                compose.onNodeWithTag(itemPanelTag(InsightItem.named(chip)) + ":close").performClick()
+                compose.waitForIdle()
+                compose.onNodeWithTag(itemPanelTag(InsightItem.named(chip))).assertDoesNotExist()
+                compose.onNodeWithTag(itemChipTag(chip)).assertExists()
+                save("$name-b2-artist-closed")
+            }
             if (split != null) {
                 compose.onNodeWithTag(itemPanelTag(InsightItem.ARTIST) + ":close").performClick()
                 compose.onNodeWithTag(itemRowTag(InsightItem.COMPOSER)).performClick()

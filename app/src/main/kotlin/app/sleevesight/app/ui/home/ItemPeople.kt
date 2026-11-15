@@ -37,8 +37,8 @@ import app.sleevesight.core.pipeline.InsightItem
 
 // The other people of a track whose roles tell the composer apart from the performers (#1199): in
 // the artist's panel, the other performers; in the Authors panel, who wrote the music and who wrote
-// the words, each a chip opening that artist's own insight in place, written on the tap; and under
-// the title, the composer's line of its own.
+// the words, each a chip giving way to that artist's own insight in its place, written on the tap;
+// and under the title, the composer's line of its own.
 
 /**
  * What [item]'s panel (or page) shows above its insight, by [split] (#1199): in the Authors panel,
@@ -57,11 +57,12 @@ internal fun PeopleBefore(
 /**
  * What [item]'s panel (or page) shows under its insight, by [split] (#1199): in the artist's panel,
  * *Also performing on this recording* and a chip for each other performer; in the Authors panel, a
- * chip for each other composer, then *Words* and a chip for each who wrote the words. A chip opens
- * that artist's insight ([InsightItem.named]) in place under the chips, one at a time, in a panel of
- * its own with *Close*; the tap is its consent, so it is written at once, in every mode (#948). The
- * one open is kept while [context]'s track plays, and the focus goes to its *Close* when it opens and
- * back to its chip when it closes.
+ * chip for each other composer, then *Words* and a chip for each who wrote the words. A chip's tap
+ * puts that artist's insight ([InsightItem.named]) in the chip's place (#1288), in a panel of its own
+ * titled with the name, with *Close*, which puts the chip back; each opens and closes on its own,
+ * several at once. The tap is its consent, so it is written at once, in every mode (#948). The ones
+ * open are kept while [context]'s track plays, and the focus goes to a panel's *Close* when it opens
+ * and back to its chip when it closes.
  */
 @Composable
 internal fun PeopleAfter(
@@ -84,31 +85,65 @@ internal fun PeopleAfter(
     if (groups.isEmpty()) return
     // A new track starts with none open.
     val playing = context.track?.nowPlaying?.let { "${it.title}\u0000${it.artists}\u0000${it.album}" }
-    var open by rememberSaveable(playing, item.name) { mutableStateOf<String?>(null) }
+    var open by rememberSaveable(playing, item.name) { mutableStateOf(emptyList<String>()) }
     val handoff = rememberFocusHandoff()
     val chips = remember { mutableMapOf<String, FocusRequester>() }
     val chipOf = { name: String -> chips.getOrPut(name) { FocusRequester() } }
-    // Each artist's *Close* its own: a panel switched for another's is not the one the focus goes to.
+    // Each artist's *Close* its own, as several may be open.
     val closes = remember { mutableMapOf<String, FocusRequester>() }
     val closeOf = { name: String -> closes.getOrPut(name) { FocusRequester() } }
     val ai = context.settings.writeInsights
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         groups.forEach { group ->
             group.heading?.let { PeopleHeading(it) }
-            PeopleChips(group.names, open, ai, { Modifier.handoffTarget(handoff, chipOf(it)) }) { name ->
-                open = if (open == name) null else name
-                if (open != null) handoff.moveTo(closeOf(name)) else handoff.moveTo(chipOf(name))
-            }
-        }
-        open?.let { name ->
-            key(name) {
-                NamedArtist(name, context, Modifier.handoffTarget(handoff, closeOf(name))) {
-                    open = null
-                    handoff.moveTo(chipOf(name))
+            peopleRuns(group.names, open).forEach { run ->
+                // One key over both kinds, so an open panel moves with its key when the runs before it
+                // change, keeping its state (and its write not asked again); a run of chips, which keeps
+                // none of its own, is laid out anew when its first chip opens.
+                key(if (run.open) "panel:${run.names.single()}" else "chips:${run.names.first()}") {
+                    if (run.open) {
+                        val name = run.names.single()
+                        NamedArtist(name, context, Modifier.handoffTarget(handoff, closeOf(name))) {
+                            open = open - name
+                            handoff.moveTo(chipOf(name))
+                        }
+                    } else {
+                        PeopleChips(run.names, ai, { Modifier.handoffTarget(handoff, chipOf(it)) }) { name ->
+                            open = open + name
+                            handoff.moveTo(closeOf(name))
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+// A stretch of a group's chips, in their order: one artist whose insight is open in its chip's place,
+// or the closed chips between two open ones.
+private class PeopleRun(
+    val names: List<String>,
+    val open: Boolean,
+)
+
+// [names] in their order, cut into runs of closed chips around each of [open], which stands alone.
+private fun peopleRuns(
+    names: List<String>,
+    open: List<String>,
+): List<PeopleRun> {
+    val runs = mutableListOf<PeopleRun>()
+    var closed = mutableListOf<String>()
+    names.forEach { name ->
+        if (name in open) {
+            if (closed.isNotEmpty()) runs += PeopleRun(closed, open = false)
+            closed = mutableListOf()
+            runs += PeopleRun(listOf(name), open = true)
+        } else {
+            closed += name
+        }
+    }
+    if (closed.isNotEmpty()) runs += PeopleRun(closed, open = false)
+    return runs
 }
 
 // A group of chips: its [heading], if any, and the artists' [names].
@@ -131,42 +166,40 @@ private fun PeopleHeading(text: String) {
 // A chip for each of [names], drawn as the rows' buttons are ([PanelChip]), with the **AI** mark
 // ([ai]); as wide as its name, the mark included, and no wider than the panel, wrapping inside;
 // "Academy of St. Martin in the Fields, uses AI. Collapsed. Button. Double-tap to show this artist's
-// insight"; while its insight is open ([open]), expanded, "Double-tap to hide this artist's insight".
+// insight". While its insight is open, the chip is not there: its panel is, in its place (#1288).
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PeopleChips(
     names: List<String>,
-    open: String?,
     ai: Boolean,
     focus: (String) -> Modifier,
     onTap: (String) -> Unit,
 ) {
     val show = stringResource(R.string.home_item_show_named)
-    val hide = stringResource(R.string.home_item_hide_named)
     BoxWithConstraints {
         val most = maxWidth
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             names.forEach { name ->
                 val width = min(chipColumnWidth(listOf(name), mark = ai), most)
-                PanelChip(
-                    name,
-                    itemChipTag(name),
-                    modifier = focus(name),
-                    action = if (open == name) hide else show,
-                    collapsed = open != name,
-                    description = if (ai) stringResource(R.string.home_uses_ai, name) else name,
-                    width = width,
-                    ai = ai,
-                    expanded = open == name,
-                    markAtEnd = false,
-                ) { onTap(name) }
+                key(name) {
+                    PanelChip(
+                        name,
+                        itemChipTag(name),
+                        modifier = focus(name),
+                        action = show,
+                        description = if (ai) stringResource(R.string.home_uses_ai, name) else name,
+                        width = width,
+                        ai = ai,
+                        markAtEnd = false,
+                    ) { onTap(name) }
+                }
             }
         }
     }
 }
 
-// [name]'s insight, open in place under the chips: a panel of its own, titled with the name, its
-// *Close* under [closeModifier] calling [onClose]; written at once, the chip's tap its consent.
+// [name]'s insight, open in its chip's place: a panel of its own, titled with the name, its *Close*
+// under [closeModifier] calling [onClose]; written at once, the chip's tap its consent.
 @Composable
 private fun NamedArtist(
     name: String,
