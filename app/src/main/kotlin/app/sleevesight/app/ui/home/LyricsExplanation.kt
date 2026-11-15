@@ -6,15 +6,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -34,6 +39,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.openWebLink
@@ -180,13 +186,16 @@ private fun citedColumns(ids: List<String>): CitedColumns {
 // A page the explanation cites: its id, then its site ([siteOf]: its host, as *Sources* names a page,
 // #1040; not the title the page gives itself), as a link with the mark of a page that opens outside
 // the app. Two columns (#1287): the ids right-aligned in theirs, as wide as the widest of [columns],
-// the links left-aligned in theirs; the id and the mark on the link's first line, by its baseline,
-// when the link wraps.
+// the links left-aligned in theirs, a site breaking only after a dot; the id and the mark on the
+// link's first line, by its baseline, the mark right after that line's text, when the link wraps.
 @Composable
 private fun CitedPageLink(
     page: CitedPage,
     columns: CitedColumns,
 ) {
+    // How far the link's first line ends before the link does (a site that wraps, or one narrower
+    // than the link's touch target), for the mark to follow the text; read when placing it.
+    var short by remember { mutableIntStateOf(0) }
     Row(
         modifier = Modifier.testTag(lyricsCitedPageTag(page.id)),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -209,7 +218,11 @@ private fun CitedPageLink(
             TextPart.Link(siteOf(page.url), page.url),
             onClickLabel = stringResource(R.string.link_open),
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.alignByBaseline().weight(1f, fill = false),
+            // At least the touch target's width itself, so a short site ("x.com") starts at the
+            // column's left edge rather than centred in it.
+            modifier = Modifier.alignByBaseline().weight(1f, fill = false).widthIn(min = LINK_MIN_WIDTH),
+            breakAfterDots = true,
+            onTextLayout = { short = (it.size.width - it.getLineRight(0).roundToInt()).coerceAtLeast(0) },
         )
         // A box a line of the link high, its baseline where the link's first line has its own.
         Box(
@@ -217,6 +230,7 @@ private fun CitedPageLink(
             modifier =
                 Modifier
                     .alignBy { columns.lineBaseline }
+                    .offset { IntOffset(-short, 0) }
                     .height(columns.lineHeight)
                     .testTag(lyricsCitedPageMarkTag(page.id)),
         ) {
@@ -244,11 +258,14 @@ const val LYRICS_PAGES_CITED_TAG: String = "lyrics-explanation:pages"
 /** The test tag of the cited page with [id] ("S1") under the explanation. */
 fun lyricsCitedPageTag(id: String): String = "lyrics-explanation:page:$id"
 
-/** The test tags of the id of the cited page with [id] ("S1"), and of its mark of a page that opens outside the app. */
+/** The test tag of the id ("S1") of the cited page with [id]. */
 fun lyricsCitedPageIdTag(id: String): String = "${lyricsCitedPageTag(id)}:id"
 
+/** The test tag of the mark of a page that opens outside the app, after the cited page with [id]. */
 fun lyricsCitedPageMarkTag(id: String): String = "${lyricsCitedPageTag(id)}:mark"
 
+// The minimum touch target's width, which a link takes itself (#1287).
+private val LINK_MIN_WIDTH = 48.dp
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
 

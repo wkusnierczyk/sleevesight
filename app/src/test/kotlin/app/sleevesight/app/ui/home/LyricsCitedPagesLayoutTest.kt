@@ -9,6 +9,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -50,11 +53,13 @@ class LyricsCitedPagesLayoutTest {
         listOf(
             CitedPage("S5", "https://www.thelineofbestfit.com/good-love", "Good Love"),
             CitedPage("S7", "https://skopemag.com/good-love", "Good Love"),
+            // A site narrower than a link's touch target.
+            CitedPage("S2", "https://x.com/good-love", "Good Love"),
             CitedPage("S10", "https://musicasparaouvirnaestrada.blogspot.com/good-love", "Good Love"),
         )
 
     private fun show(check: () -> Unit) {
-        val reply = "It is about good times. [S5] [S7] It is a song for the road. [S10]"
+        val reply = "It is about good times. [S5] [S7] [S2] It is a song for the road. [S10]"
         val grounded =
             (GroundingCheck.check(reply, pages.map { it.id }.toSet(), allowModel = false) as InsightReply.Written)
                 .grounded
@@ -105,6 +110,8 @@ class LyricsCitedPagesLayoutTest {
 
     private val tolerance = 1f
 
+    private val zeroWidthSpace = "\u200B"
+
     private fun numbersRightAlignedLinksLeftAligned() =
         show {
             val ids = pages.map(::id)
@@ -134,6 +141,46 @@ class LyricsCitedPagesLayoutTest {
             assertEquals(1, link(short).layout.lineCount)
             assertEquals(link(short).baseline(0), id(short).baseline(0), tolerance)
             assertEquals(link(short).middle(0), mark(short).center.y, tolerance)
+            // The mark right after the first line's text, the row's 4 dp on: past a wrapping site's
+            // first line, not the link's full width, and past a short one, not its touch target.
+            val space = compose.density.run { 4.dp.toPx() }
+            for (page in listOf(long, short, pages[2])) {
+                val after = link(page).right(0) + space
+                assertEquals("${page.id}'s mark after its text", after, mark(page).left, tolerance)
+            }
+        }
+
+    @Test
+    fun aSiteBreaksAfterADotAndAScreenReaderGetsItWithoutTheBreaks() =
+        show {
+            val long = pages.last()
+            val layout = link(long).layout
+            assertTrue(layout.lineCount > 1)
+            val first =
+                layout.layoutInput.text.text
+                    .substring(0, layout.getLineEnd(0))
+            assertEquals("musicasparaouvirnaestrada.", first.replace(zeroWidthSpace, ""))
+            // No text a screen reader gets carries the breaks; the link's is the site as it is.
+            val broken =
+                compose
+                    .onAllNodes(
+                        SemanticsMatcher("text with a zero-width space") { node ->
+                            node.config
+                                .getOrNull(SemanticsProperties.Text)
+                                .orEmpty()
+                                .any { zeroWidthSpace in it.text }
+                        },
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNodes()
+            assertTrue(broken.isEmpty())
+            for (page in pages) {
+                val node =
+                    compose
+                        .onNode(hasTestTag(lyricsCitedPageTag(page.id)), useUnmergedTree = true)
+                        .fetchSemanticsNode()
+                val texts = node.children.flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty() }
+                assertTrue("${page.id}: $texts", texts.any { it.text == siteOf(page.url) })
+            }
         }
 
     @Test
