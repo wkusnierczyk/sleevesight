@@ -1,0 +1,66 @@
+[
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/eadd2605-6f2f-44d5-acaf-e4ef9aa40bed",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels+tags",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-eadd2605-6f2f-44d5-acaf-e4ef9aa40bed.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Symphony No. 9 in D Minor, Op. 125 \\\"Choral\\\": I. Allegro ma non troppo, un poco maestoso\" AND artist:\"Berlin Philharmonic\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-symphony-no-9-in-d-minor-op-12-o-un-poco-maestoso-and-artist-berlin-philharmonic.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Symphony No. 9 in D Minor, Op. 125 \\\"Choral\\\": I. Allegro ma non troppo, un poco maestoso\" AND artist:\"Herbert von Karajan\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-symphony-no-9-in-d-minor-op-12-o-un-poco-maestoso-and-artist-herbert-von-karajan.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"Symphony No. 9 in D Minor, Op. 125 \\\"Choral\\\": I. Allegro ma non troppo, un poco maestoso\" AND artist:\"Ludwig van Beethoven\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-symphony-no-9-in-d-minor-op-12-un-poco-maestoso-and-artist-ludwig-van-beethoven.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:(symphony~ no 9 in d minor~ op 125) AND artist:(\"Ludwig van Beethoven\" OR \"Berlin Philharmonic\" OR \"Herbert von Karajan\")",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-symphony-no-9-in-d-minor-op-12-ven-or-berlin-philharmonic-or-herbert-von-karajan.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work/3308d248-b287-38e9-9718-0119d7a3bf9d",
+  "query": {
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits+work-rels",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-3308d248-b287-38e9-9718-0119d7a3bf9d.json"
+ }
+]

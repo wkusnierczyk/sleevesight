@@ -69,10 +69,14 @@ class RecordingResolver(
      * recordings with other orchestras and conductors.
      *
      * Two bounded fallbacks when nothing found fits (#1289):
-     * - With a composer the title names, a recording whose title, length and a performer fit but whose
-     *   credit names someone none of the track's artists is by name (the Berliner Philharmoniker for the
-     *   player's Berlin Philharmonic) has that artist's other names looked up (`withAliases`, at most two
-     *   artists): an alias that is a track artist's name counts as theirs.
+     * - A recording whose title, length and a performer fit but whose credit names someone none of the
+     *   track's artists is by name (the Berliner Philharmoniker for the player's Berlin Philharmonic) has
+     *   that artist's other names looked up (`withAliases`, at most two artists): an alias that is a track
+     *   artist's name counts as theirs. With a composer the title names, among the recordings found, before
+     *   the loose search below; then, with or without one (#1330), when nothing found may be chosen in any
+     *   way, among those with the title's numbers that search and the searches by the later credited artists
+     *   left out for crediting someone else (Beethoven credited first, Karajan's Ninth with the Berliner Philharmoniker
+     *   for the player's Berlin Philharmonic), at most two artists for the track in all (`fallbacks`).
      * - With the player's length and two or more credited artists, one search by the title's words,
      *   loosely, and every credited artist at once (`loosely`): a title misspelled by a letter, or a
      *   performer credited after the composer and librettists, beyond the searches above. Of what it
@@ -87,18 +91,12 @@ class RecordingResolver(
         val measured = duration != null
         val ours: (MbRecording) -> Boolean = { track.composer == null || names.performedBy(it, track) }
         val fits: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fits }
-        // The fallbacks (#1289) only when nothing fits in any form, a weaker one included, so a track that
-        // resolved before makes none of their requests and keeps its choice.
-        val fitsAtAll: (MbRecording) -> Boolean = { ours(it) && candidate(track, duration, it).fitsAtAll }
         val first = musicBrainz.searched(title, searchArtist(track), measured, fits)
         val further = musicBrainz.further(track, first, measured, fits) { names.performedBy(it, track) }
-        val aliased =
-            if (further.found.any(fitsAtAll)) {
-                further
-            } else {
-                musicBrainz.withAliases(names, track, duration, further) { candidate(track, duration, it).matches }
+        val searched =
+            musicBrainz.fallbacks(names, track, duration, further) { r ->
+                candidate(track, duration, r).let { Weight(ours(r), it.fitsAtAll, it.matches, it.resolvable) }
             }
-        val searched = musicBrainz.loosely(names, track, duration, aliased, fitsAtAll)
         return when (val answer = searched.answer) {
             is Lookup.NotFound -> Resolution.NONE
             is Lookup.Failed -> Resolution.unreachable(answer.reason)
@@ -585,6 +583,16 @@ class RecordingResolver(
          */
         val fitsAtAll: Boolean get() =
             fits || (!workLed && titleMatches && durationMatches && (variants.isNotEmpty() || jointly))
+
+        /**
+         * Whether its title and length fit, read in any way (a part of a work's included), with a credit in any
+         * form (by name, as a band, under an honorific variant, in a joint credit): whether it may be chosen
+         * (#1330, `fallbacks`).
+         */
+        val resolvable: Boolean get() =
+            titleMatches &&
+                durationMatches &&
+                (named.isNotEmpty() || led.isNotEmpty() || variants.isNotEmpty() || jointly)
 
         /**
          * Whether it [matches] read as a part of a work (#1289), its length known when the player's is
@@ -1135,12 +1143,17 @@ private fun searchArtist(track: NormalizedTrack): String {
 
 // One search's recordings: its first page and, when that is full, those [earlierThan] found;
 // [incomplete] when those may not be all; [later] when a credited artist after the first was searched
-// by (`further`, #1180).
+// by (`further`, #1180); [held]: what the searches by those artists and the loose search found but did
+// not keep, crediting someone not among the track's artists, for their aliases to be weighed
+// (`withAliases`, #1330);
+// [aliases]: the credited artists whose other names were looked up so far (`Aliases`).
 internal class Searched(
     val answer: Lookup<List<MbRecording>>,
     val found: List<MbRecording>,
     val incomplete: Boolean,
     val later: Boolean = false,
+    val held: List<MbRecording> = emptyList(),
+    val aliases: Map<String, List<String>> = emptyMap(),
 )
 
 // At most this many searches by title and artist for one track (#1176, #1180), the searches by date a
@@ -1154,7 +1167,8 @@ private const val SEARCHES = 3
 // - Without one, the search by each next credited artist in turn, up to [SEARCHES] in all, until one
 //   finds what fits (#1180): a classical track credited to its composer first, with no lead in its
 //   title, is found by a performer. Of those searches' recordings only those [theirs] (every credit one
-//   of the track's artists) are added, and the search by date a full page calls for weighs only them.
+//   of the track's artists) are added, and the search by date a full page calls for weighs only them;
+//   the others are [Searched.held], for the alias lookup (#1330).
 // A search that fails could not reach what may fit, so it is the answer (MusicBrainz unreachable, the
 // resolution asked again later). With nothing searched after it, [first].
 private suspend fun MusicBrainzLookup.further(
@@ -1185,13 +1199,15 @@ private suspend fun MusicBrainzLookup.further(
             if (more.answer is Lookup.Failed) {
                 more
             } else {
-                val found = (sofar.found + more.found.filter(kept)).distinctBy { it.mbid }
+                val (taken, left) = more.found.partition(kept)
+                val found = (sofar.found + taken).distinctBy { it.mbid }
                 val anyFound = sofar.answer is Lookup.Found || more.answer is Lookup.Found
                 Searched(
                     if (anyFound) Lookup.Found(found) else sofar.answer,
                     found,
                     sofar.incomplete || more.incomplete,
                     later,
+                    (sofar.held + left).distinctBy { it.mbid }.filter { held -> found.none { it.mbid == held.mbid } },
                 )
             }
     }

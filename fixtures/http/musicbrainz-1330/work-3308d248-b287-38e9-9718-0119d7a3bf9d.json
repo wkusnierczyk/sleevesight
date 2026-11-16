@@ -1,0 +1,1191 @@
+{
+ "type": null,
+ "id": "3308d248-b287-38e9-9718-0119d7a3bf9d",
+ "relations": [
+  {
+   "attributes": [],
+   "direction": "backward",
+   "ended": true,
+   "target-credit": "",
+   "attribute-ids": {},
+   "end": "1824",
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f",
+   "type": "composer",
+   "begin": "1822",
+   "target-type": "artist",
+   "source-credit": "",
+   "attribute-values": {},
+   "artist": {
+    "name": "Ludwig van Beethoven",
+    "country": "DE",
+    "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Beethoven, Ludwig van",
+    "disambiguation": "German composer"
+   }
+  },
+  {
+   "target-type": "work",
+   "source-credit": "",
+   "attribute-values": {},
+   "target-credit": "",
+   "ended": false,
+   "direction": "forward",
+   "attributes": [],
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "end": null,
+   "attribute-ids": {},
+   "type": "arrangement",
+   "begin": null,
+   "work": {
+    "disambiguation": "for two pianos, Liszt",
+    "attributes": [],
+    "type-id": null,
+    "language": "zxx",
+    "iswcs": [],
+    "id": "b7b7f2a5-7cb8-3357-92ec-927283ae6713",
+    "type": null,
+    "languages": [
+     "zxx"
+    ],
+    "title": "Symphony no. 9 in D minor, op. 125, S. 657 “Choral”: I. Allegro ma non troppo, un poco maestoso"
+   }
+  },
+  {
+   "ended": false,
+   "target-credit": "",
+   "attributes": [],
+   "direction": "forward",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "attribute-ids": {},
+   "end": null,
+   "type": "arrangement",
+   "work": {
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”, S. 464 no. 9: I. Allegro ma non troppo, un poco maestoso",
+    "languages": [
+     "zxx"
+    ],
+    "type": null,
+    "id": "1d764534-e614-3caf-84db-8d7e75513017",
+    "language": "zxx",
+    "iswcs": [],
+    "type-id": null,
+    "attributes": [],
+    "disambiguation": "for piano, Liszt"
+   },
+   "begin": null,
+   "target-type": "work",
+   "source-credit": "",
+   "attribute-values": {}
+  },
+  {
+   "direction": "forward",
+   "attributes": [],
+   "target-credit": "",
+   "ended": false,
+   "end": null,
+   "attribute-ids": {},
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "type": "arrangement",
+   "begin": null,
+   "work": {
+    "attributes": [],
+    "disambiguation": "arr. Kalkbrenner for piano, soloists and choir",
+    "language": "zxx",
+    "iswcs": [],
+    "type-id": null,
+    "type": null,
+    "id": "befec995-9a85-4cbf-a1e1-02dd5f93136d",
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+    "languages": [
+     "zxx"
+    ]
+   },
+   "target-type": "work",
+   "source-credit": "",
+   "attribute-values": {}
+  },
+  {
+   "attribute-values": {},
+   "source-credit": "",
+   "target-type": "work",
+   "work": {
+    "languages": [
+     "zxx"
+    ],
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+    "id": "b8c61687-927e-4c7a-9541-062945b4c11e",
+    "type": null,
+    "type-id": null,
+    "language": "zxx",
+    "iswcs": [],
+    "attributes": [],
+    "disambiguation": "for violin and piano, Hans Sitt"
+   },
+   "begin": null,
+   "type": "arrangement",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "attribute-ids": {},
+   "end": null,
+   "ended": false,
+   "target-credit": "",
+   "attributes": [],
+   "direction": "forward"
+  },
+  {
+   "attribute-values": {},
+   "target-type": "work",
+   "source-credit": "",
+   "type": "arrangement",
+   "begin": null,
+   "work": {
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+    "languages": [
+     "zxx"
+    ],
+    "type": null,
+    "id": "04d09742-164b-4004-854d-d1da2faf598d",
+    "language": "zxx",
+    "iswcs": [],
+    "type-id": null,
+    "attributes": [],
+    "disambiguation": "for piano four hands, Jean-Henri Ravina"
+   },
+   "ended": false,
+   "target-credit": "",
+   "attributes": [],
+   "direction": "forward",
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "attribute-ids": {},
+   "end": null
+  },
+  {
+   "type": "arrangement",
+   "work": {
+    "language": "zxx",
+    "iswcs": [],
+    "type-id": null,
+    "disambiguation": "arr. Wagner for piano, soloists and choir",
+    "attributes": [],
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+    "languages": [
+     "zxx"
+    ],
+    "type": null,
+    "id": "a2225d7d-aa55-4293-bd91-16a561ca0ac6"
+   },
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "direction": "forward",
+   "attributes": [],
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "end": null,
+   "attribute-ids": {},
+   "attribute-values": {},
+   "target-type": "work",
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "source-credit": "",
+   "target-type": "work",
+   "work": {
+    "language": "zxx",
+    "iswcs": [],
+    "type-id": null,
+    "attributes": [],
+    "disambiguation": "catch-all for unknown arrangements",
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+    "languages": [
+     "zxx"
+    ],
+    "type": null,
+    "id": "859029c6-0e89-48f7-89a6-cdffd566591e"
+   },
+   "begin": null,
+   "type": "arrangement",
+   "attribute-ids": {},
+   "end": null,
+   "type-id": "51975ed8-bbfa-486b-9f28-5947f4370299",
+   "attributes": [],
+   "direction": "forward",
+   "ended": false,
+   "target-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "source-credit": "",
+   "target-type": "work",
+   "begin": null,
+   "work": {
+    "attributes": [],
+    "disambiguation": "arranged by Mahler for large orchestra",
+    "type-id": null,
+    "language": "zxx",
+    "iswcs": [],
+    "id": "55ff1de5-f5e9-44ce-9f0d-f693aa03ad84",
+    "type": null,
+    "languages": [
+     "zxx"
+    ],
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso"
+   },
+   "type": "other version",
+   "end": null,
+   "attribute-ids": {},
+   "type-id": "7440b539-19ab-4243-8c03-4f5942ca2218",
+   "direction": "forward",
+   "attributes": [],
+   "ended": false,
+   "target-credit": ""
+  },
+  {
+   "type": "parts",
+   "work": {
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”",
+    "languages": [
+     "deu"
+    ],
+    "type": "Symphony",
+    "id": "c35b4956-d4f8-321a-865b-5b13d9ed192b",
+    "iswcs": [],
+    "language": "deu",
+    "type-id": "174314aa-0aa4-30cf-96a6-50b281d8d208",
+    "disambiguation": "",
+    "attributes": []
+   },
+   "begin": null,
+   "attributes": [
+    "movement"
+   ],
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-ids": {
+    "movement": "1d05bc4b-9884-4c9f-9f69-616f119047f3"
+   },
+   "end": null,
+   "ordering-key": 1,
+   "type-id": "ca8d3642-ce5f-49f8-91f2-125d72524e6a",
+   "attribute-values": {},
+   "target-type": "work",
+   "source-credit": ""
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1947-11-03",
+   "end": "1947-12-14",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "1c642346-57ab-40ae-9ce2-03534443f44e",
+    "title": "Symphony no. 9 in D minor, op. 125: I. Allegro ma non troppo, un poco maestoso",
+    "length": 960693,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Wiener Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "d770374d-05e9-4ed3-a068-3fbd4e6e4dd6",
+       "name": "Wiener Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1955-07-24",
+   "end": "1955-07-29",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "7422cf83-4076-4f7e-ae20-5c92739f38a7",
+    "title": "Symphony no. 9 in D minor, op. 125 \"Choral\": I. Allegro ma non troppo, un poco maestoso",
+    "length": 908000,
+    "disambiguation": "mono",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Philharmonia Orchestra",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "5610302e-bfd9-421c-80e2-03d790a0f5e5",
+       "name": "Philharmonia Orchestra"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1955-07-24",
+   "end": "1955-07-29",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "08227e87-e476-4168-b005-80eec04d8af3",
+    "title": "Symphony no. 9 in D minor, op. 125 \"Choral\": I. Allegro ma non troppo, un poco maestoso",
+    "length": 904000,
+    "disambiguation": "stereo",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Philharmonia Orchestra",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "5610302e-bfd9-421c-80e2-03d790a0f5e5",
+       "name": "Philharmonia Orchestra"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1955-07-24",
+   "end": "1955-07-29",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "c9a04135-78a5-4847-87e7-163f7e10abd3",
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+    "length": 904733,
+    "disambiguation": "stereo mix",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Philharmonia Orchestra",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "5610302e-bfd9-421c-80e2-03d790a0f5e5",
+       "name": "Philharmonia Orchestra"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1957-04-25",
+   "end": "1957-04-25",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "d599f13c-e7bf-40aa-8455-15fc7657ba79",
+    "title": "Symphony 9: 1. Allegro ma non troppo e un poco maestoso",
+    "length": 923000,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1962-10-08",
+   "end": "1962-10-31",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "abb7c704-7a38-42aa-854d-314321a0fa99",
+    "title": "Symphonie No. 9 d-Moll op. 125: 1. Allegro ma non troppo, un poco maestoso",
+    "length": 928360,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1962",
+   "end": "1962",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "ad665e20-fdff-4c18-8b1d-dd24e67af170",
+    "title": "Symphony no. 9 in D minor, op. 125: I. Allegro ma non troppo, un poco maestoso (rehearsal)",
+    "length": 503426,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1963-10-15",
+   "end": "1963-10-15",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "1723a887-1cc6-40c9-99e8-5d5875f88498",
+    "title": "Symphonie No. 9 d-Moll, Op. 125: I. Allegro ma non troppo, un poco maestoso",
+    "length": 906346,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1963-10-15",
+   "end": "1963-10-15",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "91ed226d-617b-46b9-962a-ae883ba8bdcb",
+    "title": "Symphony 9, 1. Allegro ma non troppo e un poco maestoso",
+    "length": 906000,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1968-01-01",
+   "end": "1968-01-01",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "73c15ea1-cc92-4c39-9223-bcc4d3a721e5",
+    "title": "Beethoven: Symphony 9, 1. Allegro ma non troppo e un poco maestoso",
+    "length": 888000,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1968-01-01",
+   "end": "1968-01-01",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "e695017d-9f32-4e9c-9b94-8a1e44806e6c",
+    "title": "Sinfonia n. 9 in Re minore, op. 125, «Corale»: I. Allegro ma non troppo, un poco maestoso",
+    "length": 892333,
+    "disambiguation": "live, 1968-01-01: Berlin, Deutschland",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Orchestra Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1968-01",
+   "end": "1968-02",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "6f03b958-c4fa-4670-8958-e960abe46fce",
+    "title": "Symphony no. 9 in D minor \"Choral\", op. 125: 1. Allegro ma non troppo, un poco maestoso",
+    "length": 904000,
+    "disambiguation": "",
+    "video": true,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1976-09-22",
+   "end": "1977-02-06",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "3090d5f0-a4eb-4741-9a15-bc8de591846c",
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+    "length": 926386,
+    "disambiguation": "1976 recording",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1983-09-20",
+   "end": "1983-09-27",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "eadd2605-6f2f-44d5-acaf-e4ef9aa40bed",
+    "title": "Symphony no. 9 in D minor, op. 125: I. Allegro ma non troppo, un poco maestoso",
+    "length": 936000,
+    "disambiguation": "1983 recording",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "6ee3f48a-9f50-451b-965e-28d54e9e91f0",
+    "title": "Symphonie n° 9 en ré mineur op. 125 \"avec choeur\": Allegro ma non troppo, un poco maestoso",
+    "length": 906133,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Philharmonia Orchestra",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "5610302e-bfd9-421c-80e2-03d790a0f5e5",
+       "name": "Philharmonia Orchestra"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "attributes": [
+    "partial"
+   ],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "7642facf-60b3-44cb-a9a8-953a516d8b80",
+    "title": "Symphonie No. 9 - Probe/Rehearsal: 1. Allegro ma non troppo, un poco maestoso",
+    "length": 503000,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     },
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Wiener Singverein",
+      "joinphrase": "",
+      "artist": {
+       "id": "18dc8071-2248-4c25-ba94-c92e288bd4ae",
+       "name": "Wiener Singverein"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "8c1a081c-596f-43f6-ad5c-f3f5decd6847",
+    "title": "Symphonie Nr. 9 in d-moll, Op. 125: I. Allegro ma non troppo, un poco maestoso (5.0 mix)",
+    "length": 929000,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "dbc99aac-c236-4de7-924e-0d8f92dcd64a",
+    "title": "Symphony Nº 9 in D-Moll, Opus 125, Allegro Maestoso",
+    "length": 959653,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Wiener Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "d770374d-05e9-4ed3-a068-3fbd4e6e4dd6",
+       "name": "Wiener Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "b829f5c7-cb5c-4c03-b6ae-665a7dccd9ee",
+    "title": "Symphony No. 9 in D Minor, Op. 125 'Choral': I. Allegro Ma Non Troppo, Un Poco Maestoso",
+    "length": 924000,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Reinhold Schmidt",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "7d65abca-4860-4a1e-a29a-f2127ad393c8",
+       "name": "Reinhold Schmidt"
+      }
+     },
+     {
+      "name": "Walter Berry",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "cebac518-6e51-4d13-a787-1adbf3e371f2",
+       "name": "Walter Berry"
+      }
+     },
+     {
+      "name": "Gundula Janowitz",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "5dea2dba-bf0d-4087-9117-40f90e4134ee",
+       "name": "Gundula Janowitz"
+      }
+     },
+     {
+      "name": "Waldemar Kmentt",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "f8fe5f1d-14ec-4d74-a887-8f2c2de341a9",
+       "name": "Waldemar Kmentt"
+      }
+     },
+     {
+      "name": "Hilde Rössel-Majdan",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "8eb9e349-c0b1-4785-aae4-46150d231c02",
+       "name": "Hilde Rössel‐Majdan"
+      }
+     },
+     {
+      "name": "Wiener Singverein",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "18dc8071-2248-4c25-ba94-c92e288bd4ae",
+       "name": "Wiener Singverein"
+      }
+     },
+     {
+      "name": "Berlin Philharmonic Orchestra",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "1f40ce9b-bc93-42fa-a6cb-906ed41362b2",
+    "title": "Symphony no. 9 in D minor, op. 125 “Choral”: 1. Allegro ma non troppo – Un poco maestoso",
+    "length": 904333,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Wiener Philharmoniker",
+      "joinphrase": ", ",
+      "artist": {
+       "id": "d770374d-05e9-4ed3-a068-3fbd4e6e4dd6",
+       "name": "Wiener Philharmoniker"
+      }
+     },
+     {
+      "name": "Herbert von Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "6f20b35e-4584-43e4-a02b-eeb28462b854",
+    "title": "Symphony no. 9 in D minor, op. 125: 1. Allegro ma non troppo, un poco maestoso",
+    "length": 930000,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Berliner Philharmoniker",
+      "joinphrase": " & ",
+      "artist": {
+       "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+       "name": "Berliner Philharmoniker"
+      }
+     },
+     {
+      "name": "Karajan",
+      "joinphrase": "",
+      "artist": {
+       "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+       "name": "Herbert von Karajan"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "begin": "1923-10",
+   "end": "1923-11",
+   "ended": true,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "target-credit": "",
+   "recording": {
+    "id": "c392de50-283f-4d74-9667-e7e1a6ce0986",
+    "title": "Symphony no. 9 in D minor, op. 125: I. Allegro ma non troppo, un poco maestoso",
+    "length": 840754,
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Albert Coates",
+      "joinphrase": "",
+      "artist": {
+       "id": "5f060bc5-3118-463a-b889-3c03f479c80b",
+       "name": "Albert Coates"
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+ "languages": [
+  "zxx"
+ ],
+ "disambiguation": "",
+ "attributes": [
+  {
+   "type": "Key",
+   "value-id": "6ff37406-fe52-30fd-a969-5e75b97b21c0",
+   "type-id": "7526c19d-3be4-3420-b6cc-9fb6e49fa1a9",
+   "value": "D minor"
+  }
+ ],
+ "language": "zxx",
+ "iswcs": [],
+ "type-id": null
+}

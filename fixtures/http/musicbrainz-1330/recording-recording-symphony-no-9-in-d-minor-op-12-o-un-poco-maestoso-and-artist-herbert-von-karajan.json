@@ -1,0 +1,622 @@
+{
+ "created": "2026-11-16T09:51:08.688Z",
+ "count": 5,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "7422cf83-4076-4f7e-ae20-5c92739f38a7",
+   "score": 100,
+   "title": "Symphony no. 9 in D minor, op. 125 \"Choral\": I. Allegro ma non troppo, un poco maestoso",
+   "length": 908000,
+   "first-release-date": "1989",
+   "artist-credit": [
+    {
+     "name": "Philharmonia Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "5610302e-bfd9-421c-80e2-03d790a0f5e5",
+      "name": "Philharmonia Orchestra"
+     }
+    },
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "7db4e3ab-fc36-48be-be2e-ccf3a89cfd5a",
+     "title": "The Complete EMI Recordings 1946-1984, Volume 1: Orchestral",
+     "date": "2008",
+     "status": "Official",
+     "release-group": {
+      "id": "46d77d9d-b1b7-4103-b689-413517fabc52",
+      "title": "The Complete EMI Recordings 1946–1984, Volume 1: Orchestral",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "582b2fc7-c5b6-4e99-971d-b44612df4ae6",
+     "title": "Beethoven: Symphonies 1-9 / Overtures (1951-1955)",
+     "date": "2014-03-31",
+     "status": "Official",
+     "release-group": {
+      "id": "49223472-dfe9-46c7-97da-3823956745dd",
+      "title": "Beethoven: Symphonies 1-9 / Overtures (1951-1955)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e78da9ad-7e11-4d52-8699-b17a62f7d216",
+     "title": "Official Remastered Edition",
+     "date": "2016-09-16",
+     "status": "Official",
+     "release-group": {
+      "id": "6f705b4b-50e3-4c81-a64c-51959f3473e8",
+      "title": "Official Remastered Edition",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f6ba9c0e-9248-48c3-98f9-cefaab895d03",
+     "title": "Symphonies 1-9 / Overtures (1951-1955)",
+     "date": "2014",
+     "status": "Official",
+     "release-group": {
+      "id": "9d9bc350-01b0-39d2-8bad-610d68a1ec2a",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b92d6fd5-c9d9-427d-9c97-02a03a1ea384",
+     "title": "The Complete EMI Recordings 1946–1984, Volume 1: Orchestral",
+     "date": "2008-02-08",
+     "status": "Official",
+     "release-group": {
+      "id": "46d77d9d-b1b7-4103-b689-413517fabc52",
+      "title": "The Complete EMI Recordings 1946–1984, Volume 1: Orchestral",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "254d6865-7757-4ccb-b066-415f8638e0aa",
+     "title": "9 Symphonien",
+     "date": "1989",
+     "status": "Official",
+     "release-group": {
+      "id": "9d9bc350-01b0-39d2-8bad-610d68a1ec2a",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "34924327-64df-4202-ab2c-c1e60518ac9a",
+     "title": "The 9 Symphonies",
+     "date": "2008-02-04",
+     "status": "Official",
+     "release-group": {
+      "id": "9d9bc350-01b0-39d2-8bad-610d68a1ec2a",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9c53423a-5549-406f-8547-0aab527cdc65",
+     "title": "Symphonies 1-9 / Overtures (1951-1955)",
+     "date": "2015",
+     "status": "Official",
+     "release-group": {
+      "id": "9d9bc350-01b0-39d2-8bad-610d68a1ec2a",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "6659bfb8-235b-488f-aec6-7ee5cceb7d6c",
+     "title": "Symphonies 1-9 / Overtures (1951-1955)",
+     "date": "2014",
+     "status": "Official",
+     "release-group": {
+      "id": "9d9bc350-01b0-39d2-8bad-610d68a1ec2a",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "df9318a6-07e3-47ab-a444-53599923347e",
+     "title": "Symphonies n°5, n°6 \"Pastorale\" et n°9 \"Avec choeur\"",
+     "date": "2010",
+     "status": "Official",
+     "release-group": {
+      "id": "cca9a6a9-88a6-4868-a7d4-323d78728762",
+      "title": "Symphonies n°5, n°6 \"Pastorale\" et n°9 \"Avec choeur\"",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "08227e87-e476-4168-b005-80eec04d8af3",
+   "score": 100,
+   "title": "Symphony no. 9 in D minor, op. 125 \"Choral\": I. Allegro ma non troppo, un poco maestoso",
+   "length": 904000,
+   "first-release-date": "2014",
+   "artist-credit": [
+    {
+     "name": "Philharmonia Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "5610302e-bfd9-421c-80e2-03d790a0f5e5",
+      "name": "Philharmonia Orchestra"
+     }
+    },
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "d37237f7-96a5-485e-9157-431afb942b24",
+     "title": "Symphony no. 9 in D minor, op. 125 \"Choral\"",
+     "status": "Official",
+     "release-group": {
+      "id": "2c7124e8-c6c2-429e-9343-2f51465cd3cc",
+      "title": "Symphony no. 9 in D minor, op. 125 \"Choral\"",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "9c53423a-5549-406f-8547-0aab527cdc65",
+     "title": "Symphonies 1-9 / Overtures (1951-1955)",
+     "date": "2015",
+     "status": "Official",
+     "release-group": {
+      "id": "9d9bc350-01b0-39d2-8bad-610d68a1ec2a",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "6659bfb8-235b-488f-aec6-7ee5cceb7d6c",
+     "title": "Symphonies 1-9 / Overtures (1951-1955)",
+     "date": "2014",
+     "status": "Official",
+     "release-group": {
+      "id": "9d9bc350-01b0-39d2-8bad-610d68a1ec2a",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "c9a04135-78a5-4847-87e7-163f7e10abd3",
+   "score": 100,
+   "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+   "length": 904733,
+   "first-release-date": "2014-03-31",
+   "artist-credit": [
+    {
+     "name": "Philharmonia Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "5610302e-bfd9-421c-80e2-03d790a0f5e5",
+      "name": "Philharmonia Orchestra"
+     }
+    },
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "582b2fc7-c5b6-4e99-971d-b44612df4ae6",
+     "title": "Beethoven: Symphonies 1-9 / Overtures (1951-1955)",
+     "date": "2014-03-31",
+     "status": "Official",
+     "release-group": {
+      "id": "49223472-dfe9-46c7-97da-3823956745dd",
+      "title": "Beethoven: Symphonies 1-9 / Overtures (1951-1955)",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e78da9ad-7e11-4d52-8699-b17a62f7d216",
+     "title": "Official Remastered Edition",
+     "date": "2016-09-16",
+     "status": "Official",
+     "release-group": {
+      "id": "6f705b4b-50e3-4c81-a64c-51959f3473e8",
+      "title": "Official Remastered Edition",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "3090d5f0-a4eb-4741-9a15-bc8de591846c",
+   "score": 100,
+   "title": "Symphony no. 9 in D minor, op. 125 “Choral”: I. Allegro ma non troppo, un poco maestoso",
+   "length": 926386,
+   "first-release-date": "1986",
+   "artist-credit": [
+    {
+     "name": "Berliner Philharmoniker",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+      "name": "Berliner Philharmoniker"
+     }
+    },
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "b882d4d0-28e6-46b4-ba1f-d5f11fc54b87",
+     "title": "The Symphonies",
+     "date": "2008-09",
+     "status": "Official",
+     "release-group": {
+      "id": "181459ec-0de4-45f2-bfd6-f9f809e0a433",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e37eeb0c-e064-4595-8e79-9e6ed44b7cbc",
+     "title": "Ludwig van Beethoven: 9 Symphonies",
+     "date": "2018-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "181459ec-0de4-45f2-bfd6-f9f809e0a433",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "545d7c00-a239-465c-938a-a474d3e969b8",
+     "title": "Symphonie Nr. 9 d-moll op.125",
+     "date": "",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "be672df9-6c66-459b-b7c2-3cce9dbe2cbf",
+     "title": "9 Symphonien",
+     "date": "2020",
+     "status": "Official",
+     "release-group": {
+      "id": "c9d0597f-5c1e-4471-ad55-8a8f40411c1d",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ce34d3ba-6055-4cb4-a023-69d7841b2118",
+     "title": "Symphony no. 9 “Choral”",
+     "date": "1987-03-16",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "1547c15d-b651-4613-ac45-2dfe2e5e2ccc",
+     "title": "Symphony no. 9 \"Choral\"",
+     "date": "1986",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "57a4e254-8b41-428e-8034-5bafc7f11233",
+     "title": "Karajan A-Z: Beethoven",
+     "date": "2024-09-20",
+     "status": "Official",
+     "release-group": {
+      "id": "3db64438-2042-49a8-bd2e-050408e9c311",
+      "title": "Karajan A-Z: Beethoven",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4a31ba40-a2d1-4491-b7b3-3bc4abaaca3d",
+     "title": "Complete Recordings on Deutsche Grammophon",
+     "date": "2008-04-05",
+     "status": "Official",
+     "release-group": {
+      "id": "0eb70f80-7d09-4554-8b54-ebc157098ab6",
+      "title": "Complete Recordings on Deutsche Grammophon",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f972154a-087a-418c-8c1b-600917fcbc9f",
+     "title": "9 Symphonien",
+     "date": "1990-03-20",
+     "status": "Official",
+     "release-group": {
+      "id": "181459ec-0de4-45f2-bfd6-f9f809e0a433",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "e187427d-8822-4382-9b42-5d8d81744785",
+     "title": "9 Symphonies",
+     "date": "2023-03-24",
+     "status": "Official",
+     "release-group": {
+      "id": "181459ec-0de4-45f2-bfd6-f9f809e0a433",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "0f2eda1a-951c-4144-9b34-4e6455f846c0",
+     "title": "Symphonie No. 9",
+     "date": "2007-01-07",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "96b762a5-45fb-4915-98d1-c31e019ca135",
+     "title": "The 9 Symphonies",
+     "date": "2018-05-23",
+     "status": "Official",
+     "release-group": {
+      "id": "181459ec-0de4-45f2-bfd6-f9f809e0a433",
+      "title": "9 Symphonien",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4add2b0a-2f40-4775-817a-c8780008a25b",
+     "title": "BTHVN 2020: The New Complete Edition (orchestral music)",
+     "status": "Pseudo-Release",
+     "release-group": {
+      "id": "8ac97ce6-1e7a-4673-8728-d792c9511403",
+      "title": "BTHVN 2020: The New Complete Edition",
+      "primary-type": "Other"
+     }
+    },
+    {
+     "id": "cfffccee-5d4c-4822-97b7-a99f33a4aa86",
+     "title": "BTHVN 2020: The New Complete Edition",
+     "date": "2019-11-01",
+     "status": "Official",
+     "release-group": {
+      "id": "8ac97ce6-1e7a-4673-8728-d792c9511403",
+      "title": "BTHVN 2020: The New Complete Edition",
+      "primary-type": "Other"
+     }
+    },
+    {
+     "id": "630d273f-c47f-4a7f-ac81-ecb92c78bfbe",
+     "title": "Symphony no. 9 in D minor, op. 125",
+     "date": "2002-10-29",
+     "status": "Official",
+     "release-group": {
+      "id": "a9f1da37-9864-4138-9cf7-dec2a32042b5",
+      "title": "Symphony no. 9 in D minor, op. 125",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "39f8e879-e1b0-4275-bad2-a0743d004601",
+     "title": "Symphony no. 9",
+     "date": "2002",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "62d7478c-fa70-4cd6-b7f5-ae008cb28fe4",
+     "title": "Herbert von Karajan Complete Recordings on Deutsche Grammophon and Decca",
+     "date": "2017-11-03",
+     "status": "Official",
+     "release-group": {
+      "id": "1c3c83b7-7320-4482-a115-4908920cdc1b",
+      "title": "Herbert von Karajan Complete Recordings on Deutsche Grammophon and Decca",
+      "primary-type": "Other"
+     }
+    },
+    {
+     "id": "e58987f6-fa6f-438c-8f2c-a7dde924527e",
+     "title": "Sinfonia n. 9 \"Corale\"",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a2eb765f-44b3-4071-95c2-633f00ac6261",
+     "title": "9 Symphonien / Ouvertüren",
+     "date": "2007",
+     "status": "Official",
+     "release-group": {
+      "id": "3bb31b19-b7e0-36fa-af85-328af1541822",
+      "title": "9 Symphonien / Ouvertüren",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "86e57a38-53c8-40b6-bc3e-c384d88ada26",
+     "title": "Symphony no. 9",
+     "date": "2013-11-19",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "0d60b53d-16be-3499-8223-bfd87ba9d70e",
+     "title": "Symphony Edition",
+     "date": "2008-10-31",
+     "status": "Official",
+     "release-group": {
+      "id": "3566ab2e-f690-4dd0-803e-751701e91a94",
+      "title": "Symphony Edition",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "70455946-b6be-4310-8b9e-c0b92ab0fb67",
+     "title": "Beethoven: Symphonies Nos. 5, 6 & 9",
+     "date": "2003-03-03",
+     "status": "Official",
+     "release-group": {
+      "id": "c8658436-5704-3cd3-b5d2-2993334343da",
+      "title": "Symphonies nos. 5, 6, 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d86a01f1-da1a-3874-9c93-ea93c27a004a",
+     "title": "Symphonies nos. 5, 6, 9",
+     "date": "2003-03-03",
+     "status": "Official",
+     "release-group": {
+      "id": "c8658436-5704-3cd3-b5d2-2993334343da",
+      "title": "Symphonies nos. 5, 6, 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "a9714312-0d2a-4d10-8e41-3ab000b6cc54",
+     "title": "Symphonie Nr. 9",
+     "date": "1987-03-16",
+     "status": "Official",
+     "release-group": {
+      "id": "97e41bfe-105b-45a9-95b1-5321210d5f8b",
+      "title": "Symphonie No. 9",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b829f5c7-cb5c-4c03-b6ae-665a7dccd9ee",
+   "score": 83,
+   "title": "Symphony No. 9 in D Minor, Op. 125 'Choral': I. Allegro Ma Non Troppo, Un Poco Maestoso",
+   "length": 924000,
+   "first-release-date": "2009",
+   "artist-credit": [
+    {
+     "name": "Reinhold Schmidt",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "7d65abca-4860-4a1e-a29a-f2127ad393c8",
+      "name": "Reinhold Schmidt"
+     }
+    },
+    {
+     "name": "Walter Berry",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "cebac518-6e51-4d13-a787-1adbf3e371f2",
+      "name": "Walter Berry"
+     }
+    },
+    {
+     "name": "Gundula Janowitz",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "5dea2dba-bf0d-4087-9117-40f90e4134ee",
+      "name": "Gundula Janowitz"
+     }
+    },
+    {
+     "name": "Waldemar Kmentt",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "f8fe5f1d-14ec-4d74-a887-8f2c2de341a9",
+      "name": "Waldemar Kmentt"
+     }
+    },
+    {
+     "name": "Hilde Rössel-Majdan",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "8eb9e349-c0b1-4785-aae4-46150d231c02",
+      "name": "Hilde Rössel‐Majdan"
+     }
+    },
+    {
+     "name": "Wiener Singverein",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "18dc8071-2248-4c25-ba94-c92e288bd4ae",
+      "name": "Wiener Singverein"
+     }
+    },
+    {
+     "name": "Berlin Philharmonic Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+      "name": "Berliner Philharmoniker"
+     }
+    },
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "40aa7ba7-c5c7-4e66-ac01-b4db3ad95512",
+     "title": "The Classic 100 - Symphony",
+     "date": "2009",
+     "status": "Official",
+     "release-group": {
+      "id": "f2a146b7-1a57-4abe-801a-0c13c6e25b20",
+      "title": "The Classic 100 - Symphony",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  }
+ ]
+}

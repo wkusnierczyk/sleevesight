@@ -91,9 +91,12 @@ internal class FakeMusicBrainz(
         return workFailure?.let { Lookup.Failed(it) } ?: works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
     }
 
+    /** Each artist's names, its own and its aliases (#1330), by its id; none known for an artist not here. */
+    val artistNames = mutableMapOf<String, List<String>>()
+
     override suspend fun artistNames(mbid: String): Lookup<List<String>> {
         artistNamesAsked += mbid
-        return Lookup.NotFound
+        return artistNames[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
     }
 
     /** The loose search's answer (#1289), whatever is asked. */
