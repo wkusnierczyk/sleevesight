@@ -466,7 +466,7 @@ class GroundingCheckTest {
     }
 
     @Test
-    fun `NO_EVIDENCE after prose, ending the reply or on a line of its own, is no evidence, the prose not shown`() {
+    fun `NO_EVIDENCE after uncited prose is no evidence, the prose not shown`() {
         val evidence = setOf("MB1")
         // The playlist's track 50, prompt version 13's second draft (#1142): shown as the card before.
         val track50 =
@@ -474,17 +474,45 @@ class GroundingCheckTest {
                 "nothing beyond it to tell. Per the rules, a date alone is enough for a sentence, but the album and " +
                 "release date are to be left out, so I have no story to add. NO_EVIDENCE"
         val replies =
-            listOf(
-                track50,
-                "$track50.",
-                "It came out in 2010 [MB1].\nNO_EVIDENCE",
-                "It came out in 2010 [MB1].\n\nNO_EVIDENCE.\n\nNothing else.",
-                "Nothing more to tell.\n  NO_EVIDENCE  \n",
-            )
+            listOf(track50, "$track50.", "Nothing more to tell.\n  NO_EVIDENCE  \n", "Nothing.\nNO_EVIDENCE\nAt all.")
         for (reply in replies) {
             assertEquals(InsightReply.NoEvidence, GroundingCheck.check(reply, evidence, allowModel = false), reply)
         }
-        // The marker only as part of a sentence, or of a longer word, is not the reply's.
+    }
+
+    @Test
+    fun `NO_EVIDENCE after cited prose is taken out, the cited prose kept`() {
+        val evidence = setOf("MB1")
+        for (reply in listOf("It came out in 2010 [MB1].\nNO_EVIDENCE", "It came out in 2010 [MB1]. NO_EVIDENCE.")) {
+            val checked = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, false), reply)
+            assertEquals("It came out in 2010 [MB1].", checked.grounded.text, reply)
+            assertEquals(
+                listOf(SentenceStatus.OK),
+                checked.grounded.paragraphs
+                    .flatten()
+                    .map { it.status },
+                reply,
+            )
+        }
+        val between = "It came out in 2010 [MB1].\n\nNO_EVIDENCE.\n\nNothing else."
+        val kept = assertIs<InsightReply.Written>(GroundingCheck.check(between, evidence, allowModel = false))
+        assertFalse(GroundingCheck.NO_EVIDENCE in kept.grounded.text, kept.grounded.text)
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.UNCITED),
+            kept.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
+        // A song's insight in two parts (#1133), one part answered with the marker: the other kept.
+        val twoParts = "The music\nIt was composed in 1788 [MB1].\n\nThis recording\nNO_EVIDENCE"
+        val song = assertIs<InsightReply.Written>(GroundingCheck.check(twoParts, evidence, false, headings = true))
+        assertFalse(GroundingCheck.NO_EVIDENCE in song.grounded.text, song.grounded.text)
+        assertTrue(
+            song.grounded.paragraphs
+                .flatten()
+                .any { it.cites == listOf("MB1") },
+        )
+        // The marker only as part of a sentence, or of a longer word, is not taken out.
         val written =
             listOf(
                 "It came out in 2010 [MB1]. The marker NO_EVIDENCE is never written here [MB1].",
@@ -492,7 +520,8 @@ class GroundingCheckTest {
                 "It came out in 2010 [MB1]. XNO_EVIDENCE",
             )
         for (reply in written) {
-            assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel = false), reply)
+            val checked = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, false), reply)
+            assertTrue("NO_EVIDENCE" in checked.grounded.text, reply)
         }
     }
 

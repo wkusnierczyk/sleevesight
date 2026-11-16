@@ -132,10 +132,11 @@ sealed interface InsightReply {
 /**
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
- * its `NO_EVIDENCE` test, rule for rule but for four deviations: an abbreviation does not end a
+ * its `NO_EVIDENCE` test, rule for rule but for five deviations: an abbreviation does not end a
  * sentence, a stop inside closing quotes and before citations does, a sentence may open with a
- * Markdown mark ([splitSentences]; #46, #423, #574), and prompt version 2's fixed sentence for a gap,
- * [GAP_SENTENCE], is a hedge (#46). The tests
+ * Markdown mark ([splitSentences]; #46, #423, #574), prompt version 2's fixed sentence for a gap,
+ * [GAP_SENTENCE], is a hedge (#46), and the marker after prose is read too ([check], #1142), where
+ * the simulator reads it only at the reply's start. The tests
  * check it on stored replies, against their stored results (`core/src/test/resources/grounding/`).
  * Before it splits a reply, a correction the model made of it in the open is taken out, leaving
  * the fresh version ([SelfCorrection], #597), and then, for an insight, a note the model left at
@@ -239,6 +240,12 @@ object GroundingCheck {
      * genre is or is not given, an explanation, a search's answer). With [headings], for the song's
      * insight written in two parts (#1133), a line that is one of [SongParts.HEADINGS] is a paragraph
      * of its own, one sentence marked [CheckedSentence.heading], written as the heading itself.
+     *
+     * The marker `NO_EVIDENCE` after prose (#1142), on a line of its own or ending the reply as a word
+     * of its own: taken out, and the rest checked. When no sentence of the rest cites anything, the
+     * reply is `NO_EVIDENCE` whole: what came before the marker was the model reasoning about its
+     * evidence, as on the playlist's track 50 ("…so I have no story to add. NO_EVIDENCE"). With a cited
+     * sentence, the rest is the reply: a song's insight in two parts may answer one of them so.
      */
     fun check(
         reply: String,
@@ -247,8 +254,10 @@ object GroundingCheck {
         notes: Boolean = false,
         headings: Boolean = false,
     ): InsightReply {
-        val whole = reply.trimJs()
-        if (isNoEvidence(whole)) return InsightReply.NoEvidence
+        val written = reply.trimJs()
+        if (isNoEvidence(written)) return InsightReply.NoEvidence
+        val marked = MARKER_AFTER_PROSE.containsMatchIn(written)
+        val whole = if (marked) withoutMarker(written) else written
         val correction = SelfCorrection.of(whole)
         val corrected = correction?.kept ?: whole
         val note = if (notes) MetaNote.of(corrected) else null
@@ -268,8 +277,24 @@ object GroundingCheck {
                         }
                     }
                 }.filter { it.isNotEmpty() }
-        return InsightReply.Written(GroundedText(text, paragraphs, allowModel, withdrawn))
+        val uncited = paragraphs.flatten().none { it.cites.isNotEmpty() }
+        return if (marked && uncited) {
+            InsightReply.NoEvidence
+        } else {
+            InsightReply.Written(GroundedText(text, paragraphs, allowModel, withdrawn))
+        }
     }
+
+    // [text] without the marker after prose ([MARKER_AFTER_PROSE]): a line of its own goes with its
+    // line, and one ending the text leaves the stop before it.
+    private fun withoutMarker(text: String): String =
+        MARKER_AFTER_PROSE
+            .replace(text) { found ->
+                found.value
+                    .first()
+                    .takeIf { it in ".!?" }
+                    ?.toString() ?: "\n"
+            }.trimJs()
 
     /**
      * Splits [text] into sentences, as the simulator does: spaces and tabs collapse to one space,
@@ -386,18 +411,13 @@ object GroundingCheck {
     }
 
     // The simulator's `/^NO_EVIDENCE\b/`: the marker, then the end or a character that is not a
-    // JavaScript word character. Or, since #1142, the marker after prose: on a line of its own, or
-    // ending the reply as a word of its own, with a full stop at most (a reply of version 13's draft:
-    // "…so I have no story to add. NO_EVIDENCE"). Read as `NO_EVIDENCE` whole, never the prose kept:
-    // what comes before the marker is the model reasoning about its evidence, uncited, not an insight.
+    // JavaScript word character. The marker after prose is [check]'s ([MARKER_AFTER_PROSE], #1142).
     private fun isNoEvidence(text: String): Boolean =
-        (
-            text.startsWith(NO_EVIDENCE) &&
-                (text.length == NO_EVIDENCE.length || text[NO_EVIDENCE.length] !in WORD_CHARS)
-        ) ||
-            MARKER_AFTER_PROSE.containsMatchIn(text)
+        text.startsWith(NO_EVIDENCE) &&
+            (text.length == NO_EVIDENCE.length || text[NO_EVIDENCE.length] !in WORD_CHARS)
 
-    // The marker on a line of its own, or ending the text as a word of its own; a full stop after it at most.
+    // The marker after prose (#1142): on a line of its own, or ending the text as a word of its own;
+    // a full stop after it at most.
     private val MARKER_AFTER_PROSE =
         Regex("(?:^|\\n)[ \\t]*$NO_EVIDENCE\\.?[ \\t]*(?:\\n|$)|[\\s.!?]$NO_EVIDENCE\\.?$")
 
