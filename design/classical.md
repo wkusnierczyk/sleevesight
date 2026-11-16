@@ -162,14 +162,29 @@ MusicBrainz's `Work: “Part”` shape fits: at most two more lookups without a 
 recording's detail, then its work), up to six with one (three recordings' details and the works they
 link, each work looked up once); and, with a composer lead, when its recording still has no work, a
 work found by a search (the fourth): one search more, and the lookup of the work it takes.
-- *An alias of a credited artist.* With a composer lead, a recording whose title, length and a
-  performer fit, but whose credit names someone none of the track's artists is by name, has that
-  artist's other names looked up (`artist/<id>?inc=aliases`, core data; at most two artists, only while
-  a performer of the track is left unnamed); an alias that is a track artist's name counts as theirs.
-  *Barber: Adagio for Strings* by Samuel Barber, Sir Simon Rattle and the Berlin Philharmonic:
-  MusicBrainz credits Rattle and the Berliner Philharmoniker, whose aliases include Berlin
-  Philharmonic. Four requests (two searches, the alias lookup, the recording), where it made two and
-  found nothing. MusicBrainz links that recording to no work, so the title's lead tells the composer.
+- *An alias of a credited artist.* A recording whose title, length and a performer fit, but whose
+  credit names someone none of the track's artists is by name, has that artist's other names looked up
+  (`artist/<id>?inc=aliases`, core data; at most two artists for the track, only while a performer of
+  the track is left unnamed); an alias that is a track artist's name counts as theirs. With a composer
+  lead, first among the recordings the searches by name found. Then, with or without one (#1330), when
+  nothing found may be chosen in any way (read as a part of a work, credited in any form), among those
+  the loose search (below) and the searches by the later credited artists left out for crediting
+  someone else and that have the title's numbers; such a recording counts once the aliases make it the
+  track's artists' and it stands for two or more of them, as the loose search's own, and, when only an
+  alias makes it so, for two or more performers, the composer (the title's, else the first credited) not
+  counted: another conductor's recording credited to the composer and the orchestra is not theirs. An alias looked up
+  stands for every recording after it, the loose search's included. A track that resolved before makes
+  no lookup it did not make. *Barber:
+  Adagio for Strings* by Samuel Barber, Sir Simon Rattle and the Berlin Philharmonic: MusicBrainz
+  credits Rattle and the Berliner Philharmoniker, whose aliases include Berlin Philharmonic. Four
+  requests (two searches, the alias lookup, the recording), where it made two and found nothing.
+  MusicBrainz links that recording to no work, so the title's lead tells the composer. *Symphony No. 9 in D Minor, Op. 125 "Choral": I.
+  Allegro ma non troppo, un poco maestoso* by Beethoven, the Berlin Philharmonic and Karajan (the
+  composer credited first, no lead; `fixtures/http/musicbrainz-1330/`): the three searches by name find
+  no recording within the length's tolerance; the loose search finds Karajan's of 1983 (`eadd2605`,
+  15:36), credited to the Berliner Philharmoniker and him, taken by the orchestra's alias. Seven
+  requests (four searches, the alias lookup, the recording and its work), where it made four and found
+  nothing; the work names Beethoven its composer.
 - *A loose search.* With the player's length and two or more credited artists, one search by the
   title's words (`word~` from four letters on) and every credited artist at once
   (`searchRecordingsLoosely`). Only a recording whose credits stand for two or more of the track's

@@ -1,0 +1,426 @@
+{
+ "created": "2026-11-16T09:51:44.600Z",
+ "count": 5871,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "03b3a23b-e00b-4029-8bf3-25eccda58157",
+   "score": 80,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 4. Presto",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fe3fcf63-c174-4466-969e-2256436917dd",
+   "score": 78,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 2. Molto Vivace",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ae2c99a7-3803-47ef-bd58-074a44470cc7",
+   "score": 77,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 4. Presto (Rehearsal)",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "934a0b79-72d7-47dc-a036-930bedb08f35",
+   "score": 74,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 3. Adagio Molto E Cantabile",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "1f48b3e0-b9c3-486f-b82d-57d22fad1dd7",
+   "score": 72,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 3. Adagio Molto E Cantabile (Rehearsal)",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "1c7bc571-b77b-4e62-862f-720a620b53bf",
+   "score": 69,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 1. Allegro Ma Non Troppo, Un Poco Maestoso",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "b530793d-6a89-4eb2-ad48-70d6000bf6b0",
+   "score": 68,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 1. Allegro Ma Non Troppo, Un Poco Maestoso (Rehearsal)",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "be5d92bc-cd25-4fb9-bd4c-c03034a6cc31",
+   "score": 68,
+   "title": "Beethoven Symphony #9 In D Minor, Op. 125, Choral - 5. Presto, O Freunde, Nicht Diese Töne!, Allegro Assai",
+   "first-release-date": "2010-11-09",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "86e71aac-b7ad-40e2-a9f9-b02c398874b7",
+     "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+     "date": "2010-11-09",
+     "status": "Official",
+     "release-group": {
+      "id": "70a5e4b1-7e58-42d0-bcae-1cf57a576433",
+      "title": "Ludwig Van Beethoven - Intégrale des 9 symphonies et ouvertures célèbres",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "eadd2605-6f2f-44d5-acaf-e4ef9aa40bed",
+   "score": 67,
+   "title": "Symphony no. 9 in D minor, op. 125: I. Allegro ma non troppo, un poco maestoso",
+   "length": 936000,
+   "first-release-date": "1984",
+   "artist-credit": [
+    {
+     "name": "Berliner Philharmoniker",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+      "name": "Berliner Philharmoniker"
+     }
+    },
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "2a29c5e8-e78c-4905-b61d-27d4730249f1",
+     "title": "Symphony No. 9",
+     "date": "2003",
+     "status": "Official",
+     "release-group": {
+      "id": "527506b1-407a-3aff-9c02-15b7653c00a5",
+      "title": "Symphonie no. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "2a29c5e8-e78c-4905-b61d-27d4730249f1",
+     "title": "Symphony No. 9",
+     "date": "2003",
+     "status": "Official",
+     "release-group": {
+      "id": "527506b1-407a-3aff-9c02-15b7653c00a5",
+      "title": "Symphonie no. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "57a4e254-8b41-428e-8034-5bafc7f11233",
+     "title": "Karajan A-Z: Beethoven",
+     "date": "2024-09-20",
+     "status": "Official",
+     "release-group": {
+      "id": "3db64438-2042-49a8-bd2e-050408e9c311",
+      "title": "Karajan A-Z: Beethoven",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4a31ba40-a2d1-4491-b7b3-3bc4abaaca3d",
+     "title": "Complete Recordings on Deutsche Grammophon",
+     "date": "2008-04-05",
+     "status": "Official",
+     "release-group": {
+      "id": "0eb70f80-7d09-4554-8b54-ebc157098ab6",
+      "title": "Complete Recordings on Deutsche Grammophon",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "62d7478c-fa70-4cd6-b7f5-ae008cb28fe4",
+     "title": "Herbert von Karajan Complete Recordings on Deutsche Grammophon and Decca",
+     "date": "2017-11-03",
+     "status": "Official",
+     "release-group": {
+      "id": "1c3c83b7-7320-4482-a115-4908920cdc1b",
+      "title": "Herbert von Karajan Complete Recordings on Deutsche Grammophon and Decca",
+      "primary-type": "Other"
+     }
+    },
+    {
+     "id": "642e6b57-fd3f-4e74-a542-e1313002779c",
+     "title": "Masterworks",
+     "date": "2013-02-01",
+     "status": "Official",
+     "release-group": {
+      "id": "c82d0cd9-d28f-451e-8c2a-32f054eb8e4c",
+      "title": "Masterworks",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "83929e34-56ce-4858-bad1-8af19e06cf80",
+     "title": "Symphonien / Ouvertüren",
+     "date": "2008-02-20",
+     "status": "Official",
+     "release-group": {
+      "id": "3bb31b19-b7e0-36fa-af85-328af1541822",
+      "title": "9 Symphonien / Ouvertüren",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "f83b66f2-f6e0-31dd-9fcb-496e852e4ec6",
+     "title": "Symphonie No. 9",
+     "date": "1993-03-02",
+     "status": "Official",
+     "release-group": {
+      "id": "527506b1-407a-3aff-9c02-15b7653c00a5",
+      "title": "Symphonie no. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "31d1abe1-73aa-4ad7-b6e3-df3ac13a64a2",
+     "title": "Symphonie No. 9",
+     "date": "1993-02-15",
+     "status": "Official",
+     "release-group": {
+      "id": "527506b1-407a-3aff-9c02-15b7653c00a5",
+      "title": "Symphonie no. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "ae34cda0-d2f6-48d5-8526-843b1df0e242",
+     "title": "9 Symphonien / Ouvertüren",
+     "date": "1986",
+     "status": "Official",
+     "release-group": {
+      "id": "3bb31b19-b7e0-36fa-af85-328af1541822",
+      "title": "9 Symphonien / Ouvertüren",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "d6548157-d7ab-3d00-a49d-53639c02d565",
+     "title": "Symphonie no. 9",
+     "date": "1984",
+     "status": "Official",
+     "release-group": {
+      "id": "527506b1-407a-3aff-9c02-15b7653c00a5",
+      "title": "Symphonie no. 9",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "b08d28a0-12da-4eb2-bded-84b4adc82e74",
+     "title": "9 Symphonien / Ouvertüren",
+     "date": "1993-05-03",
+     "status": "Official",
+     "release-group": {
+      "id": "3bb31b19-b7e0-36fa-af85-328af1541822",
+      "title": "9 Symphonien / Ouvertüren",
+      "primary-type": "Album"
+     }
+    },
+    {
+     "id": "4ed74b57-c4aa-476b-acc6-5e2e2ff1e73c",
+     "title": "Beethoven",
+     "date": "2011",
+     "status": "Official",
+     "release-group": {
+      "id": "06564b58-c957-4b2f-802d-75a9cb3fb1a4",
+      "title": "Beethoven",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  },
+  {
+   "id": "0e6fd7b1-2512-42d2-a98d-b6f8de422e6a",
+   "score": 66,
+   "title": "Symphony No. 9 in D Minor, Op. 125 (Ludwig van Beethoven) IV. Presto - Allegro molto assai - Andante maestoso - Allegro energico",
+   "first-release-date": "2014-07-11",
+   "artist-credit": [
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "25c4d978-d494-42ba-bb32-a1c27d26cd1d",
+     "title": "The Very Best Of Herbert von Karajan",
+     "status": "Official",
+     "release-group": {
+      "id": "6f3a6d2a-a9b3-43b4-8f31-db0179abb6ec",
+      "title": "The Very Best Of Herbert von Karajan"
+     }
+    }
+   ]
+  }
+ ]
+}
