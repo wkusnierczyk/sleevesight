@@ -91,7 +91,8 @@ import app.sleevesight.core.synthesis.SearchKind
  * the lyrics*, [SearchKind.EXPLAIN] *Explain the song*, each with the AI mark, [width] wide, so the
  * panel's two buttons are one column as the chips under *Key insights* are ([chipColumnWidth],
  * [ColumnChipLabel]; #1343): the mark at each button's end, in the same place on both, the label
- * centred in the room left of it. Without [width], the mark right after the label ([AiLabel]).
+ * centred in the room left of it. A marked button is always given [width] (only the *Lyrics* panel's
+ * are marked); without it, the mark would follow the label ([AiLabel]), a fallback.
  */
 @Composable
 internal fun AiSearchBlock(
@@ -302,6 +303,9 @@ private fun SearchButton(
             val described = stringResource(R.string.home_uses_ai, label)
             ColumnChipLabel(label, ink, ai = true, Modifier.semantics { contentDescription = described })
         } else if (texts.marked) {
+            // A fallback: no marked button is shown without a column's width today. [ColumnChipLabel]
+            // fills the bounded width this box hands it, so here it would stretch the button across
+            // the panel; [AiLabel] keeps the button to its label.
             ProvideTextStyle(MaterialTheme.typography.labelLarge) {
                 CompositionLocalProvider(LocalContentColor provides ink) { AiLabel(label) }
             }

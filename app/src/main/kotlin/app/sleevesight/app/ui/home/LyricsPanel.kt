@@ -145,8 +145,9 @@ internal fun LyricsPanel(
 }
 
 /**
- * *Explain the song* (#908), last in the panel, at least [width] wide: what the song is about, asked
- * on a tap only, its answer cited ([AiExplanation]).
+ * *Explain the song* (#908), last in the panel, [width] wide, one column with *Find the lyrics*
+ * ([chipColumnWidth], #1343): what the song is about, asked on a tap only, its answer cited
+ * ([AiExplanation]).
  */
 @Composable
 private fun Explain(

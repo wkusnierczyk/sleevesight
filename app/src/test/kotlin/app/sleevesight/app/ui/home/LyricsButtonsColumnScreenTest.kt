@@ -13,8 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
@@ -161,7 +164,8 @@ class LyricsButtonsColumnScreenTest {
         }
     }
 
-    private fun px(dp: Dp): Float = dp.value * compose.density.density
+    // [dp] in whole pixels, as the layout rounds it.
+    private fun px(dp: Dp): Float = with(compose.density) { dp.roundToPx().toFloat() }
 
     private fun near(
         what: String,
@@ -244,18 +248,33 @@ class LyricsButtonsColumnScreenTest {
     fun theButtonsAreOneColumnAtTwiceIt() = check(2f)
 
     @Test
-    fun theButtonsReadAsBefore() =
-        show {
-            val buttons =
-                listOf(
-                    AI_SEARCH_TAG to R.string.home_lyrics_find,
-                    explainTag(AI_SEARCH_TAG) to R.string.home_lyrics_explain,
-                )
-            for ((tag, label) in buttons) {
-                val name = app.getString(label)
-                compose.onNodeWithTag(tag).assertTextEquals(name).assertContentDescriptionEquals("$name, uses AI")
+    fun theButtonsReadAsBefore() {
+        val buttons =
+            listOf(
+                AI_SEARCH_TAG to R.string.home_lyrics_find,
+                explainTag(AI_SEARCH_TAG) to R.string.home_lyrics_explain,
+            )
+        for (search in listOf(AiSearch.Offered, AiSearch.Unready)) {
+            feed.states.values.forEach { it.value = search }
+            show {
+                for ((tag, label) in buttons) {
+                    val name = app.getString(label)
+                    val button = compose.onNodeWithTag(tag)
+                    button.assertTextEquals(name).assertContentDescriptionEquals("$name, uses AI")
+                    if (search == AiSearch.Unready) {
+                        button
+                            .assertIsNotEnabled()
+                            .assert(
+                                SemanticsMatcher.expectValue(
+                                    SemanticsProperties.StateDescription,
+                                    app.getString(R.string.home_ai_search_unready),
+                                ),
+                            )
+                    }
+                }
             }
         }
+    }
 
     @Test
     fun pictures() {
@@ -277,7 +296,7 @@ class LyricsButtonsColumnScreenTest {
     }
 
     private companion object {
-        // A pixel's rounding at each of the edges a measure is taken between.
-        const val TOLERANCE = 1.5f
+        // Half a pixel: centring a label in its room divides whole pixels by two.
+        const val TOLERANCE = 0.5f
     }
 }
