@@ -3,21 +3,33 @@ package app.sleevesight.app.ui.home
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
@@ -40,7 +52,8 @@ import org.robolectric.annotation.GraphicsMode
  * column as wide as the widest, the links left-aligned in theirs; on a link that wraps, the id and
  * the mark of a page that opens outside the app on its first line, not in its middle. At the usual
  * font size and at twice it, in a column narrow enough for the long site to wrap. Native graphics,
- * for the texts' real widths.
+ * for the texts' real widths. The rows close together, each link still answering a tap across 48
+ * dp; the sites in *Sources*' small type and the ids as the text's chips (#1344).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -58,7 +71,26 @@ class LyricsCitedPagesLayoutTest {
             CitedPage("S10", "https://musicasparaouvirnaestrada.blogspot.com/good-love", "Good Love"),
         )
 
-    private fun show(check: () -> Unit) {
+    // The pages opened, by a tap on their links.
+    private val opened = mutableListOf<String>()
+
+    private val browser =
+        object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+
+    // The theme's chip fill and small label type, as the explanation had them.
+    private var chipFill = Color.Unspecified
+    private var small = TextStyle.Default
+
+    // In a column [width] wide: by default narrow enough for the long site to wrap, and wide enough
+    // for the others to take one line, at the font size the test has.
+    private fun show(
+        width: Dp? = null,
+        check: () -> Unit,
+    ) {
         val reply = "It is about good times. [S5] [S7] [S2] It is a song for the road. [S10]"
         val grounded =
             (GroundingCheck.check(reply, pages.map { it.id }.toSet(), allowModel = false) as InsightReply.Written)
@@ -67,8 +99,13 @@ class LyricsCitedPagesLayoutTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
+                    val column = width ?: if (LocalDensity.current.fontScale > 1f) 300.dp else 240.dp
                     SleevesightTheme(darkTheme = false) {
-                        Surface { Column(Modifier.width(300.dp)) { AiExplanation(answer) } }
+                        chipFill = MaterialTheme.colorScheme.secondaryContainer
+                        small = MaterialTheme.typography.labelSmall
+                        CompositionLocalProvider(LocalUriHandler provides browser) {
+                            Surface { Column(Modifier.width(column)) { AiExplanation(answer) } }
+                        }
                     }
                 }
             }
@@ -185,6 +222,71 @@ class LyricsCitedPagesLayoutTest {
 
     @Test
     fun theNumbersAreRightAlignedInTheirColumnAndTheLinksLeftAlignedInTheirs() = numbersRightAlignedLinksLeftAligned()
+
+    private fun linkBounds(page: CitedPage) =
+        compose
+            .onNode(hasText(siteOf(page.url)) and hasAnyAncestor(hasTestTag(lyricsCitedPageTag(page.id))))
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+    private fun tap(point: Offset) {
+        opened.clear()
+        compose.onRoot().performTouchInput { click(point) }
+        compose.waitForIdle()
+    }
+
+    // In a phone's full width, where the two sites take a line each at either font size.
+    private fun rowsCloseAndEachLinkAnswersAcrossATouchTarget() =
+        show(width = 411.dp) {
+            val target = compose.density.run { 48.dp.toPx() }
+            val (upper, lower) = pages[1] to pages[2]
+            // The blank between the two sites' lines is the rows' gap, not a touch target's room
+            // around a smaller text: a row is as high as its text.
+            val blank =
+                link(lower).let { it.origin.y + it.layout.getLineTop(0) } -
+                    link(upper).let { it.origin.y + it.layout.getLineBottom(it.layout.lineCount - 1) }
+            assertTrue("$blank px between the rows", blank < compose.density.run { 16.dp.toPx() })
+            val above = linkBounds(upper)
+            val below = linkBounds(lower)
+            assertTrue(above.height < target && below.height < target)
+            // Outside a link's bounds, but within the 48 dp Compose widens it to, and nearer it than
+            // the next link: a tap opens it.
+            val x = above.left + 4f
+            val step = compose.density.run { 2.dp.toPx() }
+            tap(Offset(x, above.bottom + step))
+            assertEquals(listOf(upper.url), opened)
+            tap(Offset(x, below.top - step))
+            assertEquals(listOf(lower.url), opened)
+            // Above the first link, where only the note "Pages cited" is: still the first link's.
+            val first = linkBounds(pages.first())
+            val reach = (target - first.height) / 2
+            tap(Offset(x, first.top - reach + step))
+            assertEquals(listOf(pages.first().url), opened)
+        }
+
+    @Test
+    fun theRowsSitCloseAndEachLinkStillAnswersATapAcrossATouchTarget() = rowsCloseAndEachLinkAnswersAcrossATouchTarget()
+
+    @Test
+    @Config(fontScale = 2f)
+    fun atTwiceTheFontSizeTheRowsSitCloseAndEachLinkStillAnswersATap() = rowsCloseAndEachLinkAnswersAcrossATouchTarget()
+
+    @Test
+    fun theSitesAreInSourcesSmallTypeAndTheIdsAreTheTextsChips() =
+        show {
+            for (page in pages) {
+                val link = link(page).layout.layoutInput
+                assertEquals("${page.id}'s site in the small label type", small.fontSize, link.style.fontSize)
+                val id = id(page).layout.layoutInput
+                // The text's chip: its fill over the whole id, at the sites' size.
+                val chip = id.text.spanStyles.single()
+                assertEquals(chipFill, chip.item.background)
+                assertEquals(0 until id.text.length, chip.start until chip.end)
+                assertEquals(TextUnit.Unspecified, chip.item.fontSize)
+                assertEquals(link.style.fontSize, id.style.fontSize)
+                assertEquals(page.id, id.text.text.trim('\u00A0'))
+            }
+        }
 
     @Test
     @Config(fontScale = 2f)
