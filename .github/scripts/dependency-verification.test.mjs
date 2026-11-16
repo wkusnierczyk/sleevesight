@@ -205,12 +205,20 @@ for (const [name, [change, reason]] of Object.entries(refused)) {
 
 // 2. Overrides of the verification mode.
 
-// What sets the mode, or makes a build write the metadata rather than check it, in any file read.
+// What sets the mode, turns verification off, or makes a build write the metadata rather than check
+// it, in any file read. Gradle 9.9's public API has these ways (`StartParameter`,
+// `ResolutionStrategy`, `StartParameterBuildOptions`); the internal one is its override, which a
+// build reaching into Gradle's services could replace. Not here, since neither accepts a file the
+// metadata does not: `refreshKeys` and `exportKeys` (keys still need trusting, and the key servers
+// are off), and lenient resolution (`ArtifactView.lenient`, `lenientConfiguration`), which leaves a
+// file that fails verification out rather than taking it.
 const MODE = [
   /dependency[.]verification/i, // `org.gradle.dependency.verification`, in a properties file or `-D`.
   /--dependency-verification/i,
-  /dependencyverificationmode/i, // The start parameter's mode, in a build or init script.
-  /write[-_]?dependency[-_]?verification/i, // The start parameter's writing of the metadata.
+  /dependencyverificationmode/i, // `StartParameter`'s mode (`setDependencyVerificationMode`, the enum).
+  /disabledependencyverification/i, // `ResolutionStrategy.disableDependencyVerification()`, per configuration.
+  /verificationoverride/i, // Gradle's internal `DependencyVerificationOverride` and its kinds.
+  /write[-_]?dependency[-_]?verification/i, // `StartParameter`'s writing of the metadata.
   /write[-_]verification[-_]metadata/i, // `--write-verification-metadata`; `Probe`'s variable.
 ];
 // In the workflows and their scripts and actions, also the files themselves, which a step could
@@ -383,6 +391,23 @@ const refusedOverrides = {
   'the mode set in a settings script': [
     'settings.gradle.kts',
     'gradle.startParameter.dependencyVerificationMode = DependencyVerificationMode.OFF\n',
+  ],
+  'verification off for every configuration in the root build': [
+    'build.gradle.kts',
+    'allprojects { configurations.configureEach { resolutionStrategy.disableDependencyVerification() } }\n',
+  ],
+  'verification off in a convention plugin': [
+    'build-logic/src/main/kotlin/sleevesight.locking.gradle.kts',
+    'configurations.all {\n    resolutionStrategy {\n        disableDependencyVerification()\n    }\n}\n',
+  ],
+  'verification off in a Groovy build script': ['app/build.gradle', 'configurations.all { resolutionStrategy.disableDependencyVerification() }\n'],
+  "the start parameter's setter": [
+    'settings.gradle.kts',
+    'gradle.startParameter.setDependencyVerificationMode(org.gradle.api.artifacts.verification.DependencyVerificationMode.LENIENT)\n',
+  ],
+  "Gradle's internal override": [
+    'build-logic/src/main/kotlin/x.gradle.kts',
+    'val off = DependencyVerificationOverride.NO_VERIFICATION\n',
   ],
   'the metadata written from a build script': ['build.gradle.kts', 'gradle.startParameter.setWriteDependencyVerifications(listOf("sha256"))\n'],
   'the property in build logic': ['build-logic/build.gradle.kts', 'System.setProperty("org.gradle.dependency.verification", "off")\n'],
