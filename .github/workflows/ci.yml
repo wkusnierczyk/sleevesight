@@ -125,6 +125,13 @@ jobs:
       - name: Pages' security policy
         run: node --test .github/scripts/page-csp.test.mjs
 
+      # Gradle's dependency verification held on (#1329): the metadata's settings pinned, each trusted
+      # key bound to a group by name, and no file that turns verification off or makes a build write
+      # the metadata instead of checking it (`gradle.properties`, a workflow's Gradle flags, the build
+      # scripts). Here rather than in a Gradle job, so a run that skips the build checks it too.
+      - name: Dependency verification held on
+        run: node --test .github/scripts/dependency-verification.test.mjs
+
       # The release's track and its guard against a `PLAY_TRACK` left at `production`
       # (`release-track.sh`, #451), tested in a throwaway repository.
       - name: Release track
