@@ -133,6 +133,17 @@ class LyricsExplanationSourcesTest {
     }
 
     @Test
+    fun aKeptTitleOfInvisibleCharactersAloneShowsTheSiteAsItsLine() {
+        // A tag character (a surrogate pair), zero-width marks, a bidi override: each alone, and together.
+        val titles = listOf("\uDB40\uDC20", "\u200B\u2060\uFEFF", "\u202E\u2066", "\uDB40\uDC20 \u200B\u202E")
+        for (title in titles) {
+            val page = CitedPage("S1", "https://www.music.example/x", title)
+            val line = sources(answered(page, keptAt = at)).evidence?.get("S7")
+            assertEquals(title, "music.example", line?.text)
+        }
+    }
+
+    @Test
     fun withNoLineInSourcesACitationKeepsItsOwnIdAndPage() {
         val shown = citedLines(listOf(songfacts), null).getValue("S1")
         assertEquals("S1", shown.shown)

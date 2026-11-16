@@ -26,6 +26,7 @@ import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.sameAddress
+import app.sleevesight.core.text.SourceText
 import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Instant
 
@@ -243,12 +244,15 @@ internal fun explainedPages(search: AiSearch): List<WebPage> {
 }
 
 /**
- * A page's [title] as a line of *Sources* shows it: without the marks that show nothing or turn the
- * text around (format and control characters: a zero-width space, a right-to-left override), its
- * spaces one; null for none, or one with nothing left to show.
+ * A page's [title] as a line of *Sources* shows it: cleaned as its evidence is (`SourceText.clean`:
+ * what a person does not see, a tag character among it), then without the marks that show nothing
+ * or turn the text around (format and control characters: a zero-width space, a right-to-left
+ * override), its spaces one; null for none, or one with nothing left to show, so a kept title of
+ * invisible characters alone falls back to the site as a fresh one does.
  */
 internal fun shownTitle(title: String?): String? =
     title
+        ?.let(SourceText::clean)
         ?.filterNot { Character.getType(it) == Character.FORMAT.toInt() }
         ?.replace(BLANKS, " ")
         ?.trim()
