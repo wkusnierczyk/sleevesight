@@ -299,7 +299,8 @@ internal class NowPlayingActions(
  * under *Expandable boxes* *Genres* too, a genre opening in its box inside *Genres*' panel.
  * The song's, the artist's and the album's rows unfold in place under *Expandable boxes*, several at
  * once, starting as *Song, Artist and Album on a new track* says, and open a page each under
- * *Separate pages*. The insight shows in full on Home either way.
+ * *Separate pages*. The insight shows in full on Home either way. The rows and the artists under the
+ * title are held back until the track's people are named ([peopleNamed], #1355), so they are named once.
  */
 @Composable
 internal fun NowPlayingContent(
@@ -331,6 +332,7 @@ internal fun NowPlayingContent(
     // Its own evidence, with its album's lines once its insight gathered them (#522).
     val lines = sourcesLines(actions.itemNotes, track, actions.genreNotes, actions.aiSearches)
     val focus = rememberLineFocus(lines.evidence, track?.normalized)
+    val named = peopleNamed(rememberNamingMemory(), shown, remember(header) { actions.normalize(header) })
     val fold = sourcesFold(foldMemory, playing, onNewTrack = settings?.sourcesOnNewTrack)
     // A citation tapped unfolds the list far enough to show its line, or opens it there on its page.
     val cite: (String) -> Unit =
@@ -350,7 +352,7 @@ internal fun NowPlayingContent(
                 ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
                 val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
-                TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions)
+                TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions, named)
                 InsightCard(
                     keyInsight(actions.itemNotes, track, view.nothingToNarrate) ?: NOT_YET,
                     insightContext(view, track, settings, shown.modelAllowed, state.unavailable, retries),
@@ -361,7 +363,7 @@ internal fun NowPlayingContent(
                     settings?.let { writingChoice(it, actions) },
                     insightReading(actions.readAloud, track),
                 )
-                val rows = homeItemRows(shown, header, actions)
+                val rows = if (named) homeItemRows(shown, header, actions) else emptyList()
                 // One width for every chip under *Key insights*: the rows' and *Sources*' (#1286).
                 val column = keyInsightsWidth(rows, ai = settings?.writeInsights == true)
                 HomeItems(state, shown, rows, column, itemMemory, cite, actions) { t, w, i ->

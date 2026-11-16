@@ -15,6 +15,8 @@ import app.sleevesight.core.settings.Settings
 /**
  * The key data of [header] ([KeyData]: the title, the artists, the album and its year), then under
  * the album the line of buttons that open in place ([UnderAlbum]), each a child of Home's column.
+ * The artists under the title are held back, their line's space kept, until the track's people are
+ * [named] ([peopleNamed], #1355).
  */
 @Composable
 internal fun TrackHeader(
@@ -22,10 +24,11 @@ internal fun TrackHeader(
     header: NowPlaying,
     line: UnderAlbumLine,
     actions: NowPlayingActions,
+    named: Boolean = true,
 ) {
     val normalized = remember(header) { actions.normalize(header) }
     val split = remember(shown.track, normalized) { splitOf(shown.track, normalized) }
-    KeyData(normalized, header, headerYears(shown.track, header), split)
+    KeyData(normalized, header, headerYears(shown.track, header), split, held = !named)
     UnderAlbum(shown, header, line, actions)
 }
 
