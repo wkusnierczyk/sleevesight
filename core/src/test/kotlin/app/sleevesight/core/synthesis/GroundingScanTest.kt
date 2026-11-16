@@ -64,6 +64,41 @@ class GroundingScanTest {
     }
 
     @Test
+    fun `a sentence's end told by a long run of citations after it is read as before, not cut short`() {
+        // `I` and 320 citations after `The songs.`: a numeral and its citations alone, so no sentence
+        // ends there, and the first sentence, 1,294 characters, runs on past the bound. Read only to a
+        // bound and cut inside the citations, it ended at `The songs.`, which restates the draft.
+        val reply = "The songs [W1].\nWait, the evidence.\nThe songs. I " + "[W1]".repeat(LONG_RUN) + "."
+        assertNull(Before.of(reply))
+        assertNull(SelfCorrection.of(reply))
+        // Within the bound, the run is read to its end as well: `The songs. I [W1]…[W1].` is one
+        // sentence, a third of whose words (`i`) are new, so it restates nothing.
+        val within = "The songs [W1].\nWait, the evidence.\nThe songs. I " + "[W1]".repeat(SHORT_RUN) + "."
+        assertEquals(Before.of(within), SelfCorrection.of(within))
+        assertNull(SelfCorrection.of(within))
+    }
+
+    @Test
+    fun `a first sentence of up to a thousand characters restates the draft, one longer does not`() {
+        val draft = "The songs [W1].\nWait, the evidence.\n"
+        // `The the … songs songs[W1].`: 1,000 characters, all its words the draft's; one more, a space
+        // before the citation, makes 1,001.
+        val words = "The" + " the".repeat(THE_WORDS) + " songs songs"
+        for ((after, restates) in listOf(
+            "$words[W1]." to true,
+            "$words [W1]." to false,
+            "$words[W1]. It is so [W1]." to true,
+            "$words [W1]. It is so [W1]." to false,
+        )) {
+            val first = after.substringBefore(" It is")
+            assertEquals(if (restates) BOUND else BOUND + 1, first.length, after)
+            // Before the bound, it read the same; past it, the version revises nothing.
+            assertNotNull(Before.of(draft + after), after)
+            assertEquals(restates, SelfCorrection.of(draft + after) != null, after)
+        }
+    }
+
+    @Test
     fun `citations are found where the regex found them`() {
         val random = Random(SEED)
         var found = 0
@@ -230,6 +265,16 @@ class GroundingScanTest {
 
         /** 2M characters of 7-character sentences. */
         const val SENTENCES = 300_000
+
+        /** Citations after `The songs. I`: past the bound on a first sentence, and within it. */
+        const val LONG_RUN = 320
+        const val SHORT_RUN = 200
+
+        /** The bound on a version's first sentence (`SelfCorrection.FIRST_SENTENCE`). */
+        const val BOUND = 1_000
+
+        /** The `the`s that make a first sentence of [BOUND] characters, with `The`, two `songs` and `[W1].`. */
+        const val THE_WORDS = 245
 
         /** 256k characters of citations, or 320k of words. */
         const val DENSE = 64_000

@@ -379,7 +379,7 @@ object GroundingCheck {
      * sentence runs on past [within]. Only as much of [t] is read as its first sentence needs (#1318).
      */
     internal fun firstSentenceEnd(
-        t: String,
+        t: CharSequence,
         within: Int,
     ): Int? {
         var i = 0
@@ -397,7 +397,7 @@ object GroundingCheck {
 
     // Where the whitespace that starts at [i] in [t] ends.
     private fun whitespaceEnd(
-        t: String,
+        t: CharSequence,
         i: Int,
     ): Int {
         var end = i
@@ -408,7 +408,7 @@ object GroundingCheck {
     // Whether a sentence of [t] ends at the whitespace from [i] to [end], [lineBreak] when a line break
     // is in it.
     private fun endsAt(
-        t: String,
+        t: CharSequence,
         i: Int,
         end: Int,
         lineBreak: Boolean,
@@ -429,7 +429,7 @@ object GroundingCheck {
      * sentence's end, here on the JVM as on Android, where the regex engine copies the text it is given.
      */
     internal fun numeralCited(
-        t: String,
+        t: CharSequence,
         at: Int,
     ): Boolean {
         val k = afterNumeral(t, at)
@@ -442,7 +442,7 @@ object GroundingCheck {
     // may close it after it ([numeralCited]), or null when there is none. The numeral is all the run of
     // I, V and X there, as nothing that may follow it is one of them.
     private fun afterNumeral(
-        t: String,
+        t: CharSequence,
         at: Int,
     ): Int? {
         var k = at
@@ -468,7 +468,7 @@ object GroundingCheck {
          * end after any of them; or no stop, and the end.
          */
         fun endSentence(
-            t: String,
+            t: CharSequence,
             stop: Boolean,
         ): Boolean {
             val stopAfter = end < t.length && t[end] in ".!?" && (end + 1 == t.length || isJsWhitespace(t[end + 1]))
@@ -478,7 +478,7 @@ object GroundingCheck {
         companion object {
             /** The citations from [from] in [t], or null when no citation comes there. */
             fun after(
-                t: String,
+                t: CharSequence,
                 from: Int,
             ): Citations? {
                 var end = -1
@@ -547,7 +547,7 @@ object GroundingCheck {
      * marks may come between the stop and the citations ([splitSentences]).
      */
     private fun endsSentence(
-        t: String,
+        t: CharSequence,
         end: Int,
         listed: Boolean,
     ): Boolean {
@@ -587,7 +587,7 @@ object GroundingCheck {
      * one of [SENTENCE_OPENERS]; the next word may be in emphasis marks (#574, #953).
      */
     private fun endsAbbreviation(
-        t: String,
+        t: CharSequence,
         end: Int,
     ): Boolean {
         if (t.getOrNull(end - 1) != '.') return false
@@ -682,7 +682,7 @@ object GroundingCheck {
 
     /** Where the citation (`[W1]`, `[MB12]`, `[AI]`) that ends just before [end] starts, or null. */
     private fun citationBefore(
-        t: String,
+        t: CharSequence,
         end: Int,
     ): Int? {
         if (t.getOrNull(end - 1) != ']') return null
@@ -761,7 +761,7 @@ internal fun citationRanges(text: String): List<IntRange> {
 
 // Where the citation that starts at [at] in [t] ends (`[W1]`, `[MB12]`), or null.
 private fun citationEnd(
-    t: String,
+    t: CharSequence,
     at: Int,
 ): Int? {
     var k = at + 1
@@ -773,12 +773,11 @@ private fun citationEnd(
 
 /**
  * The first sentence of the text from each place in [text] on, as [GroundingCheck.splitSentences] reads
- * it: `splitSentences(text.substring(from).trimJs()).firstOrNull()`. Spaces and tabs collapse once for
- * all the places, and from each only the first [within] characters and [LOOKAHEAD] more are read, not
- * the rest of [text] (`SelfCorrection.of`, #1318, #1328). The cost: a first sentence that runs on past
- * [within] characters is none ([of] is null), and a sentence's end within them that is told by more
- * than [LOOKAHEAD] characters after it (a run of that many emphasis marks or citations) may be read
- * otherwise.
+ * it: `splitSentences(text.substring(from).trimJs()).firstOrNull()`, or null when it runs on past
+ * [within] characters. Spaces and tabs collapse once for all the places, and the text from each is read
+ * in place ([Slice]), only as far as its first [within] characters and what tells whether a sentence
+ * ends in them, not copied to the end for each (`SelfCorrection.of`, #1318, #1328). The split runs no
+ * regex on the text itself, only on the few characters of a word or a mark, which it copies.
  */
 internal class FirstSentences(
     text: String,
@@ -812,14 +811,34 @@ internal class FirstSentences(
     fun of(from: Int): String? {
         var start = places[from]
         while (start < end && isJsWhitespace(spaced[start])) start++
-        val read = spaced.substring(start, minOf(end, start + within + LOOKAHEAD))
-        // Null when no sentence ends within [within] characters, what was read cut short or not.
-        return GroundingCheck.firstSentenceEnd(read, within)?.let { read.substring(0, it) }
+        return GroundingCheck.firstSentenceEnd(Slice(spaced, start, end), within)?.let {
+            spaced.substring(start, start + it)
+        }
     }
 
-    private companion object {
-        /** How much more is read after [within] to tell whether a sentence ends there. */
-        const val LOOKAHEAD = 200
+    // [text] from [start] to [end], read in place: only what [subSequence] is asked for is copied.
+    private class Slice(
+        private val text: String,
+        private val start: Int,
+        private val end: Int,
+    ) : CharSequence {
+        override val length: Int
+            get() = end - start
+
+        override fun get(index: Int): Char {
+            require(index in 0 until length) { "$index is outside 0 until $length" }
+            return text[start + index]
+        }
+
+        override fun subSequence(
+            startIndex: Int,
+            endIndex: Int,
+        ): CharSequence {
+            require(startIndex in 0..endIndex && endIndex <= length) { "$startIndex until $endIndex, length $length" }
+            return text.substring(start + startIndex, start + endIndex)
+        }
+
+        override fun toString(): String = text.substring(start, end)
     }
 }
 
@@ -842,7 +861,7 @@ private val SPACES_AND_TABS = Regex("[ \\t]+")
 // The word after [end] in [t] ([GroundingCheck]'s abbreviations), past the whitespace and any
 // opening `(`, `"`, `“` or emphasis marks, without the punctuation and emphasis marks after it.
 private fun nextWord(
-    t: String,
+    t: CharSequence,
     end: Int,
 ): String {
     var next = end

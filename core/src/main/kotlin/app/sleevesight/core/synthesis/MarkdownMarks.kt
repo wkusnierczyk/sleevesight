@@ -11,7 +11,7 @@ internal object MarkdownMarks {
 
     /** Whether [t] at [at] is one of [openers], after any opening run of [EMPHASIS] marks. */
     fun opens(
-        t: String,
+        t: CharSequence,
         at: Int,
         openers: String,
     ): Boolean {
@@ -28,7 +28,7 @@ internal object MarkdownMarks {
      * given, at each line break of a paragraph.
      */
     fun isLineMark(
-        t: String,
+        t: CharSequence,
         at: Int,
     ): Boolean = LINE_MARK.matchesAt(t.substring(at, minOf(t.length, at + LINE_MARK_READS)), 0)
 
@@ -37,7 +37,7 @@ internal object MarkdownMarks {
      * line indented or not (a nested list's, `  1.`), as [isLineMark] reads it after a line break.
      */
     fun isListNumber(
-        t: String,
+        t: CharSequence,
         end: Int,
     ): Boolean {
         var start = end - 1
