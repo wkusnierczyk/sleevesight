@@ -493,18 +493,6 @@ object GroundingCheck {
                 }
                 return if (end < 0) null else Citations(end, spaced)
             }
-
-            // Where the citation that starts at [at] in [t] ends (`[W1]`, `[MB12]`), or null.
-            private fun citationEnd(
-                t: String,
-                at: Int,
-            ): Int? {
-                var k = at + 1
-                while (k < t.length && k - at <= 2 && t[k] in 'A'..'Z') k++
-                val letters = k - at - 1
-                while (k < t.length && t[k] in '0'..'9') k++
-                return (k + 1).takeIf { t.getOrNull(at) == '[' && letters > 0 && t.getOrNull(k) == ']' }
-            }
         }
     }
 
@@ -513,7 +501,7 @@ object GroundingCheck {
         ids: Set<String>,
         allowModel: Boolean,
     ): CheckedSentence {
-        val cites = CITATION.findAll(sentence).map { citationId(it.groupValues[1]) }.toList()
+        val cites = citationRanges(sentence).map { citationId(sentence.substring(it.first + 1, it.last)) }
         val bad = cites.any { if (it == MODEL_ID) !allowModel else it !in ids }
         val status =
             when {
@@ -724,7 +712,6 @@ object GroundingCheck {
     // What may close a numeral before its citations ([numeralCited]): emphasis, quotes, a bracket.
     private const val NUMERAL_CLOSES = "*_\"”'’)"
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
-    private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
 }
 
 /**
@@ -753,6 +740,35 @@ private fun sentencesOf(text: String): List<Pair<String, Boolean>> {
         .sentenceRanges(t)
         .map { (range, startsLine) -> t.substring(range) to startsLine }
         .filter { it.first.trimJs().isNotEmpty() }
+}
+
+/**
+ * Where each citation in [text] is (`[W1]`, `[MB12]`, `[AI]`: `\[[A-Z]{1,2}[0-9]*\]`), in order, as
+ * `Regex.findAll` finds them. Read in one scan (#1318): `findAll` starts the regex engine again for
+ * each match, and on Android the engine copies the whole text each time it starts, so a reply dense
+ * with citations took time growing with the square of its length there.
+ */
+internal fun citationRanges(text: String): List<IntRange> {
+    val ranges = mutableListOf<IntRange>()
+    var i = 0
+    while (i < text.length) {
+        val end = if (text[i] == '[') citationEnd(text, i) else null
+        if (end != null) ranges += i until end
+        i = end ?: (i + 1)
+    }
+    return ranges
+}
+
+// Where the citation that starts at [at] in [t] ends (`[W1]`, `[MB12]`), or null.
+private fun citationEnd(
+    t: String,
+    at: Int,
+): Int? {
+    var k = at + 1
+    while (k < t.length && k - at <= 2 && t[k] in 'A'..'Z') k++
+    val letters = k - at - 1
+    while (k < t.length && t[k] in '0'..'9') k++
+    return (k + 1).takeIf { t.getOrNull(at) == '[' && letters > 0 && t.getOrNull(k) == ']' }
 }
 
 /**

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Timeout
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -45,6 +46,38 @@ class GroundingScanTest {
         // The `Ω` at the end, no sentence of its own, makes each copy two bytes a character.
         val paragraph = "It is. ".repeat(SENTENCES) + "Ω."
         assertEquals(SENTENCES, GroundingCheck.splitSentences(paragraph).size)
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun `a reply dense with citations, or with a long line of many words, is weighed and checked in linear time`() {
+        // Citations and words were found with `Regex.findAll`, which starts the regex engine again for
+        // each match; on Android each start copies the whole text, time growing with the square of its
+        // length there. On the JVM, where nothing is copied, these pass either way: they guard the JVM
+        // side, and the phone check in the PR the rest.
+        val cited = "The song " + "[W1]".repeat(DENSE) + ".\nWait, the evidence.\nThe song [W1]."
+        assertEquals("The song [W1].", assertNotNull(SelfCorrection.of(cited)).kept)
+        val checked = assertIs<InsightReply.Written>(GroundingCheck.check(cited, setOf("W1"), allowModel = false))
+        assertEquals(1, checked.grounded.counts.ok)
+        val wordy = "The song " + "word ".repeat(DENSE) + "[W1].\nWait, the evidence.\nThe song [W1]."
+        assertEquals("The song [W1].", assertNotNull(SelfCorrection.of(wordy)).kept)
+    }
+
+    @Test
+    fun `citations are found where the regex found them`() {
+        val random = Random(SEED)
+        var found = 0
+        repeat(TEXTS) {
+            val text = pieces(random, NUMERAL_PIECES, MAX_PIECES)
+            val expected =
+                Before.CITATION
+                    .findAll(text)
+                    .map { it.range }
+                    .toList()
+            assertEquals(expected, citationRanges(text), text)
+            found += expected.size
+        }
+        assertTrue(found > ENOUGH, "$found found")
     }
 
     @Test
@@ -138,7 +171,7 @@ class GroundingScanTest {
             Regex("[*_]*$ROMAN_PATTERN[*_\"”'’)]*(?:[.!?]?$CITES[.!?]$REST|[.!?]$CITES$REST|$CITES)")
         val LINE_MARK = Regex("#{1,6}(?=[ \\n]|$)|(?:[-*+>]|[0-9]{1,2}[.)]) ")
         private val SENTENCE_END = Regex("(?:[.!?:]|\\])[)\"”'’*_]*$")
-        private val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
+        val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
         private val WORD = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")
         private val POSSESSIVE = Regex("['’]s$")
 
@@ -197,6 +230,9 @@ class GroundingScanTest {
 
         /** 2M characters of 7-character sentences. */
         const val SENTENCES = 300_000
+
+        /** 256k characters of citations, or 320k of words. */
+        const val DENSE = 64_000
 
         const val SEED = 1318
 
@@ -335,6 +371,7 @@ class GroundingScanTest {
                 "\tThe  song\tcame out [W1].",
                 "x.",
                 "came out in",
+                "The song's draft and Rosseel’s a''b \u0001 came [W1][W2].",
                 // `$` matches before a final U+0085, which is no whitespace to trim.
                 "The song came out [W1].\u0085",
                 "Wait, the evidence.)\u0085",

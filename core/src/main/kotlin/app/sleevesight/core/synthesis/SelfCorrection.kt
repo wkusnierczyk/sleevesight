@@ -127,16 +127,11 @@ data class SelfCorrection(
         private class Revisions(
             private val text: String,
         ) {
-            private val citations = CITATION.findAll(text).toList()
+            private val citations = citationRanges(text)
 
             // Where the last citation starts, and the last that cites a line for the first time.
-            private val last = citations.lastOrNull()?.range?.first ?: -1
-            private val newest =
-                citations
-                    .distinctBy { it.value }
-                    .lastOrNull()
-                    ?.range
-                    ?.first ?: -1
+            private val last = citations.lastOrNull()?.first ?: -1
+            private val newest = citations.distinctBy { text.substring(it) }.lastOrNull()?.first ?: -1
 
             // Each word of the text ([words]), with the first line it comes in.
             private val firstLines: Map<String, Int> by lazy {
@@ -162,11 +157,16 @@ data class SelfCorrection(
             }
         }
 
-        // The words of [text], lower case, each once, without citations or a possessive's `'s`.
+        // The words of [text], lower case, each once, without citations or a possessive's `'s`. Each
+        // regex is run once over [text] (`replace`, one pass): `findAll` would start it again for each
+        // word, and on Android each start copies the whole text (#1318). Each word is marked off
+        // ([WORD_MARK], taken out of the text first, as it is in no word) and then read.
         private fun words(text: String): Set<String> =
             WORD
-                .findAll(CITATION.replace(text, " "))
-                .map { word -> POSSESSIVE.replace(word.value.lowercase(), "") }
+                .replace(CITATION.replace(text.replace(WORD_MARK, ' '), " "), "$WORD_MARK\$0$WORD_MARK")
+                .split(WORD_MARK)
+                .filterIndexed { index, _ -> index % 2 == 1 }
+                .map { word -> POSSESSIVE.replace(word.lowercase(), "") }
                 .toSet()
 
         // Whether [line] is the model's comment on its own reply, as far as the line itself tells
@@ -271,6 +271,9 @@ data class SelfCorrection(
 
         /** A possessive's ending, `'s` or `’s`, taken off a word in [revises]. */
         private val POSSESSIVE = Regex("['’]s$")
+
+        /** What marks off each word of a text ([words]): a control character, in no word. */
+        private const val WORD_MARK = '\u0001'
 
         /** A word: letters and digits, with any apostrophes inside it (`I'll`, `Rosseel's`). */
         private val WORD = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")
