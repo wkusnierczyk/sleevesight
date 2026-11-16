@@ -39,21 +39,24 @@ internal fun NameMatcher.standsFor(
 /**
  * How a recording found weighs for [RecordingResolver.resolve]'s fallbacks: whether it is [ours] (with a
  * composer the title names, a performance by the track's own artists, [performedBy]), whether it fits as a
- * recording read so in any form, a weaker one included ([fitsAtAll]), and whether its title, length and a
- * credit by name or as a band fit, read as a part of a work included ([matches]).
+ * recording read so in any form, a weaker one included ([fitsAtAll]), whether its title, length and a
+ * credit by name or as a band fit, read as a part of a work included ([matches]), and whether it may be
+ * chosen at all, read in any way and credited in any form ([resolvable]).
  */
 internal class Weight(
     val ours: Boolean,
     val fitsAtAll: Boolean,
     val matches: Boolean,
+    val resolvable: Boolean,
 )
 
 /**
  * The fallbacks (#1289) on what the searches by name found ([further]), each only when nothing found before
  * it fits in any form, a weaker one included ([weigh]), so a track that resolved before makes none of their
  * requests and keeps its choice: with a composer the title names, the aliases of what was found
- * ([withAliases]), as before #1330; then the loose search ([loosely]); then, when nothing found matches even
- * read as a part of a work (`Nessun doma - Turandot`), the aliases of what was left out (#1330).
+ * ([withAliases]), as before #1330; then the loose search ([loosely]); then, when nothing found may be chosen
+ * in any way, read as a part of a work and credited in any form included (`Nessun doma - Turandot`, an
+ * aria under an honorific variant), the aliases of what was left out (#1330).
  */
 internal suspend fun MusicBrainzLookup.fallbacks(
     names: NameMatcher,
@@ -71,21 +74,29 @@ internal suspend fun MusicBrainzLookup.fallbacks(
             withAliases(names, track, duration, further, matches)
         }
     val loose = loosely(names, track, duration, aliased, fitsAtAll)
-    return if (loose.found.any { weigh(it).let { w -> w.ours && (w.fitsAtAll || w.matches) } }) {
+    return if (loose.found.any { weigh(it).let { w -> w.ours && w.resolvable } }) {
         loose
     } else {
         withAliases(names, track, duration, loose, matches)
     }
 }
 
-// Whether a recording the loose search found, or one left out ([Searched.held]), is taken as [track]'s: its
-// credits stand for two or more of the track's artists (a joint credit for one of them counting once) and
-// for no one else ([performedBy]).
+// Whether a recording found otherwise than by the title's exact words, by the loose search or left out by
+// a search for crediting someone else ([Searched.held]), may be taken as [track]'s at all: its title has the
+// track's numbers ([sameNumbers]), the one check the searches by name leave to the title's words (#1330).
+internal fun NameMatcher.admissible(
+    recording: MbRecording,
+    track: NormalizedTrack,
+): Boolean = sameNumbers(track.searchTitle, recording.title)
+
+// Whether such a recording ([admissible]) is taken as [track]'s: its credits stand for two or more of the
+// track's artists (a joint credit for one of them counting once) and for no one else ([performedBy]).
 internal fun NameMatcher.taken(
     recording: MbRecording,
     track: NormalizedTrack,
 ): Boolean =
-    represented(recording, track.artists.filter { it.isNotBlank() }.distinct()) >= 2 &&
+    admissible(recording, track) &&
+        represented(recording, track.artists.filter { it.isNotBlank() }.distinct()) >= 2 &&
         performedBy(recording, track)
 
 /**
@@ -120,11 +131,13 @@ internal suspend fun MusicBrainzLookup.loosely(
             words.isNotEmpty() &&
             searched.found.none(fits)
     val more = if (asked) searchRecordingsLoosely(words, artists) else null
+    // The aliases looked up already stand, so a recording they make the track's artists' is kept at once.
     val (kept, left) =
         (more as? Lookup.Found)
             ?.value
             .orEmpty()
-            .filter { names.sameNumbers(track.searchTitle, it.title) }
+            .filter { names.admissible(it, track) }
+            .map(Aliases(searched.aliases)::on)
             .partition { names.taken(it, track) }
     val found = (searched.found + kept).distinctBy { it.mbid }
     val held = (searched.held + left).distinctBy { it.mbid }.filter { h -> found.none { it.mbid == h.mbid } }

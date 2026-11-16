@@ -73,9 +73,9 @@ class RecordingResolver(
      *   track's artists is by name (the Berliner Philharmoniker for the player's Berlin Philharmonic) has
      *   that artist's other names looked up (`withAliases`, at most two artists): an alias that is a track
      *   artist's name counts as theirs. With a composer the title names, among the recordings found, before
-     *   the loose search below; then, with or without one (#1330), when nothing found matches even read as a
-     *   part of a work, among those that search and the searches by the later credited artists left out for
-     *   crediting someone else (Beethoven credited first, Karajan's Ninth with the Berliner Philharmoniker
+     *   the loose search below; then, with or without one (#1330), when nothing found may be chosen in any
+     *   way, among those with the title's numbers that search and the searches by the later credited artists
+     *   left out for crediting someone else (Beethoven credited first, Karajan's Ninth with the Berliner Philharmoniker
      *   for the player's Berlin Philharmonic), at most two artists for the track in all (`fallbacks`).
      * - With the player's length and two or more credited artists, one search by the title's words,
      *   loosely, and every credited artist at once (`loosely`): a title misspelled by a letter, or a
@@ -95,7 +95,7 @@ class RecordingResolver(
         val further = musicBrainz.further(track, first, measured, fits) { names.performedBy(it, track) }
         val searched =
             musicBrainz.fallbacks(names, track, duration, further) { r ->
-                candidate(track, duration, r).let { Weight(ours(r), it.fitsAtAll, it.matches) }
+                candidate(track, duration, r).let { Weight(ours(r), it.fitsAtAll, it.matches, it.resolvable) }
             }
         return when (val answer = searched.answer) {
             is Lookup.NotFound -> Resolution.NONE
@@ -583,6 +583,16 @@ class RecordingResolver(
          */
         val fitsAtAll: Boolean get() =
             fits || (!workLed && titleMatches && durationMatches && (variants.isNotEmpty() || jointly))
+
+        /**
+         * Whether its title and length fit, read in any way (a part of a work's included), with a credit in any
+         * form (by name, as a band, under an honorific variant, in a joint credit): whether it may be chosen
+         * (#1330, `fallbacks`).
+         */
+        val resolvable: Boolean get() =
+            titleMatches &&
+                durationMatches &&
+                (named.isNotEmpty() || led.isNotEmpty() || variants.isNotEmpty() || jointly)
 
         /**
          * Whether it [matches] read as a part of a work (#1289), its length known when the player's is

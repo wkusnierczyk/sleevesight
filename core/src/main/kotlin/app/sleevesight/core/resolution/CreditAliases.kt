@@ -13,10 +13,11 @@ import kotlin.time.Duration.Companion.milliseconds
  * length and a performer named, but not every credit one of the track's artists, [performedBy]): the
  * Berliner Philharmoniker for the player's Berlin Philharmonic. The recordings weighed are those left out
  * for crediting someone else ([Searched.held]: by the searches by the later credited artists, #1330, and by
- * the loose search, [loosely]), and, with a composer the title names (#1289), those found, which count only
- * as the track's artists' performance. A recording left out is added when an alias makes it the track's
- * artists' and it then stands for two or more of them, as the loose search's own. Incomplete when a lookup
- * fails, so the resolution is asked again later. Not called when something fits already.
+ * the loose search, [loosely]) that have the title's numbers ([admissible]), and, with a composer the title
+ * names (#1289), those found, which count only as the track's artists' performance. Every alias known so far
+ * applies, an earlier pass's included. A recording left out is added when the aliases make it the track's
+ * artists' ([taken]), as the loose search's own. Incomplete when a lookup fails, so the resolution is asked
+ * again later. Not called when something fits already.
  */
 internal suspend fun MusicBrainzLookup.withAliases(
     names: NameMatcher,
@@ -25,27 +26,21 @@ internal suspend fun MusicBrainzLookup.withAliases(
     searched: Searched,
     matches: (MbRecording) -> Boolean,
 ): Searched {
-    val weighed = if (track.composer != null) searched.found + searched.held else searched.held
-    val looked =
-        if (searched.answer is Lookup.Failed) {
-            Aliases(searched.aliases)
-        } else {
-            lookedUp(names, track, duration, weighed.filter(matches), searched.aliases)
-        }
-    val (taken, left) = searched.held.map(looked::on).partition { names.taken(it, track) }
+    if (searched.answer is Lookup.Failed) return searched
+    val held = searched.held.filter { names.admissible(it, track) }
+    val weighed = if (track.composer != null) searched.found + held else held
+    val looked = lookedUp(names, track, duration, weighed.filter(matches), searched.aliases)
+    // Every alias known so far applies, those an earlier pass looked up included.
+    val (taken, left) = held.map(looked::on).partition { names.taken(it, track) }
     val found = searched.found.map(looked::on) + taken
-    return if (looked.aliases == searched.aliases) {
-        searched
-    } else {
-        Searched(
-            if (found.isEmpty()) searched.answer else Lookup.Found(found),
-            found,
-            searched.incomplete || looked.failed,
-            searched.later || taken.isNotEmpty(),
-            left,
-            looked.aliases,
-        )
-    }
+    return Searched(
+        if (found.isEmpty()) searched.answer else Lookup.Found(found),
+        found,
+        searched.incomplete || looked.failed,
+        searched.later || taken.isNotEmpty(),
+        left,
+        looked.aliases,
+    )
 }
 
 // The other names looked up for one track's credits: each artist's id, with those of its names that are a

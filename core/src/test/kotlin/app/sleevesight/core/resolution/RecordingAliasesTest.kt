@@ -109,4 +109,68 @@ class RecordingAliasesTest {
             assertEquals(Outcome.None, resolve(musicBrainz, track, 200).outcome)
             assertEquals(listOf("a", "b"), musicBrainz.artistNamesAsked)
         }
+
+    @Test
+    fun `a recording a later artist's search finds with other numbers in its title is not weighed`() =
+        runTest {
+            // `Gymnopédie No. 2` is as alike to `No. 1` as a title may be; the loose search's guard holds for it too.
+            val musicBrainz = FakeMusicBrainz(search = Lookup.Found(emptyList()))
+            musicBrainz.searchesBy["Ann Lee"] =
+                Lookup.Found(listOf(performance("two", 200).copy(title = "Gymnopédie No. 2")))
+            musicBrainz.artistNames["ensemble"] = listOf("Berliner Ensemble", "Berlin Ensemble")
+            val resolution = resolve(musicBrainz, track("Gymnopédie No. 1", "Cy Bard, Berlin Ensemble, Ann Lee"), 200)
+            assertEquals(Outcome.None, resolution.outcome)
+            assertEquals(emptyList(), musicBrainz.artistNamesAsked)
+        }
+
+    @Test
+    fun `an alias looked up before the loose search stands for the recording that search finds`() =
+        runTest {
+            // With a composer leading the title, the first pass looks up the orchestra's names on a recording
+            // with a soloist the track does not credit, still not the track's; the loose search then finds the
+            // orchestra's and the conductor's, which the alias makes theirs, with no lookup more.
+            val musicBrainz = FakeMusicBrainz(search = Lookup.Found(emptyList()))
+            val soloist =
+                listOf(orchestra.copy(joinPhrase = ", "), conductor.copy(joinPhrase = ", "), credit("Dee Ray"))
+            musicBrainz.searchesBy["Berlin Ensemble"] = Lookup.Found(listOf(performance("solo", 200, soloist)))
+            musicBrainz.loose = Lookup.Found(listOf(performance("rose", 200)))
+            musicBrainz.artistNames["ensemble"] = listOf("Berliner Ensemble", "Berlin Ensemble")
+            val resolution = resolve(musicBrainz, track("Bard: Winter Rose", "Cy Bard, Berlin Ensemble, Ann Lee"), 200)
+            assertEquals("rose", resolution.recordingMbid)
+            assertEquals(listOf("ensemble", "mbid-Dee Ray"), musicBrainz.artistNamesAsked)
+        }
+
+    @Test
+    fun `a part of a work credited under an honorific variant is kept, with no alias lookup`() =
+        runTest {
+            // The first search finds the aria, credited to `Sir Ann Lee`, which resolves the track; the
+            // conductor's search finds the orchestra's recording, which must not displace it.
+            val musicBrainz = FakeMusicBrainz(search = Lookup.Found(emptyList()))
+            musicBrainz.searchesBy["Cy Bard"] =
+                Lookup.Found(
+                    listOf(
+                        recording(
+                            "aria",
+                            "Opera: “Winter Rose”",
+                            "Ann Lee",
+                            200,
+                            "2001",
+                        ).copy(credits = listOf(credit("Sir Ann Lee"))),
+                    ),
+                )
+            musicBrainz.searchesBy["Ann Lee"] = Lookup.Found(listOf(performance("rose", 200)))
+            musicBrainz.artistNames["ensemble"] = listOf("Berliner Ensemble", "Berlin Ensemble")
+            val before =
+                resolve(
+                    FakeMusicBrainz(search = Lookup.Found(emptyList())).also {
+                        it.searchesBy["Cy Bard"] = musicBrainz.searchesBy.getValue("Cy Bard")
+                    },
+                    track,
+                    200,
+                )
+            val resolution = resolve(musicBrainz, track, 200)
+            assertEquals("aria", before.recordingMbid)
+            assertEquals("aria", resolution.recordingMbid)
+            assertEquals(emptyList(), musicBrainz.artistNamesAsked)
+        }
 }

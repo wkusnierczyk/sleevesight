@@ -167,10 +167,12 @@ work found by a search (the fourth): one search more, and the lookup of the work
   (`artist/<id>?inc=aliases`, core data; at most two artists for the track, only while a performer of
   the track is left unnamed); an alias that is a track artist's name counts as theirs. With a composer
   lead, first among the recordings the searches by name found. Then, with or without one (#1330), when
-  the loose search (below) finds nothing that matches either, even read as a part of a work, among
-  those it and the searches by the later credited artists left out for crediting someone else; such a
-  recording counts once an alias makes it the track's artists' and it stands for two or more of them,
-  as the loose search's own. A track that resolved before makes no lookup it did not make. *Barber:
+  nothing found may be chosen in any way (read as a part of a work, credited in any form), among those
+  the loose search (below) and the searches by the later credited artists left out for crediting
+  someone else and that have the title's numbers; such a recording counts once the aliases make it the
+  track's artists' and it stands for two or more of them, as the loose search's own. An alias looked up
+  stands for every recording after it, the loose search's included. A track that resolved before makes
+  no lookup it did not make. *Barber:
   Adagio for Strings* by Samuel Barber, Sir Simon Rattle and the Berlin Philharmonic: MusicBrainz
   credits Rattle and the Berliner Philharmoniker, whose aliases include Berlin Philharmonic. Four
   requests (two searches, the alias lookup, the recording), where it made two and found nothing.
