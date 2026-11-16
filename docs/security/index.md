@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.7.1
+docs_version: 0.7.2
 nav:
-  - id: results-for-071
+  - id: results-for-072
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.7.1
+## Results for 0.7.2
 
-Checked on 16 November 2026, on the code of release 0.7.1.
+Checked on 16 November 2026, on the code of release 0.7.2.
 
-- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app. The app's libraries are the same as in 0.7.0. New: every library the build downloads is now checked against its recorded checksum and signature before it is used.
+- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app. The app's libraries are the same as in 0.7.1.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code. The release is now built in a different step from the one that uploads it to Play. Two small additions can add cost, both covered by the settings' own text: one more AI request when the model replies that it has nothing to say, and the check of the vocals on tracks that only Wikidata calls instrumental. 0.7.0's three slowdowns in reading unusual text are fixed; an older one, in reading an unusual AI reply, is smaller but not gone, and is left for a later release with a further guard for the build.
+- **Security review:** no way found to reach your keys or your data in the new code. The build now fails if checking the downloaded libraries is turned off or loosened, and 0.7.1's slowdown in reading a long AI reply is fixed. The new MusicBrainz name lookups are free, at most two per track, and keep to one request a second. Left for a later release: an older slowdown of the same kind elsewhere in reading a reply, and a tightening of the build's checks. Neither reaches keys or data.
 
 ## What is checked
 

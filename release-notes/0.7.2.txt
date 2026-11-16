@@ -1,0 +1,5 @@
+What's new in 0.7.2:
+- Classical: a classical track's first row reads Music, and an opera's Authors panel shows Music by and Words by.
+- Classical: an orchestra credited in English is found, as on Karajan's Beethoven.
+- Lyrics: Find the lyrics and Explain the song line up; Pages cited is more compact, its ids shown as in the text.
+- Faster with long AI replies.
