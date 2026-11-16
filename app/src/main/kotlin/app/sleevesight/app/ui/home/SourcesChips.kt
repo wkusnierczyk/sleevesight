@@ -451,7 +451,8 @@ private fun LetterChip(
  * (#948), and [CHIP_PADDING] at each side, each side rounded as it is laid out; [unmarked] are
  * labels in the same column that never carry the mark (*Sources* under the rows, #1286). The
  * widest chip fits its content exactly. The letters' column of *Sources*' table (#662); the chips
- * under *Key insights* ([keyInsightsWidth], #894, #1286).
+ * under *Key insights* ([keyInsightsWidth], #894, #1286); the *Lyrics* panel's AI buttons, whose
+ * side padding is [CHIP_PADDING] too ([AiSearchBlock], #908, #1343).
  */
 @Composable
 internal fun chipColumnWidth(

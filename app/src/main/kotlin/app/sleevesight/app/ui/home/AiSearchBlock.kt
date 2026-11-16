@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -29,14 +29,17 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.ui.logo.Busy
+import app.sleevesight.app.ui.theme.CHIP_PADDING
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
@@ -85,8 +88,11 @@ import app.sleevesight.core.synthesis.SearchKind
  * alone ([SearchFacts.ofGenre]), whatever the track.
  *
  * In the *Lyrics* panel (#908) its texts are its own ([SearchTexts.of]): [SearchKind.LYRICS] is *Find
- * the lyrics*, [SearchKind.EXPLAIN] *Explain the song*, each with the AI mark ([AiLabel]), at least
- * [width] wide, so the panel's two buttons are as wide as the wider ([aiButtonWidth]).
+ * the lyrics*, [SearchKind.EXPLAIN] *Explain the song*, each with the AI mark, [width] wide, so the
+ * panel's two buttons are one column as the chips under *Key insights* are ([chipColumnWidth],
+ * [ColumnChipLabel]; #1343): the mark at each button's end, in the same place on both, the label
+ * centred in the room left of it. A marked button is always given [width] (only the *Lyrics* panel's
+ * are marked); without it, the mark would follow the label ([AiLabel]), a fallback.
  */
 @Composable
 internal fun AiSearchBlock(
@@ -122,8 +128,8 @@ internal fun AiSearchBlock(
     val searchButton = Modifier.handoffTarget(handoff, button)
     when (val shown = state) {
         AiSearch.None -> Unit
-        AiSearch.Unready -> SearchButton(texts, enabled = false, searchButton.widthIn(min = width)) {}
-        AiSearch.Offered -> SearchButton(texts, enabled = true, searchButton.widthIn(min = width), ask)
+        AiSearch.Unready -> SearchButton(texts, enabled = false, width, searchButton) {}
+        AiSearch.Offered -> SearchButton(texts, enabled = true, width, searchButton, ask)
         is AiSearch.Searching ->
             SearchingLine(texts, shown.web, Modifier.handoffTarget(handoff, stop)) {
                 feed.stop(track, kind, about)
@@ -264,6 +270,7 @@ private class SearchTexts(
 private fun SearchButton(
     texts: SearchTexts,
     enabled: Boolean,
+    width: Dp,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
@@ -276,6 +283,7 @@ private fun SearchButton(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
+                .then(if (width.isSpecified) Modifier.width(width) else Modifier)
                 .testTag(texts.tag(AI_SEARCH_TAG))
                 .minimumInteractiveComponentSize()
                 .heightIn(min = HEIGHT)
@@ -290,7 +298,14 @@ private fun SearchButton(
                 .padding(PADDING),
     ) {
         val label = stringResource(texts.label)
-        if (texts.marked) {
+        if (texts.marked && width.isSpecified) {
+            // One of a column (#1343): the mark at the end, read in the description, as [AiLabel]'s is.
+            val described = stringResource(R.string.home_uses_ai, label)
+            ColumnChipLabel(label, ink, ai = true, Modifier.semantics { contentDescription = described })
+        } else if (texts.marked) {
+            // A fallback: no marked button is shown without a column's width today. [ColumnChipLabel]
+            // fills the bounded width this box hands it, so here it would stretch the button across
+            // the panel; [AiLabel] keeps the button to its label.
             ProvideTextStyle(MaterialTheme.typography.labelLarge) {
                 CompositionLocalProvider(LocalContentColor provides ink) { AiLabel(label) }
             }
@@ -434,7 +449,9 @@ const val AI_SEARCH_FAILED_TAG: String = "ai-search:failed"
 
 private val HEIGHT = 32.dp
 private val CORNER = 16.dp
-private val PADDING = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+
+// At the sides as a chip's, so a column of them is as wide as [chipColumnWidth] measures (#1343).
+private val PADDING = PaddingValues(horizontal = CHIP_PADDING, vertical = 6.dp)
 
 private const val DISABLED = 0.38f
 private const val DISABLED_EDGE = 0.12f

@@ -137,7 +137,8 @@ class KeyInsightsColumnScreenTest {
         unmerged: Boolean = false,
     ): Rect = compose.onNode(matcher, useUnmergedTree = unmerged).fetchSemanticsNode().boundsInRoot
 
-    private fun px(dp: Dp): Float = dp.value * compose.density.density
+    // [dp] in whole pixels, as the layout rounds it.
+    private fun px(dp: Dp): Float = with(compose.density) { dp.roundToPx().toFloat() }
 
     // A chip of the column: its bounds, its name's and its mark's, if any.
     private class Chip(
