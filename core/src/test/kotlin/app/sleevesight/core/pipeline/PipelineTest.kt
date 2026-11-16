@@ -736,6 +736,7 @@ class PipelineTest {
             assertEquals(1, control.cardsShown)
             assertEquals(1, control.cardsShownEmpty.size)
             assertEquals(0, control.withoutCall)
-            assertEquals(1, provider.requests.size)
+            // The first call left the release line out (#1142), so `NO_EVIDENCE` asked again with it (#239).
+            assertEquals(2, provider.requests.size)
         }
 }

@@ -259,15 +259,7 @@ internal class InsightWriter(
         revisedOnce: Boolean = false,
         billed: Usage? = null,
     ): InsightState {
-        val facts = parts.sessionFacts.citedByOthers(key)
-        val once = settings.artistFactsOncePerSession
-        val given =
-            if (whole) {
-                evidence
-            } else {
-                PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once, restatesHome)
-            }
-        val sent = Prompted(evidence, given)
+        val sent = prompted()
         val effort = settings.effort(ai.provider.id)
         val prompt = userMessage(sent.evidence)
         val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort, system = system)
@@ -340,6 +332,15 @@ internal class InsightWriter(
         } else {
             outcome
         }
+    }
+
+    // What the next call's prompt is given (`PromptEvidence`): the whole evidence once the run fell back to it.
+    private suspend fun prompted(): Prompted {
+        if (whole) return Prompted(evidence, evidence)
+        val facts = parts.sessionFacts.citedByOthers(key)
+        val once = settings.artistFactsOncePerSession
+        val given = PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once, restatesHome)
+        return Prompted(evidence, given)
     }
 
     // The user message for the lines [sent]; with them holding only facts Home shows, it says so

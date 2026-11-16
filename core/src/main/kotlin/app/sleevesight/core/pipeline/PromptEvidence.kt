@@ -37,9 +37,9 @@ import app.sleevesight.core.resolution.MusicBrainzEvidence
  * tracks the model padded the insight with a sentence citing the `P` line alone ("This recording
  * is on that same "Sundown" release [P1]"), cited and true but telling nothing the line before it
  * had not; with no `P` line there is nothing to restate. Where the song first came out elsewhere,
- * as for a compilation or a soundtrack, the `P` line stays, and a sentence citing it tells the
- * listener where this recording comes from. The release stays in the prompt's track block either
- * way.
+ * as for a compilation or a soundtrack, the `P` line stayed, for a sentence citing it to tell where
+ * this recording comes from; since #1142 it is left out there too, as a line restating Home beside
+ * the first-release line, which is more. The release stays in the prompt's track block either way.
  *
  * The lines that only restate what Home shows (`HomeShown.restatement`, #1142: the player's release,
  * MusicBrainz's first release and its line on that album, credits naming only the artists shown, the
@@ -68,6 +68,7 @@ object PromptEvidence {
      * artist-level line is sent, and only a restated release line is left out (#424). The lines
      * [restatesHome] picks are left out when another line is left to tell (#1142).
      */
+    @Suppress("LongParameterList") // The evidence, and what each of its rules leaves out by.
     fun of(
         evidence: EvidenceSet,
         release: String?,
