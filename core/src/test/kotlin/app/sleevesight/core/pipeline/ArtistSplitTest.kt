@@ -1,5 +1,6 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.sources.ArtistRoles
@@ -95,6 +96,28 @@ class ArtistSplitTest {
         // Two composers are two authors.
         val two = ArtistRoles(listOf(PUCCINI, MEHTA), listOf(PAVAROTTI))
         assertEquals(AuthorsName.AUTHORS, ArtistSplit.of(nessun, two, null)?.name)
+    }
+
+    @Test
+    fun `the song's row is Music beside a Composer row, beside Authors on a classical work, never beside Author`() {
+        // #1331: by the test that names the Composer row.
+        val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI, MEHTA, LA_PHIL))
+        val libretto = WorkLyrics(librettists = listOf(ADAMI, SIMONI))
+
+        fun of(
+            track: NormalizedTrack,
+            roles: ArtistRoles,
+            lyrics: WorkLyrics?,
+        ) = checkNotNull(ArtistSplit.of(track, roles, lyrics)).let { it.name to it.classical }
+        // Composer: by a title leading with its composer, the roles' classical form, or neither told.
+        assertEquals(AuthorsName.COMPOSER to true, of(k545, ArtistRoles.of(k545), null))
+        assertEquals(AuthorsName.COMPOSER to true, of(nessun, roles.copy(classical = true), null))
+        assertEquals(AuthorsName.COMPOSER to true, of(nessun, roles, null))
+        // Authors: on a classical work (an opera's aria), or not.
+        assertEquals(AuthorsName.AUTHORS to true, of(nessun, roles.copy(classical = true), libretto))
+        assertEquals(AuthorsName.AUTHORS to false, of(nessun, roles, libretto))
+        // Author: a songwriter's own words on no classical work.
+        assertEquals(AuthorsName.AUTHOR to false, of(nessun, roles, WorkLyrics(lyricists = listOf(PUCCINI))))
     }
 
     @Test

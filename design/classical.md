@@ -324,8 +324,9 @@ composer alone. The composer's, the artist's and a performer's insights are all 
 wherever that artist is the subject. The Composer row is *Composer* for one composer; *Authors* for
 more than one author, a lyricist or a librettist apart from the composer among them (MusicBrainz's
 `lyricist` work relationship, read for #998, and `librettist`, #1274: *Nessun dorma* is Puccini's
-under *Music*, Giuseppe Adami's and Renato Simoni's under *Words*), the panel then headed *Music*
-over the composer's insight and *Words* over the chips of the lyricists, then the librettists;
+under *Music by*, Giuseppe Adami's and Renato Simoni's under *Words by*), the panel then headed
+*Music by* over the composer's insight and *Words by* over the chips of the lyricists, then the
+librettists (*Music* and *Words* until #1331);
 *Author* for one whose own words the work's lyricist (or librettist) relationship gives, on a title
 that does not lead with them (a songwriter, not a classical work). The librettists are no sign of
 vocals for the genres, which read the lyricists alone (#998), and the work's MusicBrainz lines name
@@ -339,6 +340,17 @@ artist lines put the composer on a line of their own under the performers
 (`DescribedGenres`) is the Artist panel's subject, the lead performer, whose web search found it;
 the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about
 that artist, so a genre their page names goes to that artist's described row.
+
+On a classical track the Song row is called **Music** (#1331, the mock-up's pick, 2026-11-16), by
+the test that names the Composer row (`ArtistSplit.classical`): beside a *Composer* row always, and
+beside an *Authors* row when the work is a classical one (the roles' classical form,
+`ArtistRoles.classical`, or a title leading with its composer), so an opera's aria is *Music* too.
+Its panel's title, its page's title under *Separate pages*, its screen reader action ("show the
+music's insight"), its no-evidence line and *Report a problem* ("the music's") follow it. Beside an
+*Author* row (a songwriter's own song, or a cover of it), beside *Authors* on a work not classical,
+and with no split, it stays *Song*. The insight's two parts stay *The music* and *This recording*,
+the prompts' song kind stays as it is, and Settings keep *Song* (*Song, Artist and Album on a new
+track*).
 
 A performer's or an author's chip gives way to its insight (#1288, the 0.7.0 phone check's pick):
 the tap puts in the chip's place a panel titled with the name, *Close* at its top right, then the

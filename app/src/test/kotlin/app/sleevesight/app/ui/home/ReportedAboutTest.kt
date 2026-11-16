@@ -61,6 +61,44 @@ class ReportedAboutTest {
         assertEquals("Insight: the author's", reportLine(InsightItem.COMPOSER, own))
     }
 
+    // The track as replayed from a result kept from an earlier play: no resolution, the roles and the
+    // work's credits as MusicBrainz's kept result holds them.
+    private fun kept(
+        roles: ArtistRoles,
+        lyrics: WorkLyrics?,
+    ): TrackState {
+        val done = done()
+        val result = done.result.copy(roles = roles, lyrics = lyrics)
+        return HomeFixtures.track(nessunDorma, sources = mapOf(SourceId.MUSICBRAINZ to done.copy(result = result)))
+    }
+
+    @Test
+    fun aSongReportBesideAComposerRowOrAClassicalAuthorsRowSaysTheMusics() {
+        // #1331: the song's row is Music beside a Composer row, and beside Authors on a classical work.
+        assertEquals("Insight: the composer's", reportLine(InsightItem.COMPOSER, split))
+        assertEquals("Insight: the music's", reportLine(InsightItem.SONG, split))
+        val classical = roles.copy(classical = true)
+        assertEquals("Insight: the music's", reportLine(InsightItem.SONG, track(classical)))
+        val libretto = WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni"))
+        assertEquals("Insight: the authors'", reportLine(InsightItem.COMPOSER, track(classical, libretto)))
+        assertEquals("Insight: the music's", reportLine(InsightItem.SONG, track(classical, libretto)))
+        // Authors on a work not classical, and Author (a songwriter's own words): Song.
+        assertEquals("Insight: the song's", reportLine(InsightItem.SONG, track(roles, libretto)))
+        val own = track(roles, WorkLyrics(lyricists = listOf("Giacomo Puccini")))
+        assertEquals("Insight: the author's", reportLine(InsightItem.COMPOSER, own))
+        assertEquals("Insight: the song's", reportLine(InsightItem.SONG, own))
+    }
+
+    @Test
+    fun aSongReportOnAResultKeptFromAnEarlierPlayFollowsItsComposerRow() {
+        // Roles kept with no classical form: Composer, so Music; Authors on them, Song.
+        assertEquals("Insight: the composer's", reportLine(InsightItem.COMPOSER, kept(roles, null)))
+        assertEquals("Insight: the music's", reportLine(InsightItem.SONG, kept(roles, null)))
+        val libretto = WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni"))
+        assertEquals("Insight: the song's", reportLine(InsightItem.SONG, kept(roles, libretto)))
+        assertEquals("Insight: the music's", reportLine(InsightItem.SONG, kept(roles.copy(classical = true), libretto)))
+    }
+
     @Test
     fun anArtistReportOnAnUnsplitTrackSaysTheArtists() {
         val unsplit = track(null)

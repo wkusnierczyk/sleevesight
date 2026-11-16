@@ -41,7 +41,7 @@ internal fun ItemPage(
 ) {
     if (row == null) {
         // Nothing to write about on this track (no album it names): said as for no evidence.
-        ItemQuiet(stringResource(noEvidence(item)))
+        ItemQuiet(stringResource(noEvidence(item, context.track)))
         return
     }
     Column(Modifier.semantics(mergeDescendants = true) {}) {
@@ -68,6 +68,15 @@ internal fun itemRow(
     normalized: NormalizedTrack,
     track: TrackState? = null,
 ): ItemRow? = itemRows(header, normalized, splitOf(track, normalized)).firstOrNull { it.item == item }
+
+/**
+ * What [item]'s row is called on [track], the track the insight is of ([itemRow]'s [ItemRow.kind]),
+ * a string's id; null with no track or no row.
+ */
+internal fun rowKind(
+    item: InsightItem,
+    track: TrackState?,
+): Int? = track?.let { itemRow(item, it.nowPlaying, it.normalized, it)?.kind }
 
 /** The test tag of an item's page's first line, its name. */
 const val ITEM_PAGE_NAME_TAG: String = "item-page:name"

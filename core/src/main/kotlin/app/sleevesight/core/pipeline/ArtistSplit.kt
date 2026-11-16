@@ -20,6 +20,9 @@ import app.sleevesight.core.sources.WorkLyrics
  * @property others the other performers, in the track's order: the chips under *Also performing on
  *   this recording*.
  * @property name what the Composer row is called ([AuthorsName]).
+ * @property classical whether the song's row is called *Music* (#1331), by the test that names the
+ *   Composer row: whenever it is *Composer*, and with *Authors* when the work is a classical one
+ *   ([ArtistRoles.classical], or a title leading with its composer); never with *Author*.
  */
 data class ArtistSplit(
     val composers: List<String>,
@@ -27,6 +30,7 @@ data class ArtistSplit(
     val lead: String,
     val others: List<String>,
     val name: AuthorsName,
+    val classical: Boolean,
 ) {
     /** The composer the Composer panel is about. */
     val composer: String get() = composers.first()
@@ -63,13 +67,16 @@ data class ArtistSplit(
             val wordsBy = lyrics?.let { it.lyricists + it.librettists }.orEmpty().filter(String::isNotBlank)
             val words = wordsBy.filter { author -> composers.none { same(it, author) } }.distinct()
             val ownWords = wordsBy.any { author -> composers.any { same(it, author) } }
+            val classicalWork = roles.classical || track.composer != null
             val name =
                 when {
                     composers.size + words.size > 1 -> AuthorsName.AUTHORS
-                    ownWords && !roles.classical && track.composer == null -> AuthorsName.AUTHOR
+                    ownWords && !classicalWork -> AuthorsName.AUTHOR
                     else -> AuthorsName.COMPOSER
                 }
-            return ArtistSplit(composers, words, lead, performers - lead, name)
+            // A Composer row always comes with Music, an Author row never (#1331).
+            val classical = name == AuthorsName.COMPOSER || (name == AuthorsName.AUTHORS && classicalWork)
+            return ArtistSplit(composers, words, lead, performers - lead, name, classical)
         }
     }
 }
