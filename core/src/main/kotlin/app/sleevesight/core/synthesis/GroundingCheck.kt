@@ -360,17 +360,9 @@ object GroundingCheck {
                 i++
                 continue
             }
-            var end = i
-            var lineBreak = false
-            while (end < t.length && isJsWhitespace(t[end])) {
-                if (t[end] == '\n') lineBreak = true
-                end++
-            }
-            val listed = lineBreak && MarkdownMarks.isLineMark(t, end)
-            val opens = listed || MarkdownMarks.opens(t, end, OPENERS)
-            val ends = opens && endsSentence(t, i, listed)
-            // A Roman numeral and its citations alone are no sentence (#953).
-            if (ends && (listed || !NUMERAL_CITED.matches(t.substring(end)))) {
+            val end = whitespaceEnd(t, i)
+            val lineBreak = (i until end).any { t[it] == '\n' }
+            if (endsAt(t, i, end, lineBreak)) {
                 sentences += (start until i) to startsLine
                 start = end
                 startsLine = lineBreak
@@ -379,6 +371,141 @@ object GroundingCheck {
         }
         sentences += (start until t.length) to startsLine
         return sentences
+    }
+
+    /**
+     * Where the first sentence of [t] ends, as [sentenceRanges] splits it, looked for no further than
+     * [within] characters into it: the end of [t] when no sentence ends in it, and null when the first
+     * sentence runs on past [within]. Only as much of [t] is read as its first sentence needs (#1318).
+     */
+    internal fun firstSentenceEnd(
+        t: String,
+        within: Int,
+    ): Int? {
+        var i = 0
+        while (i < t.length && i <= within) {
+            if (!isJsWhitespace(t[i])) {
+                i++
+                continue
+            }
+            val end = whitespaceEnd(t, i)
+            if (endsAt(t, i, end, (i until end).any { t[it] == '\n' })) return i
+            i = end
+        }
+        return t.length.takeIf { it <= within }
+    }
+
+    // Where the whitespace that starts at [i] in [t] ends.
+    private fun whitespaceEnd(
+        t: String,
+        i: Int,
+    ): Int {
+        var end = i
+        while (end < t.length && isJsWhitespace(t[end])) end++
+        return end
+    }
+
+    // Whether a sentence of [t] ends at the whitespace from [i] to [end], [lineBreak] when a line break
+    // is in it.
+    private fun endsAt(
+        t: String,
+        i: Int,
+        end: Int,
+        lineBreak: Boolean,
+    ): Boolean {
+        val listed = lineBreak && MarkdownMarks.isLineMark(t, end)
+        val opens = listed || MarkdownMarks.opens(t, end, OPENERS)
+        val ends = opens && endsSentence(t, i, listed)
+        // A Roman numeral and its citations alone are no sentence (#953).
+        return ends && (listed || !numeralCited(t, end))
+    }
+
+    /**
+     * Whether the rest of the paragraph [t] from [at] is a Roman numeral and its citations up to the next
+     * sentence's end, or to the paragraph's end (#953): the numeral, in emphasis marks or before closing
+     * quotes or `)` if so, then its citations, a stop before them, after them or both, or none at the
+     * paragraph's end, and then whitespace or the paragraph's end. Read in one scan from [at], as far as
+     * the numeral and its citations go (#1318): matched with a regex, the rest would be copied at each
+     * sentence's end, here on the JVM as on Android, where the regex engine copies the text it is given.
+     */
+    internal fun numeralCited(
+        t: String,
+        at: Int,
+    ): Boolean {
+        val k = afterNumeral(t, at)
+        val stop = k != null && k < t.length && t[k] in ".!?"
+        val citations = k?.let { Citations.after(t, if (stop) it + 1 else it) }
+        return citations != null && citations.endSentence(t, stop)
+    }
+
+    // Where the Roman numeral at [at] in [t] ends, with the emphasis marks before it and the marks that
+    // may close it after it ([numeralCited]), or null when there is none. The numeral is all the run of
+    // I, V and X there, as nothing that may follow it is one of them.
+    private fun afterNumeral(
+        t: String,
+        at: Int,
+    ): Int? {
+        var k = at
+        while (k < t.length && t[k] in MarkdownMarks.EMPHASIS) k++
+        val numeral = k
+        while (k < t.length && t[k] in "IVX") k++
+        val roman = k > numeral && k - numeral <= LONGEST_NUMERAL && ROMAN.matches(t.substring(numeral, k))
+        while (k < t.length && t[k] in NUMERAL_CLOSES) k++
+        return k.takeIf { roman }
+    }
+
+    /**
+     * The citations, each after any whitespace, that follow one another from a place in a text: where
+     * the last of them [end]s, and whether whitespace or the text's end follows any of them ([spaced]).
+     */
+    private class Citations(
+        val end: Int,
+        val spaced: Boolean,
+    ) {
+        /**
+         * Whether a sentence ends with these citations in [t], with a [stop] before them or not: a
+         * stop after them, then whitespace or the end; a stop before them only, then whitespace or the
+         * end after any of them; or no stop, and the end.
+         */
+        fun endSentence(
+            t: String,
+            stop: Boolean,
+        ): Boolean {
+            val stopAfter = end < t.length && t[end] in ".!?" && (end + 1 == t.length || isJsWhitespace(t[end + 1]))
+            return stopAfter || (stop && spaced) || (!stop && end == t.length)
+        }
+
+        companion object {
+            /** The citations from [from] in [t], or null when no citation comes there. */
+            fun after(
+                t: String,
+                from: Int,
+            ): Citations? {
+                var end = -1
+                var spaced = false
+                var k = from
+                while (true) {
+                    while (k < t.length && isJsWhitespace(t[k])) k++
+                    val cited = citationEnd(t, k) ?: break
+                    end = cited
+                    spaced = spaced || cited == t.length || isJsWhitespace(t[cited])
+                    k = cited
+                }
+                return if (end < 0) null else Citations(end, spaced)
+            }
+
+            // Where the citation that starts at [at] in [t] ends (`[W1]`, `[MB12]`), or null.
+            private fun citationEnd(
+                t: String,
+                at: Int,
+            ): Int? {
+                var k = at + 1
+                while (k < t.length && k - at <= 2 && t[k] in 'A'..'Z') k++
+                val letters = k - at - 1
+                while (k < t.length && t[k] in '0'..'9') k++
+                return (k + 1).takeIf { t.getOrNull(at) == '[' && letters > 0 && t.getOrNull(k) == ']' }
+            }
+        }
     }
 
     private fun classify(
@@ -591,13 +718,11 @@ object GroundingCheck {
     private const val ROMAN_PATTERN = "(?=[IVX])X{0,3}(?:IX|IV|V?I{0,3})"
     private val ROMAN = Regex(ROMAN_PATTERN)
 
-    // The rest of a paragraph when all of it up to the next sentence's end is a Roman numeral, in
-    // emphasis marks or before closing quotes or `)` if so, and its citations, a stop before them,
-    // after them or both, or none at the paragraph's end ([sentenceRanges], #953).
-    private const val CITES = "(?:$JS_WHITESPACE_CLASS*\\[[A-Z]{1,2}[0-9]*\\])+"
-    private const val REST = "(?:$JS_WHITESPACE_CLASS[\\s\\S]*)?"
-    private val NUMERAL_CITED =
-        Regex("[*_]*$ROMAN_PATTERN[*_\"”'’)]*(?:[.!?]?$CITES[.!?]$REST|[.!?]$CITES$REST|$CITES)")
+    // The longest numeral [ROMAN] matches, `XXXVIII`.
+    private const val LONGEST_NUMERAL = 7
+
+    // What may close a numeral before its citations ([numeralCited]): emphasis, quotes, a bracket.
+    private const val NUMERAL_CLOSES = "*_\"”'’)"
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
 }
@@ -628,6 +753,58 @@ private fun sentencesOf(text: String): List<Pair<String, Boolean>> {
         .sentenceRanges(t)
         .map { (range, startsLine) -> t.substring(range) to startsLine }
         .filter { it.first.trimJs().isNotEmpty() }
+}
+
+/**
+ * The first sentence of the text from each place in [text] on, as [GroundingCheck.splitSentences] reads
+ * it: `splitSentences(text.substring(from).trimJs()).firstOrNull()`. Spaces and tabs collapse once for
+ * all the places, and from each only the first [within] characters and [LOOKAHEAD] more are read, not
+ * the rest of [text] (`SelfCorrection.of`, #1318, #1328). The cost: a first sentence that runs on past
+ * [within] characters is none ([of] is null), and a sentence's end within them that is told by more
+ * than [LOOKAHEAD] characters after it (a run of that many emphasis marks or citations) may be read
+ * otherwise.
+ */
+internal class FirstSentences(
+    text: String,
+    private val within: Int,
+) {
+    // [text] with its spaces and tabs collapsed, as [sentencesOf] collapses them, and where each of
+    // its characters went in it ([places]) and where it ends without the whitespace at its end ([end]).
+    private val spaced: String
+    private val places = IntArray(text.length + 1)
+    private val end: Int
+
+    init {
+        val out = StringBuilder(text.length)
+        for (i in text.indices) {
+            places[i] = out.length
+            val c = text[i]
+            if (c != ' ' && c != '\t') {
+                out.append(c)
+            } else if (i == 0 || (text[i - 1] != ' ' && text[i - 1] != '\t')) {
+                out.append(' ')
+            }
+        }
+        places[text.length] = out.length
+        spaced = out.toString()
+        var last = spaced.length
+        while (last > 0 && isJsWhitespace(spaced[last - 1])) last--
+        end = last
+    }
+
+    /** The first sentence of the text from [from] on, or null when it runs on past [within] characters. */
+    fun of(from: Int): String? {
+        var start = places[from]
+        while (start < end && isJsWhitespace(spaced[start])) start++
+        val read = spaced.substring(start, minOf(end, start + within + LOOKAHEAD))
+        // Null when no sentence ends within [within] characters, what was read cut short or not.
+        return GroundingCheck.firstSentenceEnd(read, within)?.let { read.substring(0, it) }
+    }
+
+    private companion object {
+        /** How much more is read after [within] to tell whether a sentence ends there. */
+        const val LOOKAHEAD = 200
+    }
 }
 
 /**

@@ -23,12 +23,14 @@ internal object MarkdownMarks {
     /**
      * Whether a line's mark starts [t] at [at]: a heading's one to six `#`s before a space, a line
      * break or the end, or a list's `-`, `*`, `+` or number (`1.`, `12)`), or a quotation's `>`,
-     * before a space. Spaces and tabs have collapsed to one space by then.
+     * before a space. Spaces and tabs have collapsed to one space by then. Matched on the few characters
+     * a mark may take (#1318), not on the rest of [t]: the regex engine on Android copies the text it is
+     * given, at each line break of a paragraph.
      */
     fun isLineMark(
         t: String,
         at: Int,
-    ): Boolean = LINE_MARK.matchesAt(t, at)
+    ): Boolean = LINE_MARK.matchesAt(t.substring(at, minOf(t.length, at + LINE_MARK_READS)), 0)
 
     /**
      * Whether the text just before [end] is a list's number at a line's start, `1.`, as a mark, the
@@ -45,6 +47,11 @@ internal object MarkdownMarks {
         val atLineStart = indent == 0 || t[indent - 1] == '\n'
         return atLineStart && LIST_NUMBER.matches(t.substring(start, end))
     }
+
+    // How much of the text a line's mark is matched on ([isLineMark]): six `#`s and what follows them,
+    // and two more characters, so that the end of what is matched is the end of `$`'s text only when it
+    // is the text's own end (`$` also matches before a final line break, `\r\n` among them).
+    private const val LINE_MARK_READS = 9
 
     private val LINE_MARK = Regex("#{1,6}(?=[ \\n]|$)|(?:[-*+>]|[0-9]{1,2}[.)]) ")
     private val LIST_NUMBER = Regex("[0-9]{1,2}\\.")
