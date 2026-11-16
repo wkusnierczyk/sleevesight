@@ -459,6 +459,9 @@
          button and its panel's title (#894), the name beside it the playing track's title, its
          primary artist, the player's album name; and each one's page title. -->
     <string name="home_item_song">Song</string>
+    <!-- The song's row on a classical track (#1331), by the test that tells the Composer row from
+         the Author row: the music's insight, its button and its panel's title, and its page's. -->
+    <string name="home_item_song_classical">Music</string>
     <string name="home_item_artist">Artist</string>
     <string name="home_item_album">Album</string>
     <!-- On a track whose roles tell the composer apart from the performers (#1199), the row before
@@ -475,9 +478,9 @@
          opening its own insight in place. -->
     <string name="home_item_also_performing">Also performing on this recording</string>
     <!-- In the Authors panel (#1199): above the composer's insight, and above the chips of who wrote
-         the words, each opening its own insight in place. -->
-    <string name="home_item_music">Music</string>
-    <string name="home_item_words">Words</string>
+         the words, each opening its own insight in place (Music by, Words by: #1331). -->
+    <string name="home_item_music">Music by</string>
+    <string name="home_item_words">Words by</string>
     <!-- The version a song's title names after the title and the Song row leaves out (#1160), on a
          line of its own under the song's name in its panel's heading and on its page, read with the
          heading: "Song, Material Girl, Version: 2024 Remaster"; %1$s: the version, "2024 Remaster". -->
@@ -491,6 +494,8 @@
          Paper Boats. Button. Double-tap to show the song's insight"; under Separate pages,
          home_page_open. -->
     <string name="home_item_show_song">show the song’s insight</string>
+    <!-- The same on a classical track, where the song's row is called Music (#1331). -->
+    <string name="home_item_show_song_classical">show the music’s insight</string>
     <string name="home_item_show_artist">show the artist’s insight</string>
     <string name="home_item_show_album">show the album’s insight</string>
     <string name="home_item_show_composer">show the composer’s insight</string>
@@ -508,6 +513,8 @@
     <string name="home_item_tap_write">Tap Write insight to have it written from the sources.</string>
     <!-- An item the sources give nothing to write from: no call is made. -->
     <string name="home_item_no_evidence_song">The sources give nothing to write the song’s insight from.</string>
+    <!-- The same on a classical track, where the song's row is called Music (#1331). -->
+    <string name="home_item_no_evidence_song_classical">The sources give nothing to write the music’s insight from.</string>
     <string name="home_item_no_evidence_artist">The sources give nothing to write the artist’s insight from.</string>
     <string name="home_item_no_evidence_album">The sources give nothing to write the album’s insight from.</string>
     <string name="home_item_no_evidence_composer">The sources give nothing to write the composer’s insight from.</string>

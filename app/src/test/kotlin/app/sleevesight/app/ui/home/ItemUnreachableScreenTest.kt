@@ -128,7 +128,7 @@ class ItemUnreachableScreenTest {
         unanswered: List<SourceId>,
         item: InsightItem,
     ) {
-        val nothing = app.getString(noEvidence(item))
+        val nothing = app.getString(noEvidence(item, null))
         if (unanswered.isEmpty()) {
             compose.onNodeWithText(nothing).assertExists()
             compose.onNodeWithTag(ITEM_UNREACHABLE_TAG).assertDoesNotExist()

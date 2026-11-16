@@ -42,7 +42,7 @@ import app.sleevesight.core.pipeline.InsightItem
 
 /**
  * What [item]'s panel (or page) shows above its insight, by [split] (#1199): in the Authors panel,
- * *Music*, the composer's insight being about the music; nothing otherwise.
+ * *Music by*, the composer's insight being about the music; nothing otherwise.
  */
 @Composable
 internal fun PeopleBefore(
@@ -57,7 +57,7 @@ internal fun PeopleBefore(
 /**
  * What [item]'s panel (or page) shows under its insight, by [split] (#1199): in the artist's panel,
  * *Also performing on this recording* and a chip for each other performer; in the Authors panel, a
- * chip for each other composer, then *Words* and a chip for each who wrote the words. A chip's tap
+ * chip for each other composer, then *Words by* and a chip for each who wrote the words. A chip's tap
  * puts that artist's insight ([InsightItem.named]) in the chip's place (#1288), in a panel of its own
  * titled with the name, with *Close*, which puts the chip back; each opens and closes on its own,
  * several at once. The tap is its consent, so it is written at once, in every mode (#948). The ones

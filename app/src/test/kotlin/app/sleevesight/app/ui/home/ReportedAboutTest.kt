@@ -62,6 +62,19 @@ class ReportedAboutTest {
     }
 
     @Test
+    fun aSongReportOnAClassicalTrackSaysTheMusics() {
+        // #1331: the song's row is Music on a classical work, Composer or Authors alike.
+        val classical = roles.copy(classical = true)
+        assertEquals("Insight: the music's", reportLine(InsightItem.SONG, track(classical)))
+        val libretto = WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni"))
+        assertEquals("Insight: the music's", reportLine(InsightItem.SONG, track(classical, libretto)))
+        // A songwriter's own words on a work no classical one (Author), and no classical work: Song.
+        val own = track(roles, WorkLyrics(lyricists = listOf("Giacomo Puccini")))
+        assertEquals("Insight: the song's", reportLine(InsightItem.SONG, own))
+        assertEquals("Insight: the song's", reportLine(InsightItem.SONG, split))
+    }
+
+    @Test
     fun anArtistReportOnAnUnsplitTrackSaysTheArtists() {
         val unsplit = track(null)
         assertEquals("Insight: the artist's", reportLine(InsightItem.ARTIST, unsplit))

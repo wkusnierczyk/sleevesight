@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.home
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ArtistSplit
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.sources.ArtistRoles
@@ -112,6 +113,46 @@ class ItemRowsTest {
             assertEquals("Luciano Pavarotti", row.name)
             assertEquals(R.string.home_item_performer to R.string.home_item_show_performer, row.kind to row.action)
         }
+    }
+
+    @Test
+    fun theSongRowIsMusicOnAClassicalTrackAndSongOtherwise() {
+        // #1331: by the test that tells Composer from Author, whatever the Composer row is called.
+        val header = sundown.copy(title = "Nessun Dorma", artists = "Giacomo Puccini, Luciano Pavarotti, Zubin Mehta")
+        val normalized = normalizer.normalize(header)
+        val roles = ArtistRoles(listOf("Giacomo Puccini"), listOf("Luciano Pavarotti", "Zubin Mehta"))
+        val music = R.string.home_item_song_classical to R.string.home_item_show_song_classical
+        val plain = R.string.home_item_song to R.string.home_item_show_song
+
+        fun kindOf(
+            roles: ArtistRoles,
+            lyrics: WorkLyrics?,
+            playing: NowPlaying = header,
+        ): Pair<Int, Int> {
+            val read = normalizer.normalize(playing)
+            val rows = itemRows(playing, read, ArtistSplit.of(read, roles, lyrics))
+            val row = rows.single { it.item == InsightItem.SONG }
+            return row.kind to row.action
+        }
+        val libretto = WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni"))
+        // A classical work: Composer, or Authors with its librettists (an opera's aria).
+        assertEquals(music, kindOf(roles.copy(classical = true), null))
+        assertEquals(music, kindOf(roles.copy(classical = true), libretto))
+        // Told by the title alone, leading with its composer (K. 545).
+        val k545 =
+            sundown.copy(
+                title = "Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante",
+                artists = "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
+            )
+        val mozart = ArtistRoles(listOf("Wolfgang Amadeus Mozart"), listOf("Khatia Buniatishvili"))
+        assertEquals(music, kindOf(mozart, null, k545))
+        // No classical work: an Author row (a cover of a songwriter's own song), Authors, or Composer.
+        assertEquals(plain, kindOf(roles, WorkLyrics(lyricists = listOf("Giacomo Puccini"))))
+        assertEquals(plain, kindOf(roles, libretto))
+        assertEquals(plain, kindOf(roles, null))
+        // No split: a pop track.
+        val pop = itemRows(header, normalized).single { it.item == InsightItem.SONG }
+        assertEquals(plain, pop.kind to pop.action)
     }
 
     @Test

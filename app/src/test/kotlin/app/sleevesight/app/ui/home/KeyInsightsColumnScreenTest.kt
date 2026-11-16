@@ -74,7 +74,7 @@ class KeyInsightsColumnScreenTest {
 
     private val onDemand = Settings(writeAutomatically = WriteAutomatically.NEVER)
 
-    // K. 545 with the roles telling the composer apart: Song, Composer, Performer, Album.
+    // K. 545 with the roles telling the composer apart: Music (#1331), Composer, Performer, Album.
     private val classical =
         sundown.copy(
             title = "Mozart: Piano Sonata No. 16 in C Major, K. 545 \"Sonata facile\": II. Andante",

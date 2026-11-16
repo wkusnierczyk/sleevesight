@@ -98,6 +98,22 @@ class ArtistSplitTest {
     }
 
     @Test
+    fun `a classical work is told by its roles or by a title leading with its composer, whatever the row's name`() {
+        // #1331: the test that tells Composer from Author, which names the song's row Music.
+        val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI, MEHTA, LA_PHIL))
+        val libretto = WorkLyrics(librettists = listOf(ADAMI, SIMONI))
+        assertEquals(true, ArtistSplit.of(k545, ArtistRoles.of(k545), null)?.classical)
+        assertEquals(true, ArtistSplit.of(nessun, roles.copy(classical = true), null)?.classical)
+        val opera = checkNotNull(ArtistSplit.of(nessun, roles.copy(classical = true), libretto))
+        assertEquals(AuthorsName.AUTHORS to true, opera.name to opera.classical)
+        // A songwriter's own words on no classical work (Author), others' words, or none known: not.
+        val own = checkNotNull(ArtistSplit.of(nessun, roles, WorkLyrics(lyricists = listOf(PUCCINI))))
+        assertEquals(AuthorsName.AUTHOR to false, own.name to own.classical)
+        assertEquals(false, ArtistSplit.of(nessun, roles, libretto)?.classical)
+        assertEquals(false, ArtistSplit.of(nessun, roles, null)?.classical)
+    }
+
+    @Test
     fun `an arranger the title names is no performer`() {
         val chaconne =
             track(

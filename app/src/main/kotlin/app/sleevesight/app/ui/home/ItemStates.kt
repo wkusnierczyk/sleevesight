@@ -17,6 +17,7 @@ import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.ItemEvidence
+import app.sleevesight.core.pipeline.TrackState
 
 // The states of the song's, the artist's and the album's insights (#522) that say something of their
 // own, in the key insight's words: gathering, writing with *Stop writing*, stopped with *Write
@@ -130,7 +131,7 @@ internal fun NothingToWriteFrom(
 ) {
     val unanswered = evidence.unanswered
     if (unanswered.isEmpty()) {
-        ItemQuiet(stringResource(noEvidence(item)))
+        ItemQuiet(stringResource(noEvidence(item, context.track)))
         return
     }
     // Wikidata by the setting that switches it, Wikipedia (#1187); the diagnostics keep it apart.
@@ -153,10 +154,21 @@ const val ITEM_UNREACHABLE_TAG: String = "item_unreachable"
 /** The test tag of *Retry* beside it. */
 const val ITEM_UNREACHABLE_RETRY_TAG: String = "item_unreachable_retry"
 
-/** What [item]'s insight says when the sources give nothing to write it from. */
-internal fun noEvidence(item: InsightItem): Int =
+/**
+ * What [item]'s insight says when the sources give nothing to write it from, as its row on [track]
+ * names it: the music's on a classical track, where the song's row is called *Music* (#1331).
+ */
+internal fun noEvidence(
+    item: InsightItem,
+    track: TrackState?,
+): Int =
     when (item) {
-        InsightItem.SONG -> R.string.home_item_no_evidence_song
+        InsightItem.SONG ->
+            if (rowKind(item, track) == R.string.home_item_song_classical) {
+                R.string.home_item_no_evidence_song_classical
+            } else {
+                R.string.home_item_no_evidence_song
+            }
         InsightItem.COMPOSER -> R.string.home_item_no_evidence_composer
         InsightItem.ARTIST -> R.string.home_item_no_evidence_artist
         InsightItem.ALBUM -> R.string.home_item_no_evidence_album

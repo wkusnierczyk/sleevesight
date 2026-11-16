@@ -34,7 +34,8 @@ import app.sleevesight.core.sources.ArtistRoles
  * said in its panel's heading and on its page, or null for none. [kind] is what its button and its
  * panel's title call it, [action] its button's action as a screen reader names it, each a string's
  * id: the item's own ([itemKindOf], [itemShowAction]), but for the Composer row and the Artist row
- * of a track whose roles tell a composer apart (#1199, [itemRows]; *Performer*, #1276).
+ * of a track whose roles tell a composer apart (#1199, [itemRows]; *Performer*, #1276), and the
+ * song's row on a classical one (*Music*, #1331).
  */
 internal class ItemRow(
     val item: InsightItem,
@@ -63,7 +64,7 @@ internal fun itemRows(
     split: ArtistSplit? = null,
 ): List<ItemRow> =
     listOfNotNull(
-        songRow(header, normalized),
+        songRow(header, normalized, split),
         split?.let(::composerRow),
         split?.let(::performerRow)
             ?: normalized.primary.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.ARTIST, it) },
@@ -113,14 +114,27 @@ internal fun splitOf(
 private val NAMES = NameMatcher(JvmAccentFolder)
 
 // The song's row: its title as under the cover ([KeyData]), with the version dropped from it; the
-// player's whole title, and no version, when normalizing leaves no title.
+// player's whole title, and no version, when normalizing leaves no title. Called *Music* on a
+// classical track ([ArtistSplit.classical], #1331), *Song* otherwise.
 private fun songRow(
     header: NowPlaying,
     normalized: NormalizedTrack,
+    split: ArtistSplit?,
 ): ItemRow? {
     if (header.title.isBlank()) return null
     val title = normalized.title.takeIf { it.isNotEmpty() }
-    return ItemRow(InsightItem.SONG, title ?: header.title, normalized.dropped.takeIf { title != null })
+    val version = normalized.dropped.takeIf { title != null }
+    return if (split?.classical == true) {
+        ItemRow(
+            InsightItem.SONG,
+            title ?: header.title,
+            version,
+            kind = R.string.home_item_song_classical,
+            action = R.string.home_item_show_song_classical,
+        )
+    } else {
+        ItemRow(InsightItem.SONG, title ?: header.title, version)
+    }
 }
 
 /** An item's kind, as its row and its page's title name it: [row]'s when given, else the item's own. */

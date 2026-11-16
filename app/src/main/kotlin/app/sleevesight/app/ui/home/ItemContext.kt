@@ -301,7 +301,7 @@ private fun ItemShownContent(
         is ItemShown.Asking -> WritingItem(item) { context.notes.stop(now.key) }
 
         // Nothing to write about on this track (no album it names): said as for no evidence.
-        ItemShown.NoSubject -> ItemQuiet(stringResource(noEvidence(item)))
+        ItemShown.NoSubject -> ItemQuiet(stringResource(noEvidence(item, track)))
         is ItemShown.Shown -> Shown(item, now, track, context, showing)
     }
 }
