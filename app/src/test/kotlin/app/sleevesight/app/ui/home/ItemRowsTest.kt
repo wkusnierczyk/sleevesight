@@ -116,28 +116,33 @@ class ItemRowsTest {
     }
 
     @Test
-    fun theSongRowIsMusicOnAClassicalTrackAndSongOtherwise() {
-        // #1331: by the test that tells Composer from Author, whatever the Composer row is called.
+    fun theSongRowIsMusicBesideAComposerRowAndAClassicalAuthorsRow() {
+        // #1331: by the test that names the Composer row, the two rows together.
         val header = sundown.copy(title = "Nessun Dorma", artists = "Giacomo Puccini, Luciano Pavarotti, Zubin Mehta")
         val normalized = normalizer.normalize(header)
         val roles = ArtistRoles(listOf("Giacomo Puccini"), listOf("Luciano Pavarotti", "Zubin Mehta"))
         val music = R.string.home_item_song_classical to R.string.home_item_show_song_classical
         val plain = R.string.home_item_song to R.string.home_item_show_song
 
-        fun kindOf(
+        // The song's row and the Composer row, each by its kind.
+        fun kinds(
             roles: ArtistRoles,
             lyrics: WorkLyrics?,
             playing: NowPlaying = header,
-        ): Pair<Int, Int> {
+        ): Triple<Int, Int, Int> {
             val read = normalizer.normalize(playing)
             val rows = itemRows(playing, read, ArtistSplit.of(read, roles, lyrics))
-            val row = rows.single { it.item == InsightItem.SONG }
-            return row.kind to row.action
+            val song = rows.single { it.item == InsightItem.SONG }
+            return Triple(song.kind, song.action, rows.single { it.item == InsightItem.COMPOSER }.kind)
         }
+
+        fun Pair<Int, Int>.with(composer: Int) = Triple(first, second, composer)
+        val composer = R.string.home_item_composer
+        val authors = R.string.home_item_authors
         val libretto = WorkLyrics(librettists = listOf("Giuseppe Adami", "Renato Simoni"))
-        // A classical work: Composer, or Authors with its librettists (an opera's aria).
-        assertEquals(music, kindOf(roles.copy(classical = true), null))
-        assertEquals(music, kindOf(roles.copy(classical = true), libretto))
+        // Composer: Music, the work classical or not told so (roles kept with no classical form).
+        assertEquals(music.with(composer), kinds(roles.copy(classical = true), null))
+        assertEquals(music.with(composer), kinds(roles, null))
         // Told by the title alone, leading with its composer (K. 545).
         val k545 =
             sundown.copy(
@@ -145,11 +150,13 @@ class ItemRowsTest {
                 artists = "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
             )
         val mozart = ArtistRoles(listOf("Wolfgang Amadeus Mozart"), listOf("Khatia Buniatishvili"))
-        assertEquals(music, kindOf(mozart, null, k545))
-        // No classical work: an Author row (a cover of a songwriter's own song), Authors, or Composer.
-        assertEquals(plain, kindOf(roles, WorkLyrics(lyricists = listOf("Giacomo Puccini"))))
-        assertEquals(plain, kindOf(roles, libretto))
-        assertEquals(plain, kindOf(roles, null))
+        assertEquals(music.with(composer), kinds(mozart, null, k545))
+        // Authors: Music on a classical work (an opera's aria), Song on another.
+        assertEquals(music.with(authors), kinds(roles.copy(classical = true), libretto))
+        assertEquals(plain.with(authors), kinds(roles, libretto))
+        // Author (a songwriter's own song, a cover of it): Song.
+        val own = WorkLyrics(lyricists = listOf("Giacomo Puccini"))
+        assertEquals(plain.with(R.string.home_item_author), kinds(roles, own))
         // No split: a pop track.
         val pop = itemRows(header, normalized).single { it.item == InsightItem.SONG }
         assertEquals(plain, pop.kind to pop.action)

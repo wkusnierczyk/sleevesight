@@ -115,7 +115,8 @@ private val NAMES = NameMatcher(JvmAccentFolder)
 
 // The song's row: its title as under the cover ([KeyData]), with the version dropped from it; the
 // player's whole title, and no version, when normalizing leaves no title. Called *Music* on a
-// classical track ([ArtistSplit.classical], #1331), *Song* otherwise.
+// classical track ([ArtistSplit.classical], #1331: beside a Composer row, or an Authors row on a
+// classical work), *Song* otherwise.
 private fun songRow(
     header: NowPlaying,
     normalized: NormalizedTrack,

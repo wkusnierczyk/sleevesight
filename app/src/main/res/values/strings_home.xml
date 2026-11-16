@@ -459,8 +459,8 @@
          button and its panel's title (#894), the name beside it the playing track's title, its
          primary artist, the player's album name; and each one's page title. -->
     <string name="home_item_song">Song</string>
-    <!-- The song's row on a classical track (#1331), by the test that tells the Composer row from
-         the Author row: the music's insight, its button and its panel's title, and its page's. -->
+    <!-- The song's row on a classical track (#1331): beside a Composer row, or an Authors row on a
+         classical work, never an Author row; its button and its panel's title, and its page's. -->
     <string name="home_item_song_classical">Music</string>
     <string name="home_item_artist">Artist</string>
     <string name="home_item_album">Album</string>

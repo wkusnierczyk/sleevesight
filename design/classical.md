@@ -341,15 +341,16 @@ artist lines put the composer on a line of their own under the performers
 the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about
 that artist, so a genre their page names goes to that artist's described row.
 
-On a classical track the Song row is called **Music** (#1331, the mock-up's pick, 2026-11-16): by
-the test that tells *Composer* from *Author* (`ArtistSplit.classical`: the roles' classical form,
-`ArtistRoles.classical`, or a title leading with its composer), whatever the Composer row is called,
-so an opera's aria with its *Authors* row is *Music* too. Its panel's title, its page's title under
-*Separate pages*, its screen reader action ("show the music's insight"), its no-evidence line and
-*Report a problem* ("the music's") follow it. A track whose work is not classical (with an *Author*
-row, a songwriter's own song or a cover of it), and one with no split, keeps *Song*. The insight's two parts stay *The music* and *This
-recording*, the prompts' song kind stays as it is, and Settings keep *Song* (*Song, Artist and Album
-on a new track*).
+On a classical track the Song row is called **Music** (#1331, the mock-up's pick, 2026-11-16), by
+the test that names the Composer row (`ArtistSplit.classical`): beside a *Composer* row always, and
+beside an *Authors* row when the work is a classical one (the roles' classical form,
+`ArtistRoles.classical`, or a title leading with its composer), so an opera's aria is *Music* too.
+Its panel's title, its page's title under *Separate pages*, its screen reader action ("show the
+music's insight"), its no-evidence line and *Report a problem* ("the music's") follow it. Beside an
+*Author* row (a songwriter's own song, or a cover of it), beside *Authors* on a work not classical,
+and with no split, it stays *Song*. The insight's two parts stay *The music* and *This recording*,
+the prompts' song kind stays as it is, and Settings keep *Song* (*Song, Artist and Album on a new
+track*).
 
 A performer's or an author's chip gives way to its insight (#1288, the 0.7.0 phone check's pick):
 the tap puts in the chip's place a panel titled with the name, *Close* at its top right, then the
