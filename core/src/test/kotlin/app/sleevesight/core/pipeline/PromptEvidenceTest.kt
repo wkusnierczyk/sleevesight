@@ -225,4 +225,26 @@ class PromptEvidenceTest {
         val kept = PromptEvidence.of(set(song(1), formed, player("Sundown")), "Sundown", cited, JvmHasher, false)
         assertEquals(listOf("MB1", "W1", "P1"), kept.ids)
     }
+
+    @Test
+    fun `lines that only restate Home are left out when another line is left to tell, not a count`() {
+        // As `HomeShown.restatement` picks them: the release and its first-release line here.
+        val sent = { evidence: EvidenceSet ->
+            PromptEvidence
+                .of(evidence, "Sundown", emptySet(), JvmHasher) {
+                    it.source == SourceId.PLAYER || "first released" in it.text
+                }.lines
+                .map { it.text }
+        }
+        val counts = EvidenceDraft(SourceId.LASTFM, Scope.ARTIST, "Last.fm counts 9 listeners.", null, RETRIEVED, true)
+        val first = firstRelease("Sundown")
+
+        assertEquals(listOf("Song fact 2.", counts.text), sent(set(first, song(2), counts, player("Sundown"))))
+        assertEquals(listOf(formed.text), sent(set(first, formed, player("Sundown"))), "an artist's line")
+        // Nothing else to tell: they stay, and the prompt says so (`InsightPrompt.NOTHING_BEYOND`). The
+        // first release on another album, so the player's line is no restated release (#424).
+        val other = firstRelease("Gord's Gold")
+        val thin = set(other, counts, player("Sundown"))
+        assertEquals(listOf(other.text, counts.text, player("Sundown").text), sent(thin))
+    }
 }

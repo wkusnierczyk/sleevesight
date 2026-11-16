@@ -64,6 +64,32 @@ object HomeShown {
         authors: List<String> = emptyList(),
         composed: ComposedDate? = null,
     ): Boolean {
+        val shown = shown(evidence, nowPlaying, track, authors, composed)
+        return evidence.lines.all { it.aggregate || shown.restates(it) }
+    }
+
+    /**
+     * Which lines of [evidence] only restate what Home shows of [nowPlaying] (as [nothingBeyond] reads
+     * them, less the counts, which say nothing Home shows): a prompt with other lines to tell leaves
+     * them out (`PromptEvidence.of`), so the model tells the story beyond the header rather than
+     * retelling it beside that story.
+     */
+    fun restatement(
+        evidence: EvidenceSet,
+        nowPlaying: NowPlaying,
+        track: NormalizedTrack,
+        authors: List<String> = emptyList(),
+        composed: ComposedDate? = null,
+    ): (EvidenceLine) -> Boolean = shown(evidence, nowPlaying, track, authors, composed)::restates
+
+    // What Home shows of [nowPlaying], as [nothingBeyond] takes it.
+    private fun shown(
+        evidence: EvidenceSet,
+        nowPlaying: NowPlaying,
+        track: NormalizedTrack,
+        authors: List<String>,
+        composed: ComposedDate?,
+    ): Shown {
         val artists =
             (listOf(nowPlaying.artists, track.primary) + track.artists + track.titleArtists + authors)
                 .map(ArtistFact::matchKey)
@@ -71,8 +97,7 @@ object HomeShown {
                 .distinct()
                 .sortedByDescending { it.length }
         val dates = datesShown(evidence)
-        val shown = Shown(nowPlaying.album?.let(PlayerAlbum::of), artists, dates, composedShown(composed, dates))
-        return evidence.lines.all { shown.only(it) }
+        return Shown(nowPlaying.album?.let(PlayerAlbum::of), artists, dates, composedShown(composed, dates))
     }
 
     /**
@@ -109,11 +134,12 @@ object HomeShown {
         val dates: Set<String>,
         val composed: Set<String>,
     ) {
-        // Whether [line] only says what Home shows.
-        fun only(line: EvidenceLine): Boolean {
+        // Whether [line] only says what Home shows; a count never does.
+        fun restates(line: EvidenceLine): Boolean {
             val credited = credited(line)
             return when {
-                line.source == SourceId.PLAYER || line.aggregate -> true
+                line.aggregate -> false
+                line.source == SourceId.PLAYER -> true
                 credited != null -> namesOnly(credited, artists)
                 line.source == SourceId.MUSICBRAINZ -> release(line)
                 line.source == SourceId.WIKIDATA && line.scope != Scope.ARTIST ->

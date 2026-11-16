@@ -363,7 +363,7 @@ class InsightPromptTest {
         // with no screen to talk about (the check of its first draft: cards that talked about the screen).
         assertTrue(
             "These facts are shown elsewhere in the app: the title, the artists, the album and its year, the " +
-                "release dates, and the names of the song, the artist and the album." in role,
+                "release dates, and short notes on the song, the artist and the album." in role,
             role,
         )
         assertFalse("The screen" in role, role)

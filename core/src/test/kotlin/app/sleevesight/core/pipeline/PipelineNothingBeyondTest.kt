@@ -89,6 +89,7 @@ class PipelineNothingBeyondTest {
             assertFalse(assertIs<InsightState.Written>(run.insight).nothingBeyondHome, "the artist's line is beyond")
             val prompt = provider.requests.single().prompt
             assertFalse("Canadian singer" in prompt, "left out of the prompt")
+            assertTrue(HEADER.first().text in prompt, "with nothing else sent, the header's lines stay")
             assertTrue(prompt.endsWith(InsightPrompt.NOTHING_BEYOND), prompt)
         }
 
@@ -119,7 +120,10 @@ class PipelineNothingBeyondTest {
                 val run = pipeline(HEADER + beyond, provider, MemoryCache()).run(sundown, write = true)
                 assertFalse(assertIs<InsightState.Written>(run.insight).nothingBeyondHome, beyond.text)
                 assertEquals(1, provider.requests.size)
-                assertFalse(InsightPrompt.NOTHING_BEYOND in provider.requests.single().prompt, beyond.text)
+                val prompt = provider.requests.single().prompt
+                assertFalse(InsightPrompt.NOTHING_BEYOND in prompt, beyond.text)
+                // The header's lines left out (`PromptEvidence`), the line beyond it sent.
+                assertTrue(HEADER.none { it.text in prompt } && beyond.text in prompt, prompt)
             }
         }
 

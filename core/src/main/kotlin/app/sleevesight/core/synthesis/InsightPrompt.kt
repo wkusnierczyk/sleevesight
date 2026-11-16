@@ -125,7 +125,7 @@ object InsightPrompt {
      *
      * Version 13 (#1142): the card tells a story from what the evidence adds beyond what Home already
      * shows. The role names those facts as shown elsewhere in the app (the title, the artists, the
-     * album and its year, the release dates, and the names of the song, the artist and the album),
+     * album and its year, the release dates, and short notes on the song, the artist and the album),
      * asks to prefer the story beyond them, with what that may be as examples, and says that one or
      * two sentences from those facts are right when the evidence offers nothing beyond them ([ROLE]);
      * the style asks for a story rather than a list ([BUILT_IN_STYLE]). On a thinly documented track,
@@ -133,7 +133,8 @@ object InsightPrompt {
      * released on July 1, 1994, as part of the album Gorgeous George."), every fact of it already on
      * Home. Where the evidence holds nothing beyond those facts (`HomeShown`, decided before the
      * call), the user message says so ([NOTHING_BEYOND]), and the app says under the card that no
-     * more source information was found.
+     * more source information was found. Where it holds more, the lines that only restate those facts
+     * are left out of the prompt (`PromptEvidence`), as cards kept a release sentence beside the story.
      *
      * Checked twice on the test playlist (27 tracks, 49 cards each, Claude Haiku 5.5, no web search).
      * The first draft told a story wherever the evidence had one, but its "The screen already shows …"
@@ -305,7 +306,7 @@ object InsightPrompt {
     const val ROLE: String =
         "You write the insight card on a music app's now-playing screen. Someone is listening to this " +
             "track right now. These facts are shown elsewhere in the app: the title, the artists, the album " +
-            "and its year, the release dates, and the names of the song, the artist and the album. Prefer " +
+            "and its year, the release dates, and short notes on the song, the artist and the album. Prefer " +
             "the story beyond them, such as who produced the track or played on it, who wrote it if not the " +
             "performer, a release before this album when the evidence names one, or what the sources say of " +
             "the song, the artist, the album or its genres. When the evidence offers nothing beyond them, " +

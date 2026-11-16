@@ -75,6 +75,9 @@ internal class InsightWriter(
     // the whole evidence, the card's key's, so a card served again says it as the one written did.
     private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track, authors, composition)
 
+    // The lines that only restate what Home shows, which a prompt with more to tell leaves out (#1142).
+    private val restatesHome = HomeShown.restatement(evidence, nowPlaying, track, authors, composition)
+
     // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
     // Its dates in the form the parts give as each call is made (#957), not when the run began: a tap may
     // come after the phone's language or region changed. The card's key does not hold the form. For a
@@ -258,7 +261,12 @@ internal class InsightWriter(
     ): InsightState {
         val facts = parts.sessionFacts.citedByOthers(key)
         val once = settings.artistFactsOncePerSession
-        val given = if (whole) evidence else PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once)
+        val given =
+            if (whole) {
+                evidence
+            } else {
+                PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once, restatesHome)
+            }
         val sent = Prompted(evidence, given)
         val effort = settings.effort(ai.provider.id)
         val prompt = userMessage(sent.evidence)
