@@ -11,8 +11,6 @@ import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -56,7 +54,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** *Report a problem* on the insight card (#390): offered on a written insight, shown, and handed over. */
+/** *Report the insight* on the insight card (#390): offered on a written insight, shown, and handed over. */
 @RunWith(RobolectricTestRunner::class)
 class ReportProblemScreenTest {
     @get:Rule
@@ -138,17 +136,12 @@ class ReportProblemScreenTest {
     private fun openReport() = compose.onNodeWithTag(REPORT_TAG).performScrollTo().performClick()
 
     @Test
-    fun aWrittenInsightOffersReportAProblemNamedForTheInsight() =
+    fun aWrittenInsightOffersReportTheInsight() =
         show(state(PipelineView(track(insight = written(reply)), aiReady = true))) {
             compose
                 .onNodeWithTag(REPORT_TAG)
                 .performScrollTo()
-                .assert(
-                    SemanticsMatcher.expectValue(
-                        SemanticsProperties.ContentDescription,
-                        listOf(text(R.string.report_action_description)),
-                    ),
-                )
+                .assert(hasText(text(R.string.report_action)))
         }
 
     @Test

@@ -4,7 +4,7 @@ Thank you for your interest in Sleevesight. The app is in closed testing, before
 
 ## Report a problem or suggest an idea
 
-- In the app: **Report a problem**, on an insight, opens a report in your own mail app, with what the app found for the track; it reaches us only if you send it.
+- In the app: **Report the insight**, on an insight, opens a report in your own mail app, with what the app found for the track; it reaches us only if you send it.
 - On GitHub: [open an issue](https://github.com/wkusnierczyk/sleevesight/issues/new/choose) and pick the template that fits (Bug report, Feature request, …).
 - By email: [support@sleevesight.app](mailto:support@sleevesight.app).
 

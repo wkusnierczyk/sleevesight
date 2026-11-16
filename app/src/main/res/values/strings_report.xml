@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Report a problem (#390): composed in the app, sent from the user's own mail app. -->
+<!-- Report the insight (#390, #733): composed in the app, sent from the user's own mail app. -->
 <resources>
-    <!-- The insight card's action, and what a screen reader says for it. -->
-    <string name="report_action">Report a problem</string>
-    <string name="report_action_description">Report a problem with this insight</string>
+    <!-- The insight card's action; a screen reader reads this label. -->
+    <string name="report_action">Report the insight</string>
 
     <string name="report_title">Report a problem</string>
     <!-- %1$s is the support address. -->

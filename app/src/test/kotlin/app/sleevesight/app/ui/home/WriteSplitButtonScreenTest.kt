@@ -280,9 +280,9 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun theRewritesWordsFollowTheCreditOnItsLineAboveReportAProblem() {
+    fun theRewritesWordsFollowTheCreditOnItsLineAboveReportTheInsight() {
         // One line (#671), for the rewrite offered and for one that failed or was stopped, and
-        // *Report a problem* under it, at the start.
+        // *Report the insight* under it, at the start.
         val kept = track(insight = written("It is a song [MB1].").copy(writtenBy = HomeFixtures.haiku))
         val lines =
             listOf(
@@ -305,7 +305,7 @@ class WriteSplitButtonScreenTest {
             show {
                 val above = bounds(line)
                 val report = compose.onNodeWithTag(REPORT_TAG).fetchSemanticsNode().boundsInRoot
-                assertTrue("Report a problem under the line", report.top >= above.bottom - 1f)
+                assertTrue("Report the insight under the line", report.top >= above.bottom - 1f)
             }
         }
     }

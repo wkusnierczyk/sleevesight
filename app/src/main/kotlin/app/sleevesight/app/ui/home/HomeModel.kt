@@ -89,7 +89,7 @@ internal class InsightOffers(
  * Where the insight card's taps go: Write ([onWrite]), Stop ([onStop]) and *Look again*
  * ([onLookAgain], #617) to the pipeline, which says whether a tap does anything; a citation chip
  * ([onCite]) to its line; the link of a model found unavailable to the settings ([onSettings],
- * #540); *Report a problem* ([onReport], #390) with the written insight and the track it was
+ * #540); *Report the insight* ([onReport], #390) with the written insight and the track it was
  * written for; *Look up again* ([onLookUpAgain], #1112) for a track *Clear history* holds.
  */
 @Suppress("LongParameterList") // Each of the card's taps, on its own.

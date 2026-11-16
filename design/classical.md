@@ -346,7 +346,7 @@ the test that names the Composer row (`ArtistSplit.classical`): beside a *Compos
 beside an *Authors* row when the work is a classical one (the roles' classical form,
 `ArtistRoles.classical`, or a title leading with its composer), so an opera's aria is *Music* too.
 Its panel's title, its page's title under *Separate pages*, its screen reader action ("show the
-music's insight"), its no-evidence line and *Report a problem* ("the music's") follow it. Beside an
+music's insight"), its no-evidence line and *Report the insight* ("the music's") follow it. Beside an
 *Author* row (a songwriter's own song, or a cover of it), beside *Authors* on a work not classical,
 and with no split, it stays *Song*. The insight's two parts stay *The music* and *This recording*,
 the prompts' song kind stays as it is, and Settings keep *Song* (*Song, Artist and Album on a new

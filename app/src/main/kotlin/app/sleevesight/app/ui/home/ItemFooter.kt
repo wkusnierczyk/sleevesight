@@ -24,7 +24,7 @@ import app.sleevesight.core.pipeline.TrackState
  * (#959, #1162: [insightCredit], by the model that wrote it) with what follows from it on its line
  * ([afterCredit], #911) and *Read aloud* ([readAloud]) at the row's end, the grounding note, which
  * citations it translated from the track's language ([TranslatedLine], #902; each by [label], the id
- * its chip shows), that the reply stopped early, *Report a problem*;
+ * its chip shows), that the reply stopped early, *Report the insight*;
  * then, while the model is found unavailable (#540), that it is, last, just above the Write it leaves
  * disabled; and *Rewrite insight* beside another model's insight ([ItemShown.Shown.rewriteWith]).
  */

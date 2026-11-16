@@ -120,7 +120,7 @@ internal class OpeningWrite(
 /**
  * What [item] shows unfolded, or on its page: once written, the insight, cited (a citation opens
  * *Sources* at its line, the album's own lines among them, #522), then its credit with *Read aloud*
- * (#959, #1162); *Report a problem*. Before it is written: opened by a tap ([tapped]), written at
+ * (#959, #1162); *Report the insight*. Before it is written: opened by a tap ([tapped]), written at
  * once in every mode (#948), *Writing…* with the turning record meanwhile: under an automatic mode as an opening
  * ([ItemContext.automatic]); under *On demand* once, the tap's consent, while [opening] is due, which
  * it ends as soon as the item's state is known, so a written, kept, stopped or failed one opens as it

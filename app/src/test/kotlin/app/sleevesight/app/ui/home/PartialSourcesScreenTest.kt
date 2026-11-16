@@ -240,7 +240,7 @@ class PartialSourcesScreenTest {
         }
 
     @Test
-    fun aTapOnTheInsightsRetryHandsTheFocusToReportAProblemAsTheLineGoes() =
+    fun aTapOnTheInsightsRetryHandsTheFocusToReportTheInsightAsTheLineGoes() =
         show(state(sundownWith(setOf(SourceId.MUSICBRAINZ)))) {
             compose.onNodeWithTag(INSIGHT_RETRY_TAG).performScrollTo().requestFocus()
             compose.waitForIdle()

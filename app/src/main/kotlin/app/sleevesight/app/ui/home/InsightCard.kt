@@ -35,7 +35,7 @@ import app.sleevesight.core.pipeline.InsightState
  * then what follows from it, with *Read aloud* at the row's end; when the evidence it was written from
  * holds nothing beyond what Home shows ([InsightState.Written.nothingBeyondHome], #1142), a quiet line
  * saying no more source information was found; [GroundingLine], a note, or with [groundingDetails]
- * (*Show grounding details*, #437) the grounding check's counts in full; and *Report a problem*
+ * (*Show grounding details*, #437) the grounding check's counts in full; and *Report the insight*
  * (#390), which hands the insight and its track to [InsightActions.onReport].
  *
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
@@ -208,14 +208,14 @@ private fun Written(
  *   record before it (#785);
  * - written from evidence that holds nothing beyond what Home shows (#1142), that no more source
  *   information was found; and a source not reached ([InsightPartial]), with its *Retry*, whose focus
- *   goes once tapped to *Report a problem* (#1121);
+ *   goes once tapped to *Report the insight* (#1121);
  * - the grounding line ([GroundingLine]): the note on the dimmed sentences, or, with
  *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
  *   stays where the counts are, which take its place in developer mode: under the credit and above
- *   *Report a problem*, the action it leads to;
+ *   *Report the insight*, the action it leads to;
  * - which citations it translated from the track's language ([TranslatedLine], #902);
  * - that the reply stopped early, for an incomplete insight;
- * - *Report a problem* ([ReportAction]), in the theme's error colour, where the focus goes from the
+ * - *Report the insight* ([ReportAction]), in the theme's error colour, where the focus goes from the
  *   *Retry* of the line on a source not reached (#1121) as it goes;
  * - while the model is found unavailable (#540), that it is ([ModelUnavailable]), with its link to the
  *   settings (#911): last, just above the split button, whose Write it leaves disabled, and in place
@@ -249,7 +249,7 @@ private fun Footer(
         if (insight.nothingBeyondHome) {
             Quiet(stringResource(R.string.home_insight_nothing_beyond), Modifier.testTag(INSIGHT_NOTHING_BEYOND_TAG))
         }
-        // Its *Retry* goes once tapped, so it hands the focus to *Report a problem* under it, which
+        // Its *Retry* goes once tapped, so it hands the focus to *Report the insight* under it, which
         // stays beside a written insight in either layout (#1121).
         val handoff = rememberFocusHandoff()
         val report = remember { FocusRequester() }
