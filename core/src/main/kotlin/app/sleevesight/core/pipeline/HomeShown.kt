@@ -28,7 +28,10 @@ import app.sleevesight.core.sources.ComposedDate
  *   "[Single]": [PlayerAlbum]), an album only where it does not. Another release
  *   named, a single before the album among them, is an earlier release;
  * - MusicBrainz's line on the album itself, as `AlbumSource` writes it ("“Sundown” is an album by
- *   Gordon Lightfoot, first released in January 1974."), for the album the player reports;
+ *   Gordon Lightfoot, first released in January 1974."), for the album the player reports, of the
+ *   kind it marks it as ([isAlbum]: an album where it marks none, a single or an EP where it marks
+ *   one), by only the artists shown ([namesOnly]). A secondary type ("a live album", "a soundtrack
+ *   album") or another credit ("by Various Artists") is more than Home shows, and adds something;
  * - a credit line ([MusicBrainzEvidence.creditedNames], and Wikidata's producers of the album) that
  *   names only the artists Home shows ([namesOnly]): the player's, and on a track whose composer is
  *   told apart, the authors its Composer row names (`ArtistSplit.authors`: the composers and who
@@ -124,10 +127,17 @@ object HomeShown {
             when (line.scope) {
                 Scope.SONG ->
                     MusicBrainzEvidence.firstRelease(line.text)?.let { (type, title) -> isAlbum(type, title, album) }
-                Scope.RELEASE ->
-                    ALBUM_LINE.find(line.text)?.let { ArtistFact.matchKey(it.groupValues[1]) == album?.name }
+                Scope.RELEASE -> ALBUM_LINE.find(line.text)?.let(::albumOnly)
                 else -> null
             } == true
+
+        // Whether MusicBrainz's line on the album, [found] by [ALBUM_LINE], names only the album the
+        // player names, of its kind, and the artists shown: its type and credit are not on Home.
+        private fun albumOnly(found: MatchResult): Boolean {
+            val (title, type, credit) = found.destructured
+            val kind = type.lowercase().takeUnless { it == NO_TYPE }.orEmpty()
+            return isAlbum(kind, title, album) && (credit.isEmpty() || namesOnly(credit, artists))
+        }
     }
 
     // The dates *Dates* shows, as the lines word them: each MusicBrainz first-release line's, and its
@@ -212,10 +222,14 @@ object HomeShown {
         return left.split(' ', ',').none { it.isNotEmpty() && it != "and" && it != "&" }
     }
 
-    // MusicBrainz's line on the album, as `AlbumSource.musicBrainzLine` writes it, its title in the
-    // group; its type is `AlbumSource.typeOf`'s, the secondary types first ("live album",
-    // "compilation album", "dj-mix album", "mixtape/street album"), so the slot is read whole.
-    private val ALBUM_LINE = Regex("^“(.*)” is an? [^,]+?(?: by .*?)?(?:, first released .*)?\\.$")
+    // MusicBrainz's line on the album, as `AlbumSource.musicBrainzLine` writes it: its title, its type
+    // and its credit in the groups (the credit empty for none). The type is `AlbumSource.typeOf`'s,
+    // the secondary types first ("live album", "compilation album", "mixtape/street album"), so the
+    // slot is read whole; "release" for a release group of no primary type ([NO_TYPE]).
+    private val ALBUM_LINE = Regex("^“(.*)” is an? ([^,]+?)(?: by (.*?))?(?:, first released .*)?\\.$")
+
+    // `AlbumSource.typeOf`'s type for a release group of no primary type: as a first release of none.
+    private const val NO_TYPE = "release"
 
     // The date of MusicBrainz's line on the album, and of its first-release line, as `EvidenceText.date` words it.
     private val ALBUM_DATE = Regex(", first released ((?:in|on) [^,]+)\\.$")

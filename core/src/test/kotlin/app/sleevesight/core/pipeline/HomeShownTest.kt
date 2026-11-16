@@ -221,13 +221,25 @@ class HomeShownTest {
     }
 
     @Test
-    fun `MusicBrainz's line on the album is read whatever its type, the secondary types first`() {
-        for (type in listOf("an album", "a live album", "a compilation album", "a mixtape/street album", "an EP")) {
-            val text = "“Gorgeous George” is $type by $EDWYN, first released in July 1994."
-            val line = draft(SourceId.MUSICBRAINZ, Scope.RELEASE, text)
-            assertTrue(nothingBeyond(listOf(line)), type)
+    fun `MusicBrainz's line on the album is shown as Home shows it, its type and credit no more than that`() {
+        fun line(
+            type: String,
+            by: String = " by $EDWYN",
+        ) = draft(SourceId.MUSICBRAINZ, Scope.RELEASE, "“Gorgeous George” is $type$by, first released in July 1994.")
+        assertTrue(nothingBeyond(listOf(line("an album"))))
+        assertTrue(nothingBeyond(listOf(line("an album", by = ""))), "no credit")
+        assertTrue(nothingBeyond(listOf(line("a release"))), "a release group of no primary type")
+        // Its secondary type or another credit is more than Home shows; the type is read whole.
+        for (type in listOf("a live album", "a compilation album", "a mixtape/street album", "a soundtrack album")) {
+            assertFalse(nothingBeyond(listOf(line(type))), type)
         }
-        val other = draft(SourceId.MUSICBRAINZ, Scope.RELEASE, "“Demos” is a live album by $EDWYN.")
+        assertFalse(nothingBeyond(listOf(line("an album", by = " by Various Artists"))), "another credit")
+        assertFalse(nothingBeyond(listOf(line("an album", by = " by Edwyn Collins and Roddy Frame"))), "and another")
+        // An EP or a single where the player marks its release so; an album only where it marks none.
+        assertFalse(nothingBeyond(listOf(line("an EP"))))
+        assertTrue(nothingBeyond(listOf(line("an EP")), playing.copy(album = "Gorgeous George (EP)")))
+        assertFalse(nothingBeyond(listOf(line("an album")), playing.copy(album = "Gorgeous George (EP)")))
+        val other = draft(SourceId.MUSICBRAINZ, Scope.RELEASE, "“Demos” is an album by $EDWYN.")
         assertFalse(nothingBeyond(listOf(other)))
     }
 

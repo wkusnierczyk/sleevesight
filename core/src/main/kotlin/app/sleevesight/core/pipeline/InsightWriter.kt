@@ -58,9 +58,9 @@ internal class InsightWriter(
     // Who composed the work and who performs it, once the sources are in (#1180): the prompt names them.
     private val roles: ArtistRoles,
     // The authors the Composer row names on Home (`ArtistSplit.authors`, #1142), none without that row.
-    authors: List<String> = emptyList(),
+    private val authors: List<String> = emptyList(),
     // When the music was composed, as *Dates* has it (#1142), null for none.
-    composed: ComposedDate? = null,
+    private val composition: ComposedDate? = null,
 ) {
     private val settings = input.settings
     private val nowPlaying = input.nowPlaying
@@ -73,7 +73,7 @@ internal class InsightWriter(
 
     // Whether the evidence holds nothing beyond what Home shows (#1142): decided before the call, from
     // the whole evidence, the card's key's, so a card served again says it as the one written did.
-    private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track, authors, composed)
+    private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track, authors, composition)
 
     // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
     // Its dates in the form the parts give as each call is made (#957), not when the run began: a tap may
@@ -261,8 +261,7 @@ internal class InsightWriter(
         val given = if (whole) evidence else PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once)
         val sent = Prompted(evidence, given)
         val effort = settings.effort(ai.provider.id)
-        // With the evidence holding only facts Home shows, the user message says so (#1142).
-        val prompt = InsightPrompt.user(nowPlaying, track, sent.evidence, roles, nothingBeyond = nothingBeyondHome)
+        val prompt = userMessage(sent.evidence)
         val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort, system = system)
         val text = StringBuilder()
         var frozen = false
@@ -333,6 +332,13 @@ internal class InsightWriter(
         } else {
             outcome
         }
+    }
+
+    // The user message for the lines [sent]; with them holding only facts Home shows, it says so
+    // (#1142): decided on the lines sent, which may be fewer than the whole evidence the card's note is.
+    private fun userMessage(sent: EvidenceSet): String {
+        val thin = HomeShown.nothingBeyond(sent, nowPlaying, track, authors, composition)
+        return InsightPrompt.user(nowPlaying, track, sent, roles, nothingBeyond = thin)
     }
 
     // The reply, checked against what its prompt was [sent] (#239): a citation of a line left out

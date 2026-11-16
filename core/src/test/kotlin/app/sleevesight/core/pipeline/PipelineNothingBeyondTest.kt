@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -31,8 +32,9 @@ class PipelineNothingBeyondTest {
 
     private fun TestScope.pipeline(
         lines: List<EvidenceDraft>,
-        provider: FakeProvider,
+        provider: FakeProvider?,
         cache: PipelineCache,
+        selected: ProviderId = ProviderId.ANTHROPIC,
     ): Pipeline =
         Pipeline(
             PipelineParts(
@@ -45,11 +47,50 @@ class PipelineNothingBeyondTest {
                     ),
                 resolver = FakeResolver(),
                 hasher = JvmHasher,
-                ai = AiAccess(provider, Secret("sk-test")),
+                ai = provider?.let { AiAccess(it, Secret("sk-test")) },
                 cache = cache,
+                // No AI access: the selected model found unavailable (#540), as `keptWithoutService` serves.
+                modelUnavailable = provider == null,
             ),
             PipelineTime(timeSource = testTimeSource),
-        ) { Settings(aiProvider = ProviderId.ANTHROPIC) }
+        ) { Settings(aiProvider = selected) }
+
+    @Test
+    fun `a card served with the selected model unavailable says it too, its own or another model's`() =
+        runTest {
+            val provider = FakeProvider { FakeProvider.done("Gordon Lightfoot wrote it [MB2].") }
+            val cache = MemoryCache()
+            assertIs<InsightState.Written>(pipeline(HEADER, provider, cache).run(sundown, true).insight)
+            // The selected model's own card (`keptWithoutService`, served under its key).
+            val own = assertIs<InsightState.Written>(pipeline(HEADER, null, cache).run(sundown, true).insight)
+            assertTrue(own.cached)
+            assertTrue(own.nothingBeyondHome)
+            // Another service selected: the card the first kept (`keptByOther`).
+            val other = pipeline(HEADER, null, cache, selected = ProviderId.OPENAI).run(sundown, true).insight
+            val shown = assertIs<InsightState.Written>(other)
+            assertEquals(ProviderId.ANTHROPIC, shown.writtenBy?.provider)
+            assertTrue(shown.nothingBeyondHome)
+            assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun `the prompt's line is decided on the lines sent, the card's note on the whole evidence`() =
+        runTest {
+            // Four lines of the song's own, so the artist's line is left out of the prompt (#239).
+            val own =
+                HEADER +
+                    listOf(
+                        line(SourceId.MUSICBRAINZ, "Gordon Lightfoot performs on this recording of “Sundown”."),
+                        line(SourceId.WIKIDATA, "“Sundown” was first published in 1974."),
+                    )
+            val artist = line(SourceId.MUSICBRAINZ, "Gordon Lightfoot was a Canadian singer.", Scope.ARTIST)
+            val provider = FakeProvider { FakeProvider.done("Gordon Lightfoot wrote it [MB2].") }
+            val run = pipeline(own + artist, provider, MemoryCache()).run(sundown, true)
+            assertFalse(assertIs<InsightState.Written>(run.insight).nothingBeyondHome, "the artist's line is beyond")
+            val prompt = provider.requests.single().prompt
+            assertFalse("Canadian singer" in prompt, "left out of the prompt")
+            assertTrue(prompt.endsWith(InsightPrompt.NOTHING_BEYOND), prompt)
+        }
 
     @Test
     fun `the release and the artist's own credit are written, the card saying nothing more was found`() =
