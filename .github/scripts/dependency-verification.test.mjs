@@ -17,9 +17,10 @@
 //    (`gradle.properties`, a `-D` flag, `GRADLE_OPTS`), `--dependency-verification` or `-F`,
 //    `--write-verification-metadata` or `-M` (a build writing the metadata checks nothing), the
 //    start parameter's mode in a build script, or the functional tests' variable for writing it
-//    (`Probe`). The workflows also must not name the verification files. Every tracked file is read
-//    but prose (Markdown, `docs/`, `design/`, the release notes), and comment lines outside
-//    `.github/`; the few lines that name the mode on purpose are listed below.
+//    (`Probe`). The workflows also must not name the verification files. Every line of every tracked
+//    file is read, comments too, but prose (Markdown, `docs/`, `design/`, the release notes);
+//    properties files are read entry by entry as Java reads them. The few lines that name the mode on
+//    purpose, or another tool's `-F` or `-M`, are listed below.
 //
 // The guard is for a change made in good faith. A determined one can write the setting so that no
 // pattern here finds it (built from pieces in a script); review is the guard against that.
@@ -215,18 +216,28 @@ const MODE = [
 // In the workflows and their scripts and actions, also the files themselves, which a step could
 // remove or replace (with no metadata, Gradle verifies nothing).
 const WORKFLOW = [/verification-metadata/i, /verification-keyring/i];
-// The short options for the mode (`-F`) and for writing the metadata (`-M`), on a line that runs
-// Gradle (continued lines joined).
-const SHORT = /^['"]?-[FM]/;
+// The short options for the mode (`-F`) and for writing the metadata (`-M`), anywhere they could be
+// an option, whatever runs them: a Gradle command can be folded over lines in YAML, continued in a
+// shell, or put together from a variable set elsewhere, so no command is parsed. Other tools' `-F` and
+// `-M` (`grep -F`, `git diff -M`) are listed below as Gradle's would be.
+const SHORT = /(^|[\s"'`=(\[\]{},;|&])-[FM]/;
 
 // The lines that name these on purpose, by file, as they read (trimmed).
 const ALLOWED = {
   '.github/workflows/dependency-graph.yml': [
     "# here: `dependency-submission` runs Gradle with `-Dorg.gradle.dependency.verification=off`. The",
   ],
+  '.githooks/merge-check': [
+    '# raw <from> <to> <prefix>: `git diff --raw -z -M` between two commits (or trees), into the arrays',
+    'gdiff --raw -z -M --no-abbrev "$1" "$2" >"$work/raw" || die "git diff failed (exit $?)"',
+  ],
   'build-logic/src/functionalTest/kotlin/sleevesight/Probe.kt': [
+    '* With `SLEEVESIGHT_WRITE_VERIFICATION_METADATA` set to a mode (`pgp,sha256`, `sha256`), as',
     'private val writeMode = System.getenv("SLEEVESIGHT_WRITE_VERIFICATION_METADATA")?.takeIf { it.isNotBlank() }',
     'val write = writeMode?.let { listOf("--write-verification-metadata", it, "--export-keys") }.orEmpty()',
+  ],
+  'build-logic/src/main/kotlin/sleevesight.locking.gradle.kts': [
+    '// `--write-verification-metadata` records them (`design/development.md`, *Dependencies*). A',
   ],
   'tools/refresh-dependency-verification.sh': [
     './gradlew --console=plain --write-verification-metadata pgp,sha256 --export-keys --write-locks "${tasks[@]}"',
@@ -240,43 +251,57 @@ const ALLOWED = {
 const PROSE = /(^|\/)[^/]*\.md$|^docs\/|^design\/|^release-notes\//;
 const SELF = '.github/scripts/dependency-verification.test.mjs';
 
-// A whole-line comment, by the file's kind; outside `.github/` only, where a workflow's `#` line can
-// be a value's text rather than a comment.
-function comment(path, text) {
-  if (/\.(kts?|java|groovy|gradle)$/.test(path)) return /^(\/\/|\/\*|\*)/.test(text);
-  if (/\.(sh|py|properties|toml|ya?ml)$/.test(path) || path === 'gradlew') return text.startsWith('#');
-  return false;
+// A properties file's entries as `java.util.Properties` reads them (Gradle reads `gradle.properties`
+// with it), each as `key=value` with its first line's number. A line whose first character past
+// spaces, tabs and form feeds is `#` or `!` is a comment, and is never continued; any other line
+// ending in an odd number of backslashes goes on in the next, less that line's leading blanks. The
+// key ends at the first `=`, `:` or blank not escaped; in key and value, `\uXXXX` is a character,
+// `\t`, `\n`, `\r` and `\f` what they are in Java, and a backslash before anything else that thing.
+export function properties(text) {
+  const lines = text.split(/\r\n|\r|\n/);
+  const blanks = /^[ \t\f]*/;
+  const entries = [];
+  for (let i = 0; i < lines.length; i++) {
+    const first = i + 1;
+    let line = lines[i].replace(blanks, '');
+    if (line === '' || line[0] === '#' || line[0] === '!') continue;
+    let logical = '';
+    for (;;) {
+      const continued = /\\*$/.exec(line)[0].length % 2 === 1;
+      logical += continued ? line.slice(0, -1) : line;
+      if (!continued || i + 1 >= lines.length) break;
+      line = lines[++i].replace(blanks, '');
+    }
+    let end = 0;
+    while (end < logical.length && !'=: \t\f'.includes(logical[end])) end += logical[end] === '\\' ? 2 : 1;
+    const rest = logical.slice(end).replace(/^[ \t\f]*(?:[=:][ \t\f]*)?/, '');
+    entries.push({ line: first, text: `${unescape(logical.slice(0, end))}=${unescape(rest)}` });
+  }
+  return entries;
 }
 
-// A properties file as Java reads it: a line ending in a backslash goes on in the next, and `\uXXXX`
-// stands for a character.
-const logical = (text) =>
-  text
-    .replace(/\\\r?\n[ \t\f]*/g, '')
-    .replace(/\\u([0-9A-Fa-f]{4})/g, (_, code) => String.fromCodePoint(parseInt(code, 16)));
+const ESCAPES = { t: '\t', n: '\n', r: '\r', f: '\f' };
+const unescape = (text) =>
+  text.replace(/\\(u[0-9A-Fa-f]{4}|[\s\S]?)/g, (_, escaped) =>
+    escaped.length === 5 ? String.fromCodePoint(parseInt(escaped.slice(1), 16)) : (ESCAPES[escaped] ?? escaped),
+  );
 
-// What in a file (its path and text) sets the verification mode, as a list of reasons.
+// What in a file (its path and text) sets the verification mode, as a list of reasons. Every line
+// counts, comments too: what reads as a comment in one language is text in another (a heredoc, a
+// raw string, a YAML value), so the lines that name the mode on purpose are listed instead.
 export function overrideProblems(path, source) {
   if (PROSE.test(path) || path === SELF) return [];
-  const text = path.endsWith('.properties') ? logical(source) : source;
-  const workflow = path.startsWith('.github/');
+  const patterns = [...MODE, ...(path.startsWith('.github/') ? WORKFLOW : []), SHORT];
   const allowed = new Set(ALLOWED[path] ?? []);
-  const found = [];
-  text.split(/\r?\n|\r/).forEach((raw, i) => {
-    const trimmed = raw.trim();
-    if (allowed.has(trimmed) || (!workflow && comment(path, trimmed))) return;
-    const patterns = workflow ? [...MODE, ...WORKFLOW] : MODE;
-    const hit = patterns.find((pattern) => pattern.test(raw));
-    if (hit) found.push(`${path}:${i + 1}: ${hit} in ${JSON.stringify(trimmed)}`);
+  const lines = path.endsWith('.properties')
+    ? properties(source)
+    : source.split(/\r\n|\r|\n/).map((text, i) => ({ line: i + 1, text }));
+  return lines.flatMap(({ line, text }) => {
+    const trimmed = text.trim();
+    if (allowed.has(trimmed)) return [];
+    const hit = patterns.find((pattern) => pattern.test(text));
+    return hit ? [`${path}:${line}: ${hit} in ${JSON.stringify(trimmed)}`] : [];
   });
-  if (workflow) {
-    for (const command of text.split(/\\\r?\n/).join(' ').split(/\r?\n/)) {
-      if (!/gradle/i.test(command)) continue;
-      const option = command.trim().split(/\s+/).find((token) => SHORT.test(token));
-      if (option) found.push(`${path}: Gradle's short option ${option} in ${JSON.stringify(command.trim())}`);
-    }
-  }
-  return found;
 }
 
 test('no file Gradle or CI reads sets the verification mode', () => {
@@ -304,7 +329,23 @@ const refusedOverrides = {
   'lenient in the root properties': ['gradle.properties', 'org.gradle.dependency.verification=lenient\n'],
   'off in a module properties file': ['app/gradle.properties', 'org.gradle.dependency.verification = off\n'],
   'a property split over two lines': ['gradle.properties', 'org.gradle.dependency.\\\n    verification=off\n'],
-  'a property with an escaped character': ['gradle.properties', 'org.gradle.dependency\\u002everification=off\n'],
+  'a property with a Unicode escape': ['gradle.properties', 'org.gradle.dependency\\u002everification=off\n'],
+  'a property with an escaped dot': ['gradle.properties', 'org.gradle.dependency\\.verification=off\n'],
+  'a property with escaped letters': ['gradle.properties', 'org.gradle.\\dependency.\\verification=off\n'],
+  'a property after a comment ending in a backslash': [
+    'gradle.properties',
+    '# A comment, which Java never continues \\\norg.gradle.dependency.verification=off\n',
+  ],
+  'a property after a ! comment ending in a backslash': [
+    'gradle.properties',
+    '! A comment \\\n  org.gradle.dependency.verification=off\n',
+  ],
+  'a property after a value ending in an even run of backslashes': [
+    'gradle.properties',
+    'a=b\\\\\norg.gradle.dependency.verification=off\n',
+  ],
+  'a property in the JVM arguments': ['gradle.properties', 'org.gradle.jvmargs=-Xmx4g -Dorg.gradle.dependency\\u002everification=off\n'],
+  'a property with a colon and blanks': ['gradle.properties', '  org.gradle.dependency.verification  :  off\n'],
   'a -D flag in a workflow': ['.github/workflows/ci.yml', '        run: ./gradlew build -Dorg.gradle.dependency.verification=off\n'],
   'GRADLE_OPTS in a workflow': ['.github/workflows/ci.yml', '      GRADLE_OPTS: -Dorg.gradle.dependency.verification=lenient\n'],
   'the long option in a workflow': ['.github/workflows/ci.yml', '        run: ./gradlew build --dependency-verification=off\n'],
@@ -317,9 +358,28 @@ const refusedOverrides = {
   ],
   'the metadata written by a workflow': ['.github/workflows/ci.yml', '        run: ./gradlew build --write-verification-metadata sha256\n'],
   'the metadata written, short': ['.github/workflows/ci.yml', '        run: ./gradlew build -M sha256\n'],
+  'the short option in a folded command': [
+    '.github/workflows/ci.yml',
+    '        run: >-\n          ./gradlew build\n          -F off\n',
+  ],
+  'the short option for writing in a folded command': [
+    '.github/workflows/ci.yml',
+    '        run: >\n          ./gradlew build\n          -M sha256\n',
+  ],
+  'the short option on its own line of a literal command': [
+    '.github/workflows/ci.yml',
+    '        run: |\n          ./gradlew build $(\n          echo -F off)\n',
+  ],
+  'the short option in a variable': ['.github/workflows/ci.yml', '        env:\n          ARGS: -F off\n        run: ./gradlew build $ARGS\n'],
+  'the short option in a flow sequence': ['.github/actions/java-gradle/action.yml', '        arguments: [-F, lenient]\n'],
+  'the short option in a script': ['tools/build.sh', 'args=(-F off)\n./gradlew build "${args[@]}"\n'],
+  'the short option in a build script': ['build.gradle.kts', 'exec { commandLine("./gradlew", "-F", "off") }\n'],
   "Probe's variable in a workflow": ['.github/workflows/ci.yml', '      SLEEVESIGHT_WRITE_VERIFICATION_METADATA: sha256\n'],
   'the metadata removed by a workflow': ['.github/workflows/ci.yml', '        run: rm gradle/verification-metadata.xml\n'],
   'a comment line in a workflow': ['.github/workflows/ci.yml', '      # -Dorg.gradle.dependency.verification=off\n'],
+  'code after a block comment closes': ['build.gradle.kts', '*/ System.setProperty("org.gradle.dependency.verification", "off")\n'],
+  'code after a one-line block comment': ['settings.gradle.kts', '/* x */ gradle.startParameter.dependencyVerificationMode = OFF\n'],
+  'a comment-looking line in a heredoc': ['tools/x.sh', 'cat > ~/.gradle/init.d/x.gradle <<EOF\n# x\n#startParameter.dependencyVerificationMode\nEOF\n'],
   'the mode set in a settings script': [
     'settings.gradle.kts',
     'gradle.startParameter.dependencyVerificationMode = DependencyVerificationMode.OFF\n',
@@ -342,7 +402,9 @@ for (const [name, [path, text]] of Object.entries(refusedOverrides)) {
 test('the override check passes what the build has', () => {
   assert.deepEqual(overrideProblems('gradle.properties', 'org.gradle.caching=true\n'), []);
   assert.deepEqual(overrideProblems('design/development.md', 'org.gradle.dependency.verification=off\n'), []);
-  assert.deepEqual(overrideProblems('build-logic/x.gradle.kts', '// `--write-verification-metadata` records them\n'), []);
-  assert.deepEqual(overrideProblems('.github/workflows/ci.yml', '        run: grep -F x file\n'), []);
+  assert.deepEqual(overrideProblems('gradle.properties', '# org.gradle.dependency.verification=off\n'), []);
+  assert.deepEqual(overrideProblems('gradle.properties', '! org.gradle.dependency.verification=off\n'), []);
+  assert.deepEqual(overrideProblems('gradle.properties', 'a=b\\\n  c\n'), []);
+  assert.deepEqual(overrideProblems('.github/workflows/ci.yml', '        run: ./gradlew build -x test -Pa=b --no-F\n'), []);
   assert.deepEqual(overrideProblems('.github/workflows/ci.yml', '        run: ./gradlew build -x test -Pa=b\n'), []);
 });
