@@ -1,0 +1,92 @@
+{
+ "created": "2026-11-16T09:51:07.238Z",
+ "count": 1,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "b829f5c7-cb5c-4c03-b6ae-665a7dccd9ee",
+   "score": 100,
+   "title": "Symphony No. 9 in D Minor, Op. 125 'Choral': I. Allegro Ma Non Troppo, Un Poco Maestoso",
+   "length": 924000,
+   "first-release-date": "2009",
+   "artist-credit": [
+    {
+     "name": "Reinhold Schmidt",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "7d65abca-4860-4a1e-a29a-f2127ad393c8",
+      "name": "Reinhold Schmidt"
+     }
+    },
+    {
+     "name": "Walter Berry",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "cebac518-6e51-4d13-a787-1adbf3e371f2",
+      "name": "Walter Berry"
+     }
+    },
+    {
+     "name": "Gundula Janowitz",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "5dea2dba-bf0d-4087-9117-40f90e4134ee",
+      "name": "Gundula Janowitz"
+     }
+    },
+    {
+     "name": "Waldemar Kmentt",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "f8fe5f1d-14ec-4d74-a887-8f2c2de341a9",
+      "name": "Waldemar Kmentt"
+     }
+    },
+    {
+     "name": "Hilde Rössel-Majdan",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "8eb9e349-c0b1-4785-aae4-46150d231c02",
+      "name": "Hilde Rössel‐Majdan"
+     }
+    },
+    {
+     "name": "Wiener Singverein",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "18dc8071-2248-4c25-ba94-c92e288bd4ae",
+      "name": "Wiener Singverein"
+     }
+    },
+    {
+     "name": "Berlin Philharmonic Orchestra",
+     "joinphrase": ", ",
+     "artist": {
+      "id": "dea28aa9-1086-4ffa-8739-0ccc759de1ce",
+      "name": "Berliner Philharmoniker"
+     }
+    },
+    {
+     "name": "Herbert von Karajan",
+     "artist": {
+      "id": "d2ced2f1-6b58-47cf-ae87-5943e2ab6d99",
+      "name": "Herbert von Karajan"
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "40aa7ba7-c5c7-4e66-ac01-b4db3ad95512",
+     "title": "The Classic 100 - Symphony",
+     "date": "2009",
+     "status": "Official",
+     "release-group": {
+      "id": "f2a146b7-1a57-4abe-801a-0c13c6e25b20",
+      "title": "The Classic 100 - Symphony",
+      "primary-type": "Album"
+     }
+    }
+   ]
+  }
+ ]
+}
