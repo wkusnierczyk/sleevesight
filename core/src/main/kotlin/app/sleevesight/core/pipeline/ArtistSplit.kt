@@ -30,7 +30,7 @@ data class ArtistSplit(
     val lead: String,
     val others: List<String>,
     val name: AuthorsName,
-    val classical: Boolean = false,
+    val classical: Boolean,
 ) {
     /** The composer the Composer panel is about. */
     val composer: String get() = composers.first()

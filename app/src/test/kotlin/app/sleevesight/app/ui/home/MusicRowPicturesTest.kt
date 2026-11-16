@@ -17,7 +17,9 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -25,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.ItemShown
+import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.session.PlaybackInfo
+import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.draft
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
@@ -38,6 +43,7 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
@@ -46,6 +52,7 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.WorkLyrics
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,7 +67,8 @@ import java.io.File
  * from the Author row, and *Song* otherwise: Beethoven's Ninth (a Composer row), *Nessun dorma* with
  * its librettists (an Authors row, its panel's headings *Music by* and *Words by*), a cover of a
  * songwriter's own song (an Author row) and a pop track (no split). Each row is checked as a screen
- * reader reads it, with its button's action, and its no-evidence line; the first two are drawn as on a
+ * reader reads it, with its button's action, its panel's title, and its no-evidence line, in the panel
+ * and, under *Separate pages*, on its page under the page's title; the first two are drawn as on a
  * phone, light and dark, at the default font size and twice it, the Music panel open, and the
  * opera's Authors panel; with `SLEEVESIGHT_PICTURES` set, saved there as pictures, as
  * `ComposerPanelPicturesTest` saves its own.
@@ -228,6 +236,35 @@ class MusicRowPicturesTest {
                     .assert(clickLabelled(situation.action))
                     .performClick()
                 compose.waitForIdle()
+                val kind = if (situation.music) "Music" else "Song"
+                compose
+                    .onNodeWithTag(itemPanelTag(InsightItem.SONG) + ":heading")
+                    .assert(hasText(kind))
+                compose.onNodeWithText(situation.none).assertExists()
+            }
+        }
+    }
+
+    @Test
+    fun underSeparatePagesTheSongsPageIsTitledAsItsRowIs() {
+        for (situation in listOf(ninth, opera, cover, pop)) {
+            val track = track(situation)
+            val state =
+                NowPlayingState(
+                    PipelineView(track, aiReady = true),
+                    track.nowPlaying,
+                    PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+                    settings = settings.copy(layout = Layout.SEPARATE_PAGES),
+                )
+            val actions = NowPlayingActions(normalizer::normalize, itemNotes = notes(situation, none = true))
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity {
+                    it.setContent { NowPlayingPageContent(HomePage.Item(InsightItem.SONG.name), state, actions) {} }
+                }
+                compose.waitForIdle()
+                val (kind, other) = if (situation.music) "Music" to "Song" else "Song" to "Music"
+                assertEquals(1, compose.onAllNodesWithText(kind).fetchSemanticsNodes().size)
+                compose.onNodeWithText(other).assertDoesNotExist()
                 compose.onNodeWithText(situation.none).assertExists()
             }
         }
