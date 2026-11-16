@@ -1,5 +1,6 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.text.isJsWhitespace
 import app.sleevesight.core.text.trimJs
 
 /**
@@ -49,12 +50,16 @@ data class SelfCorrection(
          * - a sentence of it, the line's last, introduces the corrected version, and is nothing else
          *   ([INTRO]: "Here is the corrected insight:", "Corrected reply:", `**Corrected insight:**`).
          *
-         * The last such comment counts, so a version corrected twice keeps its last.
+         * The last such comment counts, so a version corrected twice keeps its last. The lines are
+         * read once, each on its own, and the comments weighed from the last back, against what was
+         * read of the text once for all of them ([Revisions]), so a reply of many lines that read as
+         * comments takes time in step with its length (#1318, #1328).
          *
          * The cost: a comment that shares a line with the fresh version, says none of this ("That
          * second sentence is not supported."), or comes before a version that cites a line the
-         * draft did not or opens with a sentence of new words, is not found, and the reply shows as
-         * written, the comment flagged as uncited by the check.
+         * draft did not, opens with a sentence of new words, or opens with a sentence longer than
+         * [FIRST_SENTENCE] characters, is not found, and the reply shows as written, the comment
+         * flagged as uncited by the check.
          */
         fun of(reply: String): SelfCorrection? {
             val text = reply.trimJs()
@@ -64,56 +69,117 @@ data class SelfCorrection(
             val quotations = Quotations.Reader(text)
             // What follows a line that is read alone ([isComment]), looked at once for all the lines.
             val following = Quotations.Lookahead(text)
+            // The lines that read as comments after text that ends a sentence, as far as each line and
+            // the end of the text before it tell; what needs the text before and after them is weighed
+            // after, from the last back (#1258, #1318).
+            val comments = mutableListOf<Line>()
             var lineStart = 0
-            var found: SelfCorrection? = null
+            var index = 0
             while (lineStart <= text.length) {
                 val lineEnd = text.indexOf('\n', lineStart).let { if (it < 0) text.length else it }
                 val line = text.substring(lineStart, lineEnd)
                 quotations.readTo(lineStart)
-                // What the line tells first, then what needs all the text before and after it, so a
-                // reply of many lines reads the whole of it again only at a line that reads as a
-                // comment (#1258).
-                if (lineStart > 0 && isComment(line, quotations.open) { following.closes(lineEnd) }) {
-                    val before = text.substring(0, lineStart).trimJs()
-                    val after = text.substring(minOf(lineEnd + 1, text.length)).trimJs()
-                    val whole = before.isNotEmpty() && SENTENCE_END.containsMatchIn(before)
-                    if (whole && revises(after, before)) {
-                        found = SelfCorrection(kept = unquoted(after), withdrawn = text.substring(0, lineEnd).trimJs())
-                    }
+                if (lineStart > 0 &&
+                    isComment(line, quotations.open) { following.closes(lineEnd) } &&
+                    endsSentence(text, lineStart)
+                ) {
+                    comments += Line(index, lineStart, lineEnd)
                 }
                 lineStart = lineEnd + 1
+                index++
             }
-            return found
+            // Read only for a reply with a comment.
+            val revisions = if (comments.isEmpty()) null else Revisions(text)
+            val comment = revisions?.let { read -> comments.lastOrNull { read.revised(it) } } ?: return null
+            val after = text.substring(minOf(comment.end + 1, text.length)).trimJs()
+            return SelfCorrection(kept = unquoted(after), withdrawn = text.substring(0, comment.end).trimJs())
         }
 
-        // Whether [version] revises [draft]: it cites at least one line, and only lines the draft
-        // cited, and its first sentence restates the draft, at least three quarters of its words
-        // (each counted once) being the draft's.
-        private fun revises(
-            version: String,
-            draft: String,
+        // A line of a text: the [index]th, from [start] to [end], the line break after it or the end.
+        private class Line(
+            val index: Int,
+            val start: Int,
+            val end: Int,
+        )
+
+        // Whether the text before [lineStart], without the whitespace at its end, ends a sentence
+        // ([SENTENCE_END]): matched on its last characters, a stop and the closing marks after it,
+        // not on all of it again for each line.
+        private fun endsSentence(
+            text: String,
+            lineStart: Int,
         ): Boolean {
-            val cited = CITATION.findAll(version).map { it.value }.toSet()
-            val drafted = CITATION.findAll(draft).map { it.value }.toSet()
-            if (cited.isEmpty() || !drafted.containsAll(cited)) return false
-            val first = GroundingCheck.splitSentences(version).firstOrNull() ?: version
-            val restated = words(first)
-            val draftWords = words(draft)
-            return restated.isNotEmpty() && restated.count { it in draftWords } >= restated.size * RESTATED
+            var end = lineStart
+            while (end > 0 && isJsWhitespace(text[end - 1])) end--
+            if (end == 0) return false
+            // `$` also matches before a line break that ends the text, U+0085 among them, which is no
+            // whitespace here: what may come before it is read too.
+            var from = end - 1
+            while (from > 0 && text[from - 1] in SENTENCE_CLOSES) from--
+            return SENTENCE_END.containsMatchIn(text.substring(maxOf(0, from - 1), end))
         }
 
-        // The words of [text], lower case, each once, without citations or a possessive's `'s`.
+        /**
+         * What [revised] weighs, read once for all the comments in [text] (#1318, #1328): where its
+         * citations are, the line where each word first comes, and the first sentence of the text after
+         * a line, read only as far as it goes.
+         */
+        private class Revisions(
+            private val text: String,
+        ) {
+            private val citations = citationRanges(text)
+
+            // Where the last citation starts, and the last that cites a line for the first time.
+            private val last = citations.lastOrNull()?.first ?: -1
+            private val newest = citations.distinctBy { text.substring(it) }.lastOrNull()?.first ?: -1
+
+            // Each word of the text ([words]), with the first line it comes in.
+            private val firstLines: Map<String, Int> by lazy {
+                val lines = HashMap<String, Int>()
+                text.split('\n').forEachIndexed { index, line -> words(line).forEach { lines.putIfAbsent(it, index) } }
+                lines
+            }
+
+            private val firstSentences = FirstSentences(text, FIRST_SENTENCE)
+
+            /**
+             * Whether the text after [comment], the version, revises the text before it, the draft: it
+             * cites at least one line, and only lines the draft cited, and its first sentence restates
+             * the draft, at least three quarters of its words (each counted once) being the draft's.
+             * A comment cites nothing ([isComment]), so the version cites a line the draft did not just
+             * when a line is cited for the first time after the comment.
+             */
+            fun revised(comment: Line): Boolean {
+                val cites = last > comment.end && newest < comment.start
+                val restated = (if (cites) firstSentences.of(comment.end + 1) else null)?.let(::words).orEmpty()
+                val drafted = restated.count { (firstLines[it] ?: Int.MAX_VALUE) < comment.index }
+                return restated.isNotEmpty() && drafted >= restated.size * RESTATED
+            }
+        }
+
+        // The words of [text], lower case, each once, without citations or a possessive's `'s`. Each
+        // regex is run once over [text] (`replace`, one pass): `findAll` would start it again for each
+        // word, and on Android each start copies the whole text (#1318). Each word is marked off
+        // ([WORD_MARK], taken out of the text first, as it is in no word) and then read.
         private fun words(text: String): Set<String> =
             WORD
-                .findAll(CITATION.replace(text, " "))
-                .map { word -> POSSESSIVE.replace(word.value.lowercase(), "") }
+                .replace(CITATION.replace(text.replace(WORD_MARK, ' '), " "), "$WORD_MARK\$0$WORD_MARK")
+                .split(WORD_MARK)
+                .filterIndexed { index, _ -> index % 2 == 1 }
+                .map { word -> withoutPossessive(word.lowercase()) }
                 .toSet()
+
+        // [word] without a possessive's `'s` or `’s` at its end: told by its last two characters, not by
+        // a regex started for each word (#1318). A word holds no line break, so `$` was its end.
+        internal fun withoutPossessive(word: String): String =
+            if (word.length >= 2 && word.last() == 's' && word[word.length - 2] in "'’") word.dropLast(2) else word
 
         // Whether [line] is the model's comment on its own reply, as far as the line itself tells
         // (whether the text before it ends a sentence is weighed in [of]): it ends a sentence, sits
         // inside no quotation (none [open] before it), cites nothing, and says it corrects the reply.
         // [ahead]: whether a single quotation that opens in it may close in the lines after it.
-        private fun isComment(
+        // Internal for `GroundingScanTest`, which weighs comments as they were weighed before #1318.
+        internal fun isComment(
             line: String,
             open: Boolean,
             ahead: () -> Boolean,
@@ -147,8 +213,8 @@ data class SelfCorrection(
         // last character (the text's only two straight double quotes, or its only curly pair), and
         // it comes straight after the last citation, or after a stop that follows it
         // (`"... [MB1]."`). A reply that opens with a quoted title, or quotes a phrase at its end
-        // (`"Andrew" is ... "a quiet farewell [W1]."`), keeps its marks.
-        private fun unquoted(text: String): String {
+        // (`"Andrew" is ... "a quiet farewell [W1]."`), keeps its marks. Internal as [isComment] is.
+        internal fun unquoted(text: String): String {
             if (text.length < 2) return text
             val straight = text.first() == '"' && text.last() == '"' && text.count { it == '"' } == 2
             val ends = text.first() == '“' && text.last() == '”'
@@ -191,6 +257,15 @@ data class SelfCorrection(
         /** The end of a sentence, at the end of the text: a stop or colon, or a citation, then any closing marks. */
         private val SENTENCE_END = Regex("(?:[.!?:]|\\])[)\"”'’*_]*$")
 
+        /** The closing marks that may end a sentence after its stop ([SENTENCE_END]). */
+        private const val SENTENCE_CLOSES = ")\"”'’*_"
+
+        /**
+         * How long a version's first sentence may be, in characters, to restate the draft: some five
+         * times an insight's long sentence. One longer is read no further, and revises nothing.
+         */
+        private const val FIRST_SENTENCE = 1_000
+
         /** The end of a comment's line: a stop or colon, then any closing bracket or emphasis. */
         private val LINE_END = Regex("[.!?:][)*_]*$")
 
@@ -199,8 +274,8 @@ data class SelfCorrection(
         /** The share of a version's first sentence's words that must be the draft's ([revises]). */
         private const val RESTATED = 0.75
 
-        /** A possessive's ending, `'s` or `’s`, taken off a word in [revises]. */
-        private val POSSESSIVE = Regex("['’]s$")
+        /** What marks off each word of a text ([words]): a control character, in no word. */
+        private const val WORD_MARK = '\u0001'
 
         /** A word: letters and digits, with any apostrophes inside it (`I'll`, `Rosseel's`). */
         private val WORD = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")

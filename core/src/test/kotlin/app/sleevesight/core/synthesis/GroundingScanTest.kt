@@ -1,0 +1,472 @@
+package app.sleevesight.core.synthesis
+
+import app.sleevesight.core.text.JS_WHITESPACE_CLASS
+import app.sleevesight.core.text.trimJs
+import org.junit.jupiter.api.Timeout
+import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * A reply's comment lines weighed, and its sentences split, in time that grows in step with its length
+ * (#1318, #1328). [SelfCorrection.of] weighed each line that read as a comment against all the text
+ * before and after it, and the sentence split read the rest of the text again at each sentence's end, so
+ * a reply of many such lines, or of many sentences, took time that grew with the square of its length.
+ */
+class GroundingScanTest {
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun `many comment lines between two cited lines are weighed in linear time`() {
+        // 256k characters of `Wait, the evidence.` lines: each was weighed against all the text before
+        // and after it, about 3.6 s at 64k characters and far past this test's timeout at this length.
+        val reply = "The song [W1].\n" + "Wait, the evidence.\n".repeat(LINES) + "The song [W1]."
+        val correction = assertNotNull(SelfCorrection.of(reply))
+        assertEquals("The song [W1].", correction.kept)
+        assertEquals(reply.substringBeforeLast("\n"), correction.withdrawn)
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun `many introductions with no sentence's end between them are weighed in linear time`() {
+        // `Corrected insight:` lines end no sentence, so what follows each is one sentence to the reply's
+        // end, read whole for each line; the last line's words are new, so no version restates its draft.
+        val reply = "The song [W1].\n" + "Corrected insight:\n".repeat(LINES) + "Other words [W1]."
+        assertNull(SelfCorrection.of(reply))
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun `a paragraph of many sentences is split in linear time`() {
+        // 2M characters of `It is. `: at each sentence's end the rest of the paragraph was copied to see
+        // whether it was a Roman numeral and its citations alone, time growing with the square of it.
+        // The `Ω` at the end, no sentence of its own, makes each copy two bytes a character.
+        val paragraph = "It is. ".repeat(SENTENCES) + "Ω."
+        assertEquals(SENTENCES, GroundingCheck.splitSentences(paragraph).size)
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    fun `a reply dense with citations, or with a long line of many words, is weighed and checked in linear time`() {
+        // Citations and words were found with `Regex.findAll`, which starts the regex engine again for
+        // each match; on Android each start copies the whole text, time growing with the square of its
+        // length there. On the JVM, where nothing is copied, these pass either way: they guard the JVM
+        // side, and the phone check in the PR the rest.
+        val cited = "The song " + "[W1]".repeat(DENSE) + ".\nWait, the evidence.\nThe song [W1]."
+        assertEquals("The song [W1].", assertNotNull(SelfCorrection.of(cited)).kept)
+        val checked = assertIs<InsightReply.Written>(GroundingCheck.check(cited, setOf("W1"), allowModel = false))
+        assertEquals(1, checked.grounded.counts.ok)
+        val wordy = "The song " + "word ".repeat(DENSE) + "[W1].\nWait, the evidence.\nThe song [W1]."
+        assertEquals("The song [W1].", assertNotNull(SelfCorrection.of(wordy)).kept)
+    }
+
+    @Test
+    fun `a sentence's end told by a long run of citations after it is read as before, not cut short`() {
+        // `I` and 320 citations after `The songs.`: a numeral and its citations alone, so no sentence
+        // ends there, and the first sentence, 1,294 characters, runs on past the bound. Read only to a
+        // bound and cut inside the citations, it ended at `The songs.`, which restates the draft.
+        val reply = "The songs [W1].\nWait, the evidence.\nThe songs. I " + "[W1]".repeat(LONG_RUN) + "."
+        assertNull(Before.of(reply))
+        assertNull(SelfCorrection.of(reply))
+        // Within the bound, the run is read to its end as well: `The songs. I [W1]…[W1].` is one
+        // sentence, a third of whose words (`i`) are new, so it restates nothing.
+        val within = "The songs [W1].\nWait, the evidence.\nThe songs. I " + "[W1]".repeat(SHORT_RUN) + "."
+        assertEquals(Before.of(within), SelfCorrection.of(within))
+        assertNull(SelfCorrection.of(within))
+    }
+
+    @Test
+    fun `a first sentence of up to a thousand characters restates the draft, one longer does not`() {
+        val draft = "The songs [W1].\nWait, the evidence.\n"
+        // `The the … songs songs[W1].`: 1,000 characters, all its words the draft's; one more, a space
+        // before the citation, makes 1,001.
+        val words = "The" + " the".repeat(THE_WORDS) + " songs songs"
+        for ((after, restates) in listOf(
+            "$words[W1]." to true,
+            "$words [W1]." to false,
+            "$words[W1]. It is so [W1]." to true,
+            "$words [W1]. It is so [W1]." to false,
+        )) {
+            val first = after.substringBefore(" It is")
+            assertEquals(if (restates) BOUND else BOUND + 1, first.length, after)
+            // Before the bound, it read the same; past it, the version revises nothing.
+            assertNotNull(Before.of(draft + after), after)
+            assertEquals(restates, SelfCorrection.of(draft + after) != null, after)
+        }
+    }
+
+    @Test
+    fun `numerals, initials, possessives and list numbers are told by their characters as the regexes told them`() {
+        // Every string of up to eight of the characters each regex weighs.
+        fun strings(alphabet: String): List<String> =
+            (1..WORD_LENGTH)
+                .runningFold(listOf("")) { last, _ ->
+                    last.flatMap { w ->
+                        alphabet.map { w + it }
+                    }
+                }.flatten()
+        for (s in strings("IVXx")) assertEquals(Before.ROMAN.matches(s), GroundingCheck.isRoman(s), s)
+        for (s in strings("AZ.a")) assertEquals(Before.INITIALS.matches(s), GroundingCheck.isInitials(s), s)
+        for (s in strings(
+            "s'’a",
+        )) {
+            assertEquals(Before.POSSESSIVE.replace(s, ""), SelfCorrection.withoutPossessive(s), s)
+        }
+        val random = Random(SEED)
+        repeat(TEXTS) {
+            val text = pieces(random, LINE_MARK_PIECES, MAX_PIECES)
+            for (end in 1..text.length) {
+                assertEquals(Before.isListNumber(text, end), MarkdownMarks.isListNumber(text, end), "$text to $end")
+            }
+        }
+    }
+
+    @Test
+    fun `citations are found where the regex found them`() {
+        val random = Random(SEED)
+        var found = 0
+        repeat(TEXTS) {
+            val text = pieces(random, NUMERAL_PIECES, MAX_PIECES)
+            val expected =
+                Before.CITATION
+                    .findAll(text)
+                    .map { it.range }
+                    .toList()
+            assertEquals(expected, citationRanges(text), text)
+            found += expected.size
+        }
+        assertTrue(found > ENOUGH, "$found found")
+    }
+
+    @Test
+    fun `a Roman numeral and its citations alone are found as the regex before found them, at every place`() {
+        val random = Random(SEED)
+        var found = 0
+        repeat(TEXTS) {
+            val text = pieces(random, NUMERAL_PIECES, MAX_PIECES)
+            for (at in 0..text.length) {
+                val expected = Before.numeralCited(text, at)
+                assertEquals(expected, GroundingCheck.numeralCited(text, at), "$text at $at")
+                if (expected) found++
+            }
+        }
+        // The varied texts hold numerals and their citations alone, not only what is none.
+        assertTrue(found > ENOUGH, "$found found")
+    }
+
+    @Test
+    fun `a line's mark is found as the regex on the rest of the text found it, at every place`() {
+        val random = Random(SEED)
+        var found = 0
+        repeat(TEXTS) {
+            val text = pieces(random, LINE_MARK_PIECES, MAX_PIECES)
+            for (at in 0..text.length) {
+                val expected = Before.LINE_MARK.matchesAt(text, at)
+                assertEquals(expected, MarkdownMarks.isLineMark(text, at), "$text at $at")
+                if (expected) found++
+            }
+        }
+        assertTrue(found > ENOUGH, "$found found")
+    }
+
+    @Test
+    fun `the first sentence after each line is the one the whole split found, or none past its length`() {
+        val random = Random(SEED)
+        var nulls = 0
+        var cut = 0
+        repeat(TEXTS) {
+            val text = pieces(random, SENTENCE_PIECES, MAX_SENTENCE_PIECES).trimJs()
+            val firstSentences = FirstSentences(text, WITHIN)
+            for (from in (0..text.length).filter { it == 0 || text[it - 1] == '\n' }) {
+                val version = text.substring(from).trimJs()
+                val expected =
+                    (GroundingCheck.splitSentences(version).firstOrNull() ?: version).takeIf {
+                        it.length <=
+                            WITHIN
+                    }
+                assertEquals(expected, firstSentences.of(from), "$text from $from")
+                if (expected == null) {
+                    nulls++
+                } else if (expected != version) {
+                    cut++
+                }
+            }
+        }
+        // Sentences that end before the text does, and that run on past their length.
+        assertTrue(nulls > ENOUGH && cut > ENOUGH, "$nulls none, $cut ended")
+    }
+
+    @Test
+    fun `comments are weighed as before in replies of varied lines`() {
+        val random = Random(SEED)
+        var corrected = 0
+        repeat(TEXTS) {
+            val reply =
+                List(
+                    random.nextInt(1, MAX_LINES + 1),
+                ) { REPLY_LINES[random.nextInt(REPLY_LINES.size)] }.joinToString("\n")
+            val expected = Before.of(reply)
+            val weighed = SelfCorrection.of(reply)
+            assertEquals(expected, weighed, reply)
+            if (expected != null) corrected++
+        }
+        assertTrue(corrected > ENOUGH, "$corrected corrected")
+    }
+
+    // A text of [count] pieces at most, each one of [pieces].
+    private fun pieces(
+        random: Random,
+        pieces: List<String>,
+        count: Int,
+    ): String = List(random.nextInt(count + 1)) { pieces[random.nextInt(pieces.size)] }.joinToString("")
+
+    /** What #1318 and #1328 replaced, kept as written to check what replaced it against. */
+    private object Before {
+        private const val CITES = "(?:$JS_WHITESPACE_CLASS*\\[[A-Z]{1,2}[0-9]*\\])+"
+        private const val REST = "(?:$JS_WHITESPACE_CLASS[\\s\\S]*)?"
+        private const val ROMAN_PATTERN = "(?=[IVX])X{0,3}(?:IX|IV|V?I{0,3})"
+        private val NUMERAL_CITED =
+            Regex("[*_]*$ROMAN_PATTERN[*_\"”'’)]*(?:[.!?]?$CITES[.!?]$REST|[.!?]$CITES$REST|$CITES)")
+        val LINE_MARK = Regex("#{1,6}(?=[ \\n]|$)|(?:[-*+>]|[0-9]{1,2}[.)]) ")
+        private val SENTENCE_END = Regex("(?:[.!?:]|\\])[)\"”'’*_]*$")
+        val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
+        private val WORD = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")
+        val POSSESSIVE = Regex("['’]s$")
+
+        val ROMAN = Regex(ROMAN_PATTERN)
+        val INITIALS = Regex("(?:[A-Z]\\.)+")
+        private val LIST_NUMBER = Regex("[0-9]{1,2}\\.")
+
+        fun numeralCited(
+            t: String,
+            at: Int,
+        ): Boolean = NUMERAL_CITED.matches(t.substring(at))
+
+        fun isListNumber(
+            t: String,
+            end: Int,
+        ): Boolean {
+            var start = end - 1
+            while (start > 0 && t[start - 1] in '0'..'9') start--
+            var indent = start
+            while (indent > 0 && t[indent - 1] == ' ') indent--
+            val atLineStart = indent == 0 || t[indent - 1] == '\n'
+            return atLineStart && LIST_NUMBER.matches(t.substring(start, end))
+        }
+
+        fun of(reply: String): SelfCorrection? {
+            val text = reply.trimJs()
+            val quotations = Quotations.Reader(text)
+            val following = Quotations.Lookahead(text)
+            var lineStart = 0
+            var found: SelfCorrection? = null
+            while (lineStart <= text.length) {
+                val lineEnd = text.indexOf('\n', lineStart).let { if (it < 0) text.length else it }
+                val line = text.substring(lineStart, lineEnd)
+                quotations.readTo(lineStart)
+                if (lineStart > 0 && SelfCorrection.isComment(line, quotations.open) { following.closes(lineEnd) }) {
+                    val before = text.substring(0, lineStart).trimJs()
+                    val after = text.substring(minOf(lineEnd + 1, text.length)).trimJs()
+                    val whole = before.isNotEmpty() && SENTENCE_END.containsMatchIn(before)
+                    if (whole && revises(after, before)) {
+                        val withdrawn = text.substring(0, lineEnd).trimJs()
+                        found = SelfCorrection(kept = SelfCorrection.unquoted(after), withdrawn = withdrawn)
+                    }
+                }
+                lineStart = lineEnd + 1
+            }
+            return found
+        }
+
+        private fun revises(
+            version: String,
+            draft: String,
+        ): Boolean {
+            val cited = CITATION.findAll(version).map { it.value }.toSet()
+            val drafted = CITATION.findAll(draft).map { it.value }.toSet()
+            if (cited.isEmpty() || !drafted.containsAll(cited)) return false
+            val first = GroundingCheck.splitSentences(version).firstOrNull() ?: version
+            val restated = words(first)
+            val draftWords = words(draft)
+            return restated.isNotEmpty() && restated.count { it in draftWords } >= restated.size * 0.75
+        }
+
+        private fun words(text: String): Set<String> =
+            WORD
+                .findAll(CITATION.replace(text, " "))
+                .map { word -> POSSESSIVE.replace(word.value.lowercase(), "") }
+                .toSet()
+    }
+
+    private companion object {
+        /** About 250k characters of 19- and 20-character lines. */
+        const val LINES = 12_800
+
+        /** 2M characters of 7-character sentences. */
+        const val SENTENCES = 300_000
+
+        /** Citations after `The songs. I`: past the bound on a first sentence, and within it. */
+        const val LONG_RUN = 320
+        const val SHORT_RUN = 200
+
+        /** The bound on a version's first sentence (`SelfCorrection.FIRST_SENTENCE`). */
+        const val BOUND = 1_000
+
+        /** The `the`s that make a first sentence of [BOUND] characters, with `The`, two `songs` and `[W1].`. */
+        const val THE_WORDS = 245
+
+        /** 256k characters of citations, or 320k of words. */
+        const val DENSE = 64_000
+
+        const val SEED = 1318
+
+        /** The longest of the strings told by their characters. */
+        const val WORD_LENGTH = 8
+
+        /** How many of the varied texts at least must hold what a test looks for. */
+        const val ENOUGH = 100
+        const val TEXTS = 3000
+        const val MAX_PIECES = 16
+        const val MAX_LINES = 14
+
+        /** Enough for some texts to run past [WITHIN] and what is read after it. */
+        const val MAX_SENTENCE_PIECES = 160
+
+        /** A first sentence's length, short, so that varied texts run past it as well. */
+        const val WITHIN = 40
+
+        /** What the numeral's texts are made of: numerals, their marks, citations and what breaks them. */
+        val NUMERAL_PIECES =
+            listOf(
+                "I",
+                "V",
+                "X",
+                "II",
+                "IV",
+                "XXXVIII",
+                "IIII",
+                "*",
+                "_",
+                "\"",
+                "”",
+                "'",
+                "’",
+                ")",
+                ".",
+                "!",
+                "?",
+                " ",
+                "  ",
+                "\n",
+                "\u00A0",
+                "\u0085",
+                "[W1]",
+                "[MB12]",
+                "[AI]",
+                "[ABC]",
+                "[a1]",
+                "[W",
+                "]",
+                "x",
+                "It",
+            )
+
+        /** What the line marks' texts are made of: the marks and what may follow them. */
+        val LINE_MARK_PIECES =
+            listOf(
+                "#",
+                "###",
+                "######",
+                " ",
+                "\n",
+                "\r\n",
+                "\r",
+                "\u2028",
+                "\u0085",
+                "-",
+                "*",
+                "+",
+                ">",
+                "1",
+                "12",
+                ".",
+                ")",
+                "x",
+                "\t",
+            )
+
+        /** What the sentences' texts are made of: stops, openers, abbreviations, citations, marks. */
+        val SENTENCE_PIECES =
+            listOf(
+                "It is",
+                "the U.S.",
+                "Vol.",
+                "Dr.",
+                "Jr.",
+                "I",
+                "II",
+                "*",
+                "_",
+                "\"",
+                "“",
+                "(",
+                ")",
+                "’",
+                ".",
+                "!",
+                "?",
+                ":",
+                " ",
+                "\t ",
+                "\n",
+                "\n\n",
+                "\u00A0",
+                "[W1]",
+                "[MB2]",
+                "- ",
+                "1. ",
+                "# ",
+                "> ",
+                "word",
+                "Also",
+            )
+
+        /** The lines of the varied replies: comments of each kind, drafts and versions, and the rest. */
+        val REPLY_LINES =
+            listOf(
+                "The song came out in 2022 [W1].",
+                "The song came out [W1] [MB2].",
+                "It charted in the U.S. [MB2].",
+                "Other words entirely [W1].",
+                "\"The song came out in 2022 [W1].\"",
+                "A new line [W3].",
+                "The song.",
+                "Wait, the evidence.",
+                "Wait, that second sentence is not supported by the evidence.",
+                "(Wait, the evidence.)",
+                "*Wait, the citation.*",
+                "Hmm, the draft.",
+                "Actually, I'll drop it.",
+                "Let me correct that.",
+                "Corrected insight:",
+                "Here is the corrected insight:",
+                "**Corrected insight:**",
+                "Wait, 'the evidence.",
+                "it said. Corrected insight:",
+                "Vol. I [W1].",
+                "1. The song [W1].",
+                "",
+                "  ",
+                "\tThe  song\tcame out [W1].",
+                "x.",
+                "came out in",
+                "The song's draft and Rosseel’s a''b \u0001 came [W1][W2].",
+                // `$` matches before a final U+0085, which is no whitespace to trim.
+                "The song came out [W1].\u0085",
+                "Wait, the evidence.)\u0085",
+            )
+    }
+}
