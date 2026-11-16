@@ -79,8 +79,8 @@ internal fun homeLyrics(
  * MusicBrainz is asked, nor for an instrumental), *Find the lyrics* after the search or the line
  * saying it is off ([search], #773; *Ask AI* until #908), whose pages show as MusicBrainz's do
  * ([AiLyrics]). Last, for every track with lyrics, a page found or not, *Explain the song* (#908,
- * [SearchKind.EXPLAIN]), its answer cited as an insight is ([AiExplanation]); the two buttons as wide
- * as the wider ([aiButtonWidth]).
+ * [SearchKind.EXPLAIN]), its answer cited as an insight is ([AiExplanation]); the two buttons one
+ * column, as wide as the wider with its mark, the marks lined up ([chipColumnWidth], #1343).
  */
 @Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
@@ -94,7 +94,10 @@ internal fun LyricsPanel(
 ) {
     val style = MaterialTheme.typography.bodyLarge
     val width =
-        aiButtonWidth(listOf(stringResource(R.string.home_lyrics_find), stringResource(R.string.home_lyrics_explain)))
+        chipColumnWidth(
+            listOf(stringResource(R.string.home_lyrics_find), stringResource(R.string.home_lyrics_explain)),
+            mark = true,
+        )
     when (links) {
         // Nothing asked for a track the last clear holds (#1112): it says so, without the record.
         LyricsLinks.Looking ->
@@ -142,8 +145,9 @@ internal fun LyricsPanel(
 }
 
 /**
- * *Explain the song* (#908), last in the panel, at least [width] wide: what the song is about, asked
- * on a tap only, its answer cited ([AiExplanation]).
+ * *Explain the song* (#908), last in the panel, [width] wide, one column with *Find the lyrics*
+ * ([chipColumnWidth], #1343): what the song is about, asked on a tap only, its answer cited
+ * ([AiExplanation]).
  */
 @Composable
 private fun Explain(
