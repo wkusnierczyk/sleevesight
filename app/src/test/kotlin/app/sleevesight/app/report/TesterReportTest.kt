@@ -173,6 +173,16 @@ class TesterReportTest {
     }
 
     @Test
+    fun anInsightWrittenFromNothingBeyondHomeSaysItsNoteWasShown() {
+        // The line under the insight (#1142), said in the report as on the card.
+        val thin = written("It was recorded in 1973 [MB1].").copy(nothingBeyondHome = true)
+        val snapshot = snapshot().let { it.copy(view = PipelineView(track = track(insight = thin), aiReady = true)) }
+        val lines = TesterReport.nowPlaying(snapshot).lines()
+        assertTrue(lines.joinToString("\n"), lines.contains("Note shown: nothing beyond what Home shows"))
+        assertFalse(TesterReport.nowPlaying(snapshot()).contains("Note shown"))
+    }
+
+    @Test
     fun aKeptInsightCitingMIsPrintedAsWrittenWithANoteThatMIsTheOldFormOfAI() {
         // Kept from before the model's own knowledge was cited `[AI]` (#668).
         val kept = written("It was recorded in 1973 [MB1]. It is loved [M].", cached = true, allowModel = true)

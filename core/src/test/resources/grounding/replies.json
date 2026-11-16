@@ -616,7 +616,7 @@
   "allowModel": false
  },
  {
-  "name": "no evidence later in the text",
+  "name": "no evidence after uncited prose",
   "reply": "There is nothing here. NO_EVIDENCE",
   "ids": [
    "P1",

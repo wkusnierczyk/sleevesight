@@ -361,6 +361,8 @@ private fun StringBuilder.appendWritten(insight: InsightState.Written) {
     insight.usage?.let { appendLine("Tokens: ${it.inputTokens} in, ${it.outputTokens} out") }
     insight.held?.let { appendLine("Lines the prompt held: ${it.sorted().joinToString()}") }
     appendLine(insight.grounded.text.trim())
+    // The line under the insight, when its evidence held nothing beyond what Home shows (#1142).
+    if (insight.nothingBeyondHome) appendLine("Note shown: nothing beyond what Home shows")
     insight.grounded.withdrawn?.let {
         appendLine("Taken out, the model's correction of its own reply (not shown, not checked):")
         appendLine(it.trim())

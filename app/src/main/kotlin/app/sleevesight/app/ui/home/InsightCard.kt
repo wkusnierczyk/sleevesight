@@ -32,7 +32,9 @@ import app.sleevesight.core.pipeline.InsightState
  * Model prose is plain text: its only interactive parts are the citation chips, built from the
  * evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go to the
  * pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
- * insight, its footer ([Footer], #671), each part on its own line: *As written previously.* with
+ * insight's text, when the evidence it was written from holds nothing beyond what Home shows
+ * ([InsightState.Written.nothingBeyondHome], #1142), a quiet line says no more source information was
+ * found. Under that, its footer ([Footer], #671), each part on its own line: *As written previously.* with
  * what follows from it, for an insight written earlier, or *Rewritten with …* for one *Rewrite
  * insight* wrote (#854), or an automatic write in place of another model's (#972); [GroundingLine],
  * a note, or with [groundingDetails] (*Show grounding details*, #437) the grounding check's counts
@@ -205,6 +207,11 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
+    // Written from evidence that holds nothing beyond what Home shows (#1142): said under the text, in
+    // the card's quiet note style, as the line on a source not reached under it is.
+    if (insight.nothingBeyondHome) {
+        Quiet(stringResource(R.string.home_insight_nothing_beyond), Modifier.testTag(INSIGHT_NOTHING_BEYOND_TAG))
+    }
     // Its *Retry* goes once tapped, so it hands the focus to *Report a problem* under it, which
     // stays beside a written insight in either layout (#1121).
     val handoff = rememberFocusHandoff()
@@ -316,8 +323,16 @@ private fun Prose(text: AnnotatedString) {
 }
 
 @Composable
-private fun Quiet(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Quiet(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text,
+        modifier = modifier,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 // The idle notes that say something is on its way, with the turning record (#785).
@@ -325,3 +340,6 @@ private val ON_ITS_WAY = setOf(R.string.home_insight_gathering, R.string.home_in
 
 /** The test tag of the row of the *Key insights* heading, with *Read aloud* at its end. */
 const val INSIGHT_HEADING_TAG: String = "insight-heading"
+
+/** The test tag of the line under an insight written from nothing beyond what Home shows (#1142). */
+const val INSIGHT_NOTHING_BEYOND_TAG: String = "insight-nothing-beyond"

@@ -572,6 +572,11 @@
          (home_retry) beside it asks them again. %1$s is the source, or two (home_sources_two), or more
          (home_sources_list). -->
     <string name="home_insight_partial">%1$s could not be reached; some evidence for the insight may be missing.</string>
+    <!-- Under the insight's text, before home_insight_partial when both show (#1142): the evidence the
+         insight was written from holds nothing beyond what Home already shows of the track (the
+         title, the artists, the album and its year, the release dates), so the insight can only
+         retell it. Shown again whenever the insight is shown from before. -->
+    <string name="home_insight_nothing_beyond">We could not find more source information for the insight.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
     <!-- The first line of a written insight's footer (#671), for an insight not written in this run but
          earlier: on an earlier play of the track, or before a Look again, a settings change or a

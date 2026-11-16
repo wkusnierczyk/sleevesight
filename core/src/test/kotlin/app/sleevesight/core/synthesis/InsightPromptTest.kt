@@ -35,7 +35,7 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
-    fun `the stored prompts are version 10's`() {
+    fun `the stored prompts are version 13's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
         // synthesis cache keys cards by it): update both together. Version 7 (#722) added the rule
         // on the track's length, version 8 (#800) the rule on a genre from a web page, version 9
@@ -43,8 +43,9 @@ class InsightPromptTest {
         // fixes from its blind A/B. Each version's exact prompt is kept in `design/prompts/`. The rule
         // on a line found in the track's language (#902) came without a version: the lines'
         // languages are in the evidence fingerprint, part of every card's key. Nor did the rule on
-        // dates (#957): a card kept keeps its dates as written.
-        assertEquals(10, InsightPrompt.VERSION)
+        // dates (#957): a card kept keeps its dates as written. Version 13 (#1142): what Home shows,
+        // and the story beyond it.
+        assertEquals(13, InsightPrompt.VERSION)
     }
 
     @Test
@@ -63,9 +64,9 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `a composer-led track's prompt has its own version, any other track's is version 10's (#1195)`() {
-        // Never 11: the rejected variant kept in `design/prompts/` has it.
-        assertEquals(12, InsightPrompt.RECORDING_VERSION)
+    fun `a composer-led track's prompt has its own version, any other track's is version 13's (#1195)`() {
+        // Never 11: the rejected variant kept in `design/prompts/` has it; 12 was version 10's (#1142).
+        assertEquals(14, InsightPrompt.RECORDING_VERSION)
         assertEquals(InsightPrompt.RECORDING_VERSION, InsightPrompt.version(composed = true))
         assertEquals(InsightPrompt.VERSION, InsightPrompt.version(composed = false))
     }
@@ -330,9 +331,11 @@ class InsightPromptTest {
             assertFalse(contract.any { GroundingCheck.GAP_SENTENCE in it }, "version 2's gap sentence is gone")
             // No usable evidence: the exact reply the app turns into its own text, and a date or a
             // credit is enough for a card (#767, version 10); no sentence on the evidence itself.
+            // Retelling what the screen shows only as a last resort (#1142, version 13).
             assertEquals(InsightPrompt.NOTHING_TO_TELL_RULE, contract.last())
             assertTrue("reply with exactly: ${GroundingCheck.NO_EVIDENCE}." in contract.last(), contract.last())
-            assertTrue("A release date or a credit is enough" in contract.last(), contract.last())
+            // No exception to it (#1142): the model argued with "only when the evidence holds nothing else".
+            assertTrue(contract.last().endsWith("A credit or a date is enough for a sentence."), contract.last())
             // A web page's reading is the page's, its facts stated plainly, ids only in citations (#767).
             assertTrue(InsightPrompt.WEB_FACT_RULE in contract, "the rule on a web page's facts")
             val webFact = InsightPrompt.WEB_FACT_RULE
@@ -353,12 +356,61 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `the role opens with the song, the release after it (#767)`() {
-        assertTrue(InsightPrompt.ROLE.startsWith("You write the insight card on a music app's now-playing screen."))
-        assertTrue("so do not restate them" in InsightPrompt.ROLE)
-        // Version 9 kept the release out of the opening; version 10 puts it after the story.
-        assertFalse("never open with when or where it was released" in InsightPrompt.ROLE)
-        assertTrue("If you mention the release, put it after the story." in InsightPrompt.BUILT_IN_STYLE)
+    fun `the role says what Home shows and asks for the story beyond it (#767, #1142)`() {
+        val role = InsightPrompt.ROLE
+        assertTrue(role.startsWith("You write the insight card on a music app's now-playing screen."))
+        // Version 13 (#1142): the whole header, not only the title and artists, as facts shown elsewhere,
+        // with no screen to talk about (the check of its first draft: cards that talked about the screen).
+        assertTrue(
+            "These facts are shown elsewhere in the app: the title, the artists, the album and its year, the " +
+                "release dates, and short notes on the song, the artist and the album." in role,
+            role,
+        )
+        assertFalse("The screen" in role, role)
+        assertTrue("Prefer the story beyond them, such as" in role, role)
+        // The thin case as a preference, worded once, never a fact the model may not use (#1142).
+        assertTrue(
+            "When the evidence offers nothing beyond them, one or two sentences from those facts are right." in role,
+            role,
+        )
+        val beyond = listOf("produced", "played on it", "wrote it if not the performer", "a release before this album")
+        for (kind in beyond) assertTrue(kind in role, kind)
+        // Scoped, as "an earlier release" drew false claims of one.
+        assertTrue("a release before this album when the evidence names one" in role, role)
+        assertTrue("what the sources say of the song, the artist, the album or its genres" in role, role)
+        // Version 9 kept the release out of the opening; version 10 put it after the story; version 13
+        // asks for a story, what to prefer said once, in the role.
+        assertFalse("never open with when or where it was released" in role)
+        assertEquals(
+            "- Write 1 to 4 sentences that tell a story, each fact once, not a list of facts.\n" +
+                "- Plain conversational English. No hype, no praise words.",
+            InsightPrompt.BUILT_IN_STYLE,
+        )
+        val parts = listOf(InsightPrompt.ROLE, InsightPrompt.BUILT_IN_STYLE, InsightPrompt.NOTHING_TO_TELL_RULE)
+        for (part in parts) {
+            assertFalse("the screen" in part.substringAfter("now-playing screen."), part)
+            // No rule with an exception, nor a line asking the model to say there is nothing more.
+            for (exception in listOf("unless", "only when", "Leave out", "nothing more")) {
+                assertFalse(exception in part, "$exception: $part")
+            }
+        }
+    }
+
+    @Test
+    fun `evidence of only facts Home shows is told in the user message, after the evidence (#1142)`() {
+        val nowPlaying = FixtureEvidence.nowPlaying(1)
+        val normalized = normalizer.normalize(nowPlaying)
+        val evidence = FixtureEvidence.of(1)
+        val plain = InsightPrompt.user(nowPlaying, normalized, evidence)
+        assertFalse(InsightPrompt.NOTHING_BEYOND in plain)
+        assertEquals(
+            plain + "\n\n" + InsightPrompt.NOTHING_BEYOND,
+            InsightPrompt.user(nowPlaying, normalized, evidence, nothingBeyond = true),
+        )
+        assertEquals(
+            "The evidence holds only facts shown elsewhere in the app; write one or two sentences from them.",
+            InsightPrompt.NOTHING_BEYOND,
+        )
     }
 
     private companion object {

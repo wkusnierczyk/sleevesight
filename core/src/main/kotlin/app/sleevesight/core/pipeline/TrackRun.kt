@@ -224,7 +224,13 @@ internal class TrackRun(
                         control.ended(RunStep.LABELS)
                     }
                 }
-                InsightWriter(parts, time, input, evidence, guard, this@TrackRun, state.value.roles).write(control)
+                // The authors Home's Composer row names (#1142), for the note on nothing beyond Home.
+                val split = state.value.artistSplit()
+                val authors = split?.authors.orEmpty()
+                val roles = state.value.roles
+                val composed = state.value.composed()
+                InsightWriter(parts, time, input, evidence, guard, this@TrackRun, roles, authors, composed)
+                    .write(control)
             }
             return state.value
         } catch (e: CancellationException) {

@@ -92,6 +92,7 @@ class PipelineReleaseLineTest {
 
             pipeline.run(nowPlaying("Carefree Highway", "Gordon Lightfoot", "Gord's Gold"), write = true)
 
+            // Sent beside the line beyond Home (#1142) too: the earlier release it is a reissue of.
             assertTrue(
                 "[P1] (player metadata, release) This recording is on the release \"Gord's Gold\"." in
                     provider.requests.single().prompt,
