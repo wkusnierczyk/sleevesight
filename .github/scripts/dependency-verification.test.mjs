@@ -20,7 +20,7 @@
 //    (`Probe`). The workflows also must not name the verification files. Every line of every tracked
 //    file is read, comments too, but prose (Markdown, `docs/`, `design/`, the release notes);
 //    properties files are read entry by entry as Java reads them. The few lines that name the mode on
-//    purpose, or another tool's `-F` or `-M`, are listed below.
+//    purpose are listed below.
 //
 // The guard is for a change made in good faith. A determined one can write the setting so that no
 // pattern here finds it (built from pieces in a script); review is the guard against that.
@@ -221,23 +221,32 @@ const MODE = [
   /write[-_]?dependency[-_]?verification/i, // `StartParameter`'s writing of the metadata.
   /write[-_]verification[-_]metadata/i, // `--write-verification-metadata`; `Probe`'s variable.
 ];
-// In the workflows and their scripts and actions, also the files themselves, which a step could
-// remove or replace (with no metadata, Gradle verifies nothing).
-const WORKFLOW = [/verification-metadata/i, /verification-keyring/i];
+// In what CI runs (`WORKFLOW_PATHS`: the workflows, their actions and scripts), also the files
+// themselves, which a step could remove or replace (with no metadata, Gradle verifies nothing), and
+// the refresh, which writes the metadata again from whatever it downloads (`reset` turns the key
+// servers on). A workflow's `paths:` filter naming a file fails too: telling it from a step would
+// need the YAML's structure, which nothing here parses; such a line goes in `ALLOWED`.
+const WORKFLOW = [
+  /verification-metadata/i,
+  /verification-keyring/i,
+  /refresh-dependency-verification|dependency-verification[.]py/i,
+];
+const WORKFLOW_PATHS = /^[.]github\/(workflows|actions|scripts)\//;
 // The short options for the mode (`-F`) and for writing the metadata (`-M`), anywhere they could be
 // an option, whatever runs them: a Gradle command can be folded over lines in YAML, continued in a
-// shell, or put together from a variable set elsewhere, so no command is parsed. Other tools' `-F` and
-// `-M` (`grep -F`, `git diff -M`) are listed below as Gradle's would be.
-const SHORT = /(^|[\s"'`=(\[\]{},;|&])-[FM]/;
+// shell, or put together from a variable set elsewhere, so no command is parsed. An option counts
+// when a value Gradle takes follows it (a mode, a checksum kind, in any case), or a variable (`$`),
+// or nothing to the end of the line (the value on a folded or continued line). Other tools' options
+// (`gh api -F per_page=100`, `curl -F "file=@x"`, `git diff -M --no-abbrev`) and code (`-Float`,
+// `-MAX`) have none of these after them; a value must end there (`-F offset=10` is not `off`).
+const anyCase = (word) => word.replace(/[a-z]/g, (c) => `[${c}${c.toUpperCase()}]`);
+const VALUE = `(?:(?:${['off', 'lenient', 'strict', 'pgp', 'sha[0-9]+', 'md5'].map(anyCase).join('|')})(?![\\w-])|\\$)`;
+const SHORT = new RegExp(`(^|[\\s"'\`=(\\[\\]{},;|&])-[FM](?=[\\s"'\`=,\\\\\\])}]*$|[\\s"'\`=,]*${VALUE})`);
 
 // The lines that name these on purpose, by file, as they read (trimmed).
 const ALLOWED = {
   '.github/workflows/dependency-graph.yml': [
     "# here: `dependency-submission` runs Gradle with `-Dorg.gradle.dependency.verification=off`. The",
-  ],
-  '.githooks/merge-check': [
-    '# raw <from> <to> <prefix>: `git diff --raw -z -M` between two commits (or trees), into the arrays',
-    'gdiff --raw -z -M --no-abbrev "$1" "$2" >"$work/raw" || die "git diff failed (exit $?)"',
   ],
   'build-logic/src/functionalTest/kotlin/sleevesight/Probe.kt': [
     '* With `SLEEVESIGHT_WRITE_VERIFICATION_METADATA` set to a mode (`pgp,sha256`, `sha256`), as',
@@ -299,7 +308,7 @@ const unescape = (text) =>
 // raw string, a YAML value), so the lines that name the mode on purpose are listed instead.
 export function overrideProblems(path, source) {
   if (PROSE.test(path) || path === SELF) return [];
-  const patterns = [...MODE, ...(path.startsWith('.github/') ? WORKFLOW : []), SHORT];
+  const patterns = [...MODE, ...(WORKFLOW_PATHS.test(path) ? WORKFLOW : []), SHORT];
   const allowed = new Set(ALLOWED[path] ?? []);
   const lines = path.endsWith('.properties')
     ? properties(source)
@@ -322,7 +331,11 @@ test('no file Gradle or CI reads sets the verification mode', () => {
     if (buffer.subarray(0, 8000).includes(0)) return [];
     return overrideProblems(path, buffer.toString('utf8'));
   });
-  assert.deepEqual(found, []);
+  assert.ok(
+    found.length === 0,
+    `${found.join('\n')}\n\nA line that names this on purpose goes in \`ALLOWED\` in ${SELF}, ` +
+      'as its trimmed text under its path.',
+  );
 });
 
 test('each line allowed to name the mode is still there', () => {
@@ -384,6 +397,17 @@ const refusedOverrides = {
   'the short option in a build script': ['build.gradle.kts', 'exec { commandLine("./gradlew", "-F", "off") }\n'],
   "Probe's variable in a workflow": ['.github/workflows/ci.yml', '      SLEEVESIGHT_WRITE_VERIFICATION_METADATA: sha256\n'],
   'the metadata removed by a workflow': ['.github/workflows/ci.yml', '        run: rm gradle/verification-metadata.xml\n'],
+  'the refresh run by a workflow': ['.github/workflows/ci.yml', '        run: tools/refresh-dependency-verification.sh\n'],
+  "the refresh's reset run by an action": [
+    '.github/actions/java-gradle/action.yml',
+    '      run: python3 -I tools/dependency-verification.py reset\n',
+  ],
+  'the refresh run by a script': ['.github/scripts/x.sh', 'bash tools/refresh-dependency-verification.sh\n'],
+  'the mode in upper case, short': ['.github/workflows/ci.yml', '        run: ./gradlew build -F STRICT\n'],
+  "the mode from a workflow's input": ['.github/workflows/ci.yml', '        run: ./gradlew build -F ${{ inputs.mode }}\n'],
+  'the mode from a quoted variable': ['.github/workflows/ci.yml', '        run: ./gradlew build -F "$MODE"\n'],
+  'the short option at the end of a continued line': ['.github/workflows/ci.yml', '        run: ./gradlew build -F \\\n          off\n'],
+  'the metadata written in two kinds': ['tools/x.sh', './gradlew -M pgp,sha256 build\n'],
   'a comment line in a workflow': ['.github/workflows/ci.yml', '      # -Dorg.gradle.dependency.verification=off\n'],
   'code after a block comment closes': ['build.gradle.kts', '*/ System.setProperty("org.gradle.dependency.verification", "off")\n'],
   'code after a one-line block comment': ['settings.gradle.kts', '/* x */ gradle.startParameter.dependencyVerificationMode = OFF\n'],
@@ -432,4 +456,27 @@ test('the override check passes what the build has', () => {
   assert.deepEqual(overrideProblems('gradle.properties', 'a=b\\\n  c\n'), []);
   assert.deepEqual(overrideProblems('.github/workflows/ci.yml', '        run: ./gradlew build -x test -Pa=b --no-F\n'), []);
   assert.deepEqual(overrideProblems('.github/workflows/ci.yml', '        run: ./gradlew build -x test -Pa=b\n'), []);
+  // Other tools' `-F` and `-M`, and code.
+  const passes = {
+    'app/src/main/kotlin/x/A.kt': [
+      'val lo = -Float.MAX_VALUE',
+      'val angle = (-Math.PI / 2)',
+      'offset = -MAX_SHIFT',
+      'val name = "${a}-Foo"',
+    ],
+    '.github/workflows/release.yml': [
+      'gh api repos/o/r/releases -F per_page=100',
+      'gh api repos/o/r/releases -F offset=10 -F strictness=1',
+      'curl -F "file=@a.aab" https://example.invalid',
+      'grep -F -- "$x" file',
+    ],
+    '.githooks/merge-check': ['gdiff --raw -z -M --no-abbrev "$1" "$2" >"$work/raw"'],
+    'fixtures/http/x.json': ['  "title": "Song -Mono Version",'],
+    // Outside what CI runs, the verification files may be named.
+    '.github/CODEOWNERS': ['/gradle/verification-metadata.xml @someone'],
+    '.github/dependabot.yml': ['# (`tools/refresh-dependency-verification.sh`), and Dependabot closes its PR'],
+  };
+  for (const [path, lines] of Object.entries(passes)) {
+    for (const line of lines) assert.deepEqual(overrideProblems(path, `${line}\n`), [], `${path}: ${line}`);
+  }
 });
