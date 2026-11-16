@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.7.0
+docs_version: 0.7.1
 nav:
-  - id: results-for-070
+  - id: results-for-071
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.7.0
+## Results for 0.7.1
 
-Checked on 15 November 2026, on the code of release 0.7.0.
+Checked on 16 November 2026, on the code of release 0.7.1.
 
-- **Libraries:** no known vulnerability in any of the 190 libraries the app and its command-line tool use, nor in the tools that build the app. The libraries are the same as in 0.6.7.
+- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app. The app's libraries are the same as in 0.7.0. New: every library the build downloads is now checked against its recorded checksum and signature before it is used.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code. One new path can add cost: with the song's, the artist's and the album's insights set to open on every new track, the new composer's insight is written by itself too; the setting and the privacy policy now say so. The new ways of finding a classical recording on MusicBrainz ask only MusicBrainz, which is free, and keep to its limit of one request a second. A few minor points turned up, among them two slowdowns in reading unusual text, none of them reaching your keys or data; they are left for a later release.
+- **Security review:** no way found to reach your keys or your data in the new code. The release is now built in a different step from the one that uploads it to Play. Two small additions can add cost, both covered by the settings' own text: one more AI request when the model replies that it has nothing to say, and the check of the vocals on tracks that only Wikidata calls instrumental. 0.7.0's three slowdowns in reading unusual text are fixed; an older one, in reading an unusual AI reply, is smaller but not gone, and is left for a later release with a further guard for the build.
 
 ## What is checked
 

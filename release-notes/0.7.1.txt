@@ -1,0 +1,7 @@
+What's new in 0.7.1:
+- Key insights: tell what the sources add beyond what Home already shows, and say so when they add nothing.
+- Classical: the work is found more often, so the composer and the composed date show.
+- Genres: an Instrumental that only Wikidata states shows as weak.
+- Wikipedia: a sentence is no longer cut after "No." or "Op.".
+- Settings: quick changes are saved in the order made.
+- Steadier with unusual text from the sources.
