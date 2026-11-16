@@ -246,5 +246,9 @@ class PromptEvidenceTest {
         val other = firstRelease("Gord's Gold")
         val thin = set(other, counts, player("Sundown"))
         assertEquals(listOf(other.text, counts.text, player("Sundown").text), sent(thin))
+        // A first release on another album, a compilation's song: the player's line stays (#424).
+        val reissue = set(firstRelease("Sundown"), song(2), player("Gord's Gold"))
+        val kept = PromptEvidence.of(reissue, "Gord's Gold", emptySet(), JvmHasher) { it.source == SourceId.PLAYER }
+        assertEquals(listOf("MB1", "MB2", "P1"), kept.ids)
     }
 }

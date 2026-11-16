@@ -86,16 +86,17 @@ class PipelineReleaseLineTest {
         }
 
     @Test
-    fun `a release no line names, a compilation say, is left out beside its earlier release`() =
+    fun `a release no line names, a compilation say, is sent`() =
         runTest {
             val pipeline = pipeline()
 
             pipeline.run(nowPlaying("Carefree Highway", "Gordon Lightfoot", "Gord's Gold"), write = true)
 
-            // The album Home shows, beside a line beyond it (#1142): the track block gives it.
-            val prompt = provider.requests.single().prompt
-            assertFalse("(player metadata, release)" in prompt, prompt)
-            assertTrue("Release: Gord's Gold" in prompt && "on the album “Sundown”" in prompt, prompt)
+            // Sent beside the line beyond Home (#1142) too: the earlier release it is a reissue of.
+            assertTrue(
+                "[P1] (player metadata, release) This recording is on the release \"Gord's Gold\"." in
+                    provider.requests.single().prompt,
+            )
         }
 
     @Test

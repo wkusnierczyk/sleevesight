@@ -37,16 +37,18 @@ import app.sleevesight.core.resolution.MusicBrainzEvidence
  * tracks the model padded the insight with a sentence citing the `P` line alone ("This recording
  * is on that same "Sundown" release [P1]"), cited and true but telling nothing the line before it
  * had not; with no `P` line there is nothing to restate. Where the song first came out elsewhere,
- * as for a compilation or a soundtrack, the `P` line stayed, for a sentence citing it to tell where
- * this recording comes from; since #1142 it is left out there too, as a line restating Home beside
- * the first-release line, which is more. The release stays in the prompt's track block either way.
+ * as for a compilation or a soundtrack, the `P` line stays, and a sentence citing it tells the
+ * listener where this recording comes from. The release stays in the prompt's track block either
+ * way.
  *
  * The lines that only restate what Home shows (`HomeShown.restatement`, #1142: the player's release,
  * MusicBrainz's first release and its line on that album, credits naming only the artists shown, the
  * dates *Dates* gives) are left out too, when what is sent holds another line to tell, not a count.
  * Given them beside a story, the model kept a sentence of the header in it ("It was released in 1994
  * on the album Gorgeous George"), already on Home. With nothing else to tell, they stay, and the
- * prompt says so (`InsightPrompt.NOTHING_BEYOND`).
+ * prompt says so (`InsightPrompt.NOTHING_BEYOND`). The `P` line beside a first release on another
+ * album stays, as above: left out, the model told the compilation uncited ("a reissue on this
+ * best-of collection, whose title is shown in the player").
  *
  * Which lines are left out depends on the session, so the synthesis cache keys a card by the whole
  * evidence's fingerprint, not the one sent: a track played again finds the card it was given.
@@ -91,8 +93,23 @@ object PromptEvidence {
         // Decided on the retrieved lines alone: the artists' report does not matter with model knowledge off.
         val narrated = if (sent.nothingToNarrate(allowModel = false, artistsKnown = true)) evidence else sent
         val beyond = narrated.lines.any { !it.aggregate && !restatesHome(it) }
-        return if (beyond) narrated.without(hasher, restatesHome) else narrated
+        if (!beyond) return narrated
+        val elsewhere = firstReleasedElsewhere(evidence, restatesHome)
+        return narrated.without(hasher) { restatesHome(it) && !(elsewhere && it.source == SourceId.PLAYER) }
     }
+
+    // Whether MusicBrainz's first-release line in [evidence] names a release other than the one Home
+    // shows (a compilation's or a soundtrack's song): the `P` line then tells where this recording is from.
+    private fun firstReleasedElsewhere(
+        evidence: EvidenceSet,
+        restatesHome: (EvidenceLine) -> Boolean,
+    ): Boolean =
+        evidence.lines.any {
+            it.source == SourceId.MUSICBRAINZ &&
+                it.scope == Scope.SONG &&
+                MusicBrainzEvidence.firstRelease(it.text) != null &&
+                !restatesHome(it)
+        }
 
     /**
      * Which lines of [evidence] only restate the player's [release]: its `P` line, when MusicBrainz's
