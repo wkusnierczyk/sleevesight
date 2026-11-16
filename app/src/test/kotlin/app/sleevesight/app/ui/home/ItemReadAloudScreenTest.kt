@@ -60,7 +60,7 @@ import kotlin.math.abs
  * *Read aloud* of the song's, the artist's and the album's insights (#894): in an item's panel on
  * Home, once written, in the heading beside *Close*, both centred on the kind's line, read after the
  * heading and before *Close*, and not in the body; on the item's page, where it always was, on the
- * byline's row.
+ * credit's row, under the text (#959).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -160,10 +160,10 @@ class ItemReadAloudScreenTest {
             val kind = kind()
             assertTrue("$speaker $kind", near(speaker.center.y, kind.center.y))
             assertTrue("$close $kind", near(close.center.y, kind.center.y))
-            // Left of *Close*, and above the name: in the heading, not on the byline's row.
+            // Left of *Close*, and above the name: in the heading, not on the credit's row.
             assertTrue(speaker.right <= close.left + 1)
             assertTrue(speaker.top < tagged("$PANEL:subtitle").bottom)
-            assertTrue(speaker.bottom < compose.onNodeWithText("by Claude Haiku 4.5").rect().top)
+            assertTrue(speaker.bottom < compose.onNodeWithText("Written by Claude Haiku 4.5.").rect().top)
         }
 
     @Test
@@ -185,24 +185,27 @@ class ItemReadAloudScreenTest {
             val read = order.indexOf(READ)
             val close = order.indexOf("$PANEL:close")
             assertTrue(order.toString(), heading in 0 until read && read < close)
-            val byline =
+            val credit =
                 compose
                     .onAllNodes(hasAnyAncestor(hasTestTag(PANEL)))
                     .fetchSemanticsNodes()
                     .indexOfFirst { node ->
-                        node.config.getOrNull(SemanticsProperties.Text)?.any { it.text == "by Claude Haiku 4.5" } ==
+                        node.config
+                            .getOrNull(
+                                SemanticsProperties.Text,
+                            )?.any { it.text == "Written by Claude Haiku 4.5." } ==
                             true
                     }
-            assertTrue(order.toString(), close < byline)
+            assertTrue(order.toString(), close < credit)
         }
 
     @Test
-    fun onTheItemsPageReadAloudStaysOnTheBylinesRow() =
+    fun onTheItemsPageReadAloudIsOnTheCreditsRow() =
         show({ NowPlayingPageContent(HomePage.Item(InsightItem.ARTIST.name), state, actions) {} }) {
             assertEquals(1, compose.onAllNodes(hasTestTag(READ)).fetchSemanticsNodes().size)
             val speaker = tagged(READ)
-            val byline = compose.onNodeWithText("by Claude Haiku 4.5").rect()
-            assertTrue("$speaker $byline", speaker.top <= byline.center.y && byline.center.y <= speaker.bottom)
+            val credit = compose.onNodeWithText("Written by Claude Haiku 4.5.").rect()
+            assertTrue("$speaker $credit", speaker.top <= credit.center.y && credit.center.y <= speaker.bottom)
         }
 
     private companion object {

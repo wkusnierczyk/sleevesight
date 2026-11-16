@@ -96,7 +96,7 @@ sealed interface ItemShown {
      * [InsightState.NoEvidence] (the sources give nothing to write it from, with no call, or the
      * model found nothing), [InsightState.Failed] or [InsightState.Stopped], beside which it is
      * offered again, on a tap only. [model] is
-     * the name of the model that writes it, for "by {model}"; [evidence] what it was written from, which
+     * the name of the model that writes it, for its credit (#1162); [evidence] what it was written from, which
      * its citations read, each mapped to the track's line where it is one ([ItemEvidence.trackIds]).
      *
      * [rewriteWith] (#911) when [state] is the insight another AI service, model or effort wrote, kept,

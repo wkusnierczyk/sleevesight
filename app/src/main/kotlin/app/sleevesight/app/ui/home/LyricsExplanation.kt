@@ -64,14 +64,18 @@ import kotlin.math.roundToInt
  * What the song is about, as [answer] has it (#908), under the rule *Ask AI* draws: its sentences as
  * an insight's ([CheckedProse]'s look), each citation a chip that opens its page in the browser, a
  * sentence no page backs (uncited, or citing a page it was not given) dimmed, in the muted colour and
- * in italics, and read as not cited; then "Pages cited" in the quiet note style, and each page its
+ * in italics, and read as not cited; then its [credit] (#959, #1162); then "Pages cited" in the quiet
+ * note style, and each page its
  * sentences cite, its id as the text's chip of it, then its site as a link that opens in the browser,
  * in the small type *Sources* sets a page's site in (#1344). A screen
  * reader hears each citation as "Source S1", and has each page as an action of the text too, as an
  * insight's paragraph offers its lines.
  */
 @Composable
-internal fun AiExplanation(answer: SearchAnswer.Explanation) {
+internal fun AiExplanation(
+    answer: SearchAnswer.Explanation,
+    credit: @Composable () -> Unit = {},
+) {
     val uris = LocalUriHandler.current
     val resources = LocalResources.current
     val colours = MaterialTheme.colorScheme
@@ -100,6 +104,7 @@ internal fun AiExplanation(answer: SearchAnswer.Explanation) {
                     }
             },
     )
+    credit()
     Text(
         stringResource(R.string.home_lyrics_pages_cited),
         style = MaterialTheme.typography.bodySmall,

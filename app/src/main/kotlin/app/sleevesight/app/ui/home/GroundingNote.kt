@@ -19,7 +19,7 @@ import app.sleevesight.core.synthesis.SentenceStatus
  * The grounding line under a written insight or a genre's reason: with [details] (*Show grounding
  * details*, a developer option, #437) the grounding check's counts in full ([Meta]), else a note
  * only when there is something to say ([Note]). Whether it was kept from before is not its to say:
- * the insight's footer says so (*As written previously.*, #671), a genre's reason its own line
+ * the insight's credit says who wrote it (#1162), a genre's reason its own line
  * (`KeptLine`, #851).
  * [modifier] goes to the line's text. With no note, nothing is drawn, and the modifier with it: a
  * caller that sets the line in a row beside other content fills the space itself, so that content

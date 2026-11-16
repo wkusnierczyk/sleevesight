@@ -99,8 +99,8 @@ internal fun libraryPending(
  * "Web search found this track described as instrumental." and the citation of its page; after a tap
  * on this play, vocals found, "Web search found vocals on this track, so it is not *Instrumental*."
  * ([genre] in italics, as its chip names it) and its page's citation, or nothing found either way,
- * "Web search found nothing on whether this track has vocals."; each answer with "by {model}, with
- * web search" under it. The page's citation is the line *Sources* shows it under ([lines], the
+ * "Web search found nothing on whether this track has vocals."; each answer with "Written by {model}
+ * with web search." under it (#1162). The page's citation is the line *Sources* shows it under ([lines], the
  * same address: `sourcesLines` lists it, *vocals check · host*, #1053), a link that opens it there
  * ([onCite]); none while *Sources* has no such line. Nothing with no check, or a failed one.
  */
@@ -136,7 +136,7 @@ internal fun VocalsNote(
             Column(Modifier.testTag(GENRE_VOCALS_TAG), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 val line = state.page?.let { webLineOf(it.url, lines) }
                 AnswerLine(words, line, onCite)
-                SearchCredit(stringResource(R.string.genre_why_by_web, shown.model))
+                SearchCredit(creditString(Credit(shown.model, shown.effort, web = true)))
             }
         }
         is VocalsState.Failed, null -> Unit

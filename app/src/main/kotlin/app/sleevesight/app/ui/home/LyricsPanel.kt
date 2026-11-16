@@ -134,7 +134,7 @@ internal fun LyricsPanel(
                         PageLink(genius, search = true)
                         Browser()
                     }
-                    AiSearchBlock(search, SearchKind.LYRICS, width = width) { answer, _ ->
+                    AiSearchBlock(search, SearchKind.LYRICS, width = width) { answer, _, _ ->
                         if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
                     }
                 }
@@ -154,8 +154,8 @@ private fun Explain(
     search: PanelSearch,
     width: Dp,
 ) {
-    AiSearchBlock(search, SearchKind.EXPLAIN, width = width) { answer, _ ->
-        if (answer is SearchAnswer.Explanation) AiExplanation(answer)
+    AiSearchBlock(search, SearchKind.EXPLAIN, width = width) { answer, _, credit ->
+        if (answer is SearchAnswer.Explanation) AiExplanation(answer, credit)
     }
 }
 

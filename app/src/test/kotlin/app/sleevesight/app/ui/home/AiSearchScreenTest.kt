@@ -265,7 +265,7 @@ class AiSearchScreenTest {
         assertEquals("Asking AI…", text(R.string.home_ai_asking))
         assertEquals("Stop", text(R.string.home_ai_stop))
         assertEquals("stop the call", text(R.string.home_ai_stop_action))
-        assertEquals("by Claude Haiku 5.5", app.getString(R.string.home_ai_by, model))
+        assertEquals("Written by Claude Haiku 5.5.", creditText(Credit(model), app.resources))
         assertEquals("AI web search failed.", text(R.string.home_ai_web_search_failed))
         assertEquals(
             "Claude Haiku 5.5 couldn’t say from its own knowledge.",
@@ -418,7 +418,7 @@ class AiSearchScreenTest {
                     "The song was originally recorded by Someone in 1972, and released on the EP First.",
                 )
             for (sentence in sentences) assertTrue(sentence, boundsOf(sentence).top >= rule.bottom)
-            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by Claude Haiku 5.5")
+            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("Written by Claude Haiku 5.5.")
             assertTrue(bounds(AI_SEARCH_BY_TAG).top >= boundsOf(sentences.last()).bottom)
             assertEquals(FontStyle.Italic, fontStyle(AI_SEARCH_BY_TAG))
         }
@@ -556,7 +556,7 @@ class AiSearchScreenTest {
             compose.onNodeWithTag(GENRE_DEFINITION_TAG).assertExists()
             assertTrue(shows(folkRockDefinition))
             // Nothing else: no second credit, no *Why is this …?*, no table.
-            assertEquals(1, compose.onAllNodesWithText("by Claude Haiku 5.5").fetchSemanticsNodes().size)
+            assertEquals(1, compose.onAllNodesWithText("Written by Claude Haiku 5.5.").fetchSemanticsNodes().size)
             assertEquals(0, count(GENRE_WHY_TAG))
             assertEquals(0, count(GENRES_ROW_PREFIX + "0"))
             // The same chip folds it, as the others do.

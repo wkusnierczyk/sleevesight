@@ -298,7 +298,7 @@ class LyricsAiScreenTest {
         }
 
     @Test
-    fun theExplanationShowsCitedThenItsPagesThenTheModel() =
+    fun theExplanationShowsCitedThenItsCreditThenItsPages() =
         show {
             // Each page by its host, as *Sources* names a page (#1040), whatever title it gives itself.
             val songfacts = CitedPage("S1", "https://www.songfacts.example/sundown", "Sundown:\u200B song facts\u202E")
@@ -326,13 +326,15 @@ class LyricsAiScreenTest {
             assertEquals(2, prose.config[SemanticsActions.CustomActions].size)
             assertTrue(placed(prose).top >= bounds(explainTag(AI_SEARCH_RULE_TAG)).bottom)
             val heading = bounds(LYRICS_PAGES_CITED_TAG)
-            assertTrue(heading.top >= placed(prose).bottom)
+            // The credit under the text, above *Pages cited* (#959, #1162).
+            compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("Written by Claude Haiku 5.5.")
+            val credit = bounds(explainTag(AI_SEARCH_BY_TAG))
+            assertTrue(credit.top >= placed(prose).bottom)
+            assertTrue(heading.top >= credit.bottom)
             assertTrue(shows(text(R.string.home_lyrics_pages_cited)))
             assertTrue(bounds(lyricsCitedPageTag("S1")).top >= heading.bottom)
             assertTrue(shows("songfacts.example"))
             assertFalse(shows("Sundown: song facts"))
             assertTrue(shows("music-mag.example"))
-            compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("by Claude Haiku 5.5")
-            assertTrue(bounds(explainTag(AI_SEARCH_BY_TAG)).top >= bounds(lyricsCitedPageTag("S2")).bottom)
         }
 }

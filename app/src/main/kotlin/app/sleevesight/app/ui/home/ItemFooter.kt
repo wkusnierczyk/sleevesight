@@ -16,14 +16,15 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 
 // The footer of the song's, the artist's and the album's written insights (#522), with what the key
-// insight's says of a rewrite (#911): the insight another model wrote, *Rewrite insight*, and
-// "Rewritten with …".
+// insight's says of a rewrite (#911): the insight another model wrote, *Rewrite insight*, and the
+// credit, "Rewritten by …" (#1162).
 
 /**
- * The footer under [item]'s written insight [state], as the key insight's, top to bottom: the history
- * line ([itemHistory], #911), the grounding note, which citations it translated from the track's
- * language ([TranslatedLine], #902; each by [label], the id its chip shows), that the reply stopped
- * early, *Report a problem*;
+ * The footer under [item]'s written insight [state], as the key insight's, top to bottom: the credit
+ * (#959, #1162: [insightCredit], by the model that wrote it) with what follows from it on its line
+ * ([afterCredit], #911) and *Read aloud* ([readAloud]) at the row's end, the grounding note, which
+ * citations it translated from the track's language ([TranslatedLine], #902; each by [label], the id
+ * its chip shows), that the reply stopped early, *Report a problem*;
  * then, while the model is found unavailable (#540), that it is, last, just above the Write it leaves
  * disabled; and *Rewrite insight* beside another model's insight ([ItemShown.Shown.rewriteWith]).
  */
@@ -36,8 +37,14 @@ internal fun WrittenFooter(
     track: TrackState,
     context: ItemContext,
     label: (String) -> String,
+    readAloud: ReadAloudControl? = null,
 ) {
-    itemHistory(shown, state, context)?.let { ItemQuiet(it) }
+    CreditRow(
+        insightCredit(state, shown.model ?: state.writtenBy?.model),
+        Modifier.testTag(INSIGHT_BY_TAG),
+        after = afterCredit(shown, context),
+        readAloud = readAloud?.let { { ReadAloudButton(it, itemReadAloudTag(item)) } },
+    )
     GroundingLine(state.grounded, details = false)
     TranslatedLine(state.grounded, shown.evidence.evidence, label = label)
     if (!state.complete) ItemQuiet(stringResource(R.string.home_insight_incomplete))
@@ -70,29 +77,26 @@ private fun rewrites(
 ): Boolean = shown.canWrite && context.unavailable == null
 
 /**
- * The history line under an item's insight (#911), as the key insight's footer's first line says it
- * (`writtenBefore`): for the insight another AI service, model or effort wrote, shown in place of
- * none ([ItemShown.Shown.rewriteWith]), *As written previously.*, then that a rewrite of it stopped
- * or failed ([ItemShown.Shown.rewriteFailed]; not that the service refused the model while it is
- * found unavailable, which the footer's last line says, #969: [rewriteFailureShown]), then, while it
- * can be tapped ([rewrites]), what *Rewrite insight* would rewrite it with; for one a rewrite wrote,
- * on a tap or by itself in its place (#972), *Rewritten with …*; else none: an item's own insight,
- * kept or just written, says nothing of its history.
+ * What follows the credit of an item's insight on its line (#911, #1162), as the key insight's footer
+ * says it (`afterCredit`): for the insight another AI service, model or effort wrote, shown in place
+ * of none ([ItemShown.Shown.rewriteWith]), that a rewrite of it stopped or failed
+ * ([ItemShown.Shown.rewriteFailed]; not that the service refused the model while it is found
+ * unavailable, which the footer's last line says, #969: [rewriteFailureShown]), then, while it can be
+ * tapped ([rewrites]), what *Rewrite insight* would rewrite it with; else nothing.
  */
 @Composable
-private fun itemHistory(
+private fun afterCredit(
     shown: ItemShown.Shown,
-    state: InsightState.Written,
     context: ItemContext,
-): String? {
-    val offer = shown.rewriteWith ?: return rewrittenLine(state)
+): List<String> {
+    val offer = shown.rewriteWith ?: return emptyList()
     val offered =
         offer
             .takeIf { rewrites(shown, context) }
             ?.let { rewriteWhat(it.parts, it.with) }
             ?.let { stringResource(R.string.home_rewrite_offer, it) }
     val failed = rewriteFailureShown(shown.rewriteFailed, context.unavailable)?.let { rewriteFailure(it) }
-    return listOfNotNull(stringResource(R.string.home_written_before), failed, offered).joinToString(" ")
+    return listOfNotNull(failed, offered)
 }
 
 /**

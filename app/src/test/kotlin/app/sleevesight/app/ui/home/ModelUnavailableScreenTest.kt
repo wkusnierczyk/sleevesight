@@ -140,15 +140,19 @@ class ModelUnavailableScreenTest {
     @Test
     fun aRewriteTheServiceRefusedTheModelForIsSaidAsTheModelUnavailableLastInTheFooter() {
         // The insight kept, shown again after its rewrite was refused, as the model not known or not
-        // allowed: the footer's first line says it is kept, its last that the model is unavailable,
+        // allowed: the footer's first line, its credit, says who wrote it, its last that the model is unavailable,
         // and nothing gives the refusal's reason (#969).
         for (reason in listOf("model_not_found", "model_refused")) {
-            show(written("It is a song [MB1].", cached = true), haiku, rewriteFailed = reason) {
+            show(
+                written("It is a song [MB1].", cached = true).copy(writtenBy = HomeFixtures.haiku),
+                haiku,
+                rewriteFailed = reason,
+            ) {
                 val previously =
                     compose
-                        .onNodeWithText(app.getString(R.string.home_written_before))
+                        .onNodeWithText(HomeFixtures.HAIKU_CREDIT)
                         .performScrollTo()
-                        .assertTextEquals(app.getString(R.string.home_written_before))
+                        .assertTextEquals(HomeFixtures.HAIKU_CREDIT)
                 val report = compose.onNodeWithTag(REPORT_TAG)
                 val line = compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).assertTextEquals(said)
                 val write = compose.onNodeWithTag(NO_ACTION_TAG).assertIsNotEnabled()
@@ -162,14 +166,22 @@ class ModelUnavailableScreenTest {
     @Test
     fun aRewriteThatFailedOtherwiseStillSaysWhyAndWithoutTheNoteSoDoesARefusal() {
         val failed = { why: Int -> app.getString(R.string.home_rewrite_failed, app.getString(why)) }
-        val previously = app.getString(R.string.home_written_before)
+        val previously = HomeFixtures.HAIKU_CREDIT
         // Offline, with the model found unavailable: not what the note says, so said as before.
-        show(written("It is a song [MB1].", cached = true), haiku, rewriteFailed = "offline") {
+        show(
+            written("It is a song [MB1].", cached = true).copy(writtenBy = HomeFixtures.haiku),
+            haiku,
+            rewriteFailed = "offline",
+        ) {
             compose.onNodeWithText("$previously ${failed(R.string.home_failure_offline)}").performScrollTo()
             compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).assertTextEquals(said)
         }
         // A refusal with the model not (yet) found unavailable: no note, so the reason is said, as before.
-        show(written("It is a song [MB1].", cached = true), null, rewriteFailed = "model_not_found") {
+        show(
+            written("It is a song [MB1].", cached = true).copy(writtenBy = HomeFixtures.haiku),
+            null,
+            rewriteFailed = "model_not_found",
+        ) {
             compose.onNodeWithText("$previously ${failed(R.string.home_failure_model_not_found)}").performScrollTo()
             assertEquals(0, count(MODEL_UNAVAILABLE_TAG))
         }
@@ -178,8 +190,8 @@ class ModelUnavailableScreenTest {
     @Test
     fun withAnInsightItIsSaidLastInTheFooterAboveTheDisabledWrite() =
         // Kept from before, with a sentence the sources do not back: every line of the footer shows.
-        show(written("It is a song [MB1]. It was a hit.", cached = true), haiku) {
-            val previously = compose.onNodeWithText(app.getString(R.string.home_written_before)).performScrollTo()
+        show(written("It is a song [MB1]. It was a hit.", cached = true).copy(writtenBy = HomeFixtures.haiku), haiku) {
+            val previously = compose.onNodeWithText(HomeFixtures.HAIKU_CREDIT).performScrollTo()
             val note = compose.onNodeWithText(app.getString(R.string.home_note_unbacked))
             val report = compose.onNodeWithTag(REPORT_TAG)
             val line = compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).assertTextEquals(said)

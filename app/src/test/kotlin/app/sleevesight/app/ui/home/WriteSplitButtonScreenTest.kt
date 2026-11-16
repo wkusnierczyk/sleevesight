@@ -70,7 +70,7 @@ import org.robolectric.shadows.ShadowToast
  * insight*, the same in every mode, or *Stop writing* while one is written, in each situation:
  * the app just started, a new track with nothing written, an insight shown, a track that came to
  * play while *Saver* had paused automatic writing, a card written with earlier settings (*Rewrite
- * insight*, said after *As written previously.* on the same line, #606, #671), a track that followed the last one
+ * insight*, said after the credit on the same line, #606, #671), a track that followed the last one
  * by itself, writing, and a failure; each with its line. The arrow's menu is *Reactive*, in order of
  * how much is written automatically, each showing the other's change, every choice told on (the
  * one chosen included), and it ends with the way to it in the settings; another automatic mode
@@ -255,8 +255,8 @@ class WriteSplitButtonScreenTest {
     @Test
     fun aCardWrittenWithEarlierSettingsIsRewriteInsightInEveryMode() {
         // Kept from before, its key changed by a settings change: the coordinator offers a rewrite.
-        // Not from the cache, so *As written previously.* says so for the card paid for (#606, #671).
-        val kept = track(insight = written("It is a song [MB1]."))
+        // Not from the cache: the card paid for, its credit first in its footer (#606, #671, #1162).
+        val kept = track(insight = written("It is a song [MB1].").copy(writtenBy = HomeFixtures.haiku))
         for (mode in WriteAutomatically.entries) {
             settings.value = Settings(writeAutomatically = mode)
             for (waiting in listOf(false, true)) {
@@ -272,7 +272,7 @@ class WriteSplitButtonScreenTest {
                 show {
                     leading(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
                     assertEquals(0, count(NO_ACTION_TAG))
-                    says("As written previously. $REWRITE_OFFERED")
+                    says("${HomeFixtures.HAIKU_CREDIT} $REWRITE_OFFERED")
                     arrow.assertIsEnabled()
                 }
             }
@@ -280,14 +280,14 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun theRewritesWordsFollowAsWrittenPreviouslyOnItsLineAboveReportAProblem() {
+    fun theRewritesWordsFollowTheCreditOnItsLineAboveReportAProblem() {
         // One line (#671), for the rewrite offered and for one that failed or was stopped, and
         // *Report a problem* under it, at the start.
-        val kept = track(insight = written("It is a song [MB1]."))
+        val kept = track(insight = written("It is a song [MB1].").copy(writtenBy = HomeFixtures.haiku))
         val lines =
             listOf(
                 PipelineView(kept, aiReady = true, rewrite = true, rewriteWith = WITH, cardShown = true) to
-                    "As written previously. $REWRITE_OFFERED",
+                    "${HomeFixtures.HAIKU_CREDIT} $REWRITE_OFFERED",
                 PipelineView(
                     kept,
                     aiReady = true,
@@ -296,9 +296,9 @@ class WriteSplitButtonScreenTest {
                     cardShown = true,
                     rewriteFailed = "offline",
                 ) to
-                    "As written previously. Rewriting failed: no connection. $REWRITE_OFFERED",
+                    "${HomeFixtures.HAIKU_CREDIT} Rewriting failed: no connection. $REWRITE_OFFERED",
                 PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = PipelineHost.STOPPED) to
-                    "As written previously. Rewriting stopped.",
+                    "${HomeFixtures.HAIKU_CREDIT} Rewriting stopped.",
             )
         for ((pipeline, line) in lines) {
             view.value = pipeline
@@ -324,17 +324,22 @@ class WriteSplitButtonScreenTest {
     }
 
     @Test
-    fun aCardKeptFromBeforeSaysSoEvenWhenNotFromTheCache() {
-        // The card paid for, shown in place of the run's own insight: not served from the cache.
-        view.value = PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true, cardShown = true)
-        show { says("As written previously.") }
-        view.value = PipelineView(track(insight = written("It is a song [MB1].")), aiReady = true)
-        show { absent("As written previously.") }
+    fun aCardKeptFromBeforeIsCreditedAsOneJustWritten() {
+        // The card paid for, shown in place of the run's own insight, and the run's own: each says who
+        // wrote it, and neither "As written previously." (#1162).
+        val insight = written("It is a song [MB1].").copy(writtenBy = HomeFixtures.haiku)
+        for (cardShown in listOf(true, false)) {
+            view.value = PipelineView(track(insight = insight), aiReady = true, cardShown = cardShown)
+            show {
+                says(HomeFixtures.HAIKU_CREDIT)
+                absent("As written previously.")
+            }
+        }
     }
 
     @Test
     fun aRewriteThatFailedOrStoppedShowsTheCardBeforeSaysSoAndOffersRewriteInsightAgain() {
-        val kept = track(insight = written("It is a song [MB1]."))
+        val kept = track(insight = written("It is a song [MB1].").copy(writtenBy = HomeFixtures.haiku))
         val said =
             mapOf(
                 "offline" to "Rewriting failed: no connection.",
@@ -352,13 +357,13 @@ class WriteSplitButtonScreenTest {
                 )
             show {
                 compose.onNodeWithText("It is a song", substring = true).assertExists()
-                says("As written previously. $line $REWRITE_OFFERED")
+                says("${HomeFixtures.HAIKU_CREDIT} $line $REWRITE_OFFERED")
                 leading(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
             }
             // Until the coordinator offers it again: the line, and Write insight disabled.
             view.value = PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = why)
             show {
-                says("As written previously. $line")
+                says("${HomeFixtures.HAIKU_CREDIT} $line")
                 leading(NO_ACTION_TAG).assertTextEquals("Write insight").assertIsNotEnabled()
             }
         }
@@ -578,7 +583,7 @@ class WriteSplitButtonScreenTest {
     }
 
     private companion object {
-        // What follows *As written previously.* with *Rewrite insight* offered (#671), naming what a
+        // What follows the credit with *Rewrite insight* offered (#671), naming what a
         // rewrite would use (#854): another model, [WITH].
         const val REWRITE_OFFERED =
             "Tap Rewrite insight to have AI rewrite the insight with " + "Claude Haiku 5.5 high effort."

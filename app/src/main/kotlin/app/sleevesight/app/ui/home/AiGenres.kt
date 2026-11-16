@@ -65,7 +65,7 @@ internal fun GenresSearch(
             ?.singing
             ?.dropsInstrumental == true
     val feed = remember(search.feed, drops) { if (drops) LyricsFoundFeed(search.feed) else search.feed }
-    AiSearchBlock(PanelSearch(feed, search.track, search.header), SearchKind.GENRES) { answer, model ->
+    AiSearchBlock(PanelSearch(feed, search.track, search.header), SearchKind.GENRES) { answer, model, _ ->
         val asked = weighed.track
         if (answer is SearchAnswer.Genres && asked != null) {
             AiGenres(asked, answer.genres, notes.notes, search, model)

@@ -42,7 +42,7 @@ import java.io.File
  * The rows under *Key insights* with a song whose title names a version (#1160), drawn as on a
  * phone, light and dark, at the default font size and twice it: the *Song* row closed, reading the
  * title as under the cover, and its panel open, the version under the name. Each is checked; with
- * `SLEEVESIGHT_PICTURES` set, each is also saved there as a picture, as `InsightBylineScreenTest`
+ * `SLEEVESIGHT_PICTURES` set, each is also saved there as a picture, as `CreditLineScreenTest`
  * saves its own.
  */
 @RunWith(RobolectricTestRunner::class)

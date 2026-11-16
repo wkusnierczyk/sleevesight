@@ -259,7 +259,7 @@ class GenreAboutScreenTest {
             val line = compose.onNodeWithTag(AI_KEPT_TAG).fetchSemanticsNode().config[SemanticsProperties.Text]
             assertTrue(line.single().text.startsWith("Kept from before: written on "))
             assertTrue(top(AI_KEPT_TAG) > top(GENRE_REASON_TAG))
-            val credit = compose.onNodeWithText("by Claude Haiku 5.5").fetchSemanticsNode().boundsInRoot
+            val credit = compose.onNodeWithText("Written by Claude Haiku 5.5.").fetchSemanticsNode().boundsInRoot
             assertTrue(top(AI_KEPT_TAG) >= credit.bottom)
         }
     }
@@ -407,7 +407,7 @@ class GenreAboutScreenTest {
             compose.onNodeWithTag(AI_SEARCH_STOP_TAG).performClick()
             compose.waitForIdle()
             assertEquals(listOf<String?>("jazz"), feed.stopped)
-            // Answered: under a rule, then "by {model}".
+            // Answered: under a rule, then "Written by {model}.".
             feed.state.value = AiSearch.Answered(SearchAnswer.Definition(AI_JAZZ), MODEL)
             compose.waitForIdle()
             compose.onNodeWithText(AI_JAZZ).assertExists()
@@ -418,7 +418,7 @@ class GenreAboutScreenTest {
                         .fetchSemanticsNode()
                         .boundsInRoot.top,
             )
-            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by $MODEL")
+            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("Written by $MODEL.")
             // Nothing found.
             feed.state.value = AiSearch.NothingFound(MODEL)
             compose.waitForIdle()

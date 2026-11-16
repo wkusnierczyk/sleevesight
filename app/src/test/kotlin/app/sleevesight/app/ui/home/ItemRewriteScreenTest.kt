@@ -58,9 +58,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The song's, the artist's and the album's insights written by another model (#911), as the key
- * insight's: the insight kept, "As written previously." with what *Rewrite insight* would rewrite it
- * with, and *Rewrite insight*, read "Rewrite insight, uses AI"; a rewrite stopped or failed says so
- * after *As written previously.*; one a rewrite wrote says "Rewritten with …"; a model found
+ * insight's: the insight kept, its credit "Written by {model}." with what *Rewrite insight* would
+ * rewrite it with after it, and *Rewrite insight*, read "Rewrite insight, uses AI"; a rewrite stopped
+ * or failed says so after the credit; one a rewrite wrote says "Rewritten by {model}." (#1162); a model found
  * unavailable is said last, above a disabled *Write insight*, in place of why a rewrite or a write the
  * service refused the model for failed (#969).
  */
@@ -135,7 +135,7 @@ class ItemRewriteScreenTest {
         }
     }
 
-    private val written = text(R.string.home_written_before)
+    private val written = "Written by $FIRST."
     private val offer = app.getString(R.string.home_rewrite_offer, OTHER)
 
     private fun rewriteButton() = compose.onNodeWithTag(itemWriteTag(InsightItem.SONG)).performScrollTo()
@@ -143,8 +143,7 @@ class ItemRewriteScreenTest {
     @Test
     fun anInsightAnotherModelWroteSaysSoAndRewriteInsightRewritesItOnATap() =
         show(earlierShown()) {
-            compose.onNodeWithText("by $FIRST").assertExists()
-            compose.onNodeWithText("$written $offer").performScrollTo()
+            compose.onNodeWithText("$written $offer").performScrollTo().assertExists()
             val button = rewriteButton().assertIsEnabled().assertTextContains(text(R.string.home_rewrite))
             assertEquals(
                 app.getString(R.string.home_uses_ai, text(R.string.home_rewrite)),
@@ -170,14 +169,14 @@ class ItemRewriteScreenTest {
         }
 
     @Test
-    fun aRewriteStoppedSaysSoAfterAsWrittenPreviouslyWithRewriteAgain() =
+    fun aRewriteStoppedSaysSoAfterTheCreditWithRewriteAgain() =
         show(earlierShown(PipelineHost.STOPPED)) {
             compose.onNodeWithText("$written ${text(R.string.home_rewrite_stopped)} $offer").performScrollTo()
             rewriteButton().assertIsEnabled().assertTextContains(text(R.string.home_rewrite))
         }
 
     @Test
-    fun aRewriteFailedSaysWhyAfterAsWrittenPreviouslyWithRewriteAgain() =
+    fun aRewriteFailedSaysWhyAfterTheCreditWithRewriteAgain() =
         show(earlierShown("boom")) {
             val failed = app.getString(R.string.home_rewrite_failed, app.getString(R.string.home_failure_other, "boom"))
             compose.onNodeWithText("$written $failed $offer").performScrollTo()
@@ -198,17 +197,18 @@ class ItemRewriteScreenTest {
             written("Sundown was recorded in Toronto [MB1].")
                 .copy(writtenBy = WrittenBy(1, ProviderId.ANTHROPIC, OTHER, null), rewritten = setOf(RewritePart.MODEL))
         show(ItemShown.Shown(rewritten, ItemEvidence(evidence, emptyMap()), OTHER)) {
-            compose.onNodeWithText(app.getString(R.string.home_rewritten_with, OTHER)).performScrollTo()
-            compose.onAllNodesWithText(written, substring = true).assertCountEquals(0)
+            compose.onNodeWithText("Rewritten by $OTHER.").performScrollTo()
+            compose.onAllNodesWithText("Written by", substring = true).assertCountEquals(0)
+            compose.onAllNodesWithText("Rewritten with", substring = true).assertCountEquals(0)
             compose.onNodeWithTag(itemWriteTag(InsightItem.SONG)).assertDoesNotExist()
         }
     }
 
     @Test
-    fun anItemsOwnInsightHasNoHistoryLine() {
+    fun anItemsOwnInsightHasItsCreditAlone() {
         val own = written("Sundown was recorded in Toronto [MB1].", cached = true)
         show(ItemShown.Shown(own, ItemEvidence(evidence, emptyMap()), OTHER)) {
-            compose.onAllNodesWithText(written, substring = true).assertCountEquals(0)
+            compose.onNodeWithText("Written by $OTHER.").performScrollTo().assertTextEquals("Written by $OTHER.")
             compose.onNodeWithTag(itemWriteTag(InsightItem.SONG)).assertDoesNotExist()
         }
     }
@@ -256,7 +256,7 @@ class ItemRewriteScreenTest {
     fun aRewriteTheServiceRefusedTheModelForIsSaidAsTheModelUnavailableNotWhy() {
         for (reason in listOf("model_not_found", "model_refused")) {
             show(earlierShown(reason).copy(canWrite = false), UnavailableModel(ProviderId.ANTHROPIC, OTHER)) {
-                // *As written previously.* alone; last, the model unavailable, above a disabled Write insight.
+                // The credit alone; last, the model unavailable, above a disabled Write insight.
                 val history = compose.onNodeWithText(written).performScrollTo().assertTextEquals(written)
                 val report = compose.onNodeWithTag(REPORT_TAG)
                 val button = rewriteButton().assertIsNotEnabled().assertTextContains(text(R.string.home_write))

@@ -149,7 +149,7 @@ internal class PipelineHostLaterPlayTest : PipelineHostFixture() {
                     ?.insight as InsightState.Written
             assertEquals(OTHER_MODEL, written.writtenBy?.model)
             // It replaced the insight kept from the first model, as a tap on Rewrite does (#972):
-            // "Rewritten with" the model, and nothing more offered.
+            // Rewritten with the model, and nothing more offered.
             assertEquals(setOf(RewritePart.MODEL), written.rewritten)
             assertFalse(host.state.value.rewrite)
         }
