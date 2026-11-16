@@ -99,6 +99,32 @@ class GroundingScanTest {
     }
 
     @Test
+    fun `numerals, initials, possessives and list numbers are told by their characters as the regexes told them`() {
+        // Every string of up to eight of the characters each regex weighs.
+        fun strings(alphabet: String): List<String> =
+            (1..WORD_LENGTH)
+                .runningFold(listOf("")) { last, _ ->
+                    last.flatMap { w ->
+                        alphabet.map { w + it }
+                    }
+                }.flatten()
+        for (s in strings("IVXx")) assertEquals(Before.ROMAN.matches(s), GroundingCheck.isRoman(s), s)
+        for (s in strings("AZ.a")) assertEquals(Before.INITIALS.matches(s), GroundingCheck.isInitials(s), s)
+        for (s in strings(
+            "s'’a",
+        )) {
+            assertEquals(Before.POSSESSIVE.replace(s, ""), SelfCorrection.withoutPossessive(s), s)
+        }
+        val random = Random(SEED)
+        repeat(TEXTS) {
+            val text = pieces(random, LINE_MARK_PIECES, MAX_PIECES)
+            for (end in 1..text.length) {
+                assertEquals(Before.isListNumber(text, end), MarkdownMarks.isListNumber(text, end), "$text to $end")
+            }
+        }
+    }
+
+    @Test
     fun `citations are found where the regex found them`() {
         val random = Random(SEED)
         var found = 0
@@ -208,12 +234,28 @@ class GroundingScanTest {
         private val SENTENCE_END = Regex("(?:[.!?:]|\\])[)\"”'’*_]*$")
         val CITATION = Regex("\\[[A-Z]{1,2}[0-9]*\\]")
         private val WORD = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")
-        private val POSSESSIVE = Regex("['’]s$")
+        val POSSESSIVE = Regex("['’]s$")
+
+        val ROMAN = Regex(ROMAN_PATTERN)
+        val INITIALS = Regex("(?:[A-Z]\\.)+")
+        private val LIST_NUMBER = Regex("[0-9]{1,2}\\.")
 
         fun numeralCited(
             t: String,
             at: Int,
         ): Boolean = NUMERAL_CITED.matches(t.substring(at))
+
+        fun isListNumber(
+            t: String,
+            end: Int,
+        ): Boolean {
+            var start = end - 1
+            while (start > 0 && t[start - 1] in '0'..'9') start--
+            var indent = start
+            while (indent > 0 && t[indent - 1] == ' ') indent--
+            val atLineStart = indent == 0 || t[indent - 1] == '\n'
+            return atLineStart && LIST_NUMBER.matches(t.substring(start, end))
+        }
 
         fun of(reply: String): SelfCorrection? {
             val text = reply.trimJs()
@@ -281,6 +323,9 @@ class GroundingScanTest {
 
         const val SEED = 1318
 
+        /** The longest of the strings told by their characters. */
+        const val WORD_LENGTH = 8
+
         /** How many of the varied texts at least must hold what a test looks for. */
         const val ENOUGH = 100
         const val TEXTS = 3000
@@ -338,6 +383,8 @@ class GroundingScanTest {
                 " ",
                 "\n",
                 "\r\n",
+                "\r",
+                "\u2028",
                 "\u0085",
                 "-",
                 "*",

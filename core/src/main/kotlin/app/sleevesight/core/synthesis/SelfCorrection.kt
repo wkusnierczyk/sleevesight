@@ -166,8 +166,13 @@ data class SelfCorrection(
                 .replace(CITATION.replace(text.replace(WORD_MARK, ' '), " "), "$WORD_MARK\$0$WORD_MARK")
                 .split(WORD_MARK)
                 .filterIndexed { index, _ -> index % 2 == 1 }
-                .map { word -> POSSESSIVE.replace(word.lowercase(), "") }
+                .map { word -> withoutPossessive(word.lowercase()) }
                 .toSet()
+
+        // [word] without a possessive's `'s` or `’s` at its end: told by its last two characters, not by
+        // a regex started for each word (#1318). A word holds no line break, so `$` was its end.
+        internal fun withoutPossessive(word: String): String =
+            if (word.length >= 2 && word.last() == 's' && word[word.length - 2] in "'’") word.dropLast(2) else word
 
         // Whether [line] is the model's comment on its own reply, as far as the line itself tells
         // (whether the text before it ends a sentence is weighed in [of]): it ends a sentence, sits
@@ -268,9 +273,6 @@ data class SelfCorrection(
 
         /** The share of a version's first sentence's words that must be the draft's ([revises]). */
         private const val RESTATED = 0.75
-
-        /** A possessive's ending, `'s` or `’s`, taken off a word in [revises]. */
-        private val POSSESSIVE = Regex("['’]s$")
 
         /** What marks off each word of a text ([words]): a control character, in no word. */
         private const val WORD_MARK = '\u0001'

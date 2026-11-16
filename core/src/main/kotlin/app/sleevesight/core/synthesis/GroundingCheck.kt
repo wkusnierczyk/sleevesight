@@ -449,10 +449,32 @@ object GroundingCheck {
         while (k < t.length && t[k] in MarkdownMarks.EMPHASIS) k++
         val numeral = k
         while (k < t.length && t[k] in "IVX") k++
-        val roman = k > numeral && k - numeral <= LONGEST_NUMERAL && ROMAN.matches(t.substring(numeral, k))
+        val roman = k > numeral && k - numeral <= LONGEST_NUMERAL && isRoman(t.substring(numeral, k))
         while (k < t.length && t[k] in NUMERAL_CLOSES) k++
         return k.takeIf { roman }
     }
+
+    /**
+     * Whether [s] is a Roman numeral from I to XXXIX, as volumes and parts are numbered: up to three `X`,
+     * then `IX`, `IV`, or `V` or not and up to three `I`, and not empty. Read by its characters, not with
+     * a regex started for each word weighed (#1318).
+     */
+    internal fun isRoman(s: String): Boolean {
+        val tens = s.takeWhile { it == 'X' }.length
+        val rest = s.substring(tens)
+        val ones =
+            rest == "IX" ||
+                rest == "IV" ||
+                rest.removePrefix("V").let { i -> i.length <= REPEATS && i.all { it == 'I' } }
+        return s.isNotEmpty() && tens <= REPEATS && ones
+    }
+
+    /**
+     * Whether [s] is a run of capital initials, each with its stop (`U.S.`, `R.E.M.`, `J.`): read by its
+     * characters, as [isRoman] is.
+     */
+    internal fun isInitials(s: String): Boolean =
+        s.isNotEmpty() && s.length % 2 == 0 && s.indices.all { if (it % 2 == 0) s[it] in 'A'..'Z' else s[it] == '.' }
 
     /**
      * The citations, each after any whitespace, that follow one another from a place in a text: where
@@ -602,11 +624,11 @@ object GroundingCheck {
         // The numeral may close a quoted or bracketed title, or own something (`Vol. II's`).
         val numeral =
             nextWord.removeSuffix("'s").removeSuffix("’s").trimEnd { it in NUMERAL_CLOSERS }.let {
-                ROMAN.matches(it) || it in NUMBER_WORDS
+                isRoman(it) || it in NUMBER_WORDS
             }
         return bare in ABBREVIATIONS ||
             (bare in NUMBER_ABBREVIATIONS && numeral) ||
-            ((INITIALS.matches(word) || bare in NAME_SUFFIXES) && !opens)
+            ((isInitials(word) || bare in NAME_SUFFIXES) && !opens)
     }
 
     /**
@@ -700,13 +722,11 @@ object GroundingCheck {
     private const val CLOSING_QUOTES = "\"”'’"
     private const val CLOSING_MARKS = CLOSING_QUOTES + MarkdownMarks.EMPHASIS
     private const val NUMERAL_CLOSERS = ".!?)" + CLOSING_MARKS
-    private val INITIALS = Regex("(?:[A-Z]\\.)+")
 
-    // A Roman numeral from I to XXXIX, as volumes and parts are numbered.
-    private const val ROMAN_PATTERN = "(?=[IVX])X{0,3}(?:IX|IV|V?I{0,3})"
-    private val ROMAN = Regex(ROMAN_PATTERN)
+    // How many times a Roman numeral may repeat `X` or `I` ([isRoman]).
+    private const val REPEATS = 3
 
-    // The longest numeral [ROMAN] matches, `XXXVIII`.
+    // The longest numeral [isRoman] reads, `XXXVIII`.
     private const val LONGEST_NUMERAL = 7
 
     // What may close a numeral before its citations ([numeralCited]): emphasis, quotes, a bracket.

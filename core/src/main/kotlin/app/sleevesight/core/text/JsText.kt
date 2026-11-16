@@ -11,10 +11,18 @@ package app.sleevesight.core.text
 internal const val JS_WHITESPACE_CLASS: String =
     "[\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
 
-private val JS_WHITESPACE = Regex(JS_WHITESPACE_CLASS)
-
-/** Whether [c] matches JavaScript's `\s`. */
-internal fun isJsWhitespace(c: Char): Boolean = JS_WHITESPACE.matches(c.toString())
+/**
+ * Whether [c] matches JavaScript's `\s`: one of the characters [JS_WHITESPACE_CLASS] names. Told by
+ * the character, not by the regex, which the scans of a reply ask for each of its characters: a regex
+ * starts its engine for each (#1318), and on Android each start is a call into ICU.
+ */
+internal fun isJsWhitespace(c: Char): Boolean =
+    when (c) {
+        '\t', '\n', '\u000B', '\u000C', '\r', ' ', '\u00A0', '\u1680', '\u2028', '\u2029', '\u202F', '\u205F',
+        '\u3000', '\uFEFF',
+        -> true
+        else -> c in '\u2000'..'\u200A'
+    }
 
 /**
  * JavaScript's `String.prototype.trim`, as a scan from both ends. Not a regex: `$` also matches
