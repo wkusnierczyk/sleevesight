@@ -25,8 +25,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.report.Mail
@@ -105,8 +103,8 @@ private fun reasonLabel(reason: ReportReason): Int =
 private const val NOTE_LIMIT = 2000
 
 /**
- * *Report the insight*: a small text action, which a screen reader names with the insight it is for,
- * in the theme's error colour (#671). Its label starts where the lines above it start: the button
+ * *Report the insight*: a small text action, which a screen reader reads by its label, in the
+ * theme's error colour (#671). Its label starts where the lines above it start: the button
  * is moved back by its own start padding, which stays round the label as part of its target.
  * [modifier] goes on the button: a focus handoff's target (#1121).
  */
@@ -115,15 +113,13 @@ internal fun ReportAction(
     modifier: Modifier = Modifier,
     onReport: () -> Unit,
 ) {
-    val description = stringResource(R.string.report_action_description)
     val padding = ButtonDefaults.TextButtonContentPadding
     TextButton(
         onClick = onReport,
         modifier =
             modifier
                 .offset(x = -padding.calculateStartPadding(LocalLayoutDirection.current))
-                .testTag(REPORT_TAG)
-                .semantics { contentDescription = description },
+                .testTag(REPORT_TAG),
         contentPadding = padding,
         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {

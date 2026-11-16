@@ -48,7 +48,7 @@ import kotlin.math.abs
  * The footer under a written insight (#671, which replaced #606's row): each part on its own line,
  * at the start, top to bottom: *As written previously.* with what follows from it, the grounding
  * line (the note on the dimmed sentences, or in developer mode the counts), then *Report
- * a problem*, its label where the lines start, in the theme's error colour, light and dark. At twice
+ * the insight*, its label where the lines start, in the theme's error colour, light and dark. At twice
  * the font size each line wraps on its own, on the whole row. A screen reader reads them in that
  * order. Text measured as on a phone.
  */

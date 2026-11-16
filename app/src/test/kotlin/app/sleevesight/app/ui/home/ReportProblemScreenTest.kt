@@ -11,8 +11,6 @@ import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -143,12 +141,7 @@ class ReportProblemScreenTest {
             compose
                 .onNodeWithTag(REPORT_TAG)
                 .performScrollTo()
-                .assert(
-                    SemanticsMatcher.expectValue(
-                        SemanticsProperties.ContentDescription,
-                        listOf(text(R.string.report_action_description)),
-                    ),
-                )
+                .assert(hasText(text(R.string.report_action)))
         }
 
     @Test
