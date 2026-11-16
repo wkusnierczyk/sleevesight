@@ -173,4 +173,17 @@ class RecordingAliasesTest {
             assertEquals("aria", resolution.recordingMbid)
             assertEquals(emptyList(), musicBrainz.artistNamesAsked)
         }
+
+    @Test
+    fun `a recording credited to the composer and the orchestra is not taken by the orchestra's alias`() =
+        runTest {
+            // Another conductor's performance, its credit naming the composer and the orchestra only: the
+            // composer, credited first, is no performer, so the orchestra's alias alone does not make it theirs.
+            val musicBrainz = FakeMusicBrainz(search = Lookup.Found(emptyList()))
+            val credits = listOf(credit("Cy Bard").copy(joinPhrase = "; "), orchestra)
+            musicBrainz.searchesBy["Berlin Ensemble"] = Lookup.Found(listOf(performance("other", 200, credits)))
+            musicBrainz.artistNames["ensemble"] = listOf("Berliner Ensemble", "Berlin Ensemble")
+            assertEquals(Outcome.None, resolve(musicBrainz, track, 200).outcome)
+            assertEquals(listOf("ensemble"), musicBrainz.artistNamesAsked)
+        }
 }

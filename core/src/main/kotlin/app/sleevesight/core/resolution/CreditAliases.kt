@@ -16,7 +16,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * the loose search, [loosely]) that have the title's numbers ([admissible]), and, with a composer the title
  * names (#1289), those found, which count only as the track's artists' performance. Every alias known so far
  * applies, an earlier pass's included. A recording left out is added when the aliases make it the track's
- * artists' ([taken]), as the loose search's own. Incomplete when a lookup fails, so the resolution is asked
+ * artists' ([takenAliased]). Incomplete when a lookup fails, so the resolution is asked
  * again later. Not called when something fits already.
  */
 internal suspend fun MusicBrainzLookup.withAliases(
@@ -31,7 +31,7 @@ internal suspend fun MusicBrainzLookup.withAliases(
     val weighed = if (track.composer != null) searched.found + held else held
     val looked = lookedUp(names, track, duration, weighed.filter(matches), searched.aliases)
     // Every alias known so far applies, those an earlier pass looked up included.
-    val (taken, left) = held.map(looked::on).partition { names.taken(it, track) }
+    val (taken, left) = held.map(looked::on).partition { names.takenAliased(it, track) }
     val found = searched.found.map(looked::on) + taken
     return Searched(
         if (found.isEmpty()) searched.answer else Lookup.Found(found),
@@ -73,10 +73,12 @@ private suspend fun MusicBrainzLookup.lookedUp(
         recordings
             .map(Aliases(known)::on)
             .filterNot { names.performedBy(it, track) }
-            .sortedBy { r ->
-                val length = r.lengthMs?.milliseconds
-                if (duration == null || length == null) Duration.INFINITE else (length - duration).absoluteValue
-            }.filter { r -> track.performers.any { r.credits.none(names.standsFor(r.credits, listOf(it))) } }
+            .sortedWith(
+                compareBy<MbRecording> { r ->
+                    val length = r.lengthMs?.milliseconds
+                    if (duration == null || length == null) Duration.INFINITE else (length - duration).absoluteValue
+                }.thenBy { it.mbid },
+            ).filter { r -> track.performers.any { r.credits.none(names.standsFor(r.credits, listOf(it))) } }
             .flatMap { r -> r.credits.filterNot(names.standsFor(r.credits, track.artists)).map { it.artistMbid } }
             .distinct()
             .filterNot { it in known }
@@ -91,6 +93,23 @@ private suspend fun MusicBrainzLookup.lookedUp(
             }
         }
     return Aliases(known + found, failed)
+}
+
+// Whether [recording], its credits' aliases on ([MbCredit.aliases]), is taken as [track]'s, a recording found
+// otherwise than by the title's exact words ([taken]). When only an alias makes it stand for two of the
+// track's artists, it must stand for two of the performers, the composer never counted among them: the one
+// the title names ([NormalizedTrack.performers]), else the first credited, as a classical track credits its
+// composer first with no lead in its title (#1180). Otherwise a recording of the work by another conductor,
+// credited to the composer and the orchestra, would pass for the track's (#1330).
+internal fun NameMatcher.takenAliased(
+    recording: MbRecording,
+    track: NormalizedTrack,
+): Boolean {
+    val artists = track.artists.filter { it.isNotBlank() }.distinct()
+    val plain = recording.copy(credits = recording.credits.map { it.copy(aliases = emptyList()) })
+    val performers = if (track.composer != null) track.performers else artists.drop(1)
+    return taken(recording, track) &&
+        (represented(plain, artists) >= 2 || represented(recording, performers.filter { it.isNotBlank() }) >= 2)
 }
 
 // At most this many artists' other names looked up for one track (#1289, `withAliases`).

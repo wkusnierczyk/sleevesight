@@ -170,7 +170,9 @@ work found by a search (the fourth): one search more, and the lookup of the work
   nothing found may be chosen in any way (read as a part of a work, credited in any form), among those
   the loose search (below) and the searches by the later credited artists left out for crediting
   someone else and that have the title's numbers; such a recording counts once the aliases make it the
-  track's artists' and it stands for two or more of them, as the loose search's own. An alias looked up
+  track's artists' and it stands for two or more of them, as the loose search's own, and, when only an
+  alias makes it so, for two or more performers, the composer (the title's, else the first credited) not
+  counted: another conductor's recording credited to the composer and the orchestra is not theirs. An alias looked up
   stands for every recording after it, the loose search's included. A track that resolved before makes
   no lookup it did not make. *Barber:
   Adagio for Strings* by Samuel Barber, Sir Simon Rattle and the Berlin Philharmonic: MusicBrainz

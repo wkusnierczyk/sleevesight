@@ -131,14 +131,16 @@ internal suspend fun MusicBrainzLookup.loosely(
             words.isNotEmpty() &&
             searched.found.none(fits)
     val more = if (asked) searchRecordingsLoosely(words, artists) else null
-    // The aliases looked up already stand, so a recording they make the track's artists' is kept at once.
+    // The aliases looked up already stand, so a recording they make the track's artists' ([takenAliased]) is
+    // kept at once.
+    val known = Aliases(searched.aliases)
     val (kept, left) =
         (more as? Lookup.Found)
             ?.value
             .orEmpty()
             .filter { names.admissible(it, track) }
-            .map(Aliases(searched.aliases)::on)
-            .partition { names.taken(it, track) }
+            .map(known::on)
+            .partition { names.takenAliased(it, track) }
     val found = (searched.found + kept).distinctBy { it.mbid }
     val held = (searched.held + left).distinctBy { it.mbid }.filter { h -> found.none { it.mbid == h.mbid } }
     val aliases = searched.aliases
