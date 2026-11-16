@@ -21,7 +21,9 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.toSize
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -61,12 +63,14 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 /**
  * The *Lyrics* panel's two AI buttons (#908), with the searches faked: *Find the lyrics* with the AI
  * mark where *Ask AI* was, its own lines; *Explain the song* last for every track with lyrics, a page
  * found or not, not while looking nor for an instrumental, nor when not offered; the two as wide as
- * each other; and the explanation, cited, its pages listed, credited to the model.
+ * each other; and the explanation, each citation its page's line in *Sources* (#1067), credited to the
+ * model, then *Read more* with the pages' sites.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -211,7 +215,8 @@ class LyricsAiScreenTest {
             "Claude Haiku 5.5 found nothing to explain the song.",
             app.getString(R.string.home_lyrics_explain_none, model),
         )
-        assertEquals("Pages cited", text(R.string.home_lyrics_pages_cited))
+        assertEquals("Read more: %1\$s", text(R.string.home_lyrics_read_more))
+        assertEquals("explanation", text(R.string.home_line_purpose_explanation))
         // Dates and Genres keep *Ask AI*.
         assertEquals("Ask AI", text(R.string.home_ai_search))
     }
@@ -297,42 +302,95 @@ class LyricsAiScreenTest {
                 .assertTextEquals(app.getString(R.string.home_lyrics_explain_none, model))
         }
 
-    @Test
-    fun theExplanationShowsCitedThenItsPagesThenTheModel() =
-        show {
-            // Each page by its host, as *Sources* names a page (#1040), whatever title it gives itself.
-            val songfacts = CitedPage("S1", "https://www.songfacts.example/sundown", "Sundown:\u200B song facts\u202E")
-            val interview = CitedPage("S2", "https://music-mag.example/interview", "\u200B \u2060")
-            val reply = "It is about jealousy. [S1] It reads as a warning. The title is a time of day. [S2]"
-            val grounded =
-                (GroundingCheck.check(reply, setOf("S1", "S2"), allowModel = false) as InsightReply.Written).grounded
-            set(
-                SearchKind.EXPLAIN,
-                AiSearch.Answered(
-                    SearchAnswer.Explanation(grounded, listOf(songfacts, interview)),
-                    model,
-                    SearchWay(web = true),
-                ),
+    // An explanation citing [songfacts] and [interview], and the track's own web page (`example.org`,
+    // *Sources*' S1, with a trailing slash), on a track whose evidence has that web line.
+    private val songfacts = CitedPage("S1", "https://www.songfacts.example/sundown", "Sundown:\u200B song facts\u202E")
+    private val interview = CitedPage("S2", "https://musicmag.example/interview", "\u200B \u2060")
+    private val own = CitedPage("S3", "https://example.org/sundown/", "Sundown went gold")
+
+    private fun explanation(): SearchAnswer.Explanation {
+        val reply = "It is about jealousy. [S1] It reads as a warning. The title is a time of day. [S2] It sold. [S3]"
+        val grounded =
+            (GroundingCheck.check(reply, setOf("S1", "S2", "S3"), allowModel = false) as InsightReply.Written).grounded
+        return SearchAnswer.Explanation(grounded, listOf(songfacts, interview, own))
+    }
+
+    private fun withWeb(): NowPlayingState {
+        val track =
+            track(
+                sources = mapOf(SourceId.MUSICBRAINZ to lyrics(), SourceId.LASTFM to done()),
+                evidence = HomeFixtures.withWeb,
             )
+        return NowPlayingState(PipelineView(track, aiReady = true), track.nowPlaying, playback, settings = Settings())
+    }
+
+    @Test
+    fun theExplanationCitesSourcesLinesThenTheModelThenReadMore() =
+        show(withWeb()) {
+            set(SearchKind.EXPLAIN, AiSearch.Answered(explanation(), model, SearchWay(web = true)))
             assertEquals(0, count(explain))
             val prose = compose.onNodeWithTag(LYRICS_EXPLANATION_TAG).fetchSemanticsNode()
             val said = prose.config[SemanticsProperties.ContentDescription].single()
+            // Each citation read by its line in *Sources* (#1067): the pages new to it S2 and S3 after
+            // the track's web line S1, the track's own page that line.
             assertEquals(
                 // A citation after a stop is said before it, as it shows (#1061).
-                "It is about jealousy (Source S1). It reads as a warning. (not cited) " +
-                    "The title is a time of day (Source S2).",
+                "It is about jealousy (Source S2). It reads as a warning. (not cited) " +
+                    "The title is a time of day (Source S3). It sold (Source S1).",
                 said,
             )
-            assertEquals(2, prose.config[SemanticsActions.CustomActions].size)
+            val actions = prose.config[SemanticsActions.CustomActions]
+            assertEquals(listOf("Source S2", "Source S3", "Source S1"), actions.map { it.label })
             assertTrue(placed(prose).top >= bounds(explainTag(AI_SEARCH_RULE_TAG)).bottom)
-            val heading = bounds(LYRICS_PAGES_CITED_TAG)
-            assertTrue(heading.top >= placed(prose).bottom)
-            assertTrue(shows(text(R.string.home_lyrics_pages_cited)))
-            assertTrue(bounds(lyricsCitedPageTag("S1")).top >= heading.bottom)
-            assertTrue(shows("songfacts.example"))
-            assertFalse(shows("Sundown: song facts"))
-            assertTrue(shows("music-mag.example"))
+            // *Pages cited* is gone; *Read more* is last, after the credit.
+            assertFalse(shows("Pages cited"))
             compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("by Claude Haiku 5.5")
-            assertTrue(bounds(explainTag(AI_SEARCH_BY_TAG)).top >= bounds(lyricsCitedPageTag("S2")).bottom)
+            assertTrue(bounds(explainTag(AI_SEARCH_BY_TAG)).top >= placed(prose).bottom)
+            assertTrue(bounds(LYRICS_READ_MORE_TAG).top >= bounds(explainTag(AI_SEARCH_BY_TAG)).bottom)
+            compose
+                .onNodeWithTag(LYRICS_READ_MORE_TAG)
+                .assertTextEquals("Read more:\u00A0songfacts.example\u00A0· musicmag.example\u00A0· example.org")
+            // Each site a link of its own, "Read more:" plain text, in citation order.
+            assertEquals(
+                listOf(
+                    "songfacts.example" to songfacts.url,
+                    "musicmag.example" to interview.url,
+                    "example.org" to own.url,
+                ),
+                compose.linkedRanges(LYRICS_READ_MORE_TAG),
+            )
+        }
+
+    @Test
+    fun aKeptExplanationReadsTheSameAndReadMoreComesAfterTheKeptLine() =
+        show(withWeb()) {
+            val kept = Instant.parse("2026-11-01T12:00:00Z")
+            set(SearchKind.EXPLAIN, AiSearch.Answered(explanation(), model, SearchWay(web = true), keptAt = kept))
+            val said =
+                compose
+                    .onNodeWithTag(LYRICS_EXPLANATION_TAG)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.ContentDescription]
+                    .single()
+            assertTrue(said, said.endsWith("(Source S3). It sold (Source S1)."))
+            assertTrue(bounds(LYRICS_READ_MORE_TAG).top >= bounds(AI_KEPT_TAG).bottom)
+        }
+
+    @Test
+    fun aCitationOpensSourcesAtItsLine() =
+        show(withWeb()) {
+            set(SearchKind.EXPLAIN, AiSearch.Answered(explanation(), model, SearchWay(web = true)))
+            // *Sources* folded: the explanation's lines not shown until a citation reaches them.
+            assertEquals(0, count(LINE_PREFIX + "S3"))
+            compose
+                .onNodeWithTag(LYRICS_EXPLANATION_TAG)
+                .performScrollTo()
+                .performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "S3" }
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "S3").assertExists()
+            // Named by what it was read for, then its site; its text the page's title, or its site.
+            assertTrue(shows("explanation · musicmag.example"))
+            assertTrue(shows("explanation · songfacts.example"))
+            assertTrue(shows("Sundown: song facts"))
         }
 }

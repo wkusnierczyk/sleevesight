@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.ItemNotes
@@ -22,6 +23,8 @@ import app.sleevesight.core.pipeline.linesBeyond
 import app.sleevesight.core.pipeline.showsInstrumental
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.sources.WebPage
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.core.synthesis.sameAddress
 import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Instant
@@ -50,14 +53,15 @@ internal class SourcesLines(
 /**
  * What a web line in *Sources* was read for, named in place of its scope (#1205): *genres · host*
  * for a page the AI's genre list rests on; *vocals check · host* for the page the check of the
- * track's vocals cites (#1053). A few words each, [label], so another check's pages can be named the
- * same way.
+ * track's vocals cites (#1053); *explanation · host* for a page the song's explanation cites (#1067).
+ * A few words each, [label], so another check's pages can be named the same way.
  */
 internal enum class LinePurpose(
     @param:StringRes val label: Int,
 ) {
     GENRES(R.string.home_line_purpose_genres),
     VOCALS_CHECK(R.string.home_line_purpose_vocals_check),
+    EXPLANATION(R.string.home_line_purpose_explanation),
 }
 
 /**
@@ -172,8 +176,10 @@ internal fun withAlbum(
  * last, the page the check of the track's vocals cites (#1053, [GenreNotes.vocals]), named *vocals
  * check*, while the genres *Genres* composes ([composedGenres], *Find the lyrics*' answer from
  * [search] with them) still weigh its answer ([checkedPage]), and not again when another line has its
- * address. A reason's citations, and the check's, show these ids by address ([shownLine],
- * [webLineOf]), so they never point at another page.
+ * address; after it, the pages the song's explanation from [search] cites (#1067, [explainedPages]),
+ * fresh or kept, named *explanation*, each address once. A reason's citations, the check's and the
+ * explanation's show these ids by address ([shownLine], [webLineOf]), so they never point at another
+ * page.
  */
 @Composable
 internal fun sourcesLines(
@@ -216,8 +222,37 @@ internal fun sourcesLines(
     // The genres as *Genres* composes them, the artists' descriptions read from these lines.
     val composed = composedGenres(track, PanelNotes(genres, lines = genreLines.evidence), PanelSearch(search, track))
     val checked = listOfNotNull(checkedPage(composed))
-    return remember(genreLines, checked) { withPages(genreLines, checked, LinePurpose.VOCALS_CHECK) }
+    // The song's explanation (#1067), as *Lyrics* shows it, read only: fresh or kept, the same pages.
+    val explained by remember(search, track?.normalized, track?.nowPlaying?.duration, track?.nowPlaying?.album) {
+        track?.let { search.answered(it, SearchKind.EXPLAIN) } ?: flowOf(AiSearch.None)
+    }.collectAsState(AiSearch.None)
+    val explanation = explainedPages(explained)
+    return remember(genreLines, checked, explanation) {
+        withPages(withPages(genreLines, checked, LinePurpose.VOCALS_CHECK), explanation, LinePurpose.EXPLANATION)
+    }
 }
+
+/**
+ * The pages the song's explanation in [search] cites (#1067), in the order first cited, as web lines
+ * of *Sources* list them: each its title ([shownTitle]), its site ([siteOf]) where it has none; none
+ * for no answer.
+ */
+internal fun explainedPages(search: AiSearch): List<WebPage> {
+    val answer = (search as? AiSearch.Answered)?.answer as? SearchAnswer.Explanation ?: return emptyList()
+    return answer.pages.map { page -> WebPage(page.url, page.title, shownTitle(page.title) ?: siteOf(page.url)) }
+}
+
+/**
+ * A page's [title] as a line of *Sources* shows it: without the marks that show nothing or turn the
+ * text around (format and control characters: a zero-width space, a right-to-left override), its
+ * spaces one; null for none, or one with nothing left to show.
+ */
+internal fun shownTitle(title: String?): String? =
+    title
+        ?.filterNot { Character.getType(it) == Character.FORMAT.toInt() }
+        ?.replace(BLANKS, " ")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
 
 /**
  * The page the check of the track's vocals rests on (#1053), while [composed], the genres *Genres*
@@ -252,3 +287,6 @@ internal fun shownId(
 
 // When a page the AI's genre list rests on was retrieved, which *Sources* does not show: not kept.
 private val UNDATED = Instant.fromEpochMilliseconds(0)
+
+// Spaces and control characters (a tab, a line break), each run read as one space.
+private val BLANKS = Regex("[\\s\\p{Cc}]+")
