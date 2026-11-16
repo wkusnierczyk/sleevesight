@@ -127,6 +127,24 @@ class PipelineNothingBeyondTest {
             }
         }
 
+    @Test
+    fun `NO_EVIDENCE to a prompt without the header's lines asks again with them, and that card is kept`() =
+        runTest {
+            val provider = FakeProvider()
+            val replies = listOf("NO_EVIDENCE", "Gordon Lightfoot wrote it [MB2].")
+            provider.reply = { FakeProvider.done(replies[provider.requests.size - 1]) }
+            val cache = MemoryCache()
+            val written = pipeline(HEADER + PRODUCER, provider, cache).run(sundown, write = true).insight
+            assertIs<InsightState.Written>(written)
+            val (first, again) = provider.requests.map { it.prompt }
+            assertFalse(HEADER.first().text in first, first)
+            assertTrue(HEADER.first().text in again && InsightPrompt.NOTHING_BEYOND !in again, again)
+            // Kept: served again with no call.
+            val kept = pipeline(HEADER + PRODUCER, provider, cache).run(sundown, write = true).insight
+            assertTrue(assertIs<InsightState.Written>(kept).cached)
+            assertEquals(2, provider.requests.size)
+        }
+
     private companion object {
         val HEADER =
             listOf(

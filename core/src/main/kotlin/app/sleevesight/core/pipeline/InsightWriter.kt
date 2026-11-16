@@ -242,7 +242,8 @@ internal class InsightWriter(
 
     // A call, from the evidence less the artist-level lines the insight should not dwell on (#239),
     // all of them kept with *Don't repeat artist facts* off (#407), and less a release
-    // line MusicBrainz's line restates (#424) in both cases, each line keeping its id; or from the
+    // line MusicBrainz's line restates (#424) in both cases, and less the lines that only restate
+    // Home when more is left to tell (#1142), each line keeping its id; or from the
     // [whole] of it once the run fell back to it. The card's key keeps the whole evidence's
     // fingerprint, so a track played again finds its card, whatever the session cited. The facts an
     // insight cites are kept with the switch off too, so turning it on mid-session leaves out what
@@ -324,8 +325,9 @@ internal class InsightWriter(
             }
         // `NO_EVIDENCE` to a prompt that left lines out, which `finish` neither shows nor reports:
         // asked once more at once, a second paid call, with them all, as `PromptEvidence` falls back
-        // to them when nothing is left to narrate: an insight that repeats an artist fact is better
-        // than none. A Retry tapped after that call failed or was stopped asks with them all too.
+        // to them when nothing is left to narrate: an insight that repeats an artist fact or Home's
+        // header is better than none. A Retry tapped after that call failed or was stopped asks with
+        // them all too.
         return if (outcome == InsightState.NoEvidence && sent.leftOut.isNotEmpty()) {
             whole = true
             stream(ai, model, card, control, revisedOnce, (end as? CompletionEvent.Done)?.usage?.and(billed))

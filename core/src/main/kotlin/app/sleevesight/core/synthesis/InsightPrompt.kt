@@ -332,10 +332,13 @@ object InsightPrompt {
      * documented track still gets its date; and each fact once, against cards that named the same
      * credit twice ("featured artist … and the producer is listed as Tony K").
      * Version 13 (#1142): a story, not a list of facts, in place of the release after the story; what
-     * to prefer is the role's ([ROLE]), said once.
+     * to prefer is the role's ([ROLE]), said once. One sentence to four, not two: with the lines that
+     * only restate Home left out (`PromptEvidence`), a track with one fact beyond them had its card
+     * padded with a second, uncited sentence on what the evidence lacks ("The evidence does not say
+     * more about this recording"), 3 of 5 uncited sentences on the thin tracks; with one, 2 of 83.
      */
     const val BUILT_IN_STYLE: String =
-        "- Write 2 to 4 sentences that tell a story, each fact once, not a list of facts.\n" +
+        "- Write 1 to 4 sentences that tell a story, each fact once, not a list of facts.\n" +
             "- Plain conversational English. No hype, no praise words."
 
     /**

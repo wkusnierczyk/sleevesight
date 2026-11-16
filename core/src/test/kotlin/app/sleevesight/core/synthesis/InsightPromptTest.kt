@@ -382,7 +382,7 @@ class InsightPromptTest {
         // asks for a story, what to prefer said once, in the role.
         assertFalse("never open with when or where it was released" in role)
         assertEquals(
-            "- Write 2 to 4 sentences that tell a story, each fact once, not a list of facts.\n" +
+            "- Write 1 to 4 sentences that tell a story, each fact once, not a list of facts.\n" +
                 "- Plain conversational English. No hype, no praise words.",
             InsightPrompt.BUILT_IN_STYLE,
         )
