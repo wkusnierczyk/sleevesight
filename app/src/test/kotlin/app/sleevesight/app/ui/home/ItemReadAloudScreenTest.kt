@@ -57,10 +57,10 @@ import java.util.Locale
 import kotlin.math.abs
 
 /**
- * *Read aloud* of the song's, the artist's and the album's insights (#894): in an item's panel on
- * Home, once written, in the heading beside *Close*, both centred on the kind's line, read after the
- * heading and before *Close*, and not in the body; on the item's page, where it always was, on the
- * credit's row, under the text (#959).
+ * *Read aloud* of the song's, the artist's and the album's insights (#894): once written, in an
+ * item's panel on Home as on the item's page, at the end of the credit's row under the text (#959,
+ * #1162), none in the panel's heading, whose *Close* stays on the kind's line; a screen reader reads
+ * the heading, *Close*, the text, the credit, then *Read aloud*.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -152,51 +152,50 @@ class ItemReadAloudScreenTest {
         b: Float,
     ) = abs(a - b) <= WITHIN
 
-    private fun readAloudInTheHeadingOnTheKindsLine() =
+    // In the panel on Home as on the page (#959, #1162): one *Read aloud*, on the credit's row under
+    // the text, after the credit; none in the heading, whose *Close* stays on the kind's line.
+    private fun readAloudOnTheCreditsRowNotInTheHeading() =
         home {
             assertEquals(1, compose.onAllNodes(hasTestTag(READ)).fetchSemanticsNodes().size)
+            val inHeading = hasTestTag(READ) and hasAnyAncestor(hasTestTag("$PANEL:heading"))
+            assertEquals("not in the heading", 0, compose.onAllNodes(inHeading, true).fetchSemanticsNodes().size)
             val speaker = tagged(READ)
-            val close = tagged("$PANEL:close")
-            val kind = kind()
-            assertTrue("$speaker $kind", near(speaker.center.y, kind.center.y))
-            assertTrue("$close $kind", near(close.center.y, kind.center.y))
-            // Left of *Close*, and above the name: in the heading, not on the credit's row.
-            assertTrue(speaker.right <= close.left + 1)
-            assertTrue(speaker.top < tagged("$PANEL:subtitle").bottom)
-            assertTrue(speaker.bottom < compose.onNodeWithText("Written by Claude Haiku 4.5.").rect().top)
+            val credit = compose.onNodeWithText(CREDIT).rect()
+            val text = compose.onNodeWithText("Gordon Lightfoot was", substring = true).rect()
+            assertTrue("$speaker $credit", speaker.top <= credit.center.y && credit.center.y <= speaker.bottom)
+            assertTrue("after the credit", speaker.left >= credit.right - 1)
+            assertTrue("under the text", speaker.top >= text.bottom - 1)
+            assertTrue("Close on the kind's line", near(tagged("$PANEL:close").center.y, kind().center.y))
         }
 
     @Test
-    fun inAnItemsPanelReadAloudIsInTheHeadingBesideCloseOnTheKindsLine() = readAloudInTheHeadingOnTheKindsLine()
+    fun inAnItemsPanelReadAloudIsOnTheCreditsRowNotInTheHeading() = readAloudOnTheCreditsRowNotInTheHeading()
 
     @Test
     @Config(qualifiers = "w411dp-h891dp-420dpi", fontScale = 2f)
-    fun atTwiceTheFontReadAloudAndCloseStayOnTheKindsLine() = readAloudInTheHeadingOnTheKindsLine()
+    fun atTwiceTheFontReadAloudStaysOnTheCreditsRow() = readAloudOnTheCreditsRowNotInTheHeading()
 
+    // As they show: the heading, *Close*, the text, the credit, then *Read aloud*.
     @Test
-    fun aScreenReaderReadsTheHeadingThenReadAloudThenCloseThenTheBody() =
+    fun aScreenReaderReadsTheHeadingCloseTheTextTheCreditThenReadAloud() =
         home {
+            val nodes = compose.onAllNodes(hasAnyAncestor(hasTestTag(PANEL))).fetchSemanticsNodes()
+            val tags = nodes.map { it.config.getOrNull(SemanticsProperties.TestTag) }
+
+            fun says(words: String) =
+                nodes.indexOfFirst { node ->
+                    node.config.getOrNull(SemanticsProperties.Text)?.any { it.text.startsWith(words) } == true
+                }
             val order =
-                compose
-                    .onAllNodes(hasAnyAncestor(hasTestTag(PANEL)))
-                    .fetchSemanticsNodes()
-                    .map { it.config.getOrNull(SemanticsProperties.TestTag) }
-            val heading = order.indexOf("$PANEL:heading")
-            val read = order.indexOf(READ)
-            val close = order.indexOf("$PANEL:close")
-            assertTrue(order.toString(), heading in 0 until read && read < close)
-            val credit =
-                compose
-                    .onAllNodes(hasAnyAncestor(hasTestTag(PANEL)))
-                    .fetchSemanticsNodes()
-                    .indexOfFirst { node ->
-                        node.config
-                            .getOrNull(
-                                SemanticsProperties.Text,
-                            )?.any { it.text == "Written by Claude Haiku 4.5." } ==
-                            true
-                    }
-            assertTrue(order.toString(), close < credit)
+                listOf(
+                    tags.indexOf("$PANEL:heading"),
+                    tags.indexOf("$PANEL:close"),
+                    says("Gordon Lightfoot was"),
+                    says(CREDIT),
+                    tags.indexOf(READ),
+                )
+            assertTrue(order.toString(), order.all { it >= 0 })
+            assertEquals(tags.toString(), order.sorted(), order)
         }
 
     @Test
@@ -204,13 +203,14 @@ class ItemReadAloudScreenTest {
         show({ NowPlayingPageContent(HomePage.Item(InsightItem.ARTIST.name), state, actions) {} }) {
             assertEquals(1, compose.onAllNodes(hasTestTag(READ)).fetchSemanticsNodes().size)
             val speaker = tagged(READ)
-            val credit = compose.onNodeWithText("Written by Claude Haiku 4.5.").rect()
+            val credit = compose.onNodeWithText(CREDIT).rect()
             assertTrue("$speaker $credit", speaker.top <= credit.center.y && credit.center.y <= speaker.bottom)
         }
 
     private companion object {
         val PANEL = itemPanelTag(InsightItem.ARTIST)
         val READ = itemReadAloudTag(InsightItem.ARTIST)
+        const val CREDIT = "Written by Claude Haiku 4.5."
 
         // How near two middles must be, in dp, to count as on one line.
         const val WITHIN = 3f

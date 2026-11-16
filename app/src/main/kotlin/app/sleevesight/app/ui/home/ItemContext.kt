@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -133,9 +132,9 @@ internal class OpeningWrite(
  * (#972), says so in its credit, "Rewritten by …" (#1162). With the model found unavailable (#540),
  * that is said under a written insight too, last, and *Rewrite insight* is *Write insight*, disabled.
  *
- * [shown] is what [item] shows, when its caller follows it already ([itemShown]): Home's panel, which
- * draws *Read aloud* in its heading ([ItemReadAloud], #894) and so passes [readAloud] false, leaving
- * it out of the credit's row. [afterRetry] runs after a tap on *Retry* beside sources not reached
+ * [shown] is what [item] shows, when its caller follows it already ([itemShown]): Home's panel. On
+ * Home's panel and on the item's page alike, *Read aloud* is at the end of the credit's row, under
+ * the text (#959, #1162). [afterRetry] runs after a tap on *Retry* beside sources not reached
  * (#1163), whose line then goes: it hands the focus on (to the panel's *Close*, the page's back
  * arrow), as the other panels' *Retry* does (#724).
  *
@@ -150,7 +149,6 @@ internal fun ItemContent(
     context: ItemContext,
     tapped: Boolean,
     shown: ItemShown? = null,
-    readAloud: Boolean = true,
     opening: OpeningWrite = OpeningWrite.NONE,
     afterRetry: () -> Unit = {},
 ) {
@@ -168,7 +166,7 @@ internal fun ItemContent(
     PeopleBefore(item, split)
     WritesOnTap(item, track, context, now, opening)
     val writingDue = opening.due && !context.automatic
-    ItemShownContent(item, track, context, tapped, now, ItemShowing(readAloud, writingDue, afterRetry))
+    ItemShownContent(item, track, context, tapped, now, ItemShowing(writingDue, afterRetry))
     PeopleAfter(item, split, context)
 }
 
@@ -233,30 +231,10 @@ internal fun itemShown(
     return shown
 }
 
-/**
- * *Read aloud* of [item]'s insight, once written ([shown]), under [modifier]: in the heading of its
- * panel on Home (#894), the panel's content leaving its own out; nothing before.
- */
-@Composable
-internal fun ItemReadAloud(
-    item: InsightItem,
-    context: ItemContext,
-    shown: ItemShown,
-    modifier: Modifier = Modifier,
-) {
-    val track = context.track ?: return
-    val written = (shown as? ItemShown.Shown)?.state as? InsightState.Written ?: return
-    itemReading(context.readAloud, item, track, written, context.notes)?.let {
-        // In a box of its own, so [modifier] (the heading's alignment) reaches the row it sits in.
-        Box(modifier) { ReadAloudButton(it, itemReadAloudTag(item)) }
-    }
-}
-
-// How [ItemContent] shows an item: with *Read aloud* in its byline's row ([readAloud]); *Writing…* for
-// one offered while its tap's write is due ([writingDue], #948); and where the focus goes after *Retry*
-// beside sources not reached ([afterRetry], #1163).
+// How [ItemContent] shows an item: *Writing…* for one offered while its tap's write is due
+// ([writingDue], #948); and where the focus goes after *Retry* beside sources not reached
+// ([afterRetry], #1163).
 private class ItemShowing(
-    val readAloud: Boolean,
     val writingDue: Boolean,
     val afterRetry: () -> Unit,
 )
@@ -383,8 +361,7 @@ private fun Shown(
             // The song's insight in two parts (#1133): each part under its heading.
             CheckedParagraphs(state.grounded, shown.evidence.evidence, onCite, label)
             // *Read aloud* at the end of the credit's row, first under the text (#959).
-            val reading =
-                if (showing.readAloud) itemReading(context.readAloud, item, track, state, context.notes) else null
+            val reading = itemReading(context.readAloud, item, track, state, context.notes)
             WrittenFooter(item, shown, state, track, context, label, reading)
         }
 
