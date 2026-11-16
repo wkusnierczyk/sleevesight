@@ -125,29 +125,30 @@ object InsightPrompt {
      *
      * Version 13 (#1142): the card tells a story from what the evidence adds beyond what Home already
      * shows. The role names those facts as shown elsewhere in the app (the title, the artists, the
-     * album and its year, the release dates, and the names of the song, the artist and the album) and
-     * asks for the story beyond them, with what that may be as examples ([ROLE]); the style asks for a
-     * story rather than a list, leaving out the album, its release date and a credit naming only the
-     * performer unless there is nothing else to tell ([BUILT_IN_STYLE]); and the rule on nothing to
-     * tell keeps a credit or a date enough for a sentence, but retelling the facts shown elsewhere only
-     * as a last resort, when the evidence holds nothing else at all ([NOTHING_TO_TELL_RULE]): on a
-     * thinly documented track, version 10's card was the header in prose ("Edwyn Collins wrote and
-     * performed the track. It was released on July 1, 1994, as part of the album Gorgeous George."),
-     * every fact of it already on Home. Not a ban: "do not restate" alone answered `NO_EVIDENCE` for a
-     * track with one usable line (#399, [GAP_RULE]).
+     * album and its year, the release dates, and the names of the song, the artist and the album),
+     * asks to prefer the story beyond them, with what that may be as examples, and says that one or
+     * two sentences from those facts are right when the evidence offers nothing beyond them ([ROLE]);
+     * the style asks for a story rather than a list ([BUILT_IN_STYLE]). On a thinly documented track,
+     * version 10's card was the header in prose ("Edwyn Collins wrote and performed the track. It was
+     * released on July 1, 1994, as part of the album Gorgeous George."), every fact of it already on
+     * Home. Where the evidence holds nothing beyond those facts (`HomeShown`, decided before the
+     * call), the user message says so ([NOTHING_BEYOND]), and the app says under the card that no
+     * more source information was found.
      *
-     * Its first draft, checked on 27 tracks of the test playlist (49 cards, Claude Haiku 5.5), told a
-     * story wherever the evidence had one, but had "The screen already shows …" in the role: 11 cards
-     * talked about the screen or the evidence ("though that album name is already on the screen"),
-     * every uncited sentence among them, as naming what to leave out drew the model in before (#767);
-     * so the role says "shown elsewhere in the app", and no rule names the screen. Its example "an
-     * earlier release" drew false claims ("The song is older than the album it sits on"), so it is "a
-     * release before this album when the evidence names one". A credit naming only the performer
-     * ("wrote this track himself") still opened every card of the issue's artist, so the style leaves
-     * it out as it does the album and the date. Where the evidence holds
-     * nothing beyond the header, the card is still written, and the app says under it that no more
-     * source information was found (`HomeShown`). 13, not 11 or 12, which are taken. Raised so that
-     * every kept card is written afresh from it.
+     * Checked twice on the test playlist (27 tracks, 49 cards each, Claude Haiku 5.5, no web search).
+     * The first draft told a story wherever the evidence had one, but its "The screen already shows …"
+     * had 11 cards talk about the screen or the evidence, every uncited sentence among them, as naming
+     * what to leave out drew the model in before (#767): the facts are "shown elsewhere in the app",
+     * and no rule names the screen. Its example "an earlier release" drew false claims of one ("The
+     * song is older than the album it sits on"): "a release before this album when the evidence names
+     * one". The second draft left out the album, its date and a credit naming only the performer
+     * "unless there is nothing else to tell", and retold those facts "only when the evidence holds
+     * nothing else at all": better where there was a story, worst of the three on thin tracks, where
+     * the model argued with its own rules ("Per the rules, a date alone is enough for a sentence, but
+     * the album and release date are to be left out … NO_EVIDENCE"), 15.7% of sentences uncited. So no
+     * rule has an exception: one preference, worded once in the role, and the thin case told in the
+     * user message, as the app knows it before the call. 13, not 11 or 12, which are taken. Raised so
+     * that every kept card is written afresh from it.
      */
     const val VERSION: Int = 13
 
@@ -200,14 +201,27 @@ object InsightPrompt {
 
     /**
      * The user message: [nowPlaying], normalized as [normalized], in `<track>`, with its artists'
-     * [roles] (#1180), and [evidence] in `<evidence>`, each fenced as data ([DATA_GUARD]).
+     * [roles] (#1180), and [evidence] in `<evidence>`, each fenced as data ([DATA_GUARD]). With
+     * [nothingBeyond], when the evidence holds only facts Home shows (`HomeShown`, #1142), the line
+     * [NOTHING_BEYOND] after the evidence, outside its fence: the app's own words, not data.
      */
     fun user(
         nowPlaying: NowPlaying,
         normalized: NormalizedTrack,
         evidence: EvidenceSet,
         roles: ArtistRoles = ArtistRoles.of(normalized),
-    ): String = trackBlock(nowPlaying, normalized, roles) + "\n\n" + evidenceBlock(evidence)
+        nothingBeyond: Boolean = false,
+    ): String =
+        trackBlock(nowPlaying, normalized, roles) + "\n\n" + evidenceBlock(evidence) +
+            (if (nothingBeyond) "\n\n" + NOTHING_BEYOND else "")
+
+    /**
+     * The user message's last line when the evidence holds only facts Home shows (#1142, `HomeShown`,
+     * decided before the call): the thin case told, so the model is not left to work it out from the
+     * rules. In the second check of version 13, where it was, the model argued with its rules there.
+     */
+    const val NOTHING_BEYOND: String =
+        "The evidence holds only facts shown elsewhere in the app; write one or two sentences from them."
 
     /**
      * The track as the player reports it, and as normalized, fenced in `<track>`, each field on one
@@ -284,15 +298,18 @@ object InsightPrompt {
      * of the song, the artist and the album), and the card a story beyond them, its examples the kinds
      * of line that add to them (a producer, a player, a writer other than the performer, a release
      * before this album when the evidence names one, what the sources say of the song, the artist, the
-     * album or its genres), still as examples ("such as"), never a list to cover.
+     * album or its genres), still as examples ("such as"), never a list to cover. A preference, not a
+     * rule with an exception: when the evidence offers nothing beyond those facts, one or two
+     * sentences from them are right, so the model never weighs whether it may use a fact it has.
      */
     const val ROLE: String =
         "You write the insight card on a music app's now-playing screen. Someone is listening to this " +
             "track right now. These facts are shown elsewhere in the app: the title, the artists, the album " +
-            "and its year, the release dates, and the names of the song, the artist and the album. Tell the " +
-            "story beyond them, such as who produced the track or played on it, who wrote it if not the " +
+            "and its year, the release dates, and the names of the song, the artist and the album. Prefer " +
+            "the story beyond them, such as who produced the track or played on it, who wrote it if not the " +
             "performer, a release before this album when the evidence names one, or what the sources say of " +
-            "the song, the artist, the album or its genres. Open with the most interesting part of it. No " +
+            "the song, the artist, the album or its genres. When the evidence offers nothing beyond them, " +
+            "one or two sentences from those facts are right. Open with the most interesting part. No " +
             "preamble and no filler."
 
     /**
@@ -313,14 +330,11 @@ object InsightPrompt {
      * Version 10 (#767): the release after the story, rather than only where it matters, so a thinly
      * documented track still gets its date; and each fact once, against cards that named the same
      * credit twice ("featured artist … and the producer is listed as Tony K").
-     * Version 13 (#1142): a story, not a list of facts, and the album, its release date and a credit
-     * naming only the performer left out unless there is nothing else to tell, in place of the release
-     * after the story.
+     * Version 13 (#1142): a story, not a list of facts, in place of the release after the story; what
+     * to prefer is the role's ([ROLE]), said once.
      */
     const val BUILT_IN_STYLE: String =
-        "- Write 2 to 4 sentences that tell a story, each fact once, not a list of facts. Leave out the " +
-            "album, its release date and a credit naming only the performer unless there is nothing else " +
-            "to tell.\n" +
+        "- Write 2 to 4 sentences that tell a story, each fact once, not a list of facts.\n" +
             "- Plain conversational English. No hype, no praise words."
 
     /**
@@ -395,14 +409,14 @@ object InsightPrompt {
      * empty against version 8's six, and in the blind A/B a short card from the release and the
      * producer was preferred to none. "Never say what is missing" dropped: [GAP_RULE] says it.
      *
-     * Version 13 (#1142): a credit or a date is still enough for a sentence, so a thinly documented
-     * track is not left empty, but retelling the facts shown elsewhere ([ROLE]) is a last resort, for
-     * evidence that holds nothing else at all, not the default it was on thin evidence.
+     * Version 13 (#1142): "a credit or a date", not only "a release date or a credit", and nothing
+     * more: a draft that added "but retell the facts shown elsewhere in the app only when the evidence
+     * holds nothing else at all" had the model argue with it on thin tracks and answer `NO_EVIDENCE`
+     * for an album and a date. When to tell those facts is the role's ([ROLE]).
      */
     const val NOTHING_TO_TELL_RULE: String =
         "- If no evidence is usable, reply with exactly: ${GroundingCheck.NO_EVIDENCE}. A credit or a date " +
-            "is enough for a sentence, but retell the facts shown elsewhere in the app only when the evidence " +
-            "holds nothing else at all."
+            "is enough for a sentence."
 
     /** The rule on citations: every factual sentence ends with the ids of the lines it rests on. */
     val CITATION_RULE: String =

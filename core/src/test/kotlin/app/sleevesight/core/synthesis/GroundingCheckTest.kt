@@ -466,6 +466,37 @@ class GroundingCheckTest {
     }
 
     @Test
+    fun `NO_EVIDENCE after prose, ending the reply or on a line of its own, is no evidence, the prose not shown`() {
+        val evidence = setOf("MB1")
+        // The playlist's track 50, prompt version 13's second draft (#1142): shown as the card before.
+        val track50 =
+            "The only usable fact here is the release on a 2010 album, which the app already shows, so there is " +
+                "nothing beyond it to tell. Per the rules, a date alone is enough for a sentence, but the album and " +
+                "release date are to be left out, so I have no story to add. NO_EVIDENCE"
+        val replies =
+            listOf(
+                track50,
+                "$track50.",
+                "It came out in 2010 [MB1].\nNO_EVIDENCE",
+                "It came out in 2010 [MB1].\n\nNO_EVIDENCE.\n\nNothing else.",
+                "Nothing more to tell.\n  NO_EVIDENCE  \n",
+            )
+        for (reply in replies) {
+            assertEquals(InsightReply.NoEvidence, GroundingCheck.check(reply, evidence, allowModel = false), reply)
+        }
+        // The marker only as part of a sentence, or of a longer word, is not the reply's.
+        val written =
+            listOf(
+                "It came out in 2010 [MB1]. The marker NO_EVIDENCE is never written here [MB1].",
+                "It came out in 2010 [MB1]. NO_EVIDENCE_X",
+                "It came out in 2010 [MB1]. XNO_EVIDENCE",
+            )
+        for (reply in written) {
+            assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel = false), reply)
+        }
+    }
+
+    @Test
     fun `a streaming reply may be NO_EVIDENCE while it is a start of the marker or the marker as the check reads it`() {
         val empty = EvidenceSet.of(emptyList(), JvmHasher)
         val held =

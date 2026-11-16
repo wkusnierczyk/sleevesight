@@ -227,7 +227,9 @@ internal class TrackRun(
                 // The authors Home's Composer row names (#1142), for the note on nothing beyond Home.
                 val split = state.value.artistSplit()
                 val authors = split?.authors.orEmpty()
-                InsightWriter(parts, time, input, evidence, guard, this@TrackRun, state.value.roles, authors)
+                val roles = state.value.roles
+                val composed = state.value.composed()
+                InsightWriter(parts, time, input, evidence, guard, this@TrackRun, roles, authors, composed)
                     .write(control)
             }
             return state.value

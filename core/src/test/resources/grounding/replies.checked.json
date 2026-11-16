@@ -669,21 +669,8 @@
  },
  {
   "name": "no evidence later in the text",
-  "none": false,
-  "paragraphs": [
-   [
-    {
-     "s": "There is nothing here.",
-     "cites": [],
-     "status": "uncited"
-    },
-    {
-     "s": "NO_EVIDENCE",
-     "cites": [],
-     "status": "uncited"
-    }
-   ]
-  ]
+  "none": true,
+  "paragraphs": []
  },
  {
   "name": "lowercase no evidence",

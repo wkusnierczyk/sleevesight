@@ -10,6 +10,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.InsightPrompt
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.testTimeSource
@@ -56,8 +57,10 @@ class PipelineNothingBeyondTest {
             val provider = FakeProvider { FakeProvider.done("Gordon Lightfoot wrote it [MB2].") }
             val cache = MemoryCache()
             val written = assertIs<InsightState.Written>(pipeline(HEADER, provider, cache).run(sundown, true).insight)
-            // No new suppression: the call is made as before.
+            // No new suppression: the call is made as before, the thin case told in the user message.
             assertEquals(1, provider.requests.size)
+            val prompt = provider.requests.single().prompt
+            assertTrue(prompt.endsWith("</evidence>\n\n" + InsightPrompt.NOTHING_BEYOND), prompt)
             assertTrue(written.nothingBeyondHome)
             assertFalse(written.cached)
             // The card served again, with no call, says it again.
@@ -75,6 +78,7 @@ class PipelineNothingBeyondTest {
                 val run = pipeline(HEADER + beyond, provider, MemoryCache()).run(sundown, write = true)
                 assertFalse(assertIs<InsightState.Written>(run.insight).nothingBeyondHome, beyond.text)
                 assertEquals(1, provider.requests.size)
+                assertFalse(InsightPrompt.NOTHING_BEYOND in provider.requests.single().prompt, beyond.text)
             }
         }
 

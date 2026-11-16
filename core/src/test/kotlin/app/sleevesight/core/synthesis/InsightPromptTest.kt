@@ -334,12 +334,8 @@ class InsightPromptTest {
             // Retelling what the screen shows only as a last resort (#1142, version 13).
             assertEquals(InsightPrompt.NOTHING_TO_TELL_RULE, contract.last())
             assertTrue("reply with exactly: ${GroundingCheck.NO_EVIDENCE}." in contract.last(), contract.last())
-            assertTrue("A credit or a date is enough for a sentence" in contract.last(), contract.last())
-            assertTrue(
-                "retell the facts shown elsewhere in the app only when the evidence holds nothing else at all" in
-                    contract.last(),
-                contract.last(),
-            )
+            // No exception to it (#1142): the model argued with "only when the evidence holds nothing else".
+            assertTrue(contract.last().endsWith("A credit or a date is enough for a sentence."), contract.last())
             // A web page's reading is the page's, its facts stated plainly, ids only in citations (#767).
             assertTrue(InsightPrompt.WEB_FACT_RULE in contract, "the rule on a web page's facts")
             val webFact = InsightPrompt.WEB_FACT_RULE
@@ -371,24 +367,50 @@ class InsightPromptTest {
             role,
         )
         assertFalse("The screen" in role, role)
-        assertTrue("Tell the story beyond them, such as" in role, role)
+        assertTrue("Prefer the story beyond them, such as" in role, role)
+        // The thin case as a preference, worded once, never a fact the model may not use (#1142).
+        assertTrue(
+            "When the evidence offers nothing beyond them, one or two sentences from those facts are right." in role,
+            role,
+        )
         val beyond = listOf("produced", "played on it", "wrote it if not the performer", "a release before this album")
         for (kind in beyond) assertTrue(kind in role, kind)
         // Scoped, as "an earlier release" drew false claims of one.
         assertTrue("a release before this album when the evidence names one" in role, role)
         assertTrue("what the sources say of the song, the artist, the album or its genres" in role, role)
         // Version 9 kept the release out of the opening; version 10 put it after the story; version 13
-        // leaves the album and its date to the screen unless there is nothing else.
+        // asks for a story, what to prefer said once, in the role.
         assertFalse("never open with when or where it was released" in role)
-        assertFalse("put it after the story" in InsightPrompt.BUILT_IN_STYLE)
-        assertTrue("tell a story" in InsightPrompt.BUILT_IN_STYLE)
-        assertTrue(
-            "Leave out the album, its release date and a credit naming only the performer unless there is " +
-                "nothing else to tell." in InsightPrompt.BUILT_IN_STYLE,
+        assertEquals(
+            "- Write 2 to 4 sentences that tell a story, each fact once, not a list of facts.\n" +
+                "- Plain conversational English. No hype, no praise words.",
+            InsightPrompt.BUILT_IN_STYLE,
         )
-        for (part in listOf(InsightPrompt.ROLE, InsightPrompt.BUILT_IN_STYLE, InsightPrompt.NOTHING_TO_TELL_RULE)) {
+        val parts = listOf(InsightPrompt.ROLE, InsightPrompt.BUILT_IN_STYLE, InsightPrompt.NOTHING_TO_TELL_RULE)
+        for (part in parts) {
             assertFalse("the screen" in part.substringAfter("now-playing screen."), part)
+            // No rule with an exception, nor a line asking the model to say there is nothing more.
+            for (exception in listOf("unless", "only when", "Leave out", "nothing more")) {
+                assertFalse(exception in part, "$exception: $part")
+            }
         }
+    }
+
+    @Test
+    fun `evidence of only facts Home shows is told in the user message, after the evidence (#1142)`() {
+        val nowPlaying = FixtureEvidence.nowPlaying(1)
+        val normalized = normalizer.normalize(nowPlaying)
+        val evidence = FixtureEvidence.of(1)
+        val plain = InsightPrompt.user(nowPlaying, normalized, evidence)
+        assertFalse(InsightPrompt.NOTHING_BEYOND in plain)
+        assertEquals(
+            plain + "\n\n" + InsightPrompt.NOTHING_BEYOND,
+            InsightPrompt.user(nowPlaying, normalized, evidence, nothingBeyond = true),
+        )
+        assertEquals(
+            "The evidence holds only facts shown elsewhere in the app; write one or two sentences from them.",
+            InsightPrompt.NOTHING_BEYOND,
+        )
     }
 
     private companion object {

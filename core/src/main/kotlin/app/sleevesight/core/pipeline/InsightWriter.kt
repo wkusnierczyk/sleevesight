@@ -8,6 +8,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.ArtistRoles
+import app.sleevesight.core.sources.ComposedDate
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
@@ -58,6 +59,8 @@ internal class InsightWriter(
     private val roles: ArtistRoles,
     // The authors the Composer row names on Home (`ArtistSplit.authors`, #1142), none without that row.
     authors: List<String> = emptyList(),
+    // When the music was composed, as *Dates* has it (#1142), null for none.
+    composed: ComposedDate? = null,
 ) {
     private val settings = input.settings
     private val nowPlaying = input.nowPlaying
@@ -70,7 +73,7 @@ internal class InsightWriter(
 
     // Whether the evidence holds nothing beyond what Home shows (#1142): decided before the call, from
     // the whole evidence, the card's key's, so a card served again says it as the one written did.
-    private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track, authors)
+    private val nothingBeyondHome = HomeShown.nothingBeyond(evidence, nowPlaying, track, authors, composed)
 
     // The rules, sent as the system prompt; the track and its evidence are each call's user message (#767).
     // Its dates in the form the parts give as each call is made (#957), not when the run began: a tap may
@@ -258,7 +261,8 @@ internal class InsightWriter(
         val given = if (whole) evidence else PromptEvidence.of(evidence, nowPlaying.album, facts, parts.hasher, once)
         val sent = Prompted(evidence, given)
         val effort = settings.effort(ai.provider.id)
-        val prompt = InsightPrompt.user(nowPlaying, track, sent.evidence, roles)
+        // With the evidence holding only facts Home shows, the user message says so (#1142).
+        val prompt = InsightPrompt.user(nowPlaying, track, sent.evidence, roles, nothingBeyond = nothingBeyondHome)
         val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort, system = system)
         val text = StringBuilder()
         var frozen = false

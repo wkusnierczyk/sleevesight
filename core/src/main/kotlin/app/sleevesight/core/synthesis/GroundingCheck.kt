@@ -386,10 +386,20 @@ object GroundingCheck {
     }
 
     // The simulator's `/^NO_EVIDENCE\b/`: the marker, then the end or a character that is not a
-    // JavaScript word character.
+    // JavaScript word character. Or, since #1142, the marker after prose: on a line of its own, or
+    // ending the reply as a word of its own, with a full stop at most (a reply of version 13's draft:
+    // "…so I have no story to add. NO_EVIDENCE"). Read as `NO_EVIDENCE` whole, never the prose kept:
+    // what comes before the marker is the model reasoning about its evidence, uncited, not an insight.
     private fun isNoEvidence(text: String): Boolean =
-        text.startsWith(NO_EVIDENCE) &&
-            (text.length == NO_EVIDENCE.length || text[NO_EVIDENCE.length] !in WORD_CHARS)
+        (
+            text.startsWith(NO_EVIDENCE) &&
+                (text.length == NO_EVIDENCE.length || text[NO_EVIDENCE.length] !in WORD_CHARS)
+        ) ||
+            MARKER_AFTER_PROSE.containsMatchIn(text)
+
+    // The marker on a line of its own, or ending the text as a word of its own; a full stop after it at most.
+    private val MARKER_AFTER_PROSE =
+        Regex("(?:^|\\n)[ \\t]*$NO_EVIDENCE\\.?[ \\t]*(?:\\n|$)|[\\s.!?]$NO_EVIDENCE\\.?$")
 
     // JavaScript's `\w`, ASCII letters, digits and the underscore.
     private val WORD_CHARS: Set<Char> = (('a'..'z') + ('A'..'Z') + ('0'..'9') + '_').toSet()

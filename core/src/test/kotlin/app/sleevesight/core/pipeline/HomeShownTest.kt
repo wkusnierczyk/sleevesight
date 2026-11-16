@@ -11,6 +11,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.resolution.MusicBrainzEvidence
 import app.sleevesight.core.sources.ArtistRoles
+import app.sleevesight.core.sources.ComposedDate
 import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.FirstRelease
@@ -40,12 +41,14 @@ class HomeShownTest {
         lines: List<EvidenceDraft>,
         nowPlaying: NowPlaying = playing,
         authors: List<String> = emptyList(),
+        composed: ComposedDate? = null,
     ): Boolean =
         HomeShown.nothingBeyond(
             EvidenceSet.of(playerLines(nowPlaying, AT) + lines, JvmHasher),
             nowPlaying,
             Normalizer(JvmAccentFolder).normalize(nowPlaying),
             authors,
+            composed,
         )
 
     // MusicBrainz's lines for the track, as its templates write them.
@@ -196,6 +199,28 @@ class HomeShownTest {
     }
 
     @Test
+    fun `Wikidata's date is shown when Dates says it as the music's composition, by its year`() {
+        // A 1980 recording of a work composed in 1788: *Dates* says "The music was composed in 1788."
+        val recording = musicBrainz(release = FirstRelease("1980-05-01", "Gorgeous George", "rg", "r", "Album"))
+        val created = draft(SourceId.WIKIDATA, Scope.SONG, "“The Campaign for Real Rock” was created in 1788.")
+        val k545 = ComposedDate("1788", "1788", SourceId.MUSICBRAINZ, "https://musicbrainz.org/work/w")
+        assertTrue(nothingBeyond(recording + created, composed = k545))
+        assertFalse(nothingBeyond(recording + created), "no composition date shown")
+        // Over several years, its first and last, as *Dates* says them; a day it does not say adds something.
+        val turandot = ComposedDate("1921", "1924", SourceId.MUSICBRAINZ, "https://musicbrainz.org/work/t")
+        val years = listOf("in 1921" to true, "in 1924" to true, "in 1922" to false, "on 5 May 1921" to false)
+        for ((date, shown) in years) {
+            val line = draft(SourceId.WIKIDATA, Scope.SONG, "“The Campaign for Real Rock” was created $date.")
+            assertEquals(shown, nothingBeyond(recording + line, composed = turandot), date)
+        }
+        // *Dates* says no composition in or after the earliest release year, nor beside no release.
+        val same = ComposedDate("1980", "1980", SourceId.MUSICBRAINZ, "https://musicbrainz.org/work/s")
+        val in1980 = draft(SourceId.WIKIDATA, Scope.SONG, "“The Campaign for Real Rock” was created in 1980.")
+        assertTrue(nothingBeyond(recording + in1980, composed = same), "the release's own year")
+        assertFalse(nothingBeyond(listOf(created), composed = k545), "no release date shown")
+    }
+
+    @Test
     fun `MusicBrainz's line on the album is read whatever its type, the secondary types first`() {
         for (type in listOf("an album", "a live album", "a compilation album", "a mixtape/street album", "an EP")) {
             val text = "“Gorgeous George” is $type by $EDWYN, first released in July 1994."
@@ -243,6 +268,21 @@ class HomeShownTest {
         assertFalse(HomeShown.namesOnly("Edwyn Collins Jr.", artists))
         assertFalse(HomeShown.namesOnly("Edwyn Collins, Paul Kimble and Roddy Frame", artists))
         assertFalse(HomeShown.namesOnly("Edwyn", artists))
+        // A name ending in a full stop, first or last in the list (#1142).
+        val blues = listOf("gary clark jr", "eric clapton")
+        assertTrue(HomeShown.namesOnly("Gary Clark Jr. and Eric Clapton", blues))
+        assertTrue(HomeShown.namesOnly("Eric Clapton and Gary Clark Jr.", blues))
+        assertTrue(HomeShown.namesOnly("Eric Clapton, Gary Clark Jr. and Eric Clapton", blues))
+        assertFalse(HomeShown.namesOnly("Gary Clark Jr. and Doyle Bramhall II", blues))
+    }
+
+    @Test
+    fun `a credit naming an artist whose name ends in a full stop is shown, in either order`() {
+        val duet = playing.copy(artists = "Gary Clark Jr., Eric Clapton")
+        for (writers in listOf(listOf("Gary Clark Jr.", "Eric Clapton"), listOf("Eric Clapton", "Gary Clark Jr."))) {
+            val lines = musicBrainz(writers.map { credit(CreditRole.WRITER, it) })
+            assertTrue(nothingBeyond(lines, duet), writers.toString())
+        }
     }
 
     @Test
