@@ -23,7 +23,7 @@ import app.sleevesight.core.pipeline.TrackState
  * The footer under [item]'s written insight [state], as the key insight's, top to bottom: the history
  * line ([itemHistory], #911), the grounding note, which citations it translated from the track's
  * language ([TranslatedLine], #902; each by [label], the id its chip shows), that the reply stopped
- * early, *Report a problem*;
+ * early, *Report the insight*;
  * then, while the model is found unavailable (#540), that it is, last, just above the Write it leaves
  * disabled; and *Rewrite insight* beside another model's insight ([ItemShown.Shown.rewriteWith]).
  */

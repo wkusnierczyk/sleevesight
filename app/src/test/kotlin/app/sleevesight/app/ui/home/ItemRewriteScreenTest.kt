@@ -160,7 +160,7 @@ class ItemRewriteScreenTest {
         }
 
     @Test
-    fun theHistoryLineComesBeforeTheGroundingNoteAndReportAProblem() =
+    fun theHistoryLineComesBeforeTheGroundingNoteAndReportTheInsight() =
         show(earlierShown()) {
             val history = compose.onNodeWithText("$written $offer").performScrollTo()
             val report = compose.onNodeWithTag(REPORT_TAG)

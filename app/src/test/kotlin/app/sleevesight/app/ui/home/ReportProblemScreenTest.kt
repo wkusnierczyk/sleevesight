@@ -56,7 +56,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** *Report a problem* on the insight card (#390): offered on a written insight, shown, and handed over. */
+/** *Report the insight* on the insight card (#390): offered on a written insight, shown, and handed over. */
 @RunWith(RobolectricTestRunner::class)
 class ReportProblemScreenTest {
     @get:Rule
@@ -138,7 +138,7 @@ class ReportProblemScreenTest {
     private fun openReport() = compose.onNodeWithTag(REPORT_TAG).performScrollTo().performClick()
 
     @Test
-    fun aWrittenInsightOffersReportAProblemNamedForTheInsight() =
+    fun aWrittenInsightOffersReportTheInsight() =
         show(state(PipelineView(track(insight = written(reply)), aiReady = true))) {
             compose
                 .onNodeWithTag(REPORT_TAG)

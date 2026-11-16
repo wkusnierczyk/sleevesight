@@ -105,7 +105,7 @@ private fun reasonLabel(reason: ReportReason): Int =
 private const val NOTE_LIMIT = 2000
 
 /**
- * *Report a problem*: a small text action, which a screen reader names with the insight it is for,
+ * *Report the insight*: a small text action, which a screen reader names with the insight it is for,
  * in the theme's error colour (#671). Its label starts where the lines above it start: the button
  * is moved back by its own start padding, which stays round the label as part of its target.
  * [modifier] goes on the button: a focus handoff's target (#1121).
@@ -131,7 +131,7 @@ internal fun ReportAction(
     }
 }
 
-/** The test tag of *Report a problem*. */
+/** The test tag of *Report the insight*. */
 const val REPORT_TAG: String = "report"
 
 /** The test tag of the report's note. */
