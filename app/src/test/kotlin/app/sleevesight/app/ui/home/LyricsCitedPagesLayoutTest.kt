@@ -2,15 +2,19 @@ package app.sleevesight.app.ui.home
 
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.SemanticsActions
@@ -29,6 +33,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
@@ -52,8 +57,9 @@ import org.robolectric.annotation.GraphicsMode
  * column as wide as the widest, the links left-aligned in theirs; on a link that wraps, the id and
  * the mark of a page that opens outside the app on its first line, not in its middle. At the usual
  * font size and at twice it, in a column narrow enough for the long site to wrap. Native graphics,
- * for the texts' real widths. The rows close together, each link still answering a tap across 48
- * dp; the sites in *Sources*' small type and the ids as the text's chips (#1344).
+ * for the texts' real widths. The rows close together, a touch going to the nearer link, and above
+ * the first and below the last as far as a 48 dp target reaches; the sites in *Sources*' small type
+ * and the ids as the text's chips (#1344). Right to left as well, mirrored.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -89,6 +95,7 @@ class LyricsCitedPagesLayoutTest {
     // for the others to take one line, at the font size the test has.
     private fun show(
         width: Dp? = null,
+        rtl: Boolean = false,
         check: () -> Unit,
     ) {
         val reply = "It is about good times. [S5] [S7] [S2] It is a song for the road. [S10]"
@@ -103,8 +110,18 @@ class LyricsCitedPagesLayoutTest {
                     SleevesightTheme(darkTheme = false) {
                         chipFill = MaterialTheme.colorScheme.secondaryContainer
                         small = MaterialTheme.typography.labelSmall
-                        CompositionLocalProvider(LocalUriHandler provides browser) {
-                            Surface { Column(Modifier.width(column)) { AiExplanation(answer) } }
+                        val direction = if (rtl) LayoutDirection.Rtl else LocalLayoutDirection.current
+                        CompositionLocalProvider(
+                            LocalUriHandler provides browser,
+                            LocalLayoutDirection provides direction,
+                        ) {
+                            // The whole screen, as the panel has room under its last link; the
+                            // explanation [column] wide at its start.
+                            Surface(Modifier.fillMaxSize()) {
+                                Column(Modifier.wrapContentSize(Alignment.TopStart).width(column)) {
+                                    AiExplanation(answer)
+                                }
+                            }
                         }
                     }
                 }
@@ -166,8 +183,8 @@ class LyricsCitedPagesLayoutTest {
             assertEquals(gap, left - right, tolerance)
         }
 
-    private fun numberAndMarkOnAWrappingLinksFirstLine() =
-        show {
+    private fun numberAndMarkOnAWrappingLinksFirstLine(rtl: Boolean = false) =
+        show(rtl = rtl) {
             val long = pages.last()
             val link = link(long)
             assertTrue("${siteOf(long.url)} wraps", link.layout.lineCount > 1)
@@ -179,11 +196,31 @@ class LyricsCitedPagesLayoutTest {
             assertEquals(link(short).baseline(0), id(short).baseline(0), tolerance)
             assertEquals(link(short).middle(0), mark(short).center.y, tolerance)
             // The mark right after the first line's text, the row's 4 dp on: past a wrapping site's
-            // first line, not the link's full width, and past a short one, not its touch target.
+            // first line, not the link's full width, and past a short one, not its touch target;
+            // right to left, before it on the left.
             val space = compose.density.run { 4.dp.toPx() }
             for (page in listOf(long, short, pages[2])) {
-                val after = link(page).right(0) + space
-                assertEquals("${page.id}'s mark after its text", after, mark(page).left, tolerance)
+                if (rtl) {
+                    val before = link(page).left(0) - space
+                    assertEquals("${page.id}'s mark before its text", before, mark(page).right, tolerance)
+                } else {
+                    val after = link(page).right(0) + space
+                    assertEquals("${page.id}'s mark after its text", after, mark(page).left, tolerance)
+                }
+            }
+            if (rtl) {
+                // The sites' first lines end at their column's start, 8 dp from where the ids'
+                // column ends, as left to right.
+                val idsEnd = pages.minOf { id(it).left(0) }
+                val gap = compose.density.run { 8.dp.toPx() }
+                for (page in pages) {
+                    assertEquals(
+                        "${page.id}'s site at the column's start",
+                        idsEnd - gap,
+                        link(page).right(0),
+                        tolerance,
+                    )
+                }
             }
         }
 
@@ -235,9 +272,10 @@ class LyricsCitedPagesLayoutTest {
         compose.waitForIdle()
     }
 
-    // In a phone's full width, where the two sites take a line each at either font size.
-    private fun rowsCloseAndEachLinkAnswersAcrossATouchTarget() =
-        show(width = 411.dp) {
+    // In a phone's full width, where the two sites take a line each at either font size. A touch
+    // only: Compose widens tap targets for a finger, not for a stylus or a mouse.
+    private fun rowsCloseAndATouchGoesToTheNearerLink(rtl: Boolean = false) =
+        show(width = 411.dp, rtl = rtl) {
             val target = compose.density.run { 48.dp.toPx() }
             val (upper, lower) = pages[1] to pages[2]
             // The blank between the two sites' lines is the rows' gap, not a touch target's room
@@ -245,31 +283,39 @@ class LyricsCitedPagesLayoutTest {
             val blank =
                 link(lower).let { it.origin.y + it.layout.getLineTop(0) } -
                     link(upper).let { it.origin.y + it.layout.getLineBottom(it.layout.lineCount - 1) }
-            assertTrue("$blank px between the rows", blank < compose.density.run { 16.dp.toPx() })
+            assertEquals("the blank between the rows", compose.density.run { CITED_ROW_GAP.toPx() }, blank, tolerance)
             val above = linkBounds(upper)
             val below = linkBounds(lower)
             assertTrue(above.height < target && below.height < target)
-            // Outside a link's bounds, but within the 48 dp Compose widens it to, and nearer it than
-            // the next link: a tap opens it.
-            val x = above.left + 4f
+            // In the gap, outside both links' bounds but nearer one: a tap opens that one.
             val step = compose.density.run { 2.dp.toPx() }
-            tap(Offset(x, above.bottom + step))
+            tap(Offset(above.center.x, above.bottom + step))
             assertEquals(listOf(upper.url), opened)
-            tap(Offset(x, below.top - step))
+            tap(Offset(below.center.x, below.top - step))
             assertEquals(listOf(lower.url), opened)
-            // Above the first link, where only the note "Pages cited" is: still the first link's.
+            // Above the first link, where only the note "Pages cited" is, and below the last, where
+            // nothing is: as far as a 48 dp target reaches, still theirs.
             val first = linkBounds(pages.first())
-            val reach = (target - first.height) / 2
-            tap(Offset(x, first.top - reach + step))
+            tap(Offset(first.center.x, first.top - (target - first.height) / 2 + step))
             assertEquals(listOf(pages.first().url), opened)
+            val last = linkBounds(pages.last())
+            // At twice the font size the long site wraps to a link taller than a target, which
+            // Compose does not widen: there, nothing to check below it.
+            if (last.height < target - 2 * step) {
+                tap(Offset(last.center.x, last.bottom + (target - last.height) / 2 - step))
+                assertEquals(listOf(pages.last().url), opened)
+            }
         }
 
     @Test
-    fun theRowsSitCloseAndEachLinkStillAnswersATapAcrossATouchTarget() = rowsCloseAndEachLinkAnswersAcrossATouchTarget()
+    fun theRowsSitCloseAndATouchGoesToTheNearerLink() = rowsCloseAndATouchGoesToTheNearerLink()
 
     @Test
     @Config(fontScale = 2f)
-    fun atTwiceTheFontSizeTheRowsSitCloseAndEachLinkStillAnswersATap() = rowsCloseAndEachLinkAnswersAcrossATouchTarget()
+    fun atTwiceTheFontSizeTheRowsSitCloseAndATouchGoesToTheNearerLink() = rowsCloseAndATouchGoesToTheNearerLink()
+
+    @Test
+    fun rightToLeftTheRowsSitCloseAndATouchGoesToTheNearerLink() = rowsCloseAndATouchGoesToTheNearerLink(rtl = true)
 
     @Test
     fun theSitesAreInSourcesSmallTypeAndTheIdsAreTheTextsChips() =
@@ -298,4 +344,13 @@ class LyricsCitedPagesLayoutTest {
     @Test
     @Config(fontScale = 2f)
     fun atTwiceTheFontSizeTheNumberAndTheMarkSitOnAWrappingLinksFirstLine() = numberAndMarkOnAWrappingLinksFirstLine()
+
+    @Test
+    fun rightToLeftTheNumberAndTheMarkSitOnAWrappingLinksFirstLineTheMarkBeforeItsText() =
+        numberAndMarkOnAWrappingLinksFirstLine(rtl = true)
+
+    @Test
+    @Config(fontScale = 2f)
+    fun rightToLeftAtTwiceTheFontSizeTheNumberAndTheMarkSitOnAWrappingLinksFirstLine() =
+        numberAndMarkOnAWrappingLinksFirstLine(rtl = true)
 }

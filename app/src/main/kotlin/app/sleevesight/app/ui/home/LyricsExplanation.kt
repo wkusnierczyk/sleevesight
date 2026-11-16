@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -210,26 +212,33 @@ private fun citedColumns(
     }
 }
 
-// A page the explanation cites: its id, as the text's chip of it ([CitedColumns.idChip], in [chip]), then its site
-// ([siteOf]: its host, as *Sources* names a page, #1040; not the title the page gives itself), as a
-// link with the mark of a page that opens outside the app; both in the small type *Sources* sets a
-// page's site in (#1344). Two columns (#1287): the ids right-aligned in theirs, as wide as the widest
-// of [columns], the links left-aligned in theirs, a site breaking only after a dot; the id and the
-// mark on the link's first line, by its baseline, the mark right after that line's text, when the
-// link wraps.
+// A page the explanation cites: its id, as the text's chip of it ([CitedColumns.idChip], in [chip]),
+// then its site ([siteOf]: its host, as *Sources* names a page, #1040; not the title the page gives
+// itself), as a link with the mark of a page that opens outside the app; both in the small type
+// *Sources* sets a page's site in (#1344). Two columns (#1287): the ids aligned to their column's
+// end, as wide as the widest of [columns], the links to their column's start (its left, or its right
+// in a right-to-left layout), a site breaking only after a dot; the id and the mark on the link's
+// first line, by its baseline, the mark right after that line's text, when the link wraps.
 //
-// A row is as high as its text, not the 48 dp of a touch target, so the rows sit close (#1344); a
-// link still answers a tap across 48 dp: Compose widens a smaller tap target into the room around
-// it, and where two links' widened targets overlap, a tap goes to the nearer link.
+// A row is as high as its text, not the 48 dp of a touch target, so the rows sit close (#1344). A
+// touch goes to the nearer link: its own row and half the gap on either side. Compose widens a tap
+// target smaller than 48 dp into the room around it, and splits the room two widened targets share
+// at its middle; so only above the first row and below the last does a link's reach come to 48 dp.
+// A stylus or a mouse, which Compose does not widen for, hits the link's text itself.
 @Composable
 private fun CitedPageLink(
     page: CitedPage,
     columns: CitedColumns,
     chip: SpanStyle,
 ) {
-    // How far the link's first line ends before the link does (a site that wraps, or one narrower
-    // than the link's touch target), for the mark to follow the text; read when placing it.
+    // How far the link's first line ends before the link does, at its end side (a site that wraps,
+    // or one narrower than the link's least width), for the mark to follow the text; read when
+    // placing it.
     var short by remember { mutableIntStateOf(0) }
+    // A site's name takes its own text's direction (mostly left to right), which would set it at
+    // the left in a right-to-left layout; it is set at its column's start, by the layout's direction.
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val site = MaterialTheme.typography.labelSmall.copy(textAlign = if (rtl) TextAlign.Right else TextAlign.Left)
     Row(
         modifier = Modifier.testTag(lyricsCitedPageTag(page.id)),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -247,21 +256,25 @@ private fun CitedPageLink(
                     .width(columns.idWidth)
                     .testTag(lyricsCitedPageIdTag(page.id)),
         )
-        // No least size laid out: the link is as high as its text, its touch target widened by
-        // Compose instead.
+        // No least size laid out: the link is as high as its text, its tap target widened by Compose
+        // instead.
         CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
             LinkLabel(
                 TextPart.Link(siteOf(page.url), page.url),
                 onClickLabel = stringResource(R.string.link_open),
-                style = MaterialTheme.typography.labelSmall,
+                style = site,
                 // At least the touch target's width, so a short site ("x.com") is as wide a target
-                // laid out as Compose widens it to, and starts at the column's left edge.
+                // laid out as Compose widens it to, and starts at the column's start.
                 modifier = Modifier.alignByBaseline().weight(1f, fill = false).widthIn(min = LINK_MIN_WIDTH),
                 breakAfterDots = true,
-                onTextLayout = { short = (it.size.width - it.getLineRight(0).roundToInt()).coerceAtLeast(0) },
+                onTextLayout = {
+                    val room = if (rtl) it.getLineLeft(0) else it.size.width - it.getLineRight(0)
+                    short = room.roundToInt().coerceAtLeast(0)
+                },
             )
         }
-        // A box a line of the link high, its baseline where the link's first line has its own.
+        // A box a line of the link high, its baseline where the link's first line has its own; moved
+        // back by [short] toward the start (`offset` mirrors right to left).
         Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -304,8 +317,8 @@ fun lyricsCitedPageMarkTag(id: String): String = "${lyricsCitedPageTag(id)}:mark
 // The minimum touch target's width, which a link takes itself (#1287).
 private val LINK_MIN_WIDTH = 48.dp
 
-// The space between two cited pages' rows (#1344).
-private val CITED_ROW_GAP = 8.dp
+/** The space between two cited pages' rows (#1344). */
+internal val CITED_ROW_GAP = 8.dp
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
 
