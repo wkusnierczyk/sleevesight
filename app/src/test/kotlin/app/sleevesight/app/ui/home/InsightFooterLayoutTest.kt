@@ -48,7 +48,7 @@ import kotlin.math.abs
  * The footer under a written insight (#671, which replaced #606's row): each part on its own line,
  * at the start, top to bottom: *As written previously.* with what follows from it, the grounding
  * line (the note on the dimmed sentences, or in developer mode the counts), then *Report
- * a problem*, its label where the lines start, in the theme's error colour, light and dark. At twice
+ * the insight*, its label where the lines start, in the theme's error colour, light and dark. At twice
  * the font size each line wraps on its own, on the whole row. A screen reader reads them in that
  * order. Text measured as on a phone.
  */
@@ -121,12 +121,12 @@ class InsightFooterLayoutTest {
                 val action = report
                 val where = "$grounding at $scale"
                 assertTrue("$where: the grounding line under line 1", second.top >= first.bottom - 1f)
-                assertTrue("$where: Report a problem under the grounding line", action.top >= second.bottom - 1f)
+                assertTrue("$where: Report the insight under the grounding line", action.top >= second.bottom - 1f)
                 assertEquals("$where: line 1 at the start", card.left, first.left, 1f)
                 // In developer mode its mark's outline sits round it, in the same column.
                 assertEquals("$where: the grounding line at the start", card.left, second.left, density * 2)
                 // The action's label, inside the button, where the lines start.
-                assertEquals("$where: Report a problem's label at the start", card.left, bounds(REPORT).left, 1f)
+                assertEquals("$where: Report the insight's label at the start", card.left, bounds(REPORT).left, 1f)
                 // Its 48 dp target, which its semantic bounds (the button drawn) leave out, reserved
                 // under the line above, to the card's end, where the action is last.
                 assertTrue("$where: a 48 dp target", (card.bottom - second.bottom) / density >= 48f - 0.5f)
@@ -154,7 +154,7 @@ class InsightFooterLayoutTest {
         }
 
     @Test
-    fun reportAProblemIsInTheThemesErrorColourLightAndDark() {
+    fun reportTheInsightIsInTheThemesErrorColourLightAndDark() {
         for (dark in listOf(false, true)) {
             show(details = false, dark = dark) { _ ->
                 val pixels = compose.onNodeWithTag(REPORT_TAG).captureToImage().toPixelMap()
@@ -171,7 +171,7 @@ class InsightFooterLayoutTest {
     ): Boolean = listOf(a.red - b.red, a.green - b.green, a.blue - b.blue).all { abs(it) < TOLERANCE }
 
     @Test
-    fun aScreenReaderReadsEveryLineThenReportAProblem() {
+    fun aScreenReaderReadsEveryLineThenReportTheInsight() {
         val accessibility =
             ApplicationProvider.getApplicationContext<Context>().getSystemService(AccessibilityManager::class.java)
         shadowOf(accessibility).setEnabled(true)
@@ -203,7 +203,7 @@ class InsightFooterLayoutTest {
         const val BEFORE = "As written previously. Rewriting stopped. Tap Rewrite insight"
         const val NOTE = "Dimmed text is not backed by the sources."
         const val COUNTS = "1 of 2 sentences grounded · 1 uncited"
-        const val REPORT = "Report a problem"
+        const val REPORT = "Report the insight"
         const val TOLERANCE = 0.02f
 
         // A rewrite with another model and source settings, as the offer names them (#854).

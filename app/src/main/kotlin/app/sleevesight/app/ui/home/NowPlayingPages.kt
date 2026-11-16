@@ -150,7 +150,7 @@ private fun itemOf(page: HomePage.Item): InsightItem = InsightItem.of(page.item)
 
 /**
  * The song's, the artist's or the album's page (#522): its name, then its insight, for the track
- * playing; a citation opens *Sources*' page at its line; *Report a problem* opens its report here;
+ * playing; a citation opens *Sources*' page at its line; *Report the insight* opens its report here;
  * [afterRetry] hands the focus to the back arrow (#1163). Nothing until the settings are read.
  */
 @Suppress("LongParameterList") // The page, what it shows, and where the focus goes after *Retry*.

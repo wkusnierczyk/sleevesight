@@ -150,7 +150,7 @@ class ItemRowsScreenTest {
         }
 
     @Test
-    fun aWrittenItemShowsItsModelReadAloudItsInsightAndReportAProblem() {
+    fun aWrittenItemShowsItsModelReadAloudItsInsightAndReportTheInsight() {
         val artist = written("Gordon Lightfoot was a Canadian singer [W1].")
         notes.shown.value =
             mapOf(
