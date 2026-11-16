@@ -17,6 +17,7 @@ class GuideLayoutTest {
         mapOf(
             GuidePart.SETTINGS to Rect(130f, 5f, 140f, 15f),
             GuidePart.PLAYER to Rect(6f, 25f, 60f, 33f),
+            GuidePart.COVER to Rect(6f, 45f, 144f, 183f),
             GuidePart.GENRES to Rect(6f, 230f, 70f, 245f),
             GuidePart.INSIGHT to Rect(6f, 265f, 144f, 290f),
             GuidePart.CITE to Rect(50f, 282f, 60f, 290f),

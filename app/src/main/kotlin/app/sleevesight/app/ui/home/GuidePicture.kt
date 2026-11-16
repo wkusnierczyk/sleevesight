@@ -133,7 +133,6 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
                     .clearAndSetSemantics {}
                     .pointerInput(Unit) { detectTapGestures { magnified = true } },
                 picture::report,
-                picture::reportCover,
             )
             for (part in GuidePart.entries) GuideNoteText(part, hand, Modifier.layoutId(GuideNoteSlot(part)))
             for (part in GuidePart.entries) {
@@ -230,8 +229,9 @@ private fun MeasureScope.measureGuide(
     val height = max(shown.height, panel?.let { (it, top) -> (top + it.height).toFloat() } ?: 0f).roundToInt()
     val marks = slot(GuideSlot.MARKS)!!.measure(Constraints.fixed(width, height))
     val inset = (metrics.unit * MAGNIFIER_INSET).roundToInt()
-    // At the cover's bottom right corner, clear of the arrows, which cross the picture's own corners.
-    val corner = picture.cover.value ?: Rect(0f, 0f, pictureWidth.toFloat(), mini.height.toFloat())
+    // At the cover's bottom right corner, clear of the arrows, which cross the picture's own corners
+    // and point at the cover's middle.
+    val corner = parts[GuidePart.COVER] ?: Rect(0f, 0f, pictureWidth.toFloat(), mini.height.toFloat())
     return layout(width, height) {
         mini.place(0, 0)
         shown.notes.forEachIndexed { i, at -> notes[i].place(at.x.roundToInt(), at.y.roundToInt()) }
@@ -250,14 +250,13 @@ private fun MeasureScope.measureGuide(
 
 /**
  * The picture's own box, as last placed, which the parts' bounds are measured in; where each part is
- * in it, as last laid out ([parts]), and where the drawn cover is ([cover]), which the magnifier sits
- * on; and the [arrows], as the last layout placed the notes, read only where they are drawn.
+ * in it, as last laid out ([parts]), the cover among them, which the magnifier sits on; and the
+ * [arrows], as the last layout placed the notes, read only where they are drawn.
  */
 private class PictureBox {
     var coordinates: LayoutCoordinates? = null
     val parts = mutableStateMapOf<GuidePart, Rect>()
     val arrows = mutableStateOf<List<GuideArrow>>(emptyList())
-    val cover = mutableStateOf<Rect?>(null)
 
     /** Where [part] is, from its [coordinates], in the picture's box. */
     fun report(
@@ -265,11 +264,6 @@ private class PictureBox {
         coordinates: LayoutCoordinates,
     ) {
         bounds(coordinates)?.let { if (parts[part] != it) parts[part] = it }
-    }
-
-    /** Where the cover is, from its [coordinates], in the picture's box. */
-    fun reportCover(coordinates: LayoutCoordinates) {
-        bounds(coordinates)?.let { if (cover.value != it) cover.value = it }
     }
 
     private fun bounds(of: LayoutCoordinates): Rect? {
@@ -286,14 +280,13 @@ private class PictureBox {
  * semantics: the player row, a fixed cover (beige, with no blue, so the pen's arrows stand out), the
  * position, *Key insights* with its citation and the Write button; the *Dates* and *Genres* buttons
  * (#724, #772) and *Sources*' chip are Home's own [ChipFrame], without a click. Each part the notes
- * name tells [report] where it is, and the cover tells [cover].
+ * name tells [report] where it is, the cover among them (#994).
  * Left to right whatever the phone's language: a picture of Home as the notes, on its right, name it.
  */
 @Composable
 internal fun MiniHome(
     modifier: Modifier,
     report: (GuidePart, LayoutCoordinates) -> Unit,
-    cover: (LayoutCoordinates) -> Unit = {},
 ) {
     val density = LocalDensity.current
     val at = { part: GuidePart -> Modifier.onGloballyPositioned { report(part, it) } }
@@ -328,7 +321,7 @@ internal fun MiniHome(
             ) {
                 MiniHeader(at(GuidePart.SETTINGS))
                 MiniPlayer(at(GuidePart.PLAYER))
-                MiniCover(Modifier.onGloballyPositioned(cover))
+                MiniCover(at(GuidePart.COVER))
                 KeyData(EXAMPLE_NORMALIZED, EXAMPLE_TRACK, HeaderYears(album = EXAMPLE_YEAR))
                 MiniLine(at(GuidePart.GENRES))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -32,6 +32,7 @@ internal enum class GuidePart(
 ) {
     SETTINGS(R.string.home_guide_note_settings, R.string.home_guide_part_settings, R.string.home_guide_about_settings),
     PLAYER(R.string.home_guide_note_player, R.string.home_guide_part_player, R.string.home_guide_about_player),
+    COVER(R.string.home_guide_note_cover, R.string.home_guide_part_cover, R.string.home_guide_about_cover),
     GENRES(R.string.home_guide_note_genres, R.string.home_guide_part_genres, R.string.home_guide_about_genres),
     INSIGHT(R.string.home_guide_note_insight, R.string.home_guide_part_insight, R.string.home_guide_about_insight),
     CITE(R.string.home_guide_note_cite, R.string.home_guide_part_cite, R.string.home_guide_about_cite),
