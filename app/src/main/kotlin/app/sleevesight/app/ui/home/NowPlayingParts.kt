@@ -42,6 +42,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -56,6 +63,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.session.PlaybackInfo
@@ -76,6 +84,7 @@ internal fun PlayerRow(
     player: String,
     playback: PlaybackInfo,
     actions: NowPlayingActions,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val name = remember(player) { actions.playerLabel(player) }
@@ -87,7 +96,7 @@ internal fun PlayerRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier =
-            Modifier
+            modifier
                 .testTag(PLAYER_TAG)
                 .minimumInteractiveComponentSize()
                 .clip(RoundedCornerShape(8.dp))
@@ -165,7 +174,9 @@ internal fun openPlayerScreen(
 /**
  * The art, square, or a placeholder; under it the playback position, when the player gives the length.
  * With [turn], a tap turns the art over to show the album's tracklist on its back ([FlippingCover],
- * #984); without (an ad's), it is the art alone.
+ * #984); without (an ad's), it is the art alone. With [fitHeight] (Home split in two, #1097), the art
+ * is as large as the space it is given lets it be, the position under it included, rather than at
+ * most [ART_WIDTH] wide.
  */
 @Composable
 internal fun ArtAndProgress(
@@ -173,27 +184,39 @@ internal fun ArtAndProgress(
     playback: PlaybackInfo,
     duration: Duration?,
     turn: CoverTurn? = null,
+    fitHeight: Boolean = false,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val shape = RoundedCornerShape(16.dp)
-        val square =
-            Modifier
-                .widthIn(max = ART_WIDTH)
-                .fillMaxWidth()
-                .aspectRatio(1f)
+    val shape = RoundedCornerShape(16.dp)
+    val cover: @Composable (Modifier) -> Unit = { square ->
         if (turn == null) {
             Art(art, square.clip(shape), stringResource(R.string.home_art))
         } else {
             // The cover that turns names itself, as the art or as the tracklist.
             FlippingCover(square, shape, turn) { Art(art, Modifier.fillMaxSize(), description = null) }
         }
+    }
+    val progress: (@Composable (Modifier) -> Unit)? =
         if (duration != null && duration.isPositive()) {
-            Progress(playback, duration, Modifier.widthIn(max = ART_WIDTH).fillMaxWidth())
+            { modifier -> Progress(playback, duration, modifier) }
+        } else {
+            null
         }
+    if (fitHeight) {
+        FittedArt(cover, progress, ART_GAP)
+        return
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(ART_GAP),
+    ) {
+        cover(
+            Modifier
+                .widthIn(max = ART_WIDTH)
+                .fillMaxWidth()
+                .aspectRatio(1f),
+        )
+        progress?.invoke(Modifier.widthIn(max = ART_WIDTH).fillMaxWidth())
     }
 }
 
@@ -240,10 +263,16 @@ private fun Progress(
             progress = { (position / duration).toFloat() },
             modifier = Modifier.fillMaxWidth(),
         )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Small(clock(position))
-            Small(clock(duration))
-        }
+        // The position at the start and the length at the end, on one line, or the length under the
+        // position when they do not fit beside each other (a large font, a narrow cover, #1097).
+        Layout(
+            content = {
+                Small(clock(position), tabular = true)
+                Small(clock(duration), tabular = true)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            measurePolicy = TimesPolicy,
+        )
     }
 }
 
@@ -346,9 +375,19 @@ internal fun withAlbum(
     }
 }
 
+// With [tabular], digits of one width: for the times under the art, so the position takes no more room
+// than the length as it plays (#1097).
 @Composable
-private fun Small(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Small(
+    text: String,
+    tabular: Boolean = false,
+) {
+    val small = MaterialTheme.typography.bodySmall
+    Text(
+        text,
+        style = if (tabular) small.copy(fontFeatureSettings = TABULAR) else small,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 /** The test tag of the line under the title while its artists are held back (#1355). */
@@ -358,7 +397,64 @@ const val ARTISTS_HELD_TAG: String = "artists-held"
 const val PLAYER_TAG: String = "player"
 
 private val ART_WIDTH = 360.dp
+
+/** The space between the art and the playback position under it. */
+private val ART_GAP = 8.dp
 private val TICK = 1.seconds
+
+/** Digits of one width (OpenType `tnum`), for times that change as they play. */
+private const val TABULAR = "tnum"
+
+/**
+ * The playback position's two times, the position at the start and the length at the end: on one
+ * line when two lengths would fit beside each other, else the length on a line under the position.
+ * Decided by the length, not the position, so it holds for the whole track: in digits of one width
+ * ([TABULAR]), the position is never wider than the length, and a line is not taken or given back as
+ * it plays (9:59 to 10:00). Its intrinsic height says which, for the width asked, so the cover's side
+ * can size the cover to what is left.
+ */
+private object TimesPolicy : MeasurePolicy {
+    override fun MeasureScope.measure(
+        measurables: List<Measurable>,
+        constraints: Constraints,
+    ): MeasureResult {
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val (start, end) = measurables.map { it.measure(loose) }
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else 2 * end.width
+        val beside = 2 * end.width <= width
+        val height = if (beside) maxOf(start.height, end.height) else start.height + end.height
+        return layout(width, height) {
+            start.placeRelative(0, 0)
+            end.placeRelative(width - end.width, if (beside) 0 else start.height)
+        }
+    }
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int,
+    ): Int {
+        val (start, end) = measurables
+        val beside = 2 * end.maxIntrinsicWidth(Constraints.Infinity) <= width
+        val (a, b) = start.maxIntrinsicHeight(width) to end.maxIntrinsicHeight(width)
+        return if (beside) maxOf(a, b) else a + b
+    }
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int,
+    ): Int = maxIntrinsicHeight(measurables, width)
+
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(
+        measurables: List<IntrinsicMeasurable>,
+        height: Int,
+    ): Int = 2 * measurables.last().maxIntrinsicWidth(height)
+
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(
+        measurables: List<IntrinsicMeasurable>,
+        height: Int,
+    ): Int = measurables.maxOf { it.minIntrinsicWidth(height) }
+}
+
 private const val TAG = "Sleevesight"
 
 /** What a format is given in the album's place, for [withAlbum] to set the album there in italics. */
