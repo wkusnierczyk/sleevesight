@@ -30,16 +30,22 @@ object ComposerPrefix {
         title: String,
         artists: List<String>,
         fold: (String) -> String,
+    ): TitleComposer? = leadNaming(title, artists.takeIf { it.distinct().size > 1 }.orEmpty(), fold)
+
+    /**
+     * The one of [composers] that [title]'s lead names, as [find] reads a lead, with the lead; null for
+     * none. For a composer the player does not credit, whom MusicBrainz names for the work (#1376:
+     * "Barber: Adagio for Strings" with only the orchestra credited), so Home's Music row drops the lead
+     * as it does for a credited composer's; [find]'s guard on a lone credited artist is its own.
+     */
+    fun leadNaming(
+        title: String,
+        composers: List<String>,
+        fold: (String) -> String,
     ): TitleComposer? {
         val lead = LEAD.find(title)?.takeIf { it.value.length < title.length }
         val words = lead?.let { words(fold(it.groupValues[1])) }.orEmpty()
-        val artist =
-            artists.takeIf { words.isNotEmpty() && it.distinct().size > 1 }?.firstOrNull {
-                names(
-                    words,
-                    words(fold(it)),
-                )
-            }
+        val artist = composers.takeIf { words.isNotEmpty() }?.firstOrNull { names(words, words(fold(it))) }
         return if (lead == null || artist == null) null else TitleComposer(artist, lead.value)
     }
 

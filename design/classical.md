@@ -358,8 +358,23 @@ tap opens *Sources* at it, whenever it names anyone the player does not credit
 lyricists MusicBrainz names that no credited artist, nor a member of a joint credit, is by name (also
 on Spotify's *Nessun doma - Turandot*, which credits Puccini; not when the player credits "Giuseppe
 Adami & Renato Simoni"). By name alone there, since a result kept from an earlier play holds no ids.
-The rows carry no mark. The key insight's prompt and the searches that mean the credited
-composers still read the credited ones alone (`ArtistRoles.composers`). A web line's artist for the genres a description names
+The rows carry no mark. The key insight's prompt names them too (#1376): its `<track>` block reads
+`Composer: Giacomo Puccini` and `Performers: Luciano Pavarotti` where it read `Primary artist:
+Luciano Pavarotti` (`ArtistRoles.named`), as the item insights name them through `ArtistSplit`; its
+card is keyed by its own prompt version (`InsightPrompt.UNCREDITED_VERSION`, 15; 16 for a
+composer-led title naming one too), so a card kept from before is written again once. Wikipedia looks
+up the uncredited composer's article as a credited artist's (#1376), by the MusicBrainz id of the
+work's `composer` relationship naming them (`Resolution.credits`), never by name; its lines are about
+that composer, so the composer's insight is written from them, and the lone credited performer's
+insight leaves them out (`ItemInsights.artistLines`); a genre their article or item states goes to the
+composer's own row, as for a credited composer (`GenreDescribed`). Wikipedia awaits MusicBrainz's
+resolution already, and the key insight is written once every source has landed, so neither waits
+for MusicBrainz any longer than before; when MusicBrainz does not answer on a play, the prompt and
+the lookups read the player's credits alone, as before, and the next play that has the answer asks
+again (a different prompt version, and Wikipedia's results kept under the earlier extraction
+version, 10, looked up again under 11). The searches that run without waiting for MusicBrainz still
+read the player's credits alone: the web search for the track (Exa), sent at once, and Last.fm's
+artists, whose answers and tags feed the genre and similar-artist rows by credited artist. A web line's artist for the genres a description names
 (`DescribedGenres`) is the Artist panel's subject, the lead performer, whose web search found it;
 the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about
 that artist, so a genre their page names goes to that artist's described row.
@@ -378,8 +393,10 @@ track*).
 Beside a *Composer* or *Authors* row, the song's row names the title without its composer lead
 (#1356, the mock-up's pick, 2026-11-17): Spotify's *Barber: Adagio for Strings* is **Music**
 *Adagio for Strings*, the row beside it naming Barber. The lead is the one the normalizer finds
-(`NormalizedTrack.composer`) and leaves out of the searches (`searchTitle`), and it goes only when
-the row beside names that composer: a lead naming a performer (*Gould: Interview*, with Bach the
+(`NormalizedTrack.composer`) and leaves out of the searches (`searchTitle`), or, when it finds none, a
+lead naming a composer MusicBrainz names whom the player does not credit (#1376,
+`ComposerPrefix.leadNaming`: *Barber: Adagio for Strings* with only the orchestra credited), and it
+goes only when the row beside names that composer: a lead naming a performer (*Gould: Interview*, with Bach the
 composer) stays, and with no split the title is as under the cover. The row, its panel's heading, its
 page's title and what a screen reader reads ("Music, Adagio for Strings, uses AI…") all follow it;
 the title under the cover keeps the player's title, and the version line (*Version: 2019 Remaster*)
