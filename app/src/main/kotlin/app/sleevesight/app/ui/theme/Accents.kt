@@ -92,11 +92,8 @@ internal fun LinkedText(
  * [link] as a text of its own, all of it the link, marked as [LinkedText]'s are: one link
  * annotation over the whole text, so a screen reader finds it among the links and keyboard focus
  * stops on it once, and a tap anywhere in its touch target, at least the minimum (48 dp), follows
- * it. A screen reader names what a tap does with [onClickLabel]. With [breakAfterDots] (a site's
- * name, #1287) a line may break after each of its dots, as shown only: a screen reader gets the
- * text as it is. [onTextLayout] gets the text's layout.
+ * it. A screen reader names what a tap does with [onClickLabel].
  */
-@Suppress("LongParameterList") // The link, its look, and the two a site's name needs (#1287).
 @Composable
 internal fun LinkLabel(
     link: TextPart.Linked,
@@ -104,36 +101,24 @@ internal fun LinkLabel(
     style: TextStyle,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
-    breakAfterDots: Boolean = false,
-    onTextLayout: (TextLayoutResult) -> Unit = {},
 ) {
     val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
     val follow by rememberUpdatedState(rememberFollow(link))
-    val linked = { shown: String ->
-        buildAnnotatedString { withLink(annotation(link, linkStyles(ink)) { follow() }) { append(shown) } }
-    }
-    val shown = if (breakAfterDots) link.text.replace(".", ".$ZERO_WIDTH_SPACE") else link.text
-    val text = linked(shown)
-    // What a screen reader gets: the text without the breaks, still the link.
-    val spoken = if (breakAfterDots) linked(link.text) else null
+    val text = buildAnnotatedString { withLink(annotation(link, linkStyles(ink)) { follow() }) { append(link.text) } }
     // The text's node says what a tap does, and with the touch target around the text, outside
     // it, takes taps; it takes no focus, so the link stays the one stop. A tap on the text itself
     // is the link's.
     val target =
         modifier
             .semantics {
-                if (spoken != null) this.text = spoken
                 onClick(label = onClickLabel) {
                     follow()
                     true
                 }
             }.pointerInput(Unit) { detectTapGestures { follow() } }
             .minimumInteractiveComponentSize()
-    MarkedText(text, listOf(shown.indices), style, ink, color, target, onTextLayout)
+    MarkedText(text, listOf(link.text.indices), style, ink, color, target)
 }
-
-// Where a line may break and nothing shows (a site's name after its dots, [LinkLabel]).
-private const val ZERO_WIDTH_SPACE = "\u200B"
 
 /**
  * [text] drawn as a link is, inside a control that is itself what a tap and a screen reader act on

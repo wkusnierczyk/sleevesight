@@ -297,9 +297,9 @@
     <string name="home_lyrics_explaining">Reading about the song…</string>
     <!-- In the answer's place, under the rule, no page saying what the song is about; %1$s is the model. -->
     <string name="home_lyrics_explain_none">%1$s found nothing to explain the song.</string>
-    <!-- Under the explanation, in the quiet note style, over the pages its sentences cite, each a link
-         after its id ("S1"), opening in the browser; then "by {model}" (home_ai_by). -->
-    <string name="home_lyrics_pages_cited">Pages cited</string>
+    <!-- Last under the explanation (#1067), after its credit and when it was written, in Sources' small
+         muted type; %1$s: the site of each page its sentences cite, each a link, " · " between. -->
+    <string name="home_lyrics_read_more">Read more: %1$s</string>
     <!-- Said by a screen reader for a citation in the explanation naming no page it was given; %1$s: the id. -->
     <string name="home_lyrics_cite_unknown">%1$s: no such page</string>
     <!-- Search Genius when there is no link is off: this line, then home_lyrics_search_off_see on its own line. -->
@@ -804,6 +804,9 @@
     <!-- A web line in Sources named by what it was read for (#1053): the page the check of the
          track's vocals cites, "vocals check · bandcamp.com". -->
     <string name="home_line_purpose_vocals_check">vocals check</string>
+    <!-- A web line in Sources named by what it was read for (#1067): a page the song's explanation
+         (Explain the song) cites, "explanation · genius.com". -->
+    <string name="home_line_purpose_explanation">explanation</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <!-- The From line under when the music was composed, when the infobox of the work's Wikipedia
          article dates it (#1273): "From Wikipedia", "Wikipedia" linking the article. -->

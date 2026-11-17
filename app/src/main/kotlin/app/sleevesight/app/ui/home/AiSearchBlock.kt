@@ -75,7 +75,8 @@ import app.sleevesight.core.synthesis.SearchKind
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
  *   with its page, [FromSite]), then "by {model}" on a line of its own, in italics, however it was
  *   asked, then from the model's knowledge "From the AI model's own knowledge, not verified", and,
- *   kept from before, when it was written ([KeptLine], #851);
+ *   kept from before, when it was written ([KeptLine], #851); last, what the answer puts after
+ *   these notes ([last], the explanation's *Read more*, #1067);
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
  *   its own knowledge." in the answer's place, after "Asked automatically: " for one asked by itself;
  * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the
@@ -94,12 +95,14 @@ import app.sleevesight.core.synthesis.SearchKind
  * centred in the room left of it. A marked button is always given [width] (only the *Lyrics* panel's
  * are marked); without it, the mark would follow the label ([AiLabel]), a fallback.
  */
+@Suppress("LongParameterList") // The search, where it shows, and what its answer draws.
 @Composable
 internal fun AiSearchBlock(
     search: PanelSearch,
     kind: SearchKind,
     genre: GenreLabel? = null,
     width: Dp = Dp.Unspecified,
+    last: @Composable (SearchAnswer) -> Unit = {},
     answer: @Composable (SearchAnswer, String) -> Unit,
 ) {
     val texts = SearchTexts.of(kind)
@@ -135,7 +138,7 @@ internal fun AiSearchBlock(
                 feed.stop(track, kind, about)
                 handoff.moveTo(button)
             }
-        is AiSearch.Answered -> Answered(texts, shown, answer)
+        is AiSearch.Answered -> Answered(texts, shown, last, answer)
         is AiSearch.NothingFound -> NothingFound(texts, shown)
         is AiSearch.Failed ->
             RetryLine(
@@ -152,11 +155,13 @@ internal fun AiSearchBlock(
 
 // What [shown] found, under a rule, as the panel shows it ([answer]); then its credit, asked by a tap
 // or automatically (#801's revised pick); from the model's knowledge marked so, as an insight's claim
-// from it is (#801); and, kept from before, when it was written (#851).
+// from it is (#801); kept from before, when it was written (#851); and, last, what the answer puts
+// after its notes ([last]: the explanation's *Read more*, #1067).
 @Composable
 private fun Answered(
     texts: SearchTexts,
     shown: AiSearch.Answered,
+    last: @Composable (SearchAnswer) -> Unit,
     answer: @Composable (SearchAnswer, String) -> Unit,
 ) {
     PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
@@ -166,6 +171,7 @@ private fun Answered(
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(texts.tag(AI_SEARCH_KNOWLEDGE_TAG)))
     }
     shown.keptAt?.let { KeptLine(it) }
+    last(shown.answer)
 }
 
 // Nothing found, under a rule: on the web or from the model's knowledge, after "Asked
