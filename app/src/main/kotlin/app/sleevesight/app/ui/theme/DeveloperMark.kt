@@ -61,9 +61,12 @@ private class TagLayout(
 )
 
 @Composable
-private fun rememberTagLayout(ink: Color): TagLayout {
+private fun rememberTagLayout(
+    ink: Color,
+    word: String? = null,
+): TagLayout {
     val measurer = rememberTextMeasurer()
-    val tag = stringResource(R.string.developer_mark_tag)
+    val tag = word ?: stringResource(R.string.developer_mark_tag)
     val density = LocalDensity.current
     val style = MaterialTheme.typography.labelSmall.copy(color = ink, fontSize = TAG_TEXT)
     return remember(tag, style, density) {
@@ -104,31 +107,33 @@ internal fun developerMarkInset(): Dp = if (LocalDeveloperMark.current) PADDING_
  * [developerMarkColor], with a little room inside, and across its top edge near the end a small
  * *Developer* tag, in the mark's colour on the surface's, with a thin border of the mark's colour.
  * The content starts below the tag; the outline is at least as wide as the tag, with the content
- * centred in it when narrower (the report button). The tag is drawn, not composed: a screen reader
- * reads the content as it would unmarked. Off, the column alone, with no room kept for the mark.
- * Marked or not, it is the same column, only its modifier changing, so turning the mark on or off
- * keeps the content's state and focus.
+ * centred in it when narrower (the report button). The tag reads [tag] where given: *Debug build*
+ * for what only the debug build has (the prompt lab, #1003), in the same mark. The tag is drawn,
+ * not composed: a screen reader reads the content as it would unmarked. Off, the column alone, with
+ * no room kept for the mark. Marked or not, it is the same column, only its modifier changing, so
+ * turning the mark on or off keeps the content's state and focus.
  */
 @Composable
 internal fun DeveloperMark(
     modifier: Modifier = Modifier,
     spacing: Dp = 0.dp,
+    tag: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val marked = LocalDeveloperMark.current
     val ink = developerMarkColor()
     val paper = MaterialTheme.colorScheme.surface
-    val tag = rememberTagLayout(ink)
+    val layout = rememberTagLayout(ink, tag)
     val mark =
         if (marked) {
             Modifier
                 .testTag(DEVELOPER_MARK_TAG)
-                .padding(top = tag.room)
+                .padding(top = layout.room)
                 .drawWithContent {
                     drawContent()
-                    drawMark(ink, paper, tag)
-                }.centredIn(tag.minWidth)
-                .padding(start = PADDING_H, end = PADDING_H, top = tag.room + TAG_CLEARANCE, bottom = PADDING_V)
+                    drawMark(ink, paper, layout)
+                }.centredIn(layout.minWidth)
+                .padding(start = PADDING_H, end = PADDING_H, top = layout.room + TAG_CLEARANCE, bottom = PADDING_V)
         } else {
             Modifier
         }

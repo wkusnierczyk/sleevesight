@@ -22,6 +22,7 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
+import app.sleevesight.app.lab.PromptLab
 import app.sleevesight.app.pipeline.AlbumTracklistFeed
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
@@ -98,6 +99,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.PromptChoices
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
@@ -119,6 +121,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -127,6 +130,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
@@ -307,6 +311,14 @@ class AppGraph internal constructor(
     private val artistResults = StoreArtistResults({ caches }, Dispatchers.IO, artistKeeping, clearEpoch)
 
     /**
+     * The prompt lab (#1003), in the debug build only: null in any other, where nothing of it exists
+     * on screen and no request or card passes through it. Its settings and log are kept in the app's
+     * files, apart from the settings and the history; it varies nothing while developer mode is off.
+     */
+    val promptLab: PromptLab? =
+        if (BuildConfig.DEBUG) PromptLab(File(appContext.filesDir, PROMPT_LAB_DIR), mainScope, Dispatchers.IO) else null
+
+    /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
@@ -383,6 +395,15 @@ class AppGraph internal constructor(
      */
     val latestSettings: StateFlow<Settings?> =
         settings.settings.afterAcknowledged(firstRun.state).stateIn(mainScope, SharingStarted.Eagerly, null)
+
+    init {
+        // The prompt lab varies nothing outside developer mode (#1003).
+        if (BuildConfig.DEBUG) {
+            promptLab?.let { lab ->
+                mainScope.launch { latestSettings.collect { lab.developerMode(it?.developerMode == true) } }
+            }
+        }
+    }
 
     /**
      * The switched-on service and its selected model, while that model is found unavailable
@@ -538,7 +559,14 @@ class AppGraph internal constructor(
             settings = latestSettings.filterNotNull(),
             // A rebuild too when the switched-on service's model is found unavailable, or no longer
             // is (#540): the parts then leave out, or bring back, the AI access.
-            keyChanges = merge(secrets.changes, modelCheck.rebuilds(latestSettings)),
+            // And when the prompt lab's choices change (#1003), in the debug build only: they are taken
+            // at each build.
+            keyChanges =
+                merge(
+                    secrets.changes,
+                    modelCheck.rebuilds(latestSettings),
+                    if (BuildConfig.DEBUG) promptLab?.rebuilds ?: emptyFlow() else emptyFlow(),
+                ),
             readKeys = secrets::pipelineKeys,
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.
@@ -552,6 +580,13 @@ class AppGraph internal constructor(
                     aiRetry = { latestSettings.value?.aiRetry ?: Settings.DEFAULT_AI_RETRY },
                     // Each try that failed, in the diagnostics' events (#1164).
                     aiTried = { diagnostics.log.record(it) },
+                    // The prompt lab's choices (#1003), taken at each build, in the debug build only.
+                    choices = {
+                        if (BuildConfig.DEBUG) promptLab?.choices() ?: PromptChoices.NONE else PromptChoices.NONE
+                    },
+                    labThrough = { provider, chosen ->
+                        if (BuildConfig.DEBUG) promptLab?.through(provider, chosen) ?: provider else provider
+                    },
                 ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
@@ -1015,6 +1050,9 @@ class AppGraph internal constructor(
         const val SECRETS_FILE = "secrets"
         const val SKIP_DETECTION_FILE = "skip_detection"
         const val HISTORY_DATABASE = "history.db"
+
+        /** The prompt lab's folder in the app's files (#1003), in the debug build only. */
+        const val PROMPT_LAB_DIR = "prompt-lab"
         const val CACHE_DATABASE = "cache.db"
 
         val KNOWN_PLAYERS = mapOf(Settings.SPOTIFY to "Spotify")
