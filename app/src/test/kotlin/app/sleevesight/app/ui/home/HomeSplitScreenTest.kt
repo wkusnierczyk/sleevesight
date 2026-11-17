@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -37,6 +38,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.AdPlaying
 import app.sleevesight.app.session.PlaybackInfo
@@ -292,11 +294,8 @@ class HomeSplitScreenTest {
     @Test
     fun turningThePhoneKeepsTheOpenPanelTheTurnedCoverAndTheScroll() =
         show {
-            compose.onNodeWithTag(DATES_CHIP_TAG).performScrollTo().performClick()
-            compose.onNodeWithTag(COVER_TAG).performClick()
-            compose.waitForIdle()
-            compose.onNodeWithContentDescription(text(R.string.home_tracklist)).assertExists()
-            assertEquals(1, count(DATES_PANEL_TAG))
+            tapUntil(DATES_CHIP_TAG) { count(DATES_PANEL_TAG) == 1 }
+            tapUntil(COVER_TAG) { turned() }
             compose.onNodeWithTag(SOURCES_LINE_TAG).performScrollTo()
             val header = compose.onNodeWithTag(HOME_HEADER_TAG)
             // Upright: the same panel open, the tracklist on the cover's back, Home scrolled.
@@ -314,6 +313,24 @@ class HomeSplitScreenTest {
             assertEquals(1, count(DATES_PANEL_TAG))
             compose.onNodeWithContentDescription(text(R.string.home_tracklist)).assertExists()
         }
+
+    // Taps [tag] until [done]: the art's colours arrive off the main thread, at no set time, and what
+    // they recreate (all under them) loses a tap made meanwhile.
+    private fun tapUntil(
+        tag: String,
+        done: () -> Boolean,
+    ) {
+        repeat(TAPS) {
+            if (done()) return
+            compose.onNodeWithTag(tag).performClick()
+            compose.waitForIdle()
+            runCatching { compose.waitUntil(WAIT_MS) { done() } }
+        }
+        assertTrue("$tag tapped", done())
+    }
+
+    private fun turned() =
+        compose.onAllNodesWithContentDescription(text(R.string.home_tracklist)).fetchSemanticsNodes().isNotEmpty()
 
     // Whether the player row has scrolled up under [header], as it has only on a Home scrolled.
     private fun playerOutOfView(header: Rect): Boolean = laidOut(PLAYER_TAG).bottom <= header.bottom
@@ -353,5 +370,7 @@ class HomeSplitScreenTest {
         const val MAX_NODES = 200
 
         const val ART_PX = 8
+
+        const val TAPS = 3
     }
 }
