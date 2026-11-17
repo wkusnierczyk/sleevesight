@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,7 +81,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * ([openSources]), and the app's own [colors], since the back takes nothing from the art. For a
  * track *Clear history* holds under *On request* (#1112), [lookUp] asks for it to be looked up again,
  * as *Look up again* does: a turn of the cover over asks, and the back fills once the sources answer;
- * null otherwise.
+ * null otherwise. [backOf], the album whose back shows ([rememberCoverBack]), when it is kept above
+ * the cover; null for the cover's own.
  */
 @Suppress("LongParameterList") // What the back shows, what it asks, and where its buttons go.
 internal class CoverTurn(
@@ -92,6 +94,7 @@ internal class CoverTurn(
     val openSources: () -> Unit,
     val colors: ColorScheme,
     val lookUp: (() -> Unit)? = null,
+    val backOf: MutableState<String?>? = null,
 )
 
 /**
@@ -107,6 +110,7 @@ internal fun coverTurn(
     header: NowPlaying,
     settings: Settings?,
     actions: NowPlayingActions,
+    backOf: MutableState<String?>? = null,
 ): CoverTurn {
     val colors = LocalAppColors.current ?: MaterialTheme.colorScheme
     val states by actions.tracklists.states.collectAsState()
@@ -131,6 +135,7 @@ internal fun coverTurn(
         openSources = { actions.openSettingsAt(SettingsTarget.sources) },
         colors = colors,
         lookUp = { actions.lookUpAgain(shown.playing) }.takeIf { shown.cleared },
+        backOf = backOf,
     )
 }
 
@@ -157,9 +162,10 @@ internal fun FlippingCover(
     front: @Composable () -> Unit,
 ) {
     // The album whose back shows, saved with it, so a back restored after another album has come
-    // (the process gone meanwhile) is not shown on it; null for the cover.
+    // (the process gone meanwhile) is not shown on it; null for the cover. Home's own, when it gives
+    // one ([CoverTurn.backOf]), else this cover's ([coverBackOf]).
     val album = turn.album.orEmpty()
-    var backOf by rememberSaveable { mutableStateOf<String?>(null) }
+    var backOf by coverBackOf(turn)
     LaunchedEffect(album) { if (backOf != album) backOf = null }
     val lookUp = lookUpOnTurn(album, turn.lookUp)
     // A back left turned over when a clear's hold comes, which asked nothing (#1148): the cover turns

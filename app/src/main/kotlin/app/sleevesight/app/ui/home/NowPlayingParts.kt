@@ -76,6 +76,7 @@ internal fun PlayerRow(
     player: String,
     playback: PlaybackInfo,
     actions: NowPlayingActions,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val name = remember(player) { actions.playerLabel(player) }
@@ -87,7 +88,7 @@ internal fun PlayerRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier =
-            Modifier
+            modifier
                 .testTag(PLAYER_TAG)
                 .minimumInteractiveComponentSize()
                 .clip(RoundedCornerShape(8.dp))
@@ -165,7 +166,9 @@ internal fun openPlayerScreen(
 /**
  * The art, square, or a placeholder; under it the playback position, when the player gives the length.
  * With [turn], a tap turns the art over to show the album's tracklist on its back ([FlippingCover],
- * #984); without (an ad's), it is the art alone.
+ * #984); without (an ad's), it is the art alone. With [fitHeight] (Home split in two, #1097), the art
+ * is as large as the space it is given lets it be, the position under it included, rather than at
+ * most [ART_WIDTH] wide.
  */
 @Composable
 internal fun ArtAndProgress(
@@ -173,27 +176,39 @@ internal fun ArtAndProgress(
     playback: PlaybackInfo,
     duration: Duration?,
     turn: CoverTurn? = null,
+    fitHeight: Boolean = false,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val shape = RoundedCornerShape(16.dp)
-        val square =
-            Modifier
-                .widthIn(max = ART_WIDTH)
-                .fillMaxWidth()
-                .aspectRatio(1f)
+    val shape = RoundedCornerShape(16.dp)
+    val cover: @Composable (Modifier) -> Unit = { square ->
         if (turn == null) {
             Art(art, square.clip(shape), stringResource(R.string.home_art))
         } else {
             // The cover that turns names itself, as the art or as the tracklist.
             FlippingCover(square, shape, turn) { Art(art, Modifier.fillMaxSize(), description = null) }
         }
+    }
+    val progress: (@Composable (Modifier) -> Unit)? =
         if (duration != null && duration.isPositive()) {
-            Progress(playback, duration, Modifier.widthIn(max = ART_WIDTH).fillMaxWidth())
+            { modifier -> Progress(playback, duration, modifier) }
+        } else {
+            null
         }
+    if (fitHeight) {
+        FittedArt(cover, progress, ART_GAP)
+        return
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(ART_GAP),
+    ) {
+        cover(
+            Modifier
+                .widthIn(max = ART_WIDTH)
+                .fillMaxWidth()
+                .aspectRatio(1f),
+        )
+        progress?.invoke(Modifier.widthIn(max = ART_WIDTH).fillMaxWidth())
     }
 }
 
@@ -358,6 +373,9 @@ const val ARTISTS_HELD_TAG: String = "artists-held"
 const val PLAYER_TAG: String = "player"
 
 private val ART_WIDTH = 360.dp
+
+/** The space between the art and the playback position under it. */
+private val ART_GAP = 8.dp
 private val TICK = 1.seconds
 private const val TAG = "Sleevesight"
 
