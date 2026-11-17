@@ -106,10 +106,10 @@
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
     <!-- The key saved, and refused by OpenRouter since (#1157): above the link to the key in Secrets (settings_update_key). -->
     <string name="settings_openrouter_key_refused">OpenRouter no longer accepts this key: it may have been deleted there. Set a new key.</string>
-    <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
-    <string name="settings_set_key">Set your %1$s here.</string>
+    <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets; no full stop (#1401). -->
+    <string name="settings_set_key">Set %1$s</string>
     <!-- The same, once the key is saved (#667). -->
-    <string name="settings_update_key">Update your %1$s here.</string>
+    <string name="settings_update_key">Update %1$s</string>
     <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
     <!-- The same, above the link to the key in Secrets (settings_set_key), which says where it is. -->
     <string name="settings_needs_key_linked">Needs your %1$s key.</string>
@@ -297,11 +297,11 @@
     <string name="key_enable">Enable %1$s</string>
     <string name="key_switch_ai">Switch the AI service to %1$s</string>
     <string name="key_already_enabled">%1$s is already enabled.</string>
-    <!-- The key screens' table of keys (#542): its headers, the service of a Gemini key, and the note
+    <!-- The key screens' table of keys (#542): its headers, the service of a Google key (named as under AI services, #1401), and the note
          under a key that cannot be read. -->
     <string name="key_table_name">API Key</string>
     <string name="key_table_ending">Ending</string>
-    <string name="key_service_google">Google Gemini</string>
+    <string name="key_service_google">Google</string>
     <string name="key_table_unreadable">Can no longer be read</string>
     <!-- What a screen reader says of a row of the table: the service and its last four characters,
          as Anthropic, ending a1B2, which it reads character by character. -->

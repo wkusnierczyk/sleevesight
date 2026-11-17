@@ -66,7 +66,7 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * The links from *AI services* and *Sources* to the keys (#539): under each service that needs a
- * key, "Set your … API key here." ("Update your …" once it is saved, #667), the key's name a link
+ * key, "Set … API key" ("Update …" once it is saved, #667; #1401), the key's name a link
  * that unfolds *Secrets* and lands on the key's row, scrolled into view and focused, with a key
  * saved or not; and *AI services*' fuller
  * text says a service switched off keeps its settings.
@@ -112,7 +112,7 @@ class SettingsKeyLinksTest {
             },
         )
 
-    /** The sentence under a service that needs the key [id]: "Set your …", or "Update your …" once [saved] (#667). */
+    /** The sentence under a service that needs the key [id]: "Set …", or "Update …" once [saved] (#667). */
     private fun sentence(
         id: SecretId,
         saved: Boolean = false,
