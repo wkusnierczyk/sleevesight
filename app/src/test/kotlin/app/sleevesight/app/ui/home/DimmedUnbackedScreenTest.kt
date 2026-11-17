@@ -93,7 +93,9 @@ class DimmedUnbackedScreenTest {
     // A chip's text: its label between thin spaces.
     private fun chip(label: String) = " $label "
 
-    private val mark = chip("?")
+    // The `?` chip, glued to what comes before it (a word joiner and a no-break space), so it never
+    // wraps onto a line alone.
+    private val mark = "\u2060\u00A0" + chip("?")
 
     // The `?` chips' links in [text].
     private fun marks(text: AnnotatedString) =
@@ -123,7 +125,7 @@ class DimmedUnbackedScreenTest {
     fun anUncitedSentenceEndsWithTheMarkBeforeItsStop() =
         show(written("It topped the charts [W1]. It is great.")) {
             val text = textOf("It topped the charts")
-            assertEquals("It topped the charts ${chip("W1")}. It is great $mark.", text.text)
+            assertEquals("It topped the charts ${chip("W1")}. It is great$mark.", text.text)
             assertEquals(1, marks(text).size)
         }
 
@@ -131,7 +133,7 @@ class DimmedUnbackedScreenTest {
     fun aSentenceCitingAMissingLineGetsTheMarkAfterItsChip() =
         show(written("It topped the charts [W1]. It was a hit [MB9].")) {
             val text = textOf("It topped the charts")
-            assertEquals("It topped the charts ${chip("W1")}. It was a hit ${chip("MB9")} $mark.", text.text)
+            assertEquals("It topped the charts ${chip("W1")}. It was a hit ${chip("MB9")}$mark.", text.text)
             assertEquals(
                 "It topped the charts (Source W1). It was a hit (MB9: no such evidence line) ($seeNote).",
                 said("It topped the charts"),
@@ -142,7 +144,7 @@ class DimmedUnbackedScreenTest {
     fun anUnsupportedSentenceGetsTheMarkAfterItsChip() =
         show(written("It topped the charts in 1986 [W1]. Sundown was recorded in 1973 [MB1].", support = true)) {
             val text = textOf("It topped the charts")
-            assertTrue(text.text.startsWith("It topped the charts in 1986 ${chip("W1")} $mark."))
+            assertTrue(text.text.startsWith("It topped the charts in 1986 ${chip("W1")}$mark."))
             assertEquals(1, marks(text).size)
         }
 
@@ -159,7 +161,7 @@ class DimmedUnbackedScreenTest {
     fun twoDimmedSentencesInARowGetOneMarkAfterTheSecond() =
         show(written("It topped the charts [W1]. It is great. It is loved.")) {
             val text = textOf("It topped the charts")
-            assertEquals("It topped the charts ${chip("W1")}. It is great. It is loved $mark.", text.text)
+            assertEquals("It topped the charts ${chip("W1")}. It is great. It is loved$mark.", text.text)
             assertEquals(1, marks(text).size)
             assertEquals(
                 "It topped the charts (Source W1). It is great (not cited). It is loved (not cited) ($seeNote).",
@@ -171,7 +173,7 @@ class DimmedUnbackedScreenTest {
     fun dimmedBackedDimmedGetTwoMarks() =
         show(written("It is great. It topped the charts [W1]. It is loved.")) {
             val text = textOf("It is great")
-            assertEquals("It is great $mark. It topped the charts ${chip("W1")}. It is loved $mark.", text.text)
+            assertEquals("It is great$mark. It topped the charts ${chip("W1")}. It is loved$mark.", text.text)
             assertEquals(2, marks(text).size)
         }
 
@@ -180,7 +182,7 @@ class DimmedUnbackedScreenTest {
         show(written("It is great. It is loved [M]. It is old.", allowModel = true)) {
             val text = textOf("It is great")
             assertEquals(2, marks(text).size)
-            assertTrue(text.text.startsWith("It is great $mark. It is loved "))
+            assertTrue(text.text.startsWith("It is great$mark. It is loved "))
         }
 
     @Test
@@ -188,10 +190,10 @@ class DimmedUnbackedScreenTest {
         show(written("It is great. It is loved.\n\nIt is old.")) {
             // Each paragraph's run ends with its own `?`, at the paragraph's end.
             val first = textOf("It is great")
-            assertEquals("It is great. It is loved $mark.", first.text)
+            assertEquals("It is great. It is loved$mark.", first.text)
             assertEquals(1, marks(first).size)
             val second = textOf("It is old")
-            assertEquals("It is old $mark.", second.text)
+            assertEquals("It is old$mark.", second.text)
             assertEquals(1, marks(second).size)
         }
 

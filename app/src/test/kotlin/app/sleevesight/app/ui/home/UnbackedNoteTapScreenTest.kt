@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -44,10 +45,12 @@ import app.sleevesight.core.synthesis.CitedPage
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.SearchAnswer
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -198,6 +201,51 @@ class UnbackedNoteTapScreenTest {
         }
     }
 
+    @Test
+    fun atTwiceTheFontSizeTheChipStaysOnTheLineOfTheWordBeforeIt() {
+        // Each paragraph one dimmed sentence, its last word ending a little further along the line,
+        // so one of them ends where a plain space would let the chip wrap onto a line alone.
+        RuntimeEnvironment.setFontScale(2f)
+        try {
+            assertChipsStayOnTheirLines()
+        } finally {
+            RuntimeEnvironment.setFontScale(1f)
+        }
+    }
+
+    private fun assertChipsStayOnTheirLines() {
+        val text = (1..PARAGRAPHS).joinToString("\n\n") { "${"a".repeat(it)} so it is great." }
+        val insight = HomeFixtures.written(text)
+        val context =
+            InsightContext(
+                HomeFixtures.track(),
+                aiReady = true,
+                insightsOn = true,
+                modelAllowed = false,
+                offers = InsightOffers(),
+            )
+        val actions = InsightActions({}, {}, {}, onReport = { _, _ -> })
+        show({ InsightCard(insight, context, actions) }) {
+            val paragraphs =
+                compose
+                    .onAllNodes(
+                        hasText("so it is great", substring = true) and
+                            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                    ).fetchSemanticsNodes()
+            assertEquals(PARAGRAPHS, paragraphs.size)
+            val wrapped = mutableListOf<Int>()
+            for (node in paragraphs) {
+                val layouts = mutableListOf<TextLayoutResult>()
+                node.config[SemanticsActions.GetTextLayoutResult].action!!(layouts)
+                val layout = layouts.single()
+                val shown = layout.layoutInput.text.text
+                val word = shown.indexOf("great") + "great".length - 1
+                if (layout.getLineForOffset(shown.indexOf('?')) != layout.getLineForOffset(word)) wrapped += word
+            }
+            assertEquals("the chip on a line apart from \"great\"", emptyList<Int>(), wrapped)
+        }
+    }
+
     // The song's insight, its row opened.
     private fun itemInsight(block: () -> Unit) {
         val track = HomeFixtures.track(sundown, sources = mapOf(SourceId.MUSICBRAINZ to done()))
@@ -268,5 +316,6 @@ class UnbackedNoteTapScreenTest {
         const val BACKED = 24
         const val INTO_VIEW_MILLIS = 600L
         const val FLASH_MILLIS = 2000L
+        const val PARAGRAPHS = 30
     }
 }

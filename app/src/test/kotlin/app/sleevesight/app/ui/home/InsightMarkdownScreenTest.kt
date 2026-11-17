@@ -152,7 +152,7 @@ class InsightMarkdownScreenTest {
             assertEquals("Sundown\nIt topped the charts ${chip("W1")}.", first.text)
             val second = textOf("It was recorded")
             // Its `?` chip (#954) before its stop.
-            assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great ${chip("?")}.", second.text)
+            assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great\u2060\u00A0${chip("?")}.", second.text)
             assertFalse('#' in first.text || '-' in second.text)
             // The second item is a sentence of its own, on its own line, and flagged as uncited (#574),
             // dimmed (#954).
