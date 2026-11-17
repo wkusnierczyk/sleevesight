@@ -137,7 +137,8 @@ internal fun tracklistKey(
  * ([albumPick]). While a new song of the album is still looked up, the album's tracklist last found
  * shows, its mark moved, rather than "Looking" (not for several none picked, which may differ).
  * Of several albums of the name, the one the listener chose, of [choices] (#1080), shows in place of
- * the pick, said to be theirs; the one picked by date is said to be so ([PickedBy]).
+ * the pick, said to be theirs, before the song's own lookup is read: another song of the album that
+ * MusicBrainz does not find still shows it; the one picked by date is said to be so ([PickedBy]).
  */
 internal fun coverBack(
     track: TrackState?,
@@ -146,13 +147,20 @@ internal fun coverBack(
     states: Map<TracklistKey, TracklistState>,
     choices: Map<String, AlbumChoice> = emptyMap(),
 ): CoverBack {
-    if (!musicBrainzOn) return CoverBack.Off
-    return when (NoDates.of(track)) {
-        NoDates.LOOKING -> CoverBack.Looking
-        NoDates.OFF -> CoverBack.Off
-        NoDates.UNREACHABLE -> CoverBack.Unreachable(key = null)
-        NoDates.NOT_FOUND -> CoverBack.NotFound
-        NoDates.NO_DATES -> pickedBack(track, header, states, choices)
+    val none = NoDates.of(track)
+    // The listener's choice for the album and its artist holds whatever this song's own lookup found.
+    val chosen = sameName(track, header, choices)?.takeIf { it.chosen != null }
+    return when {
+        !musicBrainzOn || none == NoDates.OFF -> CoverBack.Off
+        chosen != null -> chosenBack(chosen, states, track, header)
+        else ->
+            when (none) {
+                NoDates.LOOKING -> CoverBack.Looking
+                NoDates.OFF -> CoverBack.Off
+                NoDates.UNREACHABLE -> CoverBack.Unreachable(key = null)
+                NoDates.NOT_FOUND -> CoverBack.NotFound
+                NoDates.NO_DATES -> pickedBack(track, header, states, choices)
+            }
     }
 }
 

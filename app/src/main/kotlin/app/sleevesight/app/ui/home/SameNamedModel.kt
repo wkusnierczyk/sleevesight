@@ -9,7 +9,6 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.MbMedium
-import app.sleevesight.core.resolution.MbReleaseGroup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.ReleaseDate
 
@@ -83,12 +82,47 @@ internal fun sameName(
             .named(album, dates, SAME_NAMES::albumKey)
             .map { it.group }
             .distinct()
-    val name = choiceName(album, track?.normalized?.primary?.ifEmpty { null } ?: header.artists)
+    val name = choiceName(album, artistOf(track, header))
     val choice = choices[name]
     val among = choice?.let { (it.among.ifEmpty { groups } + it.group).distinct() } ?: groups
     return SameName(name, album, among, playingRecording(track), choice?.group)
         .takeIf { choice != null || groups.size > 1 }
 }
+
+/**
+ * The album the listener chose, [same]'s chosen group (#1080): its tracklist as looked up for the
+ * playing recording, said to be theirs.
+ */
+internal fun chosenBack(
+    same: SameName,
+    states: Map<TracklistKey, TracklistState>,
+    track: TrackState?,
+    header: NowPlaying,
+): CoverBack {
+    val chosen = same.chosen ?: return CoverBack.Looking
+    val back = tracklistBack(TracklistKey(chosen, playingRecording(track)), states, track, header, same)
+    return (back as? CoverBack.Found)?.copy(albums = same, pickedBy = PickedBy.LISTENER) ?: back
+}
+
+/**
+ * The album and artist [header] (and [track], once normalized) name, as a choice among albums of one
+ * name is kept by ([choiceName], #1080); null with no album. The albums opened on the back follow it,
+ * so another artist's album of the same name closes them.
+ */
+internal fun albumArtist(
+    track: TrackState?,
+    header: NowPlaying,
+): String? =
+    header.album
+        ?.trim()
+        ?.takeIf(String::isNotEmpty)
+        ?.let { choiceName(it, artistOf(track, header)) }
+
+// The artist a choice is kept by: the track's primary artist, else the player's.
+private fun artistOf(
+    track: TrackState?,
+    header: NowPlaying,
+): String = track?.normalized?.primary?.ifEmpty { null } ?: header.artists
 
 /**
  * The key a choice among albums of one name is kept by (#1080): the [album]'s name and its [artist],
@@ -131,7 +165,13 @@ private fun albumRow(
     return AlbumRow(
         group = album.group,
         date = tracklist.date,
-        type = typeOf(tracklist.group),
+        // The group's types as MusicBrainz writes them together: "Album + Compilation", the primary first.
+        type =
+            tracklist.group
+                ?.let { listOfNotNull(it.primaryType) + it.secondaryTypes }
+                ?.distinct()
+                ?.joinToString(" + ")
+                ?.ifEmpty { null },
         tracks = back.discs.sumOf { it.tracks.size },
         labels = tracklist.labels,
         country = tracklist.country,
@@ -140,14 +180,6 @@ private fun albumRow(
         back = back,
     )
 }
-
-// The group's types as MusicBrainz writes them together: "Album + Compilation", the primary first.
-private fun typeOf(group: MbReleaseGroup?): String? =
-    group
-        ?.let { listOfNotNull(it.primaryType) + it.secondaryTypes }
-        ?.distinct()
-        ?.joinToString(" + ")
-        ?.ifEmpty { null }
 
 // The media's [formats] as one: "CD" for one, "2×CD" for several alike, else each kind once, joined.
 private fun formatOf(formats: List<String>): String? =
@@ -167,8 +199,8 @@ internal fun found(
     return if (discs.isEmpty()) null else CoverBack.Found(discs, playingIn(discs, track, header), media.size)
 }
 
-// The back once the track is found (#1080): the album the listener chose of several of its name, when
-// they chose one; else the one [albumPick] picks, said to be picked by date when it picked one of
+// The back once the track is found, with no choice made (#1080, [coverBack] takes one first): the one
+// [albumPick] picks, said to be picked by date when it picked one of
 // several and that one shows; several not told apart say so.
 internal fun pickedBack(
     track: TrackState?,
@@ -178,11 +210,6 @@ internal fun pickedBack(
 ): CoverBack {
     val same = sameName(track, header, choices)
     val recording = playingRecording(track)
-    val chosen = same?.chosen
-    if (chosen != null) {
-        val back = tracklistBack(TracklistKey(chosen, recording), states, track, header, same)
-        return (back as? CoverBack.Found)?.copy(albums = same, pickedBy = PickedBy.LISTENER) ?: back
-    }
     return when (val pick = albumPick(track, header)) {
         null -> CoverBack.NotFound
         is AlbumPick.Ambiguous ->

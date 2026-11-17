@@ -354,18 +354,21 @@ internal class Browsing(
 )
 
 /**
- * The albums opened on the back of the [album] (#1080), kept with the screen for it ([BrowsedAlbums]),
+ * The albums opened on the back for the album and artist [albumArtist] (#1080, [choiceName]), kept
+ * with the screen for them ([BrowsedAlbums]) and closed on another album or artist,
  * looked up through [choosing] on the tap that opens them; a list restored with the screen, whose
  * albums are no longer kept, asks once.
  */
 @Composable
 internal fun rememberBrowsing(
-    album: String?,
+    albumArtist: String?,
     choosing: AlbumChoosing,
 ): Browsing {
-    var browsing by rememberSaveable(album, stateSaver = BrowsedAlbums) { mutableStateOf<SameName?>(null) }
-    var opened by rememberSaveable(album) { mutableStateOf<String?>(null) }
-    var asked by remember(album) { mutableStateOf(false) }
+    var saved by rememberSaveable(albumArtist, stateSaver = BrowsedAlbums) { mutableStateOf<SameName?>(null) }
+    var opened by rememberSaveable(albumArtist) { mutableStateOf<String?>(null) }
+    var asked by remember(albumArtist) { mutableStateOf(false) }
+    // Only the albums of this album and artist: a state restored for another is not shown.
+    val browsing = saved?.takeIf { it.name == albumArtist }
     LaunchedEffect(browsing?.key) {
         browsing?.key?.takeIf { !asked && it !in choosing.states }?.let(choosing.look)
         asked = true
@@ -374,13 +377,13 @@ internal fun rememberBrowsing(
         albums = browsing,
         opened = opened,
         open = {
-            browsing = it
+            saved = it
             asked = true
             choosing.look(it.key)
         },
         openAlbum = { opened = it },
         close = {
-            browsing = null
+            saved = null
             opened = null
         },
     )

@@ -81,6 +81,7 @@ class SameNamedAlbumsScreenTest {
     private val chosen = mutableListOf<Pair<String, AlbumChoice?>>()
     private var back by mutableStateOf<CoverBack>(CoverBack.Ambiguous(same))
     private var states by mutableStateOf<Map<AlbumsKey, AlbumsState>>(emptyMap())
+    private var albumArtist by mutableStateOf(same.name)
 
     // The rows as Home orders them, the song found on the 2001 album and the undated one by title.
     private fun rows(found: List<NamedAlbum>): List<AlbumRow> {
@@ -117,6 +118,7 @@ class SameNamedAlbumsScreenTest {
                                         rows = ::rows,
                                         song = "Eyes Without a Face",
                                     ),
+                                albumArtist = albumArtist,
                             )
                         ArtAndProgress(null, PlaybackInfo.NONE, null, turn)
                     }
@@ -156,6 +158,14 @@ class SameNamedAlbumsScreenTest {
             compose.waitForIdle()
             assertEquals(listOf(same.key), looked)
             compose.onNodeWithText("3 albums named Greatest Hits").assertExists()
+            // Another artist's album of the same name: the albums close, and come back for no one else.
+            albumArtist = "greatest hits\u001fqueen"
+            back = CoverBack.Ambiguous(same.copy(name = albumArtist))
+            compose.onNodeWithTag(ALBUMS_LIST_TAG).assertDoesNotExist()
+            compose.onNodeWithTag(ALBUMS_SEE_TAG).assertExists()
+            albumArtist = same.name
+            compose.onNodeWithTag(ALBUMS_LIST_TAG).assertDoesNotExist()
+            assertEquals(listOf(same.key), looked)
         }
 
     @Test

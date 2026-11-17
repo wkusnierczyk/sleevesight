@@ -5,9 +5,11 @@ import app.sleevesight.app.pipeline.AlbumsKey
 import app.sleevesight.app.pipeline.NamedAlbum
 import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.pipeline.TracklistState
+import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.resolution.MbMedium
 import app.sleevesight.core.resolution.MbReleaseGroup
@@ -104,6 +106,23 @@ class SameNamedAlbumsModelTest {
                 ),
             ),
         )
+    }
+
+    @Test
+    fun theChoiceHoldsForASongOfTheAlbumMusicBrainzDoesNotFind() {
+        val choices = mapOf(name to AlbumChoice("g-2006", groups))
+        val unresolved = track(idol, sources = mapOf(SourceId.MUSICBRAINZ to done(Outcome.None)))
+        val key = TracklistKey("g-2006", null)
+        assertEquals(key, tracklistKey(unresolved, idol, choices))
+        val states = mapOf(key to TracklistState.Found(tracklist("r-2006", "g-2006", "Eyes Without a Face")))
+        val back = coverBack(unresolved, idol, true, states, choices) as CoverBack.Found
+        assertEquals(PickedBy.LISTENER, back.pickedBy)
+        // The song found by its title on the album chosen.
+        assertEquals(TrackAt(0, 0), back.playing)
+        // MusicBrainz switched off, for the app or the track: nothing.
+        assertEquals(CoverBack.Off, coverBack(unresolved, idol, false, states, choices))
+        val off = track(idol, sources = mapOf(SourceId.MUSICBRAINZ to done(Outcome.SourceOff)))
+        assertEquals(CoverBack.Off, coverBack(off, idol, true, states, choices))
     }
 
     @Test

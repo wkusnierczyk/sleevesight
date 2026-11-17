@@ -80,7 +80,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * ([openSources]), and the app's own [colors], since the back takes nothing from the art. For a
  * track *Clear history* holds under *On request* (#1112), [lookUp] asks for it to be looked up again,
  * as *Look up again* does: a turn of the cover over asks, and the back fills once the sources answer;
- * null otherwise. [albums]: the albums of one name to choose among (#1080).
+ * null otherwise. [albums]: the albums of one name to choose among (#1080), opened for the album and
+ * artist [albumArtist] ([albumArtist]), and closed on another.
  */
 @Suppress("LongParameterList") // What the back shows, what it asks, and where its buttons go.
 internal class CoverTurn(
@@ -93,6 +94,7 @@ internal class CoverTurn(
     val colors: ColorScheme,
     val lookUp: (() -> Unit)? = null,
     val albums: AlbumChoosing = AlbumChoosing(),
+    val albumArtist: String? = album,
 )
 
 /**
@@ -127,6 +129,7 @@ internal fun coverTurn(
         }
     return CoverTurn(
         album = albumIdentity(header),
+        albumArtist = albumArtist(track, header),
         back = back,
         key = if (on) tracklistKey(track, header, choices) else null,
         look = actions.tracklists::look,
@@ -277,7 +280,7 @@ private fun CoverBackFace(turn: CoverTurn) {
     val colors = MaterialTheme.colorScheme
     val back = turn.back
     val same = (back as? CoverBack.Ambiguous)?.albums ?: (back as? CoverBack.Found)?.albums
-    val browsing = rememberBrowsing(turn.album, turn.albums)
+    val browsing = rememberBrowsing(turn.albumArtist, turn.albums)
     val list = { same?.let(browsing.open) ?: Unit }
     Box(Modifier.fillMaxSize().background(colors.surfaceContainerHigh).testTag(COVER_BACK_TAG)) {
         CompositionLocalProvider(LocalContentColor provides colors.onSurface, LocalTrackCleared provides false) {
