@@ -18,11 +18,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -129,6 +131,40 @@ class SpellingChecks(
         }
     }
 
+    /**
+     * Whether [track]'s spelling check is still to come or under way under [settings] (#1293): asked by
+     * itself soon (*Ask AI automatically* on, it not asked yet), its AI question under way, or what
+     * MusicBrainz says of its spelling still to come or being applied. What is written by itself for
+     * the track meanwhile (the song's, artist's and album's insights, the vocals check) waits for it,
+     * so it is not paid for twice, before and after the track is looked up again.
+     */
+    fun pending(
+        track: TrackState,
+        settings: Settings?,
+    ): Boolean {
+        // What MusicBrainz said of a spelling found for the track: asked or applied, or done with.
+        val said =
+            answered.value
+                .filterKeys { it.played == track.played && it.duration == track.nowPlaying.duration }
+                .values
+                .map { it.outcome }
+        val ran = searches.ran(track, SearchKind.SPELLING)
+        return when {
+            !wanted(track) -> false
+            said.any { it == SpellingOutcome.Asking || it == SpellingOutcome.Found } -> true
+            said.isNotEmpty() -> false
+            ran == null -> settings?.searchWithAi == true
+            else -> ran is SearchState.Searching || ran is SearchState.Answered
+        }
+    }
+
+    /**
+     * [pending] for [track], as it changes: with the check's AI question, what MusicBrainz said, and the
+     * settings.
+     */
+    fun pendingFor(track: TrackState): Flow<Boolean> =
+        combine(searches.shown.entries, answered, settings) { _, _, now -> pending(track, now) }.distinctUntilChanged()
+
     /** Follows the playing track ([tracks]): each spelling its check found asked of MusicBrainz, once. */
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun follow(tracks: Flow<TrackState?>) {
@@ -139,7 +175,10 @@ class SpellingChecks(
                 if (track == null) {
                     flowOf(null)
                 } else {
-                    combine(searches.answered(track, SearchKind.SPELLING), flowOf(track)) { search, t -> t to search }
+                    // Again once the pipeline's parts are in, which MusicBrainz is asked with.
+                    combine(searches.answered(track, SearchKind.SPELLING), parts.filterNotNull()) { search, _ ->
+                        track to search
+                    }
                 }
             }.collect { pair ->
                 val (track, search) = pair ?: return@collect
@@ -201,8 +240,10 @@ class SpellingChecks(
                 // Marked with the clear's epoch, so MusicBrainz's answers it remembers (`RememberedMusicBrainz`)
                 // are dropped once a *Clear history* has started, before this is forgotten.
                 scope.launch(epoch.mark(), start = CoroutineStart.LAZY) {
-                    val confirmed = confirmed(made, track, spelling, model, writtenAt)
-                    applied(asked, since, track, confirmed)
+                    val confirmed = confirmed(names, made, track, spelling, model, writtenAt)
+                    // Not after a *Clear history* started (the epoch advanced before this is forgotten).
+                    val current = epoch.isCurrent(currentCoroutineContext())
+                    applied(asked, since.takeIf { current }, track, confirmed)
                 }
             asking[asked] = job
             job.invokeOnCompletion { synchronized(lock) { asking.remove(asked, job) } }
@@ -210,31 +251,12 @@ class SpellingChecks(
         }
     }
 
-    // What MusicBrainz answers for [spelling]; a bug, not the network (which the resolver maps to a
-    // resolution), as not found.
-    private suspend fun confirmed(
-        made: PipelineParts,
-        track: TrackState,
-        spelling: SearchAnswer.Spelling,
-        model: String,
-        writtenAt: Instant?,
-    ): FoundAs? =
-        try {
-            SpellingCheck(made.resolver, made.normalizer, names)
-                .confirm(track.nowPlaying, track.played, spelling, model, writtenAt)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (
-            @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
-        ) {
-            null
-        }
-
-    // What MusicBrainz answered for [asked] ([confirmed]), applied unless a clear came since [since] or
-    // it was stopped meanwhile: under the lock, so a clear or a stop comes wholly before or after it.
+    // What MusicBrainz answered for [asked] ([confirmed]), applied unless a clear came since [since] (null:
+    // one already started) or it was stopped meanwhile: under the lock, so a clear or a stop comes wholly
+    // before or after it.
     private fun applied(
         asked: Asked,
-        since: Long,
+        since: Long?,
         track: TrackState,
         confirmed: FoundAs?,
     ) = synchronized(lock) {
@@ -281,3 +303,25 @@ class SpellingChecks(
         fun wanted(track: TrackState): Boolean = track.foundAs == null && NoDates.of(track) == NoDates.NOT_FOUND
     }
 }
+
+// What MusicBrainz answers for [spelling], names compared by [names]; a bug, not the network (which
+// the resolver maps to a resolution), as not found.
+@Suppress("LongParameterList") // What it is asked with, and what the answer names.
+private suspend fun confirmed(
+    names: NameMatcher,
+    made: PipelineParts,
+    track: TrackState,
+    spelling: SearchAnswer.Spelling,
+    model: String,
+    writtenAt: Instant?,
+): FoundAs? =
+    try {
+        SpellingCheck(made.resolver, made.normalizer, names)
+            .confirm(track.nowPlaying, track.played, spelling, model, writtenAt)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (
+        @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
+    ) {
+        null
+    }

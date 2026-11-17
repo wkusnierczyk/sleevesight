@@ -473,8 +473,8 @@ class AiSearches(
 }
 
 // The spelling [reading] names (#1293), as nothing usable when it is the player's own for [track], as
-// [names] read them: its title the player's (as reported, or as cleaned for the sources), its artists
-// none or theirs.
+// [names] read them: its title the player's (as reported, or as cleaned for the sources). The check
+// corrects the title only, so its artists are not read.
 private fun spelled(
     reading: SearchReading,
     track: TrackState,
@@ -486,7 +486,5 @@ private fun spelled(
         listOf(track.nowPlaying.title, played.title, played.searchTitle).any {
             names.key(it) == names.key(spelling.title)
         }
-    val sameArtists =
-        spelling.artists.isEmpty() || spelling.artists.map(names::key) == played.artists.map(names::key)
-    return if (sameTitle && sameArtists) SearchReading.NothingUsable else reading
+    return if (sameTitle) SearchReading.NothingUsable else reading
 }

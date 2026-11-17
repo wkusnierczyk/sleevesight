@@ -105,6 +105,9 @@ class AskAiWired(
             ) {
                 spellings?.stop(track, spelling)
             }
+
+            override fun spellingPending(track: TrackState): Flow<Boolean> =
+                spellings?.pendingFor(track) ?: flowOf(false)
         }
 
     /**

@@ -181,6 +181,19 @@ class SpellingChecksTest {
         }
 
     @Test
+    fun `what is written by itself waits while MusicBrainz is asked, and not once it found nothing`() =
+        runTest {
+            val checks = checks()
+            checks.ask(track, spelling, "m", clock.at)
+            runCurrent()
+            assertEquals(true, checks.pendingFor(track).first())
+            answer.complete(Resolution(Outcome.None))
+            runCurrent()
+            assertEquals(SpellingOutcome.NotFound, checks.outcome(track, spelling).first())
+            assertEquals(false, checks.pendingFor(track).first())
+        }
+
+    @Test
     fun `a clear while MusicBrainz is asked applies nothing after it`() =
         runTest {
             val checks = checks()

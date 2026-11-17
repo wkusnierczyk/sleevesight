@@ -198,6 +198,18 @@ class SpellingCheckTest {
         }
 
     @Test
+    fun `a spelling dropping a number is no respelling, while one dropping the work's name is`() {
+        val check = SpellingCheck(Recording(accepted), normalizer, names)
+        val symphony = nowPlaying("Symphony No. 5 in C minor: Allegro con brio", "Ludwig van Beethoven")
+        val normalized = normalizer.normalize(symphony)
+        assertEquals(
+            false,
+            check.respelledTitle("Symphony in C minor: Allegro con brio", symphony.title, normalized),
+        )
+        assertTrue(check.respelledTitle("Nessun dorma", playing.title, played))
+    }
+
+    @Test
     fun `a recording crediting only a near name of the player's artist is not kept, whatever the AI's artists`() =
         runTest {
             val theme = nowPlaying("Star Wars Main Thme", "John Williams").copy(duration = 330.seconds)

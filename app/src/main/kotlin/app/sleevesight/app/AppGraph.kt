@@ -804,9 +804,19 @@ class AppGraph internal constructor(
      */
     private val autoVocals: AutoSearches<Unit> by lazy {
         AutoSearches(
-            { track, settings -> if (vocalsWanted(track, settings)) setOf(Unit) else emptySet() },
+            // Not while the track's spelling check is to come or under way (#1293): the vocals check would
+            // be paid for again once the track is looked up in another spelling.
+            { track, settings ->
+                if (vocalsWanted(track, settings) &&
+                    !spellingChecks.pending(track, settings)
+                ) {
+                    setOf(Unit)
+                } else {
+                    emptySet()
+                }
+            },
             // The check's own subject: the track, its length and album, so another album starts its own.
-            { track, _ -> Triple(track.normalized, track.nowPlaying.duration, VocalsChecks.subject(track)) },
+            { track, _ -> Triple(track.played, track.nowPlaying.duration, VocalsChecks.subject(track)) },
         ) { track, _ -> genreNotes.checkVocals(track) }
     }
 
@@ -923,7 +933,8 @@ class AppGraph internal constructor(
                 },
                 latestSettings,
                 pipeline.onScreen,
-                pipeline.liveParts,
+                // Again as the spelling check runs, which the vocals check waits for (#1293).
+                combine(pipeline.liveParts, aiSearches.shown.entries, spellingChecks.outcomes) { parts, _, _ -> parts },
             )
         }
         // Every genre of the playing track's table has its definition looked up as soon as the genres

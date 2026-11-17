@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.ItemShown
@@ -25,6 +26,7 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.AiSearches
+import app.sleevesight.core.pipeline.ArtistSplit
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
@@ -59,6 +61,7 @@ internal class ItemContext(
     val onModelSettings: () -> Unit = {},
     val sources: EvidenceSet? = null,
     val retries: Retries? = null,
+    val searches: AiSearchFeed = AiSearchFeed.None,
 ) {
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on
@@ -159,10 +162,7 @@ internal fun ItemContent(
     }
     val now = shown ?: itemShown(item, context)
     // The composer's and the artist's with the other people of the track (#1199).
-    val split =
-        remember(track, item) {
-            splitOf(track, track.normalized).takeIf { item == InsightItem.COMPOSER || item == InsightItem.ARTIST }
-        }
+    val split = remember(track, item) { pageSplit(track, item) }
     PeopleBefore(item, split)
     WritesOnTap(item, track, context, now, opening)
     val writingDue = opening.due && !context.automatic
@@ -303,6 +303,11 @@ private fun WritesAtOnce(
     val onScreen = resumed.isAtLeast(Lifecycle.State.RESUMED)
     // The hold-back lifting (a tap on *Write* after *Saver*, a first action) asks again too.
     val holdBackLifted = context.writesItself
+    // The track's spelling check to come or under way (#1293): nothing asked by itself until it has run,
+    // so it is not paid for before and again after the track is looked up in another spelling.
+    val spelling by remember(context.searches, track.played) {
+        context.searches.spellingPending(track)
+    }.collectAsState(false)
     // Whether its opening was asked for on this track, while it stays open (#1163, #1187): kept
     // through a rotation, whatever the evidence or the lifecycle did since.
     val opened = rememberSaveable(track.normalized.lookupKey, item) { mutableStateOf(false) }
@@ -314,6 +319,7 @@ private fun WritesAtOnce(
         offered,
         onScreen,
         holdBackLifted,
+        spelling,
     ) {
         if (atOnce && offered && onScreen) {
             val ask =
@@ -323,7 +329,7 @@ private fun WritesAtOnce(
                     else -> ItemAsk.OPENED
                 }
             if (tapped) opened.value = true
-            context.notes.write(track, item, ask)
+            if (ask == ItemAsk.OPENED || !spelling) context.notes.write(track, item, ask)
         }
     }
 }
@@ -439,8 +445,19 @@ internal fun itemContext(
     onReport = onReport,
     readAloud = actions.readAloud,
     retries = Retries(shown.view, shown.playing, actions.askAgain, actions.itemRetried),
+    searches = actions.aiSearches,
     unavailable = state.unavailable.takeIf { settings.writeInsights },
     onModelSettings = {
         state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) } ?: actions.openSettings()
     },
 )
+
+/**
+ * The people of [track] beside [item]'s panel or page (#1199): the Composer and Artist rows' split, as
+ * the rows read it, by the track as the player names it (#1293: one looked up in another spelling
+ * keeps MusicBrainz's roles); null for any other item.
+ */
+internal fun pageSplit(
+    track: TrackState,
+    item: InsightItem,
+): ArtistSplit? = splitOf(track, track.played).takeIf { item == InsightItem.COMPOSER || item == InsightItem.ARTIST }

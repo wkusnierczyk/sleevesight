@@ -79,7 +79,7 @@ class SpellingCheck(
 
     /**
      * Whether [title] respells the player's [reported] title (as cleaned for the sources: [played]):
-     * with the same [numbers] as one of them, and alike to it ([ALIKE]) or to one of its parts, split
+     * with the same [numbers] as it and alike to it ([ALIKE]), or as and to one of its parts, split
      * where a player adds words that are not the title's (" - ", ": ", brackets, " / "). The player's
      * title may carry more than the title; the spelling may not.
      */
@@ -90,8 +90,9 @@ class SpellingCheck(
     ): Boolean {
         val whole = listOf(reported, played.title, played.searchTitle)
         val parts = whole.flatMap { it.split(PARTS) }.map(String::trim).filter { names.key(it).isNotEmpty() }
-        val sameNumbers = (whole + parts).any { numbers(it) == numbers(title) }
-        return sameNumbers && (whole + parts).any { names.titleSimilarity(it, title) >= ALIKE }
+        val asked = numbers(title)
+        // Both on one form of the player's title, so a number dropped cannot pass on a part without it.
+        return (whole + parts).any { numbers(it) == asked && names.titleSimilarity(it, title) >= ALIKE }
     }
 
     /**

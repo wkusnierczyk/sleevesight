@@ -145,6 +145,12 @@ interface AiSearchFeed {
     ) = Unit
 
     /**
+     * Whether [track]'s spelling check (#1293) is still to come or under way, as it changes
+     * (`SpellingChecks.pending`): what is written by itself for the track waits for it. By default, never.
+     */
+    fun spellingPending(track: TrackState): Flow<Boolean> = flowOf(false)
+
+    /**
      * A tap on *Search with AI* or *Retry*, or, [automatic], the search starting by itself (*Search
      * with AI*, the setting, [AutoSearches]): [track]'s search of [kind] asks about [facts], unless it
      * is under way, answered or kept, or, [automatic], once stopped (*Stop* is the user's "no" to it).
