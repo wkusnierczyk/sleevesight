@@ -116,7 +116,8 @@ class UnsupportedCitationScreenTest {
             compose.onNodeWithText(app.getString(R.string.home_note_unbacked)).assertExists()
             val said = prose().fetchSemanticsNode().config[SemanticsProperties.ContentDescription].single()
             assertEquals(
-                "It topped the charts in 1986 (W1: does not say this) (not backed by its source). " +
+                "It topped the charts in 1986 (W1: does not say this) (not backed by its source) " +
+                    "(${app.getString(R.string.home_cite_see_note)}). " +
                     "Sundown was recorded in 1973 (Source MB1).",
                 said,
             )

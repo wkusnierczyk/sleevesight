@@ -122,6 +122,8 @@ object InsightPrompt {
      *
      * A track whose title leads with its composer has [RECORDING_VERSION] in its card's key in place
      * of this one, for the rule on another recording of its work ([RECORDING_RULE], #1195).
+     * One whose `<track>` block names a composer the player does not credit has [UNCREDITED_VERSION]
+     * (#1376).
      *
      * Version 13 (#1142): the card tells a story from what the evidence adds beyond what Home already
      * shows. The role names those facts as shown elsewhere in the app (the title, the artists, the
@@ -164,8 +166,33 @@ object InsightPrompt {
      */
     const val RECORDING_VERSION: Int = 14
 
-    /** The version in the card's key for a track whose title leads with its composer or not ([composed]). */
-    fun version(composed: Boolean): Int = if (composed) RECORDING_VERSION else VERSION
+    /**
+     * The version in the card's key for a track whose `<track>` block names a composer the player does
+     * not credit (`ArtistRoles.uncredited`, #1376: `Composer: Giacomo Puccini` for *Nessun Dorma* by
+     * Pavarotti alone, where the block said `Primary artist: Luciano Pavarotti`): [VERSION]'s prompt
+     * with that line. Its own number, so a card such a track kept from before is written afresh, once,
+     * when next shown, and no other track's card is; a card written before MusicBrainz named the composer
+     * (unreached on that play) is keyed by [VERSION] and stays that play's.
+     */
+    const val UNCREDITED_VERSION: Int = 15
+
+    /** [RECORDING_VERSION]'s counterpart for a composer-led track that names an uncredited composer too (#1376). */
+    const val RECORDING_UNCREDITED_VERSION: Int = 16
+
+    /**
+     * The version in the card's key for a track whose title leads with its composer or not ([composed]),
+     * and whose `<track>` block names a composer the player does not credit or not ([uncredited], #1376).
+     */
+    fun version(
+        composed: Boolean,
+        uncredited: Boolean = false,
+    ): Int =
+        when {
+            composed && uncredited -> RECORDING_UNCREDITED_VERSION
+            composed -> RECORDING_VERSION
+            uncredited -> UNCREDITED_VERSION
+            else -> VERSION
+        }
 
     /**
      * The system prompt: everything fixed for a listener, the same for every track, the built-in

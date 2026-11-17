@@ -14,6 +14,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.normalizer.ComposerPrefix
 import app.sleevesight.core.pipeline.ArtistSplit
 import app.sleevesight.core.pipeline.AuthorsName
 import app.sleevesight.core.pipeline.InsightItem
@@ -118,7 +119,10 @@ private val NAMES = NameMatcher(JvmAccentFolder)
 // beside a Composer or Authors row ([split]) without the title's composer lead ("Barber: ",
 // [NormalizedTrack.composer]) when that row names the composer it leads with (#1356), as searched
 // ([NormalizedTrack.searchTitle]: the whole title when the lead is all there is); a lead naming a
-// performer (`Gould: Interview`, Bach the composer) stays. The player's whole title, and no version,
+// performer (`Gould: Interview`, Bach the composer) stays. So for a lead naming a composer the player
+// does not credit whom MusicBrainz names for the work (#1376, [ArtistSplit.composers] from
+// `ArtistRoles.uncredited`: "Barber: Adagio for Strings" with only the orchestra credited, which the
+// normalizer finds no lead in). The player's whole title, and no version,
 // when normalizing leaves no title. Called *Music* on a classical track ([ArtistSplit.classical], #1331:
 // beside a Composer row, or an Authors row on a classical work), *Song* otherwise.
 private fun songRow(
@@ -127,9 +131,14 @@ private fun songRow(
     split: ArtistSplit?,
 ): ItemRow? {
     if (header.title.isBlank()) return null
-    val lead = normalized.composer
-    val told = lead != null && split?.composers.orEmpty().any { NAMES.sameName(it, lead.name) }
-    val title = (if (told) normalized.searchTitle else normalized.title).takeIf { it.isNotEmpty() }
+    val composers = split?.composers.orEmpty()
+    val lead =
+        normalized.composer ?: composers
+            .filter { composer -> normalized.artists.none { NAMES.sameName(it, composer) } }
+            .let { ComposerPrefix.leadNaming(normalized.title, it, NAMES::key) }
+    val told = lead != null && composers.any { NAMES.sameName(it, lead.name) }
+    val searched = if (told) normalized.copy(composer = lead).searchTitle else normalized.title
+    val title = searched.takeIf { it.isNotEmpty() }
     val version = normalized.dropped.takeIf { title != null }
     return if (split?.classical == true) {
         ItemRow(

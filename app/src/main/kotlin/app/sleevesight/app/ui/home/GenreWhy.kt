@@ -277,7 +277,8 @@ private fun NotFound(
     }
 }
 
-// The reason under the [question] as its heading.
+// The reason under the [question] as its heading, its dimmed sentences' `?` chips going to the note
+// under its credit (#954).
 @Composable
 private fun Answer(
     question: String,
@@ -289,7 +290,7 @@ private fun Answer(
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.semantics { heading() },
         )
-        content()
+        WithUnbackedNote(content)
     }
 }
 

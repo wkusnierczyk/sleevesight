@@ -236,11 +236,14 @@ class Report(
             }
         }
         appendLine()
-        // A composer-led track's insight has its own version (#1195), so a run may hold two.
+        // A composer-led track's insight has its own version (#1195), and so has one naming an uncredited
+        // composer (#1376), so a run may hold several.
         val versions =
             tried
-                .map { InsightPrompt.version(it.value.state.normalized.composer != null) }
-                .distinct()
+                .map {
+                    val state = it.value.state
+                    InsightPrompt.version(state.normalized.composer != null, state.roles.uncredited.isNotEmpty())
+                }.distinct()
                 .sorted()
         val named = if (versions.size == 1) "version" else "versions"
         appendLine("${billed(calls)} (prompt $named ${versions.joinToString(" and ")}).")

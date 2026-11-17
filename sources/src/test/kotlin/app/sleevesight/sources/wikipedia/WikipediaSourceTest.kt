@@ -102,15 +102,16 @@ class WikipediaSourceTest {
         }
 
     @Test
-    fun `the kept part's version is 4 and the track results' 10, for sentences cut at catalogue numbers`() {
+    fun `the kept part's version is 4 and the track results' 11, for an uncredited composer's article`() {
         // #1129 and #1203 changed what a track resolves to, which a track's result is checked against; an
         // artist's article, reached by the artist's id, is not, so the artist cache was kept; nor did the
         // song's composition date (#1132, #1273: its item's, its article's infobox's), which a track's
         // result holds, nor the whole work's item a movement is checked by (#1133). The genres the items
         // state (#1098) are in both, so both moved. The track results' moved on to 10 alone for sentences
-        // no longer cut at a catalogue abbreviation (#1192), which an artist's lead seldom holds.
+        // no longer cut at a catalogue abbreviation (#1192), which an artist's lead seldom holds, and to
+        // 11 for the article of a composer MusicBrainz names whom the track does not credit (#1376).
         assertEquals(4, WikipediaSource.ARTIST_PART.extraction)
-        assertEquals(10, adapter.extractionVersion)
+        assertEquals(11, adapter.extractionVersion)
     }
 
     @Test

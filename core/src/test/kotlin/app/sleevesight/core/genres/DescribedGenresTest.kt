@@ -346,13 +346,33 @@ class DescribedGenresTest {
     }
 
     @Test
-    fun `a line's artist is matched as the credit names them, else the one credited`() {
+    fun `a line's artist is matched as the credit names them, and a line about another is no one's`() {
         val names = NameMatcher(JvmAccentFolder)
         val accented = line("L1", "A soul singer.", SourceId.LASTFM, about = "Beyonce")
         assertEquals("Beyoncé", describedGenres(vocabulary, listOf(accented), listOf("Beyoncé"), names).single().artist)
         val other = line("L2", "A soul singer.", SourceId.LASTFM, about = "Someone Else")
-        assertEquals(ANN, describedGenres(vocabulary, listOf(other), listOf(ANN), names).single().artist)
+        // #1376: not the lone credited artist's either (Puccini's article on a replay of *Nessun Dorma* by
+        // Pavarotti alone without MusicBrainz's roles); every source says the credited name.
+        assertTrue(describedGenres(vocabulary, listOf(other), listOf(ANN), names).isEmpty())
         assertTrue(describedGenres(vocabulary, listOf(other), listOf(ANN, BOB), names).isEmpty())
+    }
+
+    @Test
+    fun `cached composer lines replayed without MusicBrainz's roles name no genre of the lone performer`() {
+        // #1376: Wikipedia kept Puccini's article with the track; this play has no roles, so only
+        // Pavarotti is passed, and the opera Puccini's line names is not his.
+        val names = NameMatcher(JvmAccentFolder)
+        val lines =
+            listOf(
+                line("W1", "Giacomo Puccini was an Italian composer of opera music.", about = "Giacomo Puccini"),
+                line("W2", "Luciano Pavarotti was an Italian tenor who sang soul music.", about = "Luciano Pavarotti"),
+            )
+        val rows = describedGenres(vocabulary, lines, listOf("Luciano Pavarotti"), names)
+        assertTrue(rows.flatMap { it.labels }.none { it.describedIn?.line == "W1" })
+        // With the roles, the composer passed too (`GenreDescribed`): his line is his.
+        val both = describedGenres(vocabulary, lines, listOf("Luciano Pavarotti", "Giacomo Puccini"), names)
+        val puccini = both.single { it.artist == "Giacomo Puccini" }
+        assertTrue(puccini.labels.all { it.describedIn?.line == "W1" })
     }
 
     private fun namedIdentities(text: String) =

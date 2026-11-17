@@ -612,3 +612,9 @@ private class Emphasis(
         const val THREE: Int = 3
     }
 }
+
+/** The paragraphs of text not checked yet, split as the grounding check splits them: on a blank line. */
+internal fun paragraphsOf(text: String): List<String> =
+    text.split(BLANK_LINE).map(String::trim).filter(String::isNotEmpty)
+
+private val BLANK_LINE = Regex("\\n\\s*\\n")

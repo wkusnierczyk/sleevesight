@@ -165,10 +165,15 @@ class GroundingNoteTest {
                 "1 of 3 sentences grounded · 1 uncited · 1 cites missing evidence",
                 "$grounded · $uncited · $unknown",
             )
-            assertEquals(0, count(unbacked))
+            // The note stays, above the counts: the dimmed sentences' `?` chips go to it (#954).
+            assertEquals(1, count(unbacked))
+            val note = compose.onNodeWithText(unbacked).fetchSemanticsNode().boundsInRoot
+            val counts = compose.onNodeWithText("$grounded · $uncited · $unknown").fetchSemanticsNode().boundsInRoot
+            assertTrue(counts.top >= note.bottom - 1f)
         }
-        // Every sentence grounded: the count still shows, in the singular for one.
+        // Every sentence grounded: the count still shows, in the singular for one, and no note.
         show(written("It was recorded in 1973 [MB1]."), details) {
+            assertNoUnbackedNote()
             compose.onNodeWithText(plural(R.plurals.home_meta_grounded, 1, 1, 1)).assertExists()
             assertEquals("1 of 1 sentence grounded", plural(R.plurals.home_meta_grounded, 1, 1, 1))
         }

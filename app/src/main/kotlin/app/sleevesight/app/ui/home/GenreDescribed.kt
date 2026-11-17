@@ -43,7 +43,9 @@ internal fun withDescribed(
     val vocabulary = notes.notes.vocabulary
     val lines = notes.lines ?: track?.evidence
     if (track == null || vocabulary == null || lines == null) return track
-    val artists = track.normalized.artists
+    // With the composers MusicBrainz names whom the player does not credit (#1376): Wikipedia's article on
+    // Puccini, on *Nessun Dorma* by Pavarotti alone, is Puccini's, as it would be were he credited.
+    val artists = (track.normalized.artists + track.roles.uncredited).distinct()
     // A web page naming no artist is the Artist panel's subject's (#1199): the lead performer once the
     // roles tell a composer apart.
     val lead = remember(track) { track.artistSplit(NAMES::sameName)?.lead }

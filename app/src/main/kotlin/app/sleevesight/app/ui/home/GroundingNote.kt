@@ -16,12 +16,13 @@ import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 
 /**
- * The grounding line under a written insight or a genre's reason: with [details] (*Show grounding
- * details*, a developer option, #437) the grounding check's counts in full ([Meta]), else a note
- * only when there is something to say ([Note]). Whether it was kept from before is not its to say:
+ * The grounding line under a written insight or a genre's reason: a note only when there is
+ * something to say ([Note]), the one the dimmed sentences' `?` chips go to (#954), and under it, with
+ * [details] (*Show grounding details*, a developer option, #437), the grounding check's counts in
+ * full ([Meta]). Whether it was kept from before is not its to say:
  * the insight's credit says who wrote it (#1162), a genre's reason its own line
  * (`KeptLine`, #851).
- * [modifier] goes to the line's text. With no note, nothing is drawn, and the modifier with it: a
+ * [modifier] goes to the note. With no note, nothing is drawn, and the modifier with it: a
  * caller that sets the line in a row beside other content fills the space itself, so that content
  * keeps its place (a weighted `Box` around the line, a `Spacer(Modifier.weight(1f))`, or
  * `Arrangement.End`).
@@ -32,8 +33,9 @@ internal fun GroundingLine(
     details: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // The full counts show only in developer mode, and are marked as such (#536).
-    if (details) DeveloperMark { Meta(grounded, modifier) } else Note(grounded, modifier)
+    Note(grounded, modifier)
+    // The full counts show only in developer mode, and are marked as such (#536); the note stays (#954).
+    if (details) DeveloperMark { Meta(grounded, Modifier) }
 }
 
 /**
@@ -41,7 +43,8 @@ internal fun GroundingLine(
  * sources do not back, which are dimmed (uncited, citing missing evidence, or citing lines that do
  * not back them, #1036; #819), named by
  * that mark (#664), in one text for any number of them ("Dimmed text is not backed by the
- * sources.", #854). A sentence from the
+ * sources.", #854), after the `?` chip each of them ends with, which goes to it (#954,
+ * [UnbackedNote]). A sentence from the
  * model's own knowledge is not counted: it is not dimmed, and its own chip says where it is from. A
  * sentence the sources back
  * needs no word: its citations show it. The full counts are [Meta]'s, behind *Show grounding details*.
@@ -54,7 +57,7 @@ private fun Note(
     modifier: Modifier,
 ) {
     val unbacked = remember(grounded) { unbacked(grounded) }
-    if (unbacked > 0) MetaLine(stringResource(R.string.home_note_unbacked), modifier)
+    if (unbacked > 0) UnbackedNote(modifier)
 }
 
 // The sentences the sources do not back that show on the card, dimmed.

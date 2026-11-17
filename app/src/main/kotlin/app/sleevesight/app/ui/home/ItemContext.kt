@@ -357,13 +357,15 @@ private fun Shown(
             WritingItem(item) { shown.key?.let(context.notes::stop) }
         }
 
-        is InsightState.Written -> {
-            // The song's insight in two parts (#1133): each part under its heading.
-            CheckedParagraphs(state.grounded, shown.evidence.evidence, onCite, label)
-            // *Read aloud* at the end of the credit's row, first under the text (#959).
-            val reading = itemReading(context.readAloud, item, track, state, context.notes)
-            WrittenFooter(item, shown, state, track, context, label, reading)
-        }
+        is InsightState.Written ->
+            // The dimmed sentences' `?` chips go to the note in the footer (#954).
+            WithUnbackedNote {
+                // The song's insight in two parts (#1133): each part under its heading.
+                CheckedParagraphs(state.grounded, shown.evidence.evidence, onCite, label)
+                // *Read aloud* at the end of the credit's row, first under the text (#959).
+                val reading = itemReading(context.readAloud, item, track, state, context.notes)
+                WrittenFooter(item, shown, state, track, context, label, reading)
+            }
 
         InsightState.NoEvidence -> NothingToWriteFrom(item, shown.evidence, context, showing.afterRetry)
 

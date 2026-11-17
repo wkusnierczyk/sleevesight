@@ -84,6 +84,10 @@ import app.sleevesight.core.text.DateWhen
  *   What it holds stands, but MusicBrainz's result from it is not kept in the retrieval cache
  *   ([SourceResult.provisional]), so one failed request does not leave the part out for the entry's
  *   whole life. False when those lookups answered, found or not.
+ * @property workUnknown the recording's detail or its work could not be looked up (#1376): a lookup
+ *   failed, not a search left incomplete, so the work's composers, and the uncredited ones among them,
+ *   are not known. [provisional] then too. Wikipedia's result is not kept then
+ *   (`SourceResult.provisional`), so a later run with the work looks the uncredited composer up.
  */
 data class Resolution(
     val outcome: Outcome = Outcome.None,
@@ -108,6 +112,7 @@ data class Resolution(
     val composed: ComposedDate? = null,
     val failure: String? = null,
     val provisional: Boolean = false,
+    val workUnknown: Boolean = false,
 ) {
     /**
      * The earliest first-release date of the recording, as MusicBrainz gives it (`1974`,
@@ -147,8 +152,9 @@ data class Resolution(
  * @property uncredited the composers the work names whom the track does not credit (#1298), by
  *   MusicBrainz's names, in its order: only on a [classical] work, and only when every credited composer
  *   is one the work names, so no one is named twice in two spellings; empty otherwise. Home shows them
- *   as it shows the [composers] (`ArtistSplit`), marked as MusicBrainz's; searches and prompts that
- *   mean the credited composers read [composers] alone.
+ *   as it shows the [composers] (`ArtistSplit`), marked as MusicBrainz's; the key insight's prompt
+ *   names them as composers too ([named], #1376), and Wikipedia looks up their articles as a credited
+ *   artist's.
  */
 data class ArtistRoles(
     val composers: List<String>,
@@ -158,6 +164,18 @@ data class ArtistRoles(
 ) {
     /** The first performer, else [track]'s first credited artist ([NormalizedTrack.primary]). */
     fun lead(track: NormalizedTrack): String = performers.firstOrNull { it.isNotBlank() } ?: track.primary
+
+    /**
+     * These roles with the [uncredited] composers among the [composers], after the credited ones (#1376):
+     * the composers as Home names them, for a prompt that names the composer. Itself when there are none.
+     */
+    val named: ArtistRoles
+        get() =
+            if (uncredited.isEmpty()) {
+                this
+            } else {
+                copy(composers = (composers + uncredited).distinct(), uncredited = emptyList())
+            }
 
     companion object {
         /**

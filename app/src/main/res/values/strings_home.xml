@@ -712,6 +712,9 @@
          hold its names, numbers or dates (#1036): the sentence is dimmed, the chip a dim outline. -->
     <string name="home_cite_unsupported">%1$s: does not say this</string>
     <string name="home_cite_unbacked">not backed by its source</string>
+    <!-- The `?` chip after a dimmed sentence (#954), as a screen reader reads it and as the action that
+         goes to the note under the text ("Dimmed text is not backed by the sources."). -->
+    <string name="home_cite_see_note">Not backed, see the note</string>
 
     <!-- Why an insight could not be written: the fixed labels the pipeline gives. -->
     <!-- Only when the phone had no network, or the service's host could not be resolved (#1164). -->

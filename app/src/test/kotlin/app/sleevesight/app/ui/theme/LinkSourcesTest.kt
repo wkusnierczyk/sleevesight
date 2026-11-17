@@ -112,6 +112,8 @@ class LinkSourcesTest {
                 "import androidx.compose.ui.text.withLink",
                 // Filled, or outlined for a sentence its lines do not back (#1036).
                 "val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(style)) { onCite(id) }",
+                // The `?` chip after a run of dimmed sentences, which goes to the note under the text (#954).
+                "val link = LinkAnnotation.Clickable(UNBACKED_LINK_TAG, TextLinkStyles(styles.unbacked)) { note.go() }",
                 "withLink(link) { append(label) }",
             )
 
