@@ -147,6 +147,7 @@ class SettingsSearchTest {
                     R.string.settings_theme_button,
                     R.string.settings_font,
                     R.string.settings_layout,
+                    R.string.settings_one_panel,
                     R.string.settings_sources_on_new_track,
                     R.string.settings_items_on_new_track,
                     R.string.settings_fold_descriptions,

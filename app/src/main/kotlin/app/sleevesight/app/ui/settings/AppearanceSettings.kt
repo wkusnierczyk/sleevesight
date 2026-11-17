@@ -19,9 +19,11 @@ import kotlinx.coroutines.Deferred
  * the cogwheel that moves *Theme* one step on with each tap, which *Theme*'s row then shows.
  * *Layout* (#447): whether *Sources*, a genre's panel and the song's, the artist's and the album's
  * insights (#522) open in place on Home (*Expandable boxes*, the default) or each on a page of its
- * own (*Separate pages*). *Sources on a new track* (#269; a choice since #522, the switch *Keep
- * Sources as you left them* before) and *Song, Artist and Album on a new track* (#522): *Folded*
- * (the default), *Unfolded* or *As left*, as button groups; under *Expandable boxes* only,
+ * own (*Separate pages*). *One panel for Dates, Genres and Lyrics* (#1128), on by default: whether
+ * those three on Home open one shared panel, their buttons its tabs. *Sources on a new track*
+ * (#269; a choice since #522, the switch *Keep Sources as you left them* before) and *Song, Artist
+ * and Album on a new track* (#522): *Folded* (the default), *Unfolded* or *As left*, as button
+ * groups; under *Expandable boxes* only,
  * so they are shown, but not offered, under *Separate pages*, where each page opens fresh. Then
  * *Foldable descriptions* and *Descriptions on return*
  * (#847, [DescriptionRows]). *Lyrics links* (#728), on by default: whether Home shows a
@@ -65,6 +67,11 @@ internal fun AppearanceSection(
         choices = layouts(),
         selected = settings.layout,
     ) { layout -> update { it.copy(layout = layout) } }
+    SwitchRow(
+        title = stringResource(R.string.settings_one_panel),
+        summary = stringResource(R.string.settings_one_panel_summary),
+        checked = settings.onePanel,
+    ) { on -> update { it.copy(onePanel = on) } }
     NewTrackRows(settings, update)
     DescriptionRows(settings, update)
     LyricsRows(settings, update)

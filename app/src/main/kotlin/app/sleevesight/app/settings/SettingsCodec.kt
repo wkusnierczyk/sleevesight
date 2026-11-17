@@ -112,6 +112,7 @@ internal object SettingsCodec {
 
     /** What parts the ids of [UNFOLDED_DESCRIPTIONS]: the unit separator, never in a row's name. */
     private const val UNFOLDED_SEPARATOR = '\u001F'
+    private val ONE_PANEL = booleanPreferencesKey("display.one_panel")
     private val LYRICS_LINKS = booleanPreferencesKey("display.lyrics_links")
     private val LYRICS_SEARCH = booleanPreferencesKey("display.lyrics_search")
 
@@ -166,6 +167,7 @@ internal object SettingsCodec {
             lookUpAfterClear = enumOf(prefs[LOOK_UP_AFTER_CLEAR]) ?: defaults.lookUpAfterClear,
             sourcesOnNewTrack = newTrackFoldOf(prefs[SOURCES_ON_NEW_TRACK], prefs[KEEP_SOURCES_UNFOLDED], defaults),
             itemsOnNewTrack = NewTrackFold.of(prefs[ITEMS_ON_NEW_TRACK]) ?: defaults.itemsOnNewTrack,
+            onePanel = prefs[ONE_PANEL] ?: defaults.onePanel,
             lyricsLinks = prefs[LYRICS_LINKS] ?: defaults.lyricsLinks,
             lyricsSearch = prefs[LYRICS_SEARCH] ?: defaults.lyricsSearch,
             showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
@@ -325,6 +327,7 @@ internal object SettingsCodec {
         if (moved { it.itemsOnNewTrack }) {
             prefs.put(ITEMS_ON_NEW_TRACK, settings.itemsOnNewTrack.key, defaults.itemsOnNewTrack.key)
         }
+        if (moved { it.onePanel }) prefs.put(ONE_PANEL, settings.onePanel, defaults.onePanel)
         if (moved { it.lyricsLinks }) prefs.put(LYRICS_LINKS, settings.lyricsLinks, defaults.lyricsLinks)
         if (moved { it.lyricsSearch }) prefs.put(LYRICS_SEARCH, settings.lyricsSearch, defaults.lyricsSearch)
         if (moved { it.showPhoneName }) prefs.put(SHOW_PHONE_NAME, settings.showPhoneName, defaults.showPhoneName)

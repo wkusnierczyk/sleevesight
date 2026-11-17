@@ -179,6 +179,8 @@
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_boxes">Boxes</string>
     <string name="settings_layout_pages">Pages</string>
+    <string name="settings_one_panel">One panel for Dates, Genres and Lyrics</string>
+    <string name="settings_one_panel_summary">Dates, Genres and Lyrics on the home screen open one shared panel, with the three buttons at its top to switch between them.</string>
     <string name="settings_layout_summary">How Sources, the genres, and the song’s, the composer’s, the artist’s and the album’s insights open: in place on the home screen, as expandable boxes, or each on a page of its own, with a back arrow.</string>
 
     <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. Load keys (#765):

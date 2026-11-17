@@ -144,7 +144,8 @@ class PageLinksTest {
                 nowPlaying = MutableStateFlow(sundown),
                 playback = MutableStateFlow(PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING)),
                 art = MutableStateFlow(null),
-                settings = MutableStateFlow(Settings(layout = Layout.SEPARATE_PAGES)),
+                // *Genres* opens its page only with a panel each (#1128).
+                settings = MutableStateFlow(Settings(layout = Layout.SEPARATE_PAGES, onePanel = false)),
                 normalizer = normalizer,
                 playerLabel = { it },
                 playerActivity = { null },

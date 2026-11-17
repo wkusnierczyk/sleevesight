@@ -50,7 +50,8 @@ internal class UnderAlbumLine(
  * then *Lyrics* while *Lyrics links* is on ([lyricsItem], #728), its *Retry* asking MusicBrainz
  * again and its links opening the settings: *Sources*, and for *Lyrics*' search *Appearance*.
  * *Dates* and *Lyrics* open in place under either. Each offers *Search with AI* under its empty
- * state (#773).
+ * state (#773). With *One panel for Dates, Genres and Lyrics* on (#1128, the default), the three
+ * open one shared panel, their buttons its tabs, *Genres* in it under *Separate pages* too.
  */
 @Composable
 internal fun UnderAlbum(
@@ -79,6 +80,10 @@ internal fun UnderAlbum(
         } else {
             null
         }
-    val genres = genresItem(track, line.settings, line.notes, retries, actions.openSettingsAt, line.genresPage, search)
-    InPlaceLine(listOfNotNull(dates, genres, lyrics), line.memory, playing)
+    // One panel for the three (#1128), on until the settings are read, as by default: *Genres* opens
+    // in it under *Separate pages* too.
+    val onePanel = line.settings?.onePanel ?: true
+    val page = line.genresPage.takeUnless { onePanel }
+    val genres = genresItem(track, line.settings, line.notes, retries, actions.openSettingsAt, page, search)
+    InPlaceLine(listOfNotNull(dates, genres, lyrics), line.memory, playing, onePanel)
 }

@@ -54,6 +54,11 @@ import kotlin.math.roundToInt
  * subtitle, the heading is as it always was, and [actions] is not drawn. With a subtitle, [note] (the
  * version a song's title names, #1160) goes on a line of its own under it, in its style, read with
  * the heading too.
+ *
+ * With [titleSlot] (the one panel of *Dates*, *Genres* and *Lyrics*, #1128: its tabs), it is drawn in
+ * the title's place, handed the modifier that gives it the row's room left of *Close*, and the row's
+ * items align at its top, so *Close* stays top right when the heading takes two lines; [title] is
+ * then not drawn.
  */
 @Suppress("LongParameterList") // What the panel shows, and where its users hook into it.
 @Composable
@@ -67,6 +72,7 @@ internal fun Panel(
     subtitle: String? = null,
     note: String? = null,
     actions: @Composable (centred: Modifier) -> Unit = {},
+    titleSlot: (@Composable (Modifier) -> Unit)? = null,
     headingFrame: @Composable (@Composable () -> Unit) -> Unit = { it() },
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -84,18 +90,22 @@ internal fun Panel(
     ) {
         headingFrame {
             if (subtitle == null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .padding(vertical = 10.dp)
-                                .testTag("$tag:heading")
-                                .semantics { heading() },
-                    )
+                Row(verticalAlignment = if (titleSlot == null) Alignment.CenterVertically else Alignment.Top) {
+                    if (titleSlot != null) {
+                        titleSlot(Modifier.weight(1f))
+                    } else {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .padding(vertical = 10.dp)
+                                    .testTag("$tag:heading")
+                                    .semantics { heading() },
+                        )
+                    }
                     onClose?.let { PanelClose(tag, closeModifier, it) }
                 }
             } else {
