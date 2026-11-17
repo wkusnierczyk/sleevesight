@@ -51,7 +51,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * *Why is this …?*'s cascade as the panel shows it (#695): a reason that cites no source, only the
  * model's own knowledge, has a line saying so under the question, above the answer, read in that
- * order; one from web pages is credited "by {model}, with web search"; any other "by {model}", with
+ * order; one from web pages is credited "Written by {model} with web search."; any other "Written by
+ * {model}.", with
  * no line; nothing explains it, "AI could not find an explanation.", then what was off and could
  * have, each linked to where it is set, and no such line with both on.
  */
@@ -90,7 +91,7 @@ class GenreCascadeScreenTest {
         show(CascadeFixtures.fromModel) {
             compose.onNodeWithTag(GENRE_REASON_TAG).performScrollTo()
             compose.onNodeWithText(CascadeFixtures.LINE).assertExists()
-            compose.onNodeWithText("by ${CascadeFixtures.MODEL}").assertExists()
+            compose.onNodeWithText("Written by ${CascadeFixtures.MODEL}.").assertExists()
             // Read in order, top to bottom in the reason's column: the question, the line, then the answer.
 
             fun top(text: String) =
@@ -108,7 +109,7 @@ class GenreCascadeScreenTest {
     fun aReasonFromWebPagesIsCreditedWithWebSearchAndHasNoLine() =
         show(CascadeFixtures.fromWeb) {
             compose.onNodeWithTag(GENRE_REASON_TAG).performScrollTo()
-            compose.onNodeWithText("by ${CascadeFixtures.MODEL}, with web search").assertExists()
+            compose.onNodeWithText("Written by ${CascadeFixtures.MODEL} with web search.").assertExists()
             assertEquals(0, count(GENRE_WHY_FROM_MODEL_TAG))
         }
 
@@ -117,7 +118,7 @@ class GenreCascadeScreenTest {
         for (reason in listOf(CascadeFixtures.sourced, CascadeFixtures.mixed)) {
             show(reason) {
                 compose.onNodeWithTag(GENRE_REASON_TAG).performScrollTo()
-                compose.onNodeWithText("by ${CascadeFixtures.MODEL}").assertExists()
+                compose.onNodeWithText("Written by ${CascadeFixtures.MODEL}.").assertExists()
                 val web = compose.onAllNodesWithText("with web search", substring = true).fetchSemanticsNodes()
                 assertEquals(0, web.size)
                 assertEquals(0, count(GENRE_WHY_FROM_MODEL_TAG))

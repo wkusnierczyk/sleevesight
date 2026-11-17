@@ -227,7 +227,7 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
         "The currently selected Anthropic model $OTHER is not available. " +
             "Please select another model or provider in AI services."
 
-    private val previously = app.getString(R.string.home_written_before)
+    private val previously = "Written by $FIRST."
 
     // No words of a refusal of the model, nor the start of a line that would give one, anywhere on Home.
     private fun assertNoRefusalSaid() {
@@ -367,7 +367,7 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
             model(OTHER)
             waitFor { songWriteSays(R.string.home_rewrite) }
 
-            // *Rewrite insight* refused: the song's insight kept, "As written previously." alone, the
+            // *Rewrite insight* refused: the song's insight kept, its credit alone, the
             // note last, above a disabled *Write insight*.
             provider.error = AiErrorKind.MODEL_NOT_FOUND
             songWrite().assertIsEnabled().performClick()
@@ -411,7 +411,7 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
             }
 
             // A later play: the row opened writes anew, and is refused (#975). The song's insight kept,
-            // "As written previously." alone, the note last, above a disabled *Write insight*, as after
+            // The credit alone, the note last, above a disabled *Write insight*, as after
             // a refused *Rewrite insight*; the key insight kept ends with the note too.
             provider.error = AiErrorKind.MODEL_NOT_FOUND
             songRow().performClick()

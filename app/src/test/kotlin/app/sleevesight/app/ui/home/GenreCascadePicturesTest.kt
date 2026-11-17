@@ -86,7 +86,7 @@ class GenreCascadePicturesTest {
         val states =
             listOf(
                 Triple("from-model", CascadeFixtures.fromModel, CascadeFixtures.LINE),
-                Triple("from-web", CascadeFixtures.fromWeb, "by ${CascadeFixtures.MODEL}, with web search"),
+                Triple("from-web", CascadeFixtures.fromWeb, "Written by ${CascadeFixtures.MODEL} with web search."),
                 Triple(
                     "not-found-both-off",
                     CascadeFixtures.notFound(GenreListMode.KNOWLEDGE, GenreListMode.WEB),

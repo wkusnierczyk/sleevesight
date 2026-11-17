@@ -49,8 +49,8 @@ import org.robolectric.RobolectricTestRunner
  * *Look again* on the insight card (#617): the first item of the split button's menu beside a
  * written insight, with no **AI** mark (it makes no call); enabled while the pipeline offers it,
  * and a tap carries the key it was offered under and the track shown; absent with no written
- * insight. While it looks, under *As written previously.*, on a line of its own (#785): what it
- * costs, the web search named when it is looked up. After *As written previously.*, on the same line
+ * insight. While it looks, under the credit (#1162), on a line of its own (#785): what it
+ * costs, the web search named when it is looked up. After the credit, on the same line
  * (#671): once it found something new, that *Rewrite insight* uses it (in place of the settings'
  * rewrite words); once it found nothing new, that it did.
  */
@@ -60,7 +60,7 @@ class LookAgainScreenTest {
     val compose = createEmptyComposeRule()
 
     private val key = RunKey.of(normalizer, sundown)
-    private val kept = track(insight = written("It is a song [MB1]."))
+    private val kept = track(insight = written("It is a song [MB1].").copy(writtenBy = HomeFixtures.haiku))
     private val view = MutableStateFlow(PipelineView(kept, aiReady = true, cardShown = true, lookAgainKey = key))
     private val taps = mutableListOf<Pair<RunKey, NowPlaying>>()
 
@@ -139,13 +139,13 @@ class LookAgainScreenTest {
     fun whileItLooksTheCardSaysWhatItCosts() {
         view.value = PipelineView(kept, aiReady = true, cardShown = true, lookingAgain = true)
         show {
-            compose.onNodeWithText("As written previously.").assertExists()
+            compose.onNodeWithText("Written by Claude Haiku 5.5.").assertExists()
             compose.onNodeWithText("Looking every source up again.").assertExists()
         }
         val searching = kept.copy(sources = kept.sources + (SourceId.WEB to SourceState.Pending))
         view.value = PipelineView(searching, aiReady = true, cardShown = true, lookingAgain = true)
         show {
-            compose.onNodeWithText("As written previously.").assertExists()
+            compose.onNodeWithText("Written by Claude Haiku 5.5.").assertExists()
             compose
                 .onNodeWithText(
                     "Looking every source up again, the web search included: a paid search on your Exa key.",
@@ -173,8 +173,8 @@ class LookAgainScreenTest {
             compose.onNodeWithTag(WRITE_TAG).assertTextEquals("Rewrite insight").assertIsEnabled()
             compose
                 .onNodeWithText(
-                    "As written previously. Tap Rewrite insight to have AI rewrite the insight with new findings " +
-                        "from sources.",
+                    "Written by Claude Haiku 5.5. Tap Rewrite insight to have AI rewrite the insight with " +
+                        "new findings from sources.",
                 ).assertExists()
             compose.onNodeWithText("updated sources", substring = true).assertDoesNotExist()
             // No cost said: the button carries the AI mark (#854).
@@ -186,7 +186,7 @@ class LookAgainScreenTest {
     fun nothingNewIsSaidAfterAsWrittenPreviously() {
         view.value = PipelineView(kept, aiReady = true, cardShown = true, lookAgainKey = key, nothingNew = true)
         show {
-            compose.onNodeWithText("As written previously. No update from sources.").assertExists()
+            compose.onNodeWithText("Written by Claude Haiku 5.5. No update from sources.").assertExists()
         }
     }
 

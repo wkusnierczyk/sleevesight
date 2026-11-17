@@ -267,7 +267,7 @@ class AskAiWebScreenTest {
             assertEquals(listOf("discogs.com" to discogs), compose.linkedRanges(AI_SEARCH_FROM_TAG))
             assertTrue(bounds(AI_SEARCH_FROM_TAG).top >= boundsOf(ALBUM_SENTENCE).bottom)
             assertEquals(0, count(AI_SEARCH_KNOWLEDGE_TAG))
-            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by Claude Haiku 5.5")
+            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("Written by Claude Haiku 5.5.")
         }
 
     @Test
@@ -350,7 +350,7 @@ class AskAiWebScreenTest {
                 AiSearch.Answered(SearchAnswer.Dates(album = "1974-01", albumSource = discogs), model, auto),
             )
             // Found: the plain credit; only the nothing line says it was asked automatically.
-            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("by Claude Haiku 5.5")
+            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("Written by Claude Haiku 5.5.")
             set(SearchKind.DATES, AiSearch.NothingFound(model, auto))
             compose
                 .onNodeWithTag(AI_SEARCH_NOTHING_TAG)

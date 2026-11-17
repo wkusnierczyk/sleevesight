@@ -132,7 +132,7 @@ class GenreVocalsScreenTest {
             compose
                 .onNodeWithContentDescription("Web search found this track described as instrumental. (Source S1)")
                 .assertExists()
-            compose.onNodeWithText("by ${VocalsFixtures.MODEL}, with web search").assertExists()
+            compose.onNodeWithText("Written by ${VocalsFixtures.MODEL} with web search.").assertExists()
             compose.onNodeWithTag(GENRE_WHY_TAG).assertExists()
         }
 
@@ -148,7 +148,7 @@ class GenreVocalsScreenTest {
                 .onNodeWithText(
                     "This track also credits Yurika Hanashima and may feature vocals.",
                 ).assertDoesNotExist()
-            compose.onNodeWithText("by ${VocalsFixtures.MODEL}, with web search").assertExists()
+            compose.onNodeWithText("Written by ${VocalsFixtures.MODEL} with web search.").assertExists()
             // No reason for a genre the check found wrong: the button is gone for the play.
             compose.onNodeWithTag(GENRE_WHY_TAG).assertDoesNotExist()
         }

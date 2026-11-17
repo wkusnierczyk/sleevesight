@@ -32,11 +32,12 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * The insight's footer with what a rewrite changed (#854), drawn as on a phone, at the default font
- * size and twice it: the play an insight was rewritten, a later play with *Rewrite insight* offered
- * again, and the offer after *Look again* found something new, each with a dimmed sentence and its
- * note. Each first line is checked; with `SLEEVESIGHT_PICTURES` set, each is also saved there as a
- * picture, as `InsightBylineScreenTest` saves its own.
+ * The insight's credit with what a rewrite changed (#854, #1162), drawn as on a phone, light and dark,
+ * at the default font size and twice it: the play an insight was rewritten, a later play with
+ * *Rewrite insight* offered again, and a kept insight with the offer after *Look again* found
+ * something new, each with a dimmed sentence and its note. Each credit line is checked; with
+ * `SLEEVESIGHT_PICTURES` set, each is also saved there as a picture, as `CreditLineScreenTest` saves
+ * its own.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -47,12 +48,14 @@ class RewrittenNotePicturesTest {
 
     private val out = System.getenv("SLEEVESIGHT_PICTURES")?.let { File(it).apply { mkdirs() } }
 
+    @Suppress("LongParameterList") // The picture's name, what it shows, and in which theme.
     private fun picture(
         name: String,
         line: String,
         offers: InsightOffers,
         rewritten: Set<RewritePart>,
         cached: Boolean,
+        dark: Boolean,
     ) {
         val insight =
             HomeFixtures
@@ -70,7 +73,7 @@ class RewrittenNotePicturesTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    SleevesightTheme(darkTheme = false) {
+                    SleevesightTheme(darkTheme = dark) {
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                             Column(Modifier.padding(16.dp)) {
                                 InsightCard(insight, context, InsightActions({}, {}, {}, onReport = { _, _ -> }))
@@ -93,33 +96,39 @@ class RewrittenNotePicturesTest {
         for (scale in listOf(1f, 2f)) {
             RuntimeEnvironment.setFontScale(scale)
             val size = if (scale == 1f) "font100" else "font200"
-            picture(
-                "rewritten-just-now-light-$size",
-                "Rewritten with Claude Haiku 5.5 high effort.",
-                InsightOffers(),
-                setOf(RewritePart.MODEL),
-                cached = false,
-            )
-            picture(
-                "rewritten-later-play-offered-again-light-$size",
-                "Rewritten with new findings from sources and Claude Haiku 5.5 high effort. " +
-                    "Tap Rewrite insight to have AI rewrite the insight with GPT-6.1 Sol high effort.",
-                InsightOffers(rewrite = true, rewriteWith = RewriteOffer(setOf(RewritePart.MODEL), SOL_HIGH)),
-                setOf(RewritePart.NEW_FINDINGS, RewritePart.MODEL),
-                cached = true,
-            )
-            picture(
-                "offer-after-look-again-light-$size",
-                "As written previously. Tap Rewrite insight to have AI rewrite the insight with new findings " +
-                    "from sources.",
-                InsightOffers(
-                    rewrite = true,
-                    somethingNew = true,
-                    rewriteWith = RewriteOffer(setOf(RewritePart.NEW_FINDINGS), HAIKU_HIGH),
-                ),
-                emptySet(),
-                cached = true,
-            )
+            for (dark in listOf(false, true)) {
+                val theme = if (dark) "dark" else "light"
+                picture(
+                    "rewritten-just-now-$theme-$size",
+                    "Rewritten by Claude Haiku 5.5 with high effort.",
+                    InsightOffers(),
+                    setOf(RewritePart.MODEL),
+                    cached = false,
+                    dark,
+                )
+                picture(
+                    "rewritten-later-play-offered-again-$theme-$size",
+                    "Rewritten by Claude Haiku 5.5 with high effort and new findings from sources. " +
+                        "Tap Rewrite insight to have AI rewrite the insight with GPT-6.1 Sol high effort.",
+                    InsightOffers(rewrite = true, rewriteWith = RewriteOffer(setOf(RewritePart.MODEL), SOL_HIGH)),
+                    setOf(RewritePart.NEW_FINDINGS, RewritePart.MODEL),
+                    cached = true,
+                    dark,
+                )
+                picture(
+                    "kept-offer-after-look-again-$theme-$size",
+                    "Written by Claude Haiku 5.5 with high effort. Tap Rewrite insight to have AI rewrite the " +
+                        "insight with new findings from sources.",
+                    InsightOffers(
+                        rewrite = true,
+                        somethingNew = true,
+                        rewriteWith = RewriteOffer(setOf(RewritePart.NEW_FINDINGS), HAIKU_HIGH),
+                    ),
+                    emptySet(),
+                    cached = true,
+                    dark,
+                )
+            }
         }
     }
 

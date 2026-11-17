@@ -87,7 +87,7 @@ internal fun offersLookAgain(context: InsightContext): Boolean =
     context.offers.lookAgain && context.insightsOn && context.aiReady && context.unavailable == null
 
 /**
- * What is said of *Look again* (#617) after *As written previously.* (#671), on the same line, once
+ * What is said of *Look again* (#617) after the credit (#671, #1162), on the same line, once
  * it is done and found nothing new: that it did; else none. Once it found something new, the line
  * offering *Rewrite insight* names it among what a rewrite would use (#854, `InsightOffers.rewriteWith`).
  * While it looks, none: what it is doing goes on a line of its own ([lookingAgainLine], #785).
@@ -98,7 +98,7 @@ internal fun lookAgainLine(context: InsightContext): Int? =
 
 /**
  * What *Look again* (#617) is doing while it looks the sources up, and what that costs, the web
- * search named when the run looks it up; said on a line of its own under *As written previously.*,
+ * search named when the run looks it up; said on a line of its own under the credit,
  * with the turning record before it (#785). Null while it is not looking.
  */
 @StringRes

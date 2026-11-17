@@ -131,18 +131,20 @@ class GroundingNoteTest {
         }
 
     @Test
-    fun aKeptInsightSaysSoInItsOwnLineNotInTheNote() {
-        show(written("It was recorded in 1973 [MB1].", cached = true)) {
-            compose.onNodeWithText(text(R.string.home_written_before)).assertExists()
+    fun aKeptInsightSaysWhoWroteItInItsOwnLineNotInTheNote() {
+        show(written("It was recorded in 1973 [MB1].", cached = true).copy(writtenBy = HomeFixtures.haiku)) {
+            compose.onNodeWithText(HomeFixtures.HAIKU_CREDIT).assertExists()
             assertEquals(0, count("Kept from before", substring = true))
             assertNoGroundedCount()
             assertNoUnbackedNote()
         }
-        show(written("It was recorded in 1973 [MB1]. It is great.", cached = true)) {
-            // Each on its own line: the note alone, under the line about the insight's history.
-            val before = compose.onNodeWithText(text(R.string.home_written_before)).fetchSemanticsNode().boundsInRoot
+        show(
+            written("It was recorded in 1973 [MB1]. It is great.", cached = true).copy(writtenBy = HomeFixtures.haiku),
+        ) {
+            // Each on its own line: the note alone, under the credit (#959).
+            val before = compose.onNodeWithText(HomeFixtures.HAIKU_CREDIT).fetchSemanticsNode().boundsInRoot
             val note = compose.onNodeWithText(unbacked).fetchSemanticsNode().boundsInRoot
-            assertTrue("the note under As written previously.", note.top >= before.bottom - 1f)
+            assertTrue("the note under the credit", note.top >= before.bottom - 1f)
             assertEquals(0, count("Kept from before", substring = true))
         }
     }
@@ -150,13 +152,14 @@ class GroundingNoteTest {
     @Test
     fun showGroundingDetailsBringsBackTheFullCounts() {
         val details = Settings(developerMode = true, showGroundingDetails = true)
-        show(written("It was recorded in 1973 [MB1]. It is great. It was a hit [MB9].", cached = true), details) {
+        val kept = written("It was recorded in 1973 [MB1]. It is great. It was a hit [MB9].", cached = true)
+        show(kept.copy(writtenBy = HomeFixtures.haiku), details) {
             val grounded = plural(R.plurals.home_meta_grounded, 3, 1, 3)
             val uncited = text(R.string.home_meta_uncited, 1)
             val unknown = plural(R.plurals.home_meta_unknown, 1, 1)
-            // Without *kept from before*, which the line above it says (#671).
+            // Without *kept from before*: the credit above it says who wrote it (#671, #1162).
             compose.onNodeWithText("$grounded · $uncited · $unknown").assertExists()
-            compose.onNodeWithText(text(R.string.home_written_before)).assertExists()
+            compose.onNodeWithText(HomeFixtures.HAIKU_CREDIT).assertExists()
             assertEquals(0, count("kept from before", substring = true))
             assertEquals(
                 "1 of 3 sentences grounded · 1 uncited · 1 cites missing evidence",
