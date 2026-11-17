@@ -171,8 +171,12 @@ class SameNamedAlbumsScreenTest {
     @Test
     fun anAlbumOpensItsTracklistAllAlbumsGoesBackAndSelectKeepsIt() =
         shown(CoverBack.Ambiguous(same)) {
-            states = mapOf(same.key to AlbumsState.Found(albums))
+            // The undated album has no tracklist: no row, but the heading counts every album of the name,
+            // as the note's button does.
+            states = mapOf(same.key to AlbumsState.Found(albums.take(2)))
             compose.onNodeWithTag(ALBUMS_SEE_TAG).performClick()
+            compose.onNodeWithText("3 albums named Greatest Hits").assertExists()
+            compose.onNodeWithTag(albumRowTag("g-undated")).assertDoesNotExist()
             compose.onNodeWithTag(albumRowTag("g-2006")).performClick()
             compose.onNodeWithTag(ALBUMS_OPENED_TAG).assertExists()
             compose.onNodeWithText("2006 · Compilation · EMI · Europe · CD").assertExists()

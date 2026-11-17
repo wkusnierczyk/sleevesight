@@ -58,13 +58,25 @@ class MusicBrainzTracklistTest {
             assertEquals("1959-08-17", tracklist.date)
             assertEquals("United States", tracklist.country)
             assertEquals(listOf("Columbia"), tracklist.labels)
-            assertEquals(MbReleaseGroup("g1", "Kind of Blue", "Album", listOf("Compilation", "Live")), tracklist.group)
+            assertEquals(
+                MbReleaseGroup("g1", "Kind of Blue", "Album", listOf("Compilation", "Live"), "1959-08-17"),
+                tracklist.group,
+            )
             assertEquals(listOf("12\" Vinyl", null), tracklist.media.map { it.format })
-            // With no release event, the country's code; with none of these, none.
+            // With no release event, no country (never the bare code); MusicBrainz's "[Worldwide]" as
+            // "Worldwide".
             val bare =
                 ReplayNetClient.ok("""{"id":"r2","country":"XE","media":[{"position":1,"tracks":[]}]}""")
             val plain = assertIs<Lookup.Found<MbTracklist>>(MusicBrainzClient(bare).tracklist("r2")).value
-            assertEquals("XE", plain.country)
+            assertEquals(null, plain.country)
+            val world =
+                ReplayNetClient.ok(
+                    """{"id":"r3","country":"XW","release-events":[{"area":{"name":"[Worldwide]"}}],"media":[]}""",
+                )
+            assertEquals(
+                "Worldwide",
+                assertIs<Lookup.Found<MbTracklist>>(MusicBrainzClient(world).tracklist("r3")).value.country,
+            )
             assertEquals(null, plain.date)
             assertEquals(emptyList<String>(), plain.labels)
             assertEquals(null, plain.group)
@@ -141,7 +153,7 @@ class MusicBrainzTracklistTest {
              "release-events":[{"date":"1959-08-17","area":{"id":"a1","name":"United States"}}],
              "label-info":[{"catalog-number":"CL 1355","label":{"id":"l1","name":"Columbia"}},
                            {"catalog-number":"CS 8163","label":{"id":"l1","name":"Columbia"}}],
-             "release-group":{"id":"g1","title":"Kind of Blue","primary-type":"Album","secondary-types":["Compilation","Live"]},
+             "release-group":{"id":"g1","title":"Kind of Blue","primary-type":"Album","secondary-types":["Compilation","Live"],"first-release-date":"1959-08-17"},
              "media":[
               {"position":1,"format":"12\" Vinyl","tracks":[
                 {"position":1,"title":"So What","length":562000,"recording":{"id":"rec1","title":"So What"}},

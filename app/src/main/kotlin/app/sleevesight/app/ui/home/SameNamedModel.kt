@@ -164,7 +164,8 @@ private fun albumRow(
         }
     return AlbumRow(
         group = album.group,
-        date = tracklist.date,
+        // The album's first release, not the edition shown's, which is often a reissue.
+        date = tracklist.group?.firstReleaseDate ?: tracklist.date,
         // The group's types as MusicBrainz writes them together: "Album + Compilation", the primary first.
         type =
             tracklist.group
@@ -181,13 +182,14 @@ private fun albumRow(
     )
 }
 
-// The media's [formats] as one: "CD" for one, "2×CD" for several alike, else each kind once, joined.
+// The media's [formats] as one, each kind once with its count, in order: "CD", "2×CD", "2×CD + DVD".
 private fun formatOf(formats: List<String>): String? =
-    when {
-        formats.isEmpty() -> null
-        formats.distinct().size == 1 && formats.size > 1 -> "${formats.size}\u00d7${formats.first()}"
-        else -> formats.distinct().joinToString(" + ")
-    }
+    formats
+        .groupingBy { it }
+        .eachCount()
+        .entries
+        .joinToString(" + ") { (format, count) -> if (count > 1) "$count\u00d7$format" else format }
+        .ifEmpty { null }
 
 // [media]'s discs with tracks as the back shows them, the playing song marked; null with no track.
 internal fun found(

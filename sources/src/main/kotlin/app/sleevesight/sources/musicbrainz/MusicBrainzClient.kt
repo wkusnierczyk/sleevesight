@@ -283,11 +283,17 @@ class MusicBrainzClient(
             MbTracklist(
                 releaseMbid = json.required("id"),
                 date = json.string("date")?.ifEmpty { null },
+                // The area's name ("[Worldwide]" as "Worldwide"), never the bare ISO code.
                 country =
                     json
                         .array("release-events")
-                        .firstNotNullOfOrNull { it.obj("area")?.string("name")?.ifEmpty { null } }
-                        ?: json.string("country")?.ifEmpty { null },
+                        .firstNotNullOfOrNull {
+                            it
+                                .obj("area")
+                                ?.string("name")
+                                ?.removeSurrounding("[", "]")
+                                ?.ifEmpty { null }
+                        },
                 labels =
                     json
                         .array("label-info")
@@ -302,6 +308,7 @@ class MusicBrainzClient(
                             it.array("secondary-types").mapNotNull { type ->
                                 (type as? JsonPrimitive)?.content?.ifEmpty { null }
                             },
+                            it.string("first-release-date")?.ifEmpty { null },
                         )
                     },
                 media =

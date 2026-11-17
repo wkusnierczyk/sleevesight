@@ -172,7 +172,15 @@ internal fun stateOf(
 ): TracklistState? {
     val state = states[key]
     return if (key.group != null && (state == null || state == TracklistState.Looking)) {
-        states.entries.lastOrNull { it.key.group == key.group && it.value is TracklistState.Found }?.value ?: state
+        // Only a tracklist of that group: a pick's entry may hold another group's of the name (#1080).
+        states.entries
+            .lastOrNull { (other, found) ->
+                other.group == key.group &&
+                    found is TracklistState.Found &&
+                    found.tracklist.group
+                        ?.mbid
+                        .let { it == null || it == key.group }
+            }?.value ?: state
     } else {
         state
     }

@@ -165,7 +165,9 @@ private fun AlbumList(
     val colors = MaterialTheme.colorScheme
     Column(Modifier.fillMaxSize().testTag(ALBUMS_LIST_TAG)) {
         Text(
-            stringResource(R.string.home_albums_heading, rows.size, albums.album),
+            // Every album the name names, as the note and the line count them; one with no tracklist
+            // has no row.
+            stringResource(R.string.home_albums_heading, albums.groups.size, albums.album),
             style = MaterialTheme.typography.labelLarge,
             color = colors.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp).semantics { heading() },

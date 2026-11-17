@@ -109,6 +109,46 @@ class SameNamedAlbumsModelTest {
     }
 
     @Test
+    fun theYearAndOrderAreTheAlbumsFirstReleaseNotTheEditionShown() {
+        // The 2001 album's release shown is a 2010 reissue; the 2006 album's, its first.
+        fun album(
+            group: String,
+            first: String?,
+            edition: String,
+        ) = NamedAlbum(
+            group,
+            tracklist("r-$group", null, "Mony Mony")
+                .copy(
+                    date = edition,
+                    group = MbReleaseGroup(group, "Greatest Hits", "Album", firstReleaseDate = first),
+                ),
+        )
+        val rows =
+            albumRows(
+                listOf(album("g-2006", "2006-03", "2006-03"), album("g-2001", "2001-04-24", "2010")),
+                idolTrack,
+                idol,
+            )
+        assertEquals(listOf("g-2001", "g-2006"), rows.map { it.group })
+        assertEquals(listOf("2001", "2006"), rows.map { it.year })
+        // With no first release date for the group, the edition's.
+        assertEquals("2010", albumRows(listOf(album("g", null, "2010")), idolTrack, idol).single().year)
+    }
+
+    @Test
+    fun aChoiceJustMadeShowsNoOtherGroupsTracklistFoundForThePick() {
+        // The pick by date asked for g-2001 with g-2006 besides, and the recording took g-2006's
+        // release; the listener then chose g-2001: that entry is not g-2001's tracklist.
+        val pickKey = TracklistKey("g-2001", "rec-eyes", listOf("g-2006", "g-undated"))
+        val states = mapOf(pickKey to TracklistState.Found(tracklist("r-2006", "g-2006", "Eyes Without a Face")))
+        val choices = mapOf(name to AlbumChoice("g-2001", groups))
+        assertEquals(CoverBack.Looking, coverBack(idolTrack, idol, true, states, choices))
+        // Its own group's is taken while the song's own is looked up.
+        val own = mapOf(pickKey to TracklistState.Found(tracklist("r-2001", "g-2001", "Eyes Without a Face")))
+        assertEquals(PickedBy.LISTENER, (coverBack(idolTrack, idol, true, own, choices) as CoverBack.Found).pickedBy)
+    }
+
+    @Test
     fun theChoiceHoldsForASongOfTheAlbumMusicBrainzDoesNotFind() {
         val choices = mapOf(name to AlbumChoice("g-2006", groups))
         val unresolved = track(idol, sources = mapOf(SourceId.MUSICBRAINZ to done(Outcome.None)))
@@ -226,5 +266,7 @@ class SameNamedAlbumsModelTest {
         assertEquals("2-2", row.playingAt)
         val mixed = two.copy(media = two.media.mapIndexed { i, m -> m.copy(format = listOf("CD", "DVD")[i]) })
         assertEquals("CD + DVD", albumRows(listOf(NamedAlbum("g", mixed)), idolTrack, idol).single().format)
+        val three = two.copy(media = two.media + MbMedium(3, listOf(MbTrack(1, "y", null, null)), "DVD"))
+        assertEquals("2\u00d7CD + DVD", albumRows(listOf(NamedAlbum("g", three)), idolTrack, idol).single().format)
     }
 }
