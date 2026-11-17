@@ -99,6 +99,17 @@ class KeyRefusalsTest {
         }
 
     @Test
+    fun aRefusalOfTheNewKeyAnsweredBeforeItsSaveIsReadIsSaidOnceItIs() =
+        runTest {
+            val refusals = KeyRefusals()
+            refusals.keysChanged { Secret("old") }
+            // The new key saved and used at once; its refusal comes before the change is read.
+            refusals.watching(Answering(refused)).stream(request, Secret("new")).toList()
+            refusals.keysChanged { Secret("new") }
+            assertEquals(setOf(ProviderId.OPENROUTER), refusals.refused.first())
+        }
+
+    @Test
     fun aCallThatSucceedsWithAnotherKeyDoesNotLiftTheMarkOfTheKeyRefused() =
         runTest {
             val refusals = KeyRefusals()

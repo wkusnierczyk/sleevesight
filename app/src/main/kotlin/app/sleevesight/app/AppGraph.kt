@@ -47,10 +47,10 @@ import app.sleevesight.app.pipeline.vocalsWanted
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.OpenRouterLogin
-import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.saveAndSwitchOn
 import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
@@ -127,7 +127,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
 /**
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
@@ -362,22 +361,14 @@ class AppGraph internal constructor(
 
     /**
      * Signing in with OpenRouter (#1157): its key saved as any other, and OpenRouter switched on at
-     * once, the service on before switched off, as its switch does. A key saved whose switch could
-     * not be saved on is still a sign-in that finished: the switch is there to move.
+     * once, the service on before switched off, as its switch does; finished only once both are
+     * saved ([saveAndSwitchOn]).
      */
     val openRouterLogin =
         OpenRouterLogin(
             wiring.openRouterSignIn,
             save = { key ->
-                (secrets.set(SecretId.OPENROUTER, key) == SaveResult.SAVED).also { saved ->
-                    if (saved) {
-                        try {
-                            settings.update { it.copy(aiProvider = ProviderId.OPENROUTER) }
-                        } catch (_: IOException) {
-                            // Not switched on: the key is saved, and the switch can be moved.
-                        }
-                    }
-                }
+                saveAndSwitchOn(secrets, key) { settings.update { it.copy(aiProvider = ProviderId.OPENROUTER) } }
             },
             scope = mainScope,
         )

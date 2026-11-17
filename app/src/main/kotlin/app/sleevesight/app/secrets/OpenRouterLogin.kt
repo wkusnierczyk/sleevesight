@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -173,5 +174,27 @@ class OpenRouterLogin(
             uri: String?,
             callback: String,
         ): Boolean = uri != null && (uri == callback || uri.startsWith("$callback?") || uri.startsWith("$callback/"))
+    }
+}
+
+/**
+ * A key from a sign-in with OpenRouter (#1157), saved in [store], and OpenRouter switched on at once
+ * ([switchOn], the settings' write): true only once both are done. When the switch cannot be saved,
+ * the key saved is removed again, so the screen never says "Signed in" for a sign-in that did not
+ * finish, and the service on before stays on; the sign-in then says OpenRouter did not hand over the
+ * key, to try again.
+ */
+suspend fun saveAndSwitchOn(
+    store: SecretStore,
+    key: Secret,
+    switchOn: suspend () -> Unit,
+): Boolean {
+    if (store.set(SecretId.OPENROUTER, key) != SaveResult.SAVED) return false
+    return try {
+        switchOn()
+        true
+    } catch (_: IOException) {
+        store.clear(SecretId.OPENROUTER)
+        false
     }
 }

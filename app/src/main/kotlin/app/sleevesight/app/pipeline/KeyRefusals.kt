@@ -22,27 +22,30 @@ import kotlinx.coroutines.flow.update
  * memory only, as a fingerprint: a call with that key that succeeds lifts it, and so does another key
  * saved, or the key removed ([keysChanged]). Each start begins with none.
  *
- * The keys saved are known from [keysChanged] on: a refusal that comes back for a key no longer the
- * one saved (a call made with the key before, answered after another was saved) marks nothing. The
- * marks and the keys saved change together, in one state, so no refusal can slip between them.
+ * Each refusal is marked with the key its request used, whatever order the answers and the saves
+ * come in, and a service is said refused only while its mark's key is the one saved, as
+ * [keysChanged] last read it (or before it has read any): a refusal of the key before, answered after
+ * another was saved, says nothing of the new one; a refusal of the new key, answered before
+ * [keysChanged] has read it, is said once it has. The marks and the keys saved change together, in
+ * one state.
  */
 class KeyRefusals {
-    /** The marks, by service, each with its key's fingerprint; and the keys saved, as last read. */
+    /** The marks, each a service and its refused key's fingerprint; and the keys saved, as last read. */
     private data class Book(
-        val marks: Map<ProviderId, String> = emptyMap(),
+        val marks: Set<Pair<ProviderId, String>> = emptySet(),
         val saved: Map<ProviderId, String?> = emptyMap(),
     ) {
-        // Whether [print] is not [provider]'s key saved, as far as it is known.
-        fun stale(
-            provider: ProviderId,
-            print: String,
-        ): Boolean = provider in saved && saved[provider] != print
+        // The services whose key saved, as far as it is known, has a mark.
+        fun refused(): Set<ProviderId> =
+            marks.filter { (provider, print) -> provider !in saved || saved[provider] == print }.mapTo(mutableSetOf()) {
+                it.first
+            }
     }
 
     private val book = MutableStateFlow(Book())
 
     /** The services whose saved key was refused. */
-    val refused: Flow<Set<ProviderId>> = book.map { it.marks.keys }.distinctUntilChanged()
+    val refused: Flow<Set<ProviderId>> = book.map { it.refused() }.distinctUntilChanged()
 
     /** [provider], with its refusals heard: its calls' ends and its model lists. */
     fun watching(provider: AiProvider): AiProvider =
@@ -78,19 +81,20 @@ class KeyRefusals {
         for (provider in ProviderId.entries) {
             val print = key(provider)?.let(::fingerprint)
             book.update { now ->
-                val marks = now.marks.filterNot { (marked, refused) -> marked == provider && refused != print }
+                // A mark of a key no longer saved can never be said again.
+                val marks = now.marks.filterNot { (marked, refused) -> marked == provider && refused != print }.toSet()
                 now.copy(marks = marks, saved = now.saved + (provider to print))
             }
         }
     }
 
-    // [provider]'s key [key] refused: marked, unless another key is saved by now.
+    // [provider]'s key [key], the one its request used, refused.
     private fun mark(
         provider: ProviderId,
         key: Secret,
     ) {
         val print = fingerprint(key)
-        book.update { if (it.stale(provider, print)) it else it.copy(marks = it.marks + (provider to print)) }
+        book.update { it.copy(marks = it.marks + (provider to print)) }
     }
 
     private fun lift(
@@ -102,7 +106,7 @@ class KeyRefusals {
     private fun lift(
         provider: ProviderId,
         print: String,
-    ) = book.update { if (it.marks[provider] == print) it.copy(marks = it.marks - provider) else it }
+    ) = book.update { it.copy(marks = it.marks - (provider to print)) }
 
     private companion object {
         // A key's SHA-256, to tell the key refused from the one saved now; in memory only.
