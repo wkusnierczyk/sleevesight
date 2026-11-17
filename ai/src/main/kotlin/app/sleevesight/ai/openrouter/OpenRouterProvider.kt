@@ -54,6 +54,13 @@ import kotlin.time.Instant
  * reasoning it streams back is skipped. With an effort the token limit is as asked, else at most
  * [CompletionRequest.DEFAULT_MAX_TOKENS] (`maxTokensSent`).
  *
+ * A request whose prompt asks for one JSON object ([CompletionRequest.json], #1400) also sends
+ * `response_format: {"type": "json_object"}`, OpenRouter's JSON mode, which the Claude, GPT and
+ * Gemini models it offers all list. Without it, a Claude model reached through OpenRouter answered
+ * such a prompt in prose (*Explain the song*), which the app cannot read, where the same model
+ * called directly kept to the shape. A model whose route does not take the mode has OpenRouter
+ * drop it, and answers from the prompt alone, as before. A plain-text request sends no format.
+ *
  * Errors ([kindOf]): 402 is an account out of credit, or a key past its spending limit
  * ([AiErrorKind.BILLING]); a 429 for a free model's daily allowance ([FREE_DAILY]) is
  * [AiErrorKind.QUOTA_EXHAUSTED], any other a rate limit, with the wait its `Retry-After` asks; 401
@@ -139,6 +146,7 @@ class OpenRouterProvider(
                 put("max_tokens", maxTokensSent(request, effort != null))
                 put("stream", true)
                 effort?.let { putJsonObject("reasoning") { put("effort", effortName(it)) } }
+                if (request.json) putJsonObject("response_format") { put("type", "json_object") }
             }
         return NetRequest(
             url = "$baseUrl/api/v1/chat/completions",

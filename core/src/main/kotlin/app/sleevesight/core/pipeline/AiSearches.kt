@@ -278,7 +278,7 @@ class AiSearches(
                 questions.used(asking.search).takeUnless { it == AiWebSearch.OFF } ?: AiWebSearch.ONCE
             }
         show(SearchState.Searching(web = search != AiWebSearch.OFF), now())
-        val base = CompletionRequest(key.model, "", maxTokensFor(key.effort), key.effort, card = key.card)
+        val base = CompletionRequest(key.model, "", maxTokensFor(key.effort), key.effort, card = key.card, json = true)
         val explain = ExplainQuestion.of(kind, facts, track.evidence, dates())
         val reply = questions.ask(explain ?: question(kind, facts), search, asking.limit, base, counted)
         val pages = reply.pages?.map(WebPage::url)

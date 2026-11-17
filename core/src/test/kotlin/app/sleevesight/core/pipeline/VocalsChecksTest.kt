@@ -106,6 +106,7 @@ class VocalsChecksTest {
                 queries,
             )
             val prompt = provider.requests.single().prompt
+            assertTrue(provider.requests.single().json)
             assertTrue("Title: Nasnusa" in prompt && "Artists: Sababa 5, Yurika Hanashima" in prompt)
             assertTrue("Album: Kokoro" in prompt && page.url in prompt)
             // Nothing the sources found: the title, artists and album with the pages.

@@ -100,6 +100,7 @@ internal object PromptDump {
                 "effort=${request.effort?.name?.lowercase() ?: "default"}",
                 "tools=${request.tools.joinToString(",") { it.name }.ifEmpty { "none" }}",
                 "toolsAllowed=${request.toolsAllowed}",
+                "json=${request.json}",
                 "exchanges=${request.exchanges.size}",
                 "at=$at",
             ).joinToString(" ")

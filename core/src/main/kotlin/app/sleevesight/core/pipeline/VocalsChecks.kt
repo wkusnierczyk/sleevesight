@@ -133,7 +133,7 @@ class VocalsChecks(
     ): VocalsState {
         val access = checkNotNull(ai) { "no AI service" }
         show(VocalsState.Checking, now())
-        val base = CompletionRequest(key.model, "", AiSearches.maxTokensFor(key.effort), key.effort)
+        val base = CompletionRequest(key.model, "", AiSearches.maxTokensFor(key.effort), key.effort, json = true)
         val questions = WebQuestions(access, web)
         val search = questions.used(asking.search).takeUnless { it == AiWebSearch.OFF } ?: AiWebSearch.ONCE
         val asked = questions.ask(question(track), search, asking.limit, base, counted, mayPay)

@@ -40,7 +40,7 @@ class PromptDumpTest {
         assertEquals(
             listOf(
                 "#3 request 1/1 provider=anthropic model=claude-haiku-5-5 maxTokens=4096 effort=low " +
-                    "tools=web_search toolsAllowed=true exchanges=0 at=T",
+                    "tools=web_search toolsAllowed=true json=false exchanges=0 at=T",
                 "#3 system 1/1 Narrate.",
                 "#3 prompt 1/1 Line one\\nC:\\\\path",
             ),

@@ -283,6 +283,7 @@ class SpellingCheckTest {
             assertEquals(QuestionCost(searches = 1, calls = 1), last.way.cost)
             assertEquals(listOf("Nessun doma - Turandot by ${played.artists.joinToString(", ")}"), searched)
             val prompt = provider.requests.single().prompt
+            assertTrue(provider.requests.single().json)
             assertTrue("Title: Nessun doma - Turandot" in prompt)
             assertTrue(SpellingPrompt.QUESTION in prompt)
         }

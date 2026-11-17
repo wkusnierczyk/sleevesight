@@ -144,7 +144,8 @@ class GenreLists(
         val access = checkNotNull(ai) { "no AI service" }
         val mode = checkNotNull(GenreListMode.entries.firstOrNull { it.key == key.subject }) { "no mode" }
         show(GenreListState.Asking, now())
-        val base = CompletionRequest(key.model, "", AiSearches.maxTokensFor(key.effort), key.effort, card = key.card)
+        val tokens = AiSearches.maxTokensFor(key.effort)
+        val base = CompletionRequest(key.model, "", tokens, key.effort, card = key.card, json = true)
         val questions = WebQuestions(access, web)
         // A list from the web is asked from it, *Once* when the settings say *Off* since the key was made.
         val search =
