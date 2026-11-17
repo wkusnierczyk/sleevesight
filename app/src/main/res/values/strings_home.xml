@@ -167,8 +167,25 @@
     <string name="home_key_composer">Composer:</string>
     <string name="home_key_author">Author:</string>
     <string name="home_key_authors">Authors:</string>
-    <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
-    <string name="home_album_year">%1$s, %2$s</string>
+    <!-- Under the album (#729), quieter: the record label (or labels, joined by commas) of the release
+         being played, then the album's year: "Parlophone · 1965"; either alone when only it is known. -->
+    <string name="home_album_release">%1$s · %2$s</string>
+    <!-- Under the album (#729), the release's own year, then in brackets the year the album first came
+         out, when the release played is a later edition: "2019 (1969)", as in "Apple Records · 2019 (1969)". -->
+    <string name="home_album_year_first">%1$s (%2$s)</string>
+    <!-- As home_album_released_by_in, for a later edition (#729): %4$s the year the album first came
+         out: "Abbey Road, released by Apple Records in 2019, first released in 1969." -->
+    <string name="home_album_released_by_in_first">%1$s, released by %2$s in %3$s, first released in %4$s.</string>
+    <!-- As home_album_released_by_in_first, with no label known: "Abbey Road, released in 2019, first
+         released in 1969." -->
+    <string name="home_album_released_in_first">%1$s, released in %2$s, first released in %3$s.</string>
+    <!-- The album and the line under it, as a screen reader reads them in one (#729): %1$s the album,
+         %2$s its label or labels ("Harvest and Capitol Records"), %3$s the year. -->
+    <string name="home_album_released_by_in">%1$s, released by %2$s in %3$s.</string>
+    <!-- As home_album_released_by_in, with no year known: "Rubber Soul, released by Parlophone." -->
+    <string name="home_album_released_by">%1$s, released by %2$s.</string>
+    <!-- As home_album_released_by_in, with no label known: "Rubber Soul, released in 1965." -->
+    <string name="home_album_released_in">%1$s, released in %2$s.</string>
 
     <!-- While the player plays an ad (#880): in place of the title, the player's name as the player
          row names it; under it a line; then, where Key insights would be, the note. -->

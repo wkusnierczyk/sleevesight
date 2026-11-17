@@ -666,9 +666,10 @@ class DatesScreenTest {
         }
 
     @Test
-    fun theAlbumLineKeepsItsYearAndTheFirstReleaseIsNotUnderIt() =
+    fun theLineUnderTheAlbumHasItsYearAndTheFirstReleaseIsNotUnderIt() =
         show {
-            compose.onNodeWithText("${sundown.album}, 1974").assertExists()
+            // The year on the line under the album (#729), the label not looked up by this screen's feed.
+            compose.onNodeWithText("1974", useUnmergedTree = true).assertExists()
             assertEquals(0, compose.onAllNodesWithText("First released", substring = true).fetchSemanticsNodes().size)
         }
 }

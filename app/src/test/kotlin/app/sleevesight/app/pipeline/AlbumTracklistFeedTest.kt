@@ -50,6 +50,71 @@ class AlbumTracklistFeedTest {
     )
 
     @Test
+    fun aLookupAheadSupersededIsCancelledAndForgottenSoTheNextTracksIsNotHeldBehindIt() =
+        runTest {
+            // #729: a skip while the skipped track's release is still asked.
+            val hold = CompletableDeferred<Unit>()
+            val feed = feed(hold = hold)
+            val skipped = TracklistKey("g-skipped", "rec-1")
+            feed.lookAhead(skipped)
+            runCurrent()
+            assertEquals(TracklistState.Looking, feed.states.value[skipped])
+            hold.complete(Unit)
+            // The next track's look ahead gives it up before its answer lands.
+            feed.lookAhead(g)
+            runCurrent()
+            assertNull(feed.states.value[skipped])
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[g])
+            // Asked again later, it is asked anew.
+            feed.lookAhead(skipped)
+            runCurrent()
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[skipped])
+            assertEquals(listOf("g-skipped", "g", "g-skipped"), asked)
+        }
+
+    @Test
+    fun aLookupAheadTheCoverTurnedToIsNotGivenUp() =
+        runTest {
+            val hold = CompletableDeferred<Unit>()
+            val feed = feed(hold = hold)
+            feed.lookAhead(g)
+            runCurrent()
+            feed.look(g)
+            val next = TracklistKey("g-next", "rec-2")
+            feed.lookAhead(next)
+            hold.complete(Unit)
+            runCurrent()
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[g])
+            assertEquals(listOf("g", "g-next"), asked)
+        }
+
+    @Test
+    fun aLookupAheadThatEndedIsKept() =
+        runTest {
+            val feed = feed()
+            feed.lookAhead(g)
+            runCurrent()
+            feed.lookAhead(TracklistKey("g-next", "rec-2"))
+            runCurrent()
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[g])
+        }
+
+    @Test
+    fun aLookupAheadAsksAgainAfterAFailure() =
+        runTest {
+            answer = Lookup.Failed("Offline")
+            val feed = feed()
+            feed.lookAhead(g)
+            runCurrent()
+            assertEquals(TracklistState.Failed, feed.states.value[g])
+            answer = Lookup.Found(tracklist)
+            feed.lookAhead(g)
+            runCurrent()
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[g])
+            assertEquals(listOf("g", "g"), asked)
+        }
+
+    @Test
     fun theAlbumsOfOneNameAreAskedOnceAndAgainOnlyOnRetryAfterAFailure() =
         runTest {
             // #1080: on the listener's tap, all of them in one lookup.
