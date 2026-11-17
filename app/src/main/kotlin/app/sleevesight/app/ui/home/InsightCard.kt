@@ -190,10 +190,13 @@ private fun Written(
 ) {
     val paragraphs = insight.grounded.paragraphs
     if (paragraphs.isEmpty()) Prose(AnnotatedString(insight.grounded.text))
-    for (paragraph in paragraphs) {
-        CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
+    // The dimmed sentences' `?` chips go to the note in the footer (#954).
+    WithUnbackedNote {
+        for (paragraph in paragraphs) {
+            CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
+        }
+        Footer(insight, context, actions, groundingDetails, readAloud)
     }
-    Footer(insight, context, actions, groundingDetails, readAloud)
 }
 
 /**

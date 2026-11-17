@@ -162,4 +162,5 @@ internal fun rememberLineFocus(
     return focus
 }
 
-private val FLASH = 1300.milliseconds
+/** How long a line, or the note on dimmed text (#954), flashes once gone to. */
+internal val FLASH = 1300.milliseconds

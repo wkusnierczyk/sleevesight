@@ -120,7 +120,16 @@ class InsightFooterLayoutTest {
         for ((details, grounding) in listOf(false to NOTE, true to COUNTS)) {
             show(details) { _ ->
                 val first = bounds(BEFORE)
-                val second = bounds(grounding)
+                // The note's line starts with its `?` chip (#954), the counts' with their words.
+                val second =
+                    if (details) {
+                        bounds(grounding)
+                    } else {
+                        compose
+                            .onNodeWithTag(UNBACKED_NOTE_TAG, useUnmergedTree = true)
+                            .fetchSemanticsNode()
+                            .boundsInRoot
+                    }
                 val action = report
                 val where = "$grounding at $scale"
                 assertTrue("$where: the grounding line under line 1", second.top >= first.bottom - 1f)

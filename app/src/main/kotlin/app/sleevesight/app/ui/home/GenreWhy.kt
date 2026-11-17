@@ -181,26 +181,32 @@ internal fun ReasonShown(
             }
 
         is InsightState.Written ->
+            // The dimmed sentences' `?` chips go to the note under the credit (#954).
             Answer(question) {
-                // Read from its citations, not its words (#695): no sentence cites a source or a page.
-                if (state.grounded.fromModelAlone) {
-                    QuietNote(stringResource(R.string.genre_why_from_model), Modifier.testTag(GENRE_WHY_FROM_MODEL_TAG))
+                WithUnbackedNote {
+                    // Read from its citations, not its words (#695): no sentence cites a source or a page.
+                    if (state.grounded.fromModelAlone) {
+                        QuietNote(
+                            stringResource(R.string.genre_why_from_model),
+                            Modifier.testTag(GENRE_WHY_FROM_MODEL_TAG),
+                        )
+                    }
+                    // A reason asked again with web search cites the pages it found too (#801).
+                    val evidence = state.searched ?: context.track?.evidence
+                    // Each citation shown, and opened, by the id *Sources* lists its line under (#1205).
+                    val shownAs = shownAs(evidence, actions.sources)
+                    for (paragraph in state.grounded.paragraphs) {
+                        CheckedProse(
+                            paragraph,
+                            state.grounded,
+                            evidence,
+                            { id -> actions.onCite(shownAs(id)) },
+                            label = shownAs,
+                        )
+                    }
+                    ReasonCredits(shown, state, evidence, shownAs, actions.readAloud)
+                    if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
                 }
-                // A reason asked again with web search cites the pages it found too (#801).
-                val evidence = state.searched ?: context.track?.evidence
-                // Each citation shown, and opened, by the id *Sources* lists its line under (#1205).
-                val shownAs = shownAs(evidence, actions.sources)
-                for (paragraph in state.grounded.paragraphs) {
-                    CheckedProse(
-                        paragraph,
-                        state.grounded,
-                        evidence,
-                        { id -> actions.onCite(shownAs(id)) },
-                        label = shownAs,
-                    )
-                }
-                ReasonCredits(shown, state, evidence, shownAs, actions.readAloud)
-                if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
             }
 
         // The AI could not explain it (#762), then what is off that could (#695). Not for a genre the

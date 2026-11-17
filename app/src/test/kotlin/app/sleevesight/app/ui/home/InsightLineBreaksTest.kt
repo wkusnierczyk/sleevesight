@@ -72,7 +72,8 @@ class InsightLineBreaksTest {
     fun aListsItemsStayOnTheirOwnLines() =
         show(written("- It was recorded [MB1].\n- It topped the charts [W1].\n- It is great.")) {
             assertEquals(
-                "It was recorded ${chip("MB1")}.\nIt topped the charts ${chip("W1")}.\nIt is great.",
+                // The uncited item ends with its `?` chip (#954).
+                "It was recorded ${chip("MB1")}.\nIt topped the charts ${chip("W1")}.\nIt is great ${chip("?")}.",
                 paragraph("It was recorded"),
             )
         }
