@@ -179,6 +179,33 @@ class PromptLabTest {
         }
 
     @Test
+    fun typingCustomRebuildsNothingUntilItIsApplied() =
+        runTest {
+            val lab = lab()
+            advanceUntilIdle()
+            lab.developerMode(true)
+            lab.update { it.use(PromptKind.SONG, LabPrompts.CUSTOM) }
+            lab.applyCustom(PromptKind.SONG)
+            advanceUntilIdle()
+            val asked = mutableListOf<Unit>()
+            val watching = launch { lab.rebuilds.collect { asked += it } }
+            advanceUntilIdle()
+            for (typed in listOf("W", "Wr", "Write the sound first.")) {
+                lab.update { it.withCustom(PromptKind.SONG, typed) }
+                advanceUntilIdle()
+            }
+            assertEquals(0, asked.size)
+            assertEquals(LabPrompts.ROLE, lab.choices()[PromptKind.SONG]?.instructions)
+
+            // The field left: the instructions as typed are taken, and the pipeline rebuilt once.
+            lab.applyCustom(PromptKind.SONG)
+            advanceUntilIdle()
+            watching.cancel()
+            assertEquals(1, asked.size)
+            assertEquals("Write the sound first.", lab.choices()[PromptKind.SONG]?.instructions)
+        }
+
+    @Test
     fun theSettingsAndTheLogOutlastTheProcess() =
         runTest {
             val first = lab()

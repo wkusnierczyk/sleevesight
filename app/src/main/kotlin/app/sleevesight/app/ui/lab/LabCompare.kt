@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,7 +92,13 @@ internal fun LabCompare(subject: LabSubject) {
     val context = LocalContext.current
     val names = remember(context) { ListedModelNames(context) }
     val resources = LocalResources.current
-    var run by remember(subject) { mutableStateOf<Comparing?>(null) }
+    // One comparison per card shown: evidence landing meanwhile keeps it, which holds its own subject.
+    var run by remember(subject.kind, subject.card) { mutableStateOf<Comparing?>(null) }
+    // Its calls stop with it, rather than run on unseen and unlogged.
+    DisposableEffect(run) {
+        val current = run
+        onDispose { current?.stop() }
+    }
     val count = settings.compared(subject.kind).size
     DeveloperMark(Modifier.fillMaxWidth().testTag(LAB_COMPARE_TAG), tag = stringResource(R.string.lab_mark_tag)) {
         val current = run

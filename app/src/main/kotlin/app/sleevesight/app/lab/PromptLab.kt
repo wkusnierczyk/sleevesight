@@ -63,6 +63,7 @@ class PromptLab(
     private val onState = MutableStateFlow(false)
     private val settingsState = MutableStateFlow(LabSettings())
     private val logState = MutableStateFlow<List<LabComparison>>(emptyList())
+    private val appliedCustom = MutableStateFlow<Map<PromptKind, String>>(emptyMap())
     private val sentByCard = LinkedHashMap<String, Sent>()
     private val files = Mutex()
 
@@ -78,7 +79,11 @@ class PromptLab(
     init {
         scope.launch(io) {
             files.withLock {
-                read(SETTINGS)?.let { settingsState.value = LabJson.readSettings(it) }
+                read(SETTINGS)?.let { text ->
+                    val read = LabJson.readSettings(text)
+                    settingsState.value = read
+                    appliedCustom.value = read.custom
+                }
                 read(LOG)?.let { logState.value = LabJson.readLog(it) }
             }
         }
@@ -96,27 +101,48 @@ class PromptLab(
     }
 
     /**
-     * The lab's choices as set now (#1003): the variant each kind is written with and its instructions,
-     * for a pipeline built now; [PromptChoices.NONE] while the lab is off.
+     * Takes [kind]'s *Custom* instructions as now typed for the pipeline ([choices]): once their
+     * editing ends (the field left), or *Custom* is chosen or reset. Until then, typing changes no
+     * choice, so it neither rebuilds the pipeline nor writes with half-typed instructions.
+     */
+    fun applyCustom(kind: PromptKind) {
+        appliedCustom.update { it + (kind to settingsState.value.custom(kind)) }
+    }
+
+    /**
+     * The lab's choices as set now (#1003): the variant each kind is written with and its instructions
+     * (*Custom*'s as last applied, [applyCustom]), for a pipeline built now; [PromptChoices.NONE] while
+     * the lab is off.
      */
     fun choices(): PromptChoices {
         if (!onState.value) return PromptChoices.NONE
         val settings = settingsState.value
+        val custom = appliedCustom.value
         return PromptChoices(
             PromptKind.entries.associateWith { kind ->
-                settings.inUse(kind).let { id -> PromptChoice(id, settings.instructions(kind, id)) }
+                settings.inUse(kind).let { id ->
+                    val instructions =
+                        if (id ==
+                            LabPrompts.CUSTOM
+                        ) {
+                            custom[kind] ?: LabPrompts.ROLE
+                        } else {
+                            settings.instructions(kind, id)
+                        }
+                    PromptChoice(id, instructions)
+                }
             },
         )
     }
 
     /**
      * When a pipeline is to be built again for the lab's choices: each change of them after the
-     * first, a burst of typing in *Custom* taken as one.
+     * first (developer mode, a variant used, *Custom* applied), changes close together taken as one.
      */
     @OptIn(FlowPreview::class)
     val rebuilds: Flow<Unit>
         get() =
-            combine(onState, settingsState) { _, _ -> signature(choices()) }
+            combine(onState, settingsState, appliedCustom) { _, _, _ -> signature(choices()) }
                 .distinctUntilChanged()
                 .drop(1)
                 .debounce(REBUILD_QUIET)

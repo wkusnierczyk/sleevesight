@@ -33,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -124,6 +125,7 @@ private fun Variants(
     update: ((LabSettings) -> LabSettings) -> Unit,
 ) {
     val shown = remember { mutableStateMapOf<String, Boolean>() }
+    val lab = LocalPromptLab.current
     val inUse = settings.inUse(kind)
     val compared = settings.compared(kind)
     Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -142,7 +144,11 @@ private fun Variants(
             Row(verticalAlignment = Alignment.Top) {
                 RadioButton(
                     selected = inUse == id,
-                    onClick = { update { it.use(kind, id) } },
+                    onClick = {
+                        update { it.use(kind, id) }
+                        // *Custom* chosen: its instructions as typed are taken.
+                        if (id == LabPrompts.CUSTOM) lab?.applyCustom(kind)
+                    },
                     modifier = Modifier.testTag(labUseTag(kind, id)),
                 )
                 if (compares(kind)) {
@@ -187,15 +193,28 @@ private fun Instructions(
         Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
+    val lab = LocalPromptLab.current
+    var editing by remember { mutableStateOf(false) }
     OutlinedTextField(
         value = settings.custom(kind),
         onValueChange = { text -> update { it.withCustom(kind, text) } },
         label = { Text(stringResource(R.string.lab_custom_label)) },
-        modifier = Modifier.fillMaxWidth().testTag(labCustomTag(kind)),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .testTag(labCustomTag(kind))
+                // Taken for the pipeline once the field is left, not at each keystroke.
+                .onFocusChanged { focus ->
+                    if (editing && !focus.isFocused) lab?.applyCustom(kind)
+                    editing = focus.isFocused
+                },
         textStyle = MaterialTheme.typography.bodySmall,
     )
     Quiet(stringResource(R.string.lab_custom_role))
-    TextButton(onClick = { update { it.withCustom(kind, LabPrompts.ROLE) } }) {
+    TextButton(onClick = {
+        update { it.withCustom(kind, LabPrompts.ROLE) }
+        lab?.applyCustom(kind)
+    }) {
         Text(stringResource(R.string.lab_custom_reset))
     }
 }

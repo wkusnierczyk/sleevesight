@@ -29,6 +29,10 @@ import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.sources.WebSearchOutcome
 import app.sleevesight.core.sources.WebSearcher
 import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.LabPrompts
+import app.sleevesight.core.synthesis.PromptChoice
+import app.sleevesight.core.synthesis.PromptChoices
+import app.sleevesight.core.synthesis.PromptKind
 import app.sleevesight.core.synthesis.WebPrompt
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -127,7 +131,15 @@ class ArtistWebInsightsTest {
     private fun items(
         provider: FakeProvider,
         web: WebSearcher? = null,
-    ) = ItemInsights(AiAccess(provider, Secret("k")), cache, JvmHasher, names, artistWeb = artistWeb, web = web)
+        choices: PromptChoices = PromptChoices.NONE,
+    ) = ItemInsights(
+        AiAccess(provider, Secret("k"), choices),
+        cache,
+        JvmHasher,
+        names,
+        artistWeb = artistWeb,
+        web = web,
+    )
 
     // A track of Gehra Hua: a line about the song, and, with [artistLines], one about the artist.
     private fun track(
@@ -406,6 +418,24 @@ class ArtistWebInsightsTest {
             assertIs<ItemSearch.Found>(items.search(InsightItem.ARTIST, track, settings, evidence))
             assertEquals(1, artistWeb.searches)
             assertTrue(engine.queries.isEmpty())
+        }
+
+    @Test
+    fun `in the prompt lab, an insight written while searching names the card its request was sent as (#1003)`() =
+        runTest {
+            val provider = searching("Shashwat Sachdev scored Uri: The Surgical Strike [S1].")
+            val chosen = PromptChoices(mapOf(PromptKind.ARTIST to PromptChoice(LabPrompts.RELEASE, null)))
+            val items = items(provider, Searches { WebSearchOutcome.Found(listOf(ABOUT, ELSEWHERE)) }, chosen)
+            val track = track()
+            val gathered = checkNotNull(items.evidence(InsightItem.ARTIST, track, upTo))
+            val first = checkNotNull(items.key(InsightItem.ARTIST, track, gathered, upTo))
+            val result = checkNotNull(items.writeSearching(first, InsightItem.ARTIST, track, upTo, gathered))
+            val written = assertIs<InsightState.Written>(result.state)
+
+            // The card is keyed anew from the lines found, but names the request that wrote it.
+            assertNotEquals(first, result.key)
+            assertEquals(provider.requests.last().card, written.writtenBy?.card)
+            assertEquals(LabPrompts.RELEASE, written.writtenBy?.variant)
         }
 
     @Test

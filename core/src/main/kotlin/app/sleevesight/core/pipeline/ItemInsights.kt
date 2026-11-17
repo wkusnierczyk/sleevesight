@@ -998,7 +998,8 @@ class ItemInsights(
             )
         if (!gates.reserve(key)) return null
         val rewritten = asked.rewriting?.let { rewriteParts(it, key.writtenBy()) }.orEmpty()
-        val read = outcome(reply.end, text, key, lines, null, rewritten)
+        // Named by the card its request was sent as (`first`), for the prompt lab's comparison (#1003).
+        val read = outcome(reply.end, text, key, lines, null, rewritten).sentAs(first)
         val nothing = !searched && foundNothing(asked.item, read)
         if (searched || nothing) attempt { searching.keep(drafts) }
         // With "found nothing" kept, the item's evidence has no search due.
@@ -1538,6 +1539,13 @@ class ItemInsights(
 
     // What a reply came to: read, as a state and whether it is kept; or revised with nothing usable
     // left, with the tokens paid so far.
+    // This reply, its written state named by [sent]'s card ([CardKey.card]), the card its request
+    // was sent as: a searched write keys its card anew from the lines found (#1003).
+    private fun Reply.sentAs(sent: CardKey): Reply {
+        val state = (this as? Reply.Read)?.state as? InsightState.Written ?: return this
+        return Reply.Read(state.copy(writtenBy = state.writtenBy?.copy(card = sent.card)), kept)
+    }
+
     private sealed interface Reply {
         class Read(
             val state: InsightState,
