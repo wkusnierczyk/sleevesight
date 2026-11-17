@@ -12,10 +12,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.Unavailability
 import app.sleevesight.app.ui.GENRE_LABELS_DOCS_URL
+import app.sleevesight.app.ui.lab.LabCompareUnder
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
@@ -26,6 +28,7 @@ import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.GenreLists
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.synthesis.GenreListMode
+import app.sleevesight.core.synthesis.PromptKind
 
 // *Why is this …?* once it is asked for, or where it cannot be (#523, #762): the reason under its
 // question, the line while the AI service is asked, a failed call's *Retry*, and the button disabled
@@ -181,32 +184,27 @@ internal fun ReasonShown(
             }
 
         is InsightState.Written ->
-            // The dimmed sentences' `?` chips go to the note under the credit (#954).
             Answer(question) {
-                WithUnbackedNote {
-                    // Read from its citations, not its words (#695): no sentence cites a source or a page.
-                    if (state.grounded.fromModelAlone) {
-                        QuietNote(
-                            stringResource(R.string.genre_why_from_model),
-                            Modifier.testTag(GENRE_WHY_FROM_MODEL_TAG),
-                        )
-                    }
-                    // A reason asked again with web search cites the pages it found too (#801).
-                    val evidence = state.searched ?: context.track?.evidence
-                    // Each citation shown, and opened, by the id *Sources* lists its line under (#1205).
-                    val shownAs = shownAs(evidence, actions.sources)
-                    for (paragraph in state.grounded.paragraphs) {
-                        CheckedProse(
-                            paragraph,
-                            state.grounded,
-                            evidence,
-                            { id -> actions.onCite(shownAs(id)) },
-                            label = shownAs,
-                        )
-                    }
-                    ReasonCredits(shown, state, evidence, shownAs, actions.readAloud)
-                    if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
+                // Read from its citations, not its words (#695): no sentence cites a source or a page.
+                if (state.grounded.fromModelAlone) {
+                    QuietNote(stringResource(R.string.genre_why_from_model), Modifier.testTag(GENRE_WHY_FROM_MODEL_TAG))
                 }
+                // A reason asked again with web search cites the pages it found too (#801).
+                val evidence = state.searched ?: context.track?.evidence
+                // Each citation shown, and opened, by the id *Sources* lists its line under (#1205).
+                val shownAs = shownAs(evidence, actions.sources)
+                for (paragraph in state.grounded.paragraphs) {
+                    CheckedProse(
+                        paragraph,
+                        state.grounded,
+                        evidence,
+                        { id -> actions.onCite(shownAs(id)) },
+                        label = shownAs,
+                    )
+                }
+                ReasonCredits(shown, state, evidence, shownAs, actions.readAloud)
+                if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
+                if (BuildConfig.DEBUG) LabCompareUnder(PromptKind.GENRE_REASONS, context.track, state, evidence)
             }
 
         // The AI could not explain it (#762), then what is off that could (#695). Not for a genre the
@@ -254,6 +252,7 @@ private fun ReasonCredits(
         CreditRow(
             shown.model?.let { creditString(Credit(it, shown.effort, web = fromWeb)) },
             readAloud = readAloud?.let { { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) } },
+            variant = state.writtenBy?.variant,
         )
         GroundingLine(state.grounded, details = false)
         TranslatedLine(state.grounded, evidence, label = shownAs)
@@ -278,7 +277,8 @@ private fun NotFound(
     }
 }
 
-// The reason under the [question] as its heading.
+// The reason under the [question] as its heading, its dimmed sentences' `?` chips going to the note
+// under its credit (#954).
 @Composable
 private fun Answer(
     question: String,
@@ -290,7 +290,7 @@ private fun Answer(
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.semantics { heading() },
         )
-        content()
+        WithUnbackedNote(content)
     }
 }
 

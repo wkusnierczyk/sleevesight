@@ -6,22 +6,28 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.withStyle
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.settings.ListedModelNames
+import app.sleevesight.app.ui.lab.labCreditText
 import app.sleevesight.app.ui.settings.effortName
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.LabPrompts
 
 // The one credit line of a text an AI model wrote (#1162), under the text, first in its notes (#959).
 
@@ -127,6 +133,12 @@ internal fun creditString(credit: Credit): String = creditText(credit, LocalReso
  * after a space; and at the row's end, *Read aloud* ([readAloud]), when given. One text, so a screen
  * reader reads the credit and what follows as the line shows them, then *Read aloud*. With no credit,
  * what follows alone; with neither, *Read aloud* alone at the row's end; nothing with none.
+ *
+ * In the debug build, for a text the prompt lab's [variant] wrote (#1003), the credit
+ * names that variant ("Written by Claude Haiku 5.5 · prompt B."), its text in the developer mark
+ * tagged *Debug build*, so a screenshot shows the line is not the Play build's. The variant is the
+ * one that wrote the text (`WrittenBy.variant`), whatever the lab is set to now; none for the release
+ * prompt's.
  */
 @Composable
 internal fun CreditRow(
@@ -134,25 +146,38 @@ internal fun CreditRow(
     modifier: Modifier = Modifier,
     after: List<String> = emptyList(),
     readAloud: (@Composable () -> Unit)? = null,
+    variant: String? = null,
 ) {
-    val said = credit != null || after.isNotEmpty()
+    // The credit naming the variant that wrote the text, if one did; none outside the debug build.
+    val resources = LocalResources.current
+    val named = variant?.takeIf { BuildConfig.DEBUG && it != LabPrompts.RELEASE }
+    val labbed = if (credit != null && named != null) labCreditText(credit, named, resources) else null
+    val credited = labbed ?: credit
+    val said = credited != null || after.isNotEmpty()
     if (!said && readAloud == null) return
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (said) {
             val text =
                 buildAnnotatedString {
-                    credit?.let { withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(it) } }
+                    credited?.let { withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(it) } }
                     after.forEach {
                         if (length > 0) append(' ')
                         append(it)
                     }
                 }
-            Text(
-                text,
-                modifier.weight(1f),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            val line: @Composable (Modifier) -> Unit = { textModifier ->
+                Text(
+                    text,
+                    textModifier,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (labbed != null) {
+                DeveloperMark(modifier.weight(1f), tag = stringResource(R.string.lab_mark_tag)) { line(Modifier) }
+            } else {
+                line(modifier.weight(1f))
+            }
         } else {
             Spacer(Modifier.weight(1f))
         }

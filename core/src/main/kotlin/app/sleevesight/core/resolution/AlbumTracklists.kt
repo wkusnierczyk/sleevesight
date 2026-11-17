@@ -74,6 +74,29 @@ class AlbumTracklists(
             Lookup.NotFound, null -> null
         }
 
+    /**
+     * The tracklist of each of [groups] (the albums of one name, #1080), as [of] gives it for the
+     * group alone with the playing [recording]: the release the recording is on there, else the
+     * group's own. One group after another, never at once, each answer through the remembered answers
+     * and the client's one request a second; the recording's releases are asked once for them all.
+     * Paired with its group, in [groups]' order, a group with no tracklist left out; not found when
+     * none has one; failed as soon as one could not be asked, so a *Retry* asks again what was not kept.
+     */
+    suspend fun each(
+        groups: List<String>,
+        recording: String?,
+    ): Lookup<List<Pair<String, MbTracklist>>> {
+        val found = mutableListOf<Pair<String, MbTracklist>>()
+        for (group in groups) {
+            when (val tracklist = of(group, recording)) {
+                is Lookup.Found -> found += group to tracklist.value
+                Lookup.NotFound -> Unit
+                is Lookup.Failed -> return tracklist
+            }
+        }
+        return if (found.isEmpty()) Lookup.NotFound else Lookup.Found(found)
+    }
+
     // The release of the recording's [listed] releases in [group] to show, by [choose]; null when it is
     // on none there (a release with no group counts as its own).
     private fun inGroup(

@@ -3,6 +3,7 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.ui.phoneDateForm
+import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
@@ -14,6 +15,7 @@ import app.sleevesight.core.pipeline.SessionFacts
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.synthesis.PromptChoices
 import app.sleevesight.wiring.PipelineWiring
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.flow.Flow
@@ -47,6 +49,9 @@ import kotlin.time.Duration
  * next one. Each call through the client is asked again when it fails for a while only, for up to
  * [aiRetry] (*Retry when the AI fails*, #1164, [AiRetry]; none unless given: the app gives the
  * setting, as last read), and each try that failed is told to [aiTried], for the diagnostics.
+ * In the debug build, the prompt lab's [choices] (#1003) are taken once per build: the AI access
+ * carries them, so the pipeline keys its cards with them, and its client sends each request with them
+ * ([labThrough]); none elsewhere.
  */
 @Suppress("LongParameterList") // The wiring, the shared parts, and what the app sets apart from the tests.
 class AppPipelineParts(
@@ -57,6 +62,8 @@ class AppPipelineParts(
     private val phone: () -> Locale = Locale::getDefault,
     private val aiRetry: () -> Duration = { Duration.ZERO },
     private val aiTried: (PipelineEvent) -> Unit = {},
+    private val choices: () -> PromptChoices = { PromptChoices.NONE },
+    private val labThrough: (AiProvider, PromptChoices) -> AiProvider = { provider, _ -> provider },
     private val cache: () -> PipelineCache,
 ) : (PipelineKeys, Settings) -> PipelineParts {
     override fun invoke(
@@ -65,6 +72,7 @@ class AppPipelineParts(
     ): PipelineParts {
         // The selected model found unavailable (#540): no AI access, and the pipeline told why (#911).
         val blocked = models?.blocks(settings) == true
+        val chosen = choices()
         return PipelineParts(
             normalizer = normalizer,
             adapters = wiring.adapters(keys.sources, settings),
@@ -75,7 +83,10 @@ class AppPipelineParts(
                     ?.takeUnless { blocked }
                     ?.let { wiring.aiProviders[it] }
                     ?.let { p ->
-                        keys.ai?.let { AiAccess(AiRetry(models?.watching(p) ?: p, aiRetry, ended = aiTried), it) }
+                        keys.ai?.let {
+                            val sent = labThrough(p, chosen)
+                            AiAccess(AiRetry(models?.watching(sent) ?: sent, aiRetry, ended = aiTried), it, chosen)
+                        }
                     },
             cache = cache(),
             musicBrainzLabels = wiring.musicBrainzLabels,

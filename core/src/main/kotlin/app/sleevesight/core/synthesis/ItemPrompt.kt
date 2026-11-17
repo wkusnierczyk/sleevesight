@@ -291,7 +291,7 @@ object ItemPrompt {
     }
 
     // The task: what the card is about.
-    private fun task(kind: CardKind): String =
+    internal fun task(kind: CardKind): String =
         when (kind) {
             CardKind.SONG ->
                 "You write the song's insight on a music app's now-playing screen: the song's own story, as " +

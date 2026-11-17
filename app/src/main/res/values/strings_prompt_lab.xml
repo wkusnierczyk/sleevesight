@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The prompt lab (#1003), in the debug build only: in Settings → Developer, under every insight
+     (Compare), and in the credit of a text written with a variant. -->
+<resources>
+    <!-- The mark's tag on what only the debug build has. -->
+    <string name="lab_mark_tag">Debug build</string>
+
+    <string name="lab_title">Prompt lab</string>
+    <string name="lab_summary">Prompt variants for each kind of AI text, to compare on this phone with real tracks and mark. Only in the debug build.</string>
+    <string name="lab_twice">The Play app reacts to the same tracks: with insights written in both, each track is paid for twice. While testing, set the Play app\'s writing mode to On demand.</string>
+
+    <!-- The prompt kinds. -->
+    <string name="lab_kind_key">Key insight</string>
+    <string name="lab_kind_song">Song</string>
+    <string name="lab_kind_artist">Artist</string>
+    <string name="lab_kind_album">Album</string>
+    <string name="lab_kind_genre_list">Genre list</string>
+    <string name="lab_kind_genre_reasons">Genre reasons</string>
+    <string name="lab_kind_explain">Explain the song</string>
+
+    <!-- A kind's row, closed: %1$s the variant in use, %2$s those compared. -->
+    <string name="lab_kind_summary">In use: %1$s · Compare: %2$s</string>
+    <!-- The kind's row with no comparison (the genre list, which has no insight to compare under). -->
+    <string name="lab_kind_summary_use">In use: %1$s</string>
+    <string name="lab_variant_release">Release</string>
+    <string name="lab_variant_release_description">As in the Play build.</string>
+    <string name="lab_variant_custom">Custom</string>
+    <string name="lab_variant_custom_description">Your own instructions, edited here.</string>
+    <!-- A drafted variant: %1$s its id, %2$s its name. -->
+    <string name="lab_variant_named">%1$s · %2$s</string>
+    <string name="lab_use">Use</string>
+    <string name="lab_compare">Compare</string>
+    <string name="lab_show_instructions">Show the instructions</string>
+    <string name="lab_hide_instructions">Hide the instructions</string>
+    <string name="lab_custom_label">Custom instructions</string>
+    <string name="lab_custom_reset">Reset</string>
+    <!-- Under the Custom field: what {role} stands for. -->
+    <string name="lab_custom_role">{role} stands for the release instructions, as each prompt has them.</string>
+    <string name="lab_use_compare_hint">Use: the prompt this kind is written with. Compare: 2 to 4 taking part; each is one paid call.</string>
+
+    <string name="lab_logged_title">Comparisons logged</string>
+    <!-- %1$d comparisons, %2$s the day of the first. -->
+    <plurals name="lab_logged_count">
+        <item quantity="one">%1$d since %2$s, kept on this phone until cleared.</item>
+        <item quantity="other">%1$d since %2$s, kept on this phone until cleared.</item>
+    </plurals>
+    <string name="lab_logged_none">None yet.</string>
+    <string name="lab_export">Export the log</string>
+    <string name="lab_clear">Clear the log</string>
+    <string name="lab_clear_confirm">Clear the prompt lab\'s log? The comparisons logged are deleted from this phone.</string>
+    <string name="lab_clear_confirm_yes">Clear</string>
+    <string name="lab_clear_confirm_no">Cancel</string>
+    <string name="lab_exported">The log was exported.</string>
+    <string name="lab_export_failed">The log could not be exported.</string>
+
+    <!-- Under an insight: %1$d the number of variants taking part. -->
+    <plurals name="lab_compare_action">
+        <item quantity="one">Compare %1$d prompts · %1$d paid calls</item>
+        <item quantity="other">Compare %1$d prompts · %1$d paid calls</item>
+    </plurals>
+    <string name="lab_compare_title">Compare prompts</string>
+    <string name="lab_compare_close">Close</string>
+    <!-- %1$d the number of versions. -->
+    <plurals name="lab_compare_intro">
+        <item quantity="one">The same evidence, written with %1$d prompts, in shuffled order. Mark the good ones; the prompts\' names show after.</item>
+        <item quantity="other">The same evidence, written with %1$d prompts, in shuffled order. Mark the good ones; the prompts\' names show after.</item>
+    </plurals>
+    <!-- No request of this kind for this track since the app started: nothing to compare from. -->
+    <string name="lab_compare_unsent">Nothing to compare from: this insight\'s prompt was not sent since the app started. Write it again, then compare.</string>
+    <string name="lab_show">Show the prompts</string>
+    <string name="lab_logged">Logged. Export the log from Settings → Developer → Prompt lab.</string>
+    <string name="lab_stop">Stop</string>
+    <!-- A version: %1$d its number. -->
+    <string name="lab_version">Version %1$d</string>
+    <string name="lab_writing">Writing…</string>
+    <!-- %1$s why. -->
+    <string name="lab_version_failed">This version could not be written: %1$s.</string>
+    <!-- Why a version could not be written, after "This version could not be written: ". -->
+    <string name="lab_failed_time">the AI service did not answer in time</string>
+    <string name="lab_failed_unreached">the AI service could not be reached</string>
+    <string name="lab_failed_search">the model asked to search the web, which a comparison does not do</string>
+    <string name="lab_failed_other">the AI service answered with an error</string>
+    <string name="lab_stopped">stopped</string>
+    <string name="lab_retry">Retry</string>
+    <string name="lab_good">Good</string>
+    <string name="lab_bad">Bad</string>
+    <string name="lab_add_note">Add a note</string>
+    <!-- %1$d the version's number. -->
+    <string name="lab_note">Note on version %1$d</string>
+    <!-- Revealed: %1$s the variant's id, %2$s its name. -->
+    <string name="lab_revealed_variant">Prompt %1$s: %2$s</string>
+    <string name="lab_revealed_release">Release prompt: as in the Play build</string>
+    <string name="lab_revealed_custom">Custom prompt: your own instructions</string>
+
+    <!-- The credit with a variant in use: %1$s the credit without its full stop, %2$s the variant's id. -->
+    <string name="lab_credit">%1$s · prompt %2$s.</string>
+
+    <!-- The tester report's part: its name (also its heading in the mail), and what it holds. -->
+    <string name="lab_report_label">Prompt lab\'s log</string>
+    <string name="lab_report_part">The comparisons the prompt lab logged on this phone, as its export holds them, with the tracks\' titles. Off until you turn it on.</string>
+</resources>

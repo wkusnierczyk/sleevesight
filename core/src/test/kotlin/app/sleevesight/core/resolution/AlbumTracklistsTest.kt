@@ -367,4 +367,53 @@ class AlbumTracklistsTest {
             tracklists.of("group")
             assertEquals(4, fake.asked.size)
         }
+
+    @Test
+    fun `each album of one name, one after another, the recording's releases asked once`() =
+        runTest {
+            // #1080: three groups named alike; the recording on the first two, the third asked by group.
+            val fake =
+                Fake(
+                    groups = mapOf("g3" to Lookup.Found(listOf(release("r3", "1990", "Official", "g3")))),
+                    releases = mapOf("r1" to tracks("r1", "A"), "r2" to tracks("r2", "B"), "r3" to tracks("r3", "C")),
+                    recordings =
+                        mapOf(
+                            "rec" to
+                                Lookup.Found(
+                                    listOf(
+                                        release("r1", "2001", "Official", "g1"),
+                                        release("r2", "2006", "Official", "g2"),
+                                    ),
+                                ),
+                        ),
+                )
+            val each =
+                assertIs<Lookup.Found<List<Pair<String, MbTracklist>>>>(
+                    AlbumTracklists(RememberedMusicBrainz(fake)).each(listOf("g1", "g2", "g3", "g4"), "rec"),
+                ).value
+            // g4 is no group's id, nor a release's, and is left out.
+            assertEquals(listOf("g1" to "r1", "g2" to "r2", "g3" to "r3"), each.map { (g, t) -> g to t.releaseMbid })
+            assertEquals(1, fake.asked.count { it == "recording rec" })
+            assertEquals(
+                listOf("release r1", "release r2", "group g3", "release r3", "group g4", "release g4"),
+                fake.asked.drop(1),
+            )
+        }
+
+    @Test
+    fun `each album of one name, none with a tracklist not found, a failure failing them all`() =
+        runTest {
+            val none = Fake(groups = emptyMap(), releases = emptyMap())
+            assertEquals(Lookup.NotFound, AlbumTracklists(none).each(listOf("g1", "g2"), null))
+            val failing =
+                Fake(
+                    groups =
+                        mapOf(
+                            "g1" to Lookup.Found(listOf(release("r1", "1990", "Official", "g1"))),
+                            "g2" to Lookup.Failed("Timeout"),
+                        ),
+                    releases = mapOf("r1" to tracks("r1", "A")),
+                )
+            assertEquals(Lookup.Failed("Timeout"), AlbumTracklists(failing).each(listOf("g1", "g2"), null))
+        }
 }
