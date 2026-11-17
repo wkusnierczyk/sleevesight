@@ -5,8 +5,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.LookUpAfterClear
@@ -21,24 +23,7 @@ import kotlin.time.Duration.Companion.seconds
 // is kept and the way to wipe it sit together, since *Forever* is offered (#547), and under that
 // *Look up the track again*, what follows a clear for the track on Home (#1112); *New session idle
 // trigger*, how long each source's findings are kept (D9), and *Keep what sources said about each
-// artist* (#420).
-
-/**
- * The history's lifetimes offered, in days, and *Forever*; a stored one outside them is offered
- * too. A week is the least: a shorter one would empty the track list of someone who listens once
- * a week, and leave skip detection little to learn from (D15). A year is the most short of
- * keeping it for ever.
- */
-@Suppress("MagicNumber") // The values are the offer itself.
-private val HISTORY_DAYS = listOf(7, 30, 90, 365)
-
-/**
- * The session gaps offered, in minutes; a stored one outside them is offered too. Less than 10
- * minutes splits a session at a pause to answer the door; more than 2 hours joins an afternoon's
- * listening to the evening's.
- */
-@Suppress("MagicNumber") // The values are the offer itself.
-private val SESSION_GAP_MINUTES = listOf(10, 20, 30, 60, 120)
+// artist* (#420). A choice from a range is a stepped slider, an action a button (#1126).
 
 private const val DAYS_IN_YEAR = 365
 private val YEAR = DAYS_IN_YEAR.days
@@ -54,34 +39,20 @@ internal val SHOWN_LIFETIMES =
         SourceId.WEB to R.string.settings_cache_web,
     )
 
-/** The lifetimes offered, which include every default (D9); a stored one outside them is offered too. */
-@Suppress("MagicNumber") // The values are the offer itself.
-private val LIFETIME_DAYS = listOf(1, 3, 7, 14, 30, 90)
-
 @Composable
 internal fun HistorySection(
     settings: Settings,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val lifetime = settings.historyLifetime
-    val lifetimes = historyLifetimes(lifetime)
-    ValueRow(
-        title = stringResource(R.string.settings_keep_history),
-        value = lifetimeLabel(lifetime),
-        summary = stringResource(R.string.settings_keep_history_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_keep_history, lifetimes, lifetime) { chosen ->
-                update { it.copy(historyLifetime = chosen) }
-            },
-        )
-    }
-    ValueRow(
+    KeepHistoryRow(settings, update)
+    ButtonRow(
         title = stringResource(R.string.settings_clear_history),
-        value = stringResource(R.string.settings_clear_history_value),
-        onClick = { open(SettingsDialog.ClearHistory) },
-    )
+        summary = stringResource(R.string.settings_clear_history_summary),
+        label = stringResource(R.string.settings_clear),
+        tag = CLEAR_HISTORY_BUTTON_TAG,
+        destructive = true,
+    ) { open(SettingsDialog.ClearHistory) }
     ChoiceButtonsRow(
         title = stringResource(R.string.settings_look_up_again),
         summary = stringResource(R.string.settings_look_up_again_summary),
@@ -89,24 +60,34 @@ internal fun HistorySection(
         selected = settings.lookUpAfterClear,
     ) { chosen -> update { it.copy(lookUpAfterClear = chosen) } }
 
-    val gap = settings.sessionGap
-    val gaps = sessionGaps(gap)
     // Where *Don't repeat artist facts* links to (#581).
     LandingSpot(SettingsTarget.sessionGap) {
-        ValueRow(
-            title = stringResource(R.string.settings_session_gap),
-            value = durationLabel(gap),
-            summary = stringResource(R.string.settings_session_gap_summary),
-        ) {
-            open(
-                SettingsDialog.Choice(R.string.settings_session_gap, gaps, gap) { chosen ->
-                    update { it.copy(sessionGap = chosen) }
-                },
-            )
+        val title = stringResource(R.string.settings_session_gap)
+        if (shownInSearch(title)) {
+            val stops = sessionGapStops()
+            SteppedRow(
+                title = title,
+                summary = { _, _ -> stringResource(R.string.settings_session_gap_summary) },
+                stops = stops,
+                stored = nearestStop(stops.values, settings.sessionGap),
+                applies = true,
+                tags = SteppedTags(SESSION_GAP_SLIDER_TAG, SESSION_GAP_STOPS_TAG, SESSION_GAP_VALUE_TAG),
+                look =
+                    SteppedLook(
+                        start = 0.dp,
+                        between =
+                            between(
+                                settings.sessionGap,
+                                stops.values,
+                                { shortDuration(it) },
+                                { durationLabel(it) },
+                            ),
+                    ),
+            ) { gap -> update { it.copy(sessionGap = gap) } }
         }
     }
 
-    LifetimeRows(settings, update, open)
+    LifetimeRows(settings, update)
 
     // A privacy choice (#420), so its title is in the theme's error colour: what is kept per
     // artist amounts to a list of the artists heard. After the lifetimes it is kept for.
@@ -119,33 +100,114 @@ internal fun HistorySection(
 }
 
 /**
- * How long each source's findings are kept (D9), a row per source with an adapter, each starting
- * with the source's badge, in the column and style of the badges under *Sources* (#670): Wikidata,
- * kept apart from Wikipedia here, has its own letter, `WD`.
+ * How *Keep history for* is saved (#1126): [held] is its value as last asked for, saved yet or not,
+ * given the one stored, which a shorter time is judged against; [choose] saves one. The settings
+ * screen keeps the last choice with the settings' store ([LocalHistoryLifetime]), so a row, a
+ * screen or an activity made again while a save waits its turn still knows it.
+ */
+internal class HistoryLifetimeWriter(
+    val held: (stored: Duration?) -> Duration?,
+    val choose: (Duration?) -> Unit,
+)
+
+/** The settings screen's [HistoryLifetimeWriter]; null where *History* is shown on its own. */
+internal val LocalHistoryLifetime = staticCompositionLocalOf<HistoryLifetimeWriter?> { null }
+
+/**
+ * *Keep history for* (#1126): a stepped slider, every stop labelled, *Forever* the last. A shorter
+ * time deletes what is older at once and cannot be undone, so a move is stored only once the thumb
+ * is let go, and a shorter time asks first ([ShortenHistoryDialog]); a longer one is stored at once.
+ */
+@Composable
+private fun KeepHistoryRow(
+    settings: Settings,
+    update: Update,
+) {
+    val title = stringResource(R.string.settings_keep_history)
+    if (!shownInSearch(title)) return
+    val writer = LocalHistoryLifetime.current
+    val stored = settings.historyLifetime
+    val stops = historyStops()
+    SteppedRow(
+        title = title,
+        summary = { _, _ -> stringResource(R.string.settings_keep_history_summary) },
+        stops = stops,
+        stored = nearestHistoryStop(stored),
+        applies = true,
+        tags = SteppedTags(KEEP_HISTORY_SLIDER_TAG, KEEP_HISTORY_STOPS_TAG, KEEP_HISTORY_VALUE_TAG),
+        look =
+            SteppedLook(
+                start = 0.dp,
+                between = between(stored, stops.values, { lifetimeLabel(it) }, { lifetimeLabel(it) }),
+            ),
+        askBeforeLower = AskBeforeLower({ held(writer, stored) }, ::shorter, ::ShortenHistoryDialog),
+    ) { chosen ->
+        if (writer != null) writer.choose(chosen) else update { it.copy(historyLifetime = chosen) }
+    }
+}
+
+/**
+ * Asks before *Keep history for* is shortened to [time] (#1126), in words (*30 days*): [onShorten]
+ * stores it, and what is older is deleted; [onCancel], or a tap outside, puts the thumb back.
+ */
+@Composable
+internal fun ShortenHistoryDialog(
+    time: String,
+    onShorten: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(stringResource(R.string.settings_keep_history_shorten_title, time)) },
+        text = {
+            Text(
+                stringResource(R.string.settings_keep_history_shorten_text, time),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onShorten,
+            ) { Text(stringResource(R.string.settings_keep_history_shorten)) }
+        },
+        dismissButton = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } },
+    )
+}
+
+/**
+ * How long each source's findings are kept (D9), a row per source with an adapter, each a stepped
+ * slider labelled only at its ends (#1126), starting with the source's badge, in the column and
+ * style of the badges under *Sources* (#670): Wikidata, kept apart from Wikipedia here, has its own
+ * letter, `WD`.
  */
 @Composable
 private fun LifetimeRows(
     settings: Settings,
     update: Update,
-    open: (SettingsDialog) -> Unit,
 ) {
     // Over the rows under it, so a search that finds one of them shows it too (#649).
     val shown = SHOWN_LIFETIMES.filter { (source, _) -> settings.cacheLifetimes[source] != null }
     Hint(R.string.settings_cache_lifetimes, over = shown.map { (_, name) -> stringResource(name) })
+    val stops = lifetimeStops()
     for ((source, name) in SHOWN_LIFETIMES) {
-        val lifetime = settings.cacheLifetimes[source] ?: continue
-        val options = cacheLifetimes(lifetime)
-        ValueRow(
-            title = stringResource(name),
-            value = daysLabel(lifetime),
-            leading = { ServiceBadge(badgeLetter(source)) },
-        ) {
-            open(
-                SettingsDialog.Choice(name, options, lifetime) { chosen ->
-                    update { it.copy(cacheLifetimes = it.cacheLifetimes + (source to chosen)) }
-                },
-            )
-        }
+        val lifetime = settings.cacheLifetimes[source]
+        val title = stringResource(name)
+        if (lifetime == null || !shownInSearch(title)) continue
+        SteppedRow(
+            title = title,
+            summary = null,
+            stops = stops,
+            stored = nearestStop(stops.values, lifetime),
+            applies = true,
+            tags = lifetimeTags(source),
+            look =
+                SteppedLook(
+                    start = 0.dp,
+                    leading = { ServiceBadge(badgeLetter(source)) },
+                    endsOnly = true,
+                    between = between(lifetime, stops.values, { durationLabel(it) }, { durationLabel(it) }),
+                ),
+        ) { chosen -> update { it.copy(cacheLifetimes = it.cacheLifetimes + (source to chosen)) } }
     }
 }
 
@@ -184,23 +246,6 @@ internal fun lookUpAgainChoices(): List<Pair<LookUpAfterClear, String>> =
         LookUpAfterClear.ON_REQUEST to stringResource(R.string.settings_look_up_again_on_request),
     )
 
-/** *Keep history for*'s choices, [lifetime] the one set among them; null is *Forever*. */
-@Composable
-internal fun historyLifetimes(lifetime: Duration?): List<Pair<Duration?, String>> {
-    val lifetimes = (HISTORY_DAYS.map { it.days } + listOfNotNull(lifetime)).distinct().sorted()
-    return (lifetimes + null).map { it to lifetimeLabel(it) }
-}
-
-/** *New session idle trigger*'s choices, [gap] the one set among them. */
-@Composable
-internal fun sessionGaps(gap: Duration): List<Pair<Duration, String>> =
-    (SESSION_GAP_MINUTES.map { it.minutes } + gap).distinct().sorted().map { it to durationLabel(it) }
-
-/** A source's cache lifetime's choices, [lifetime] the one set among them. */
-@Composable
-internal fun cacheLifetimes(lifetime: Duration): List<Pair<Duration, String>> =
-    (LIFETIME_DAYS.map { it.days } + lifetime).distinct().sorted().map { it to daysLabel(it) }
-
 /** *Keep history for*: null is *Forever*. */
 @Composable
 internal fun lifetimeLabel(lifetime: Duration?): String =
@@ -208,8 +253,7 @@ internal fun lifetimeLabel(lifetime: Duration?): String =
 
 /**
  * [duration] in the largest unit it is a whole number of: years of 365 days, days, hours, minutes,
- * else seconds. The options are all whole; a stored value outside them, as from a later version,
- * is shown as it is.
+ * else seconds.
  */
 @Composable
 internal fun durationLabel(duration: Duration): String {

@@ -6,7 +6,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -23,6 +22,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -47,13 +47,13 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.CLEAR_HISTORY_BUTTON_TAG
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
-import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -77,8 +77,6 @@ import java.io.IOException
 import java.security.ProviderException
 import java.util.concurrent.CountDownLatch
 import javax.crypto.SecretKey
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
 
 @RunWith(RobolectricTestRunner::class)
 class SettingsScreenTest {
@@ -483,28 +481,6 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun aCacheLifetimeIsChosen() =
-        show {
-            compose.openSection(SettingsSection.HISTORY)
-            compose.onNodeWithText(text(R.string.settings_cache_web)).performScrollTo().performClick()
-            compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_days, 3, 3)).performClick()
-            waitFor("the web cache lifetime stored") { current().cacheLifetimes[SourceId.WEB]?.inWholeDays == 3L }
-        }
-
-    @Test
-    fun theHistorysLifetimeAndSessionGapAreChosen() =
-        show {
-            compose.openSection(SettingsSection.HISTORY)
-            compose.onNodeWithText(text(R.string.settings_keep_history)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_keep_history_forever)).performClick()
-            waitFor("the history kept forever") { current().historyLifetime == null }
-
-            compose.onNodeWithText(text(R.string.settings_session_gap)).performScrollTo().performClick()
-            compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_hours, 1, 1)).performClick()
-            waitFor("a session gap of 1 hour stored") { current().sessionGap == 1.hours }
-        }
-
-    @Test
     fun theSaverAndItsCountAreChosen() =
         show {
             compose.openSection(SettingsSection.INSIGHTS)
@@ -546,22 +522,6 @@ class SettingsScreenTest {
         app.resources.getQuantityString(R.plurals.settings_pause_auto_write_summary, count, count)
 
     @Test
-    fun aStoredValueOutsideTheOptionsIsShownAsItIs() {
-        runBlocking { settings.update { it.copy(historyLifetime = 12.hours, sessionGap = 45.minutes) } }
-        show {
-            compose.openSection(SettingsSection.HISTORY)
-            val twelveHours = app.resources.getQuantityString(R.plurals.settings_hours, 12, 12)
-            compose.onNodeWithText(twelveHours).performScrollTo().assertIsDisplayed()
-            val minutes = app.resources.getQuantityString(R.plurals.settings_minutes, 45, 45)
-            compose.onNodeWithText(minutes).performScrollTo().assertIsDisplayed()
-
-            // And offered among the options.
-            compose.onNodeWithText(text(R.string.settings_keep_history)).performScrollTo().performClick()
-            compose.onAllNodesWithText(twelveHours).assertCountEquals(2)
-        }
-    }
-
-    @Test
     fun clearHistoryAsksFirst() {
         var cleared = 0
         val clear = { _: Boolean ->
@@ -570,14 +530,14 @@ class SettingsScreenTest {
         }
         show(clearHistory = clear) {
             compose.openSection(SettingsSection.HISTORY)
-            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithTag(CLEAR_HISTORY_BUTTON_TAG).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_clear_history_explained)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
             compose.waitForIdle()
             assertEquals(0, cleared)
 
-            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            compose.onNodeWithTag(CLEAR_HISTORY_BUTTON_TAG).performScrollTo().performClick()
+            compose.onNode(hasText(text(R.string.settings_clear)) and hasAnyAncestor(isDialog())).performClick()
             waitFor("one clear asked for") { cleared == 1 }
             waitForText(text(R.string.settings_clear_history_done_looked_up))
             assertEquals(
@@ -592,13 +552,13 @@ class SettingsScreenTest {
         var succeeds = false
         show(clearHistory = { CompletableDeferred(succeeds) }) {
             compose.openSection(SettingsSection.HISTORY)
-            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            compose.onNodeWithTag(CLEAR_HISTORY_BUTTON_TAG).performScrollTo().performClick()
+            compose.onNode(hasText(text(R.string.settings_clear)) and hasAnyAncestor(isDialog())).performClick()
             waitForText(text(R.string.settings_clear_history_failed))
 
             succeeds = true
-            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            compose.onNodeWithTag(CLEAR_HISTORY_BUTTON_TAG).performScrollTo().performClick()
+            compose.onNode(hasText(text(R.string.settings_clear)) and hasAnyAncestor(isDialog())).performClick()
             waitFor("the clear failure message gone") {
                 compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().isEmpty()
             }

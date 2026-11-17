@@ -4,10 +4,16 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -18,6 +24,7 @@ import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.memorySettings
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.CLEAR_HISTORY_BUTTON_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import kotlinx.coroutines.CompletableDeferred
@@ -103,11 +110,18 @@ class HistorySettingsTest {
         }
 
     @Test
-    fun clearHistorySaysWhatATapDoesAsAnAction() =
+    fun clearHistoryIsARowWithAClearButtonSayingWhatItDeletes() =
         showHistory {
-            // An action, as a button's label is, not a description of the row (#669).
-            val line = "Delete everything Sleevesight kept about the tracks you played"
+            // An action is a button (#1126), its description under the row's name.
+            val line = "Deletes everything Sleevesight kept about the tracks you played."
+            assertEquals(line, text(R.string.settings_clear_history_summary))
             assertTrue(compose.onAllNodesWithText(line).fetchSemanticsNodes().isNotEmpty())
+            compose
+                .onNodeWithTag(CLEAR_HISTORY_BUTTON_TAG)
+                .performScrollTo()
+                .assert(hasClickAction())
+                .assert(hasContentDescription(text(R.string.settings_clear_history)))
+                .assert(hasText("Clear"))
         }
 
     @Test
