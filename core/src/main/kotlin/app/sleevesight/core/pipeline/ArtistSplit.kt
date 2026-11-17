@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.resolution.creditMembers
 import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.WorkLyrics
 
@@ -89,14 +90,17 @@ data class ArtistSplit(
         }
 
         // Of [authors], those [track] does not credit: [roles]' uncredited composers, and anyone no credited
-        // artist is by name ([same]).
+        // artist is by name ([same]), nor a member of a joint credit ([creditMembers]: "Giuseppe Adami &
+        // Renato Simoni"). By name alone, as a result kept from an earlier play holds no ids.
         private fun uncreditedOf(
             track: NormalizedTrack,
             roles: ArtistRoles,
             authors: List<String>,
             same: (String, String) -> Boolean,
-        ): List<String> =
-            authors.filter { author -> author in roles.uncredited || track.artists.none { same(it, author) } }
+        ): List<String> {
+            val credited = track.artists.flatMap { listOf(it) + creditMembers(it) }
+            return authors.filter { author -> author in roles.uncredited || credited.none { same(it, author) } }
+        }
     }
 }
 

@@ -106,15 +106,38 @@ private fun NameMatcher.uncredited(
 }
 
 // Whether [credit] may name [composer] (#1298): folded, its words all among theirs ("Puccini" for
-// "Giacomo Puccini"), or theirs all among its (a joint credit, "Giacomo Puccini & Luciano Pavarotti").
+// "Giacomo Puccini"), or theirs all among its; and so for each member of a joint credit
+// ([creditMembers]: "Puccini & Pavarotti", "Giacomo Puccini & Luciano Pavarotti").
 private fun NameMatcher.mayName(
     credit: String,
     composer: String,
 ): Boolean {
-    val words = key(credit).split(' ').filter(String::isNotEmpty).toSet()
-    val theirs = key(composer).split(' ').filter(String::isNotEmpty).toSet()
-    return words.isNotEmpty() && theirs.isNotEmpty() && (theirs.containsAll(words) || words.containsAll(theirs))
+    val theirs = words(composer)
+    if (theirs.isEmpty()) return false
+    return (listOf(credit) + creditMembers(credit)).any { part ->
+        val words = words(part)
+        words.isNotEmpty() && (theirs.containsAll(words) || words.containsAll(theirs))
+    }
 }
+
+// [text]'s folded words.
+private fun NameMatcher.words(text: String): Set<String> = key(text).split(' ').filter(String::isNotEmpty).toSet()
+
+/**
+ * The members of a joint credit as a player writes it (#1298): "Giuseppe Adami & Renato Simoni" is
+ * Adami and Simoni, split at `&`, `/`, `+`, a comma, " and ", " with ", " x " and "feat."; empty for a
+ * credit of one name.
+ */
+internal fun creditMembers(credit: String): List<String> =
+    credit
+        .split(JOINS)
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .takeIf { it.size > 1 }
+        .orEmpty()
+
+// What joins a joint credit's members.
+private val JOINS = Regex("\\s*(?:[&/+,]|\\s(?:and|with|x|feat\\.?|ft\\.)\\s)\\s*", RegexOption.IGNORE_CASE)
 
 // [track]'s performers: its credited artists but those who [wrote] the work and an artist the title names
 // whom the recording does not have ([onRecording]); on a [classical] work, those it has first (#1289).

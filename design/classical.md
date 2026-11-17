@@ -344,12 +344,21 @@ not credit (`ArtistRoles.uncredited`, by MusicBrainz's names, from its CC0 `comp
 relationships alone, never its tags or other supplementary data) are shown as if credited: the
 *Composer* or *Authors* row, *Performer* for the credited artist, the *Composer:* or *Authors:* line
 under the title. Only on a classical work (the roles' classical form), and only when every credited
-composer is one the work names by name, so a composer is never named twice in two spellings. The
-line under the title then ends with one citation chip of MusicBrainz's line on the work, as the
-insight's chips are ("MB4", read "Source MB4"), whose tap opens *Sources* at it, whenever it names
-anyone the player does not credit (`ArtistSplit.uncredited`): the uncredited composer, and the
-librettists or lyricists MusicBrainz names (also on Spotify's *Nessun doma - Turandot*, which credits
-Puccini). The rows carry no mark. The key insight's prompt and the searches that mean the credited
+composer is one the work names by name, so a composer is never named twice in two spellings. A
+composer the work names counts as credited, and is not added, when a credited artist is them by
+name, by the MusicBrainz id it resolved to, or by an id of the joint credit the track was accepted
+under (`Resolution.jointArtists`: the player's "G. Puccini & Luciano Pavarotti" is MusicBrainz's two
+artists joined); or when a credit may name them (`mayName`): folded, its words all theirs ("Puccini")
+or theirs all its, the credit as a whole or any member of a joint credit (`creditMembers`, split at
+`&`, `/`, `+`, a comma, "and", "with", "x", "feat."; "Puccini & Adami" unresolved). Leaving a composer
+out is the lesser fault than naming one twice. The line under the title then ends with one citation
+chip of MusicBrainz's line on the work, as the insight's chips are ("MB4", read "Source MB4"), whose
+tap opens *Sources* at it, whenever it names anyone the player does not credit
+(`ArtistSplit.uncredited`, on a classical work only): the uncredited composer, and the librettists or
+lyricists MusicBrainz names that no credited artist, nor a member of a joint credit, is by name (also
+on Spotify's *Nessun doma - Turandot*, which credits Puccini; not when the player credits "Giuseppe
+Adami & Renato Simoni"). By name alone there, since a result kept from an earlier play holds no ids.
+The rows carry no mark. The key insight's prompt and the searches that mean the credited
 composers still read the credited ones alone (`ArtistRoles.composers`). A web line's artist for the genres a description names
 (`DescribedGenres`) is the Artist panel's subject, the lead performer, whose web search found it;
 the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about

@@ -115,4 +115,13 @@ class UncreditedComposerTest {
             assertEquals(listOf("mbid-$puccini", "mbid-$pavarotti"), resolution.jointArtists.map { it.mbid })
             assertEquals(emptyList(), resolution.roles?.uncredited)
         }
+
+    @Test
+    fun `a member of an unresolved joint credit that may name the composer keeps them from being named twice`() =
+        runTest {
+            // "Puccini & Adami" resolves to no one; the recording is found through Pavarotti. Its member
+            // "Puccini" is all Giacomo Puccini's words, so he is not added beside it.
+            assertEquals(emptyList(), rolesOf("Puccini & Adami, $pavarotti", work("Aria", puccini))?.uncredited)
+            assertEquals(emptyList(), rolesOf("Adami / Puccini, $pavarotti", work("Aria", puccini))?.uncredited)
+        }
 }
