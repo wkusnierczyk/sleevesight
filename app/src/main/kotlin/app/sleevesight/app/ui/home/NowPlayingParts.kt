@@ -42,6 +42,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -56,6 +63,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.session.PlaybackInfo
@@ -255,10 +263,16 @@ private fun Progress(
             progress = { (position / duration).toFloat() },
             modifier = Modifier.fillMaxWidth(),
         )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Small(clock(position))
-            Small(clock(duration))
-        }
+        // The position at the start and the length at the end, on one line, or the length under the
+        // position when they do not fit beside each other (a large font, a narrow cover, #1097).
+        Layout(
+            content = {
+                Small(clock(position))
+                Small(clock(duration))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            measurePolicy = TimesPolicy,
+        )
     }
 }
 
@@ -377,6 +391,55 @@ private val ART_WIDTH = 360.dp
 /** The space between the art and the playback position under it. */
 private val ART_GAP = 8.dp
 private val TICK = 1.seconds
+
+/**
+ * The playback position's two times, the position at the start and the length at the end: on one
+ * line when they fit beside each other, else the length on a line under the position. Its intrinsic
+ * height says which, for the width asked, so the cover's side can size the cover to what is left.
+ */
+private object TimesPolicy : MeasurePolicy {
+    override fun MeasureScope.measure(
+        measurables: List<Measurable>,
+        constraints: Constraints,
+    ): MeasureResult {
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val (start, end) = measurables.map { it.measure(loose) }
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else start.width + end.width
+        val beside = start.width + end.width <= width
+        val height = if (beside) maxOf(start.height, end.height) else start.height + end.height
+        return layout(width, height) {
+            start.placeRelative(0, 0)
+            end.placeRelative(width - end.width, if (beside) 0 else start.height)
+        }
+    }
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int,
+    ): Int {
+        val (start, end) = measurables
+        val beside =
+            start.maxIntrinsicWidth(Constraints.Infinity) + end.maxIntrinsicWidth(Constraints.Infinity) <= width
+        val (a, b) = start.maxIntrinsicHeight(width) to end.maxIntrinsicHeight(width)
+        return if (beside) maxOf(a, b) else a + b
+    }
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int,
+    ): Int = maxIntrinsicHeight(measurables, width)
+
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(
+        measurables: List<IntrinsicMeasurable>,
+        height: Int,
+    ): Int = measurables.sumOf { it.maxIntrinsicWidth(height) }
+
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(
+        measurables: List<IntrinsicMeasurable>,
+        height: Int,
+    ): Int = measurables.maxOf { it.minIntrinsicWidth(height) }
+}
+
 private const val TAG = "Sleevesight"
 
 /** What a format is given in the album's place, for [withAlbum] to set the album there in italics. */

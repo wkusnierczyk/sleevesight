@@ -326,7 +326,7 @@ internal fun NowPlayingContent(
     }
     // Under the return, so a while with no cover shows the next one's front; above the art's colours,
     // so the cover turned over outlives those arriving, and the phone turning (#1097).
-    val back = rememberCoverBack()
+    val back = rememberCoverMemory()
     val shown = Showing(state, playing)
     // *Retry* beside the sources that did not answer, under the insight and in *Sources* (#1121).
     val retries = Retries(shown.view, playing, actions.askAgain)

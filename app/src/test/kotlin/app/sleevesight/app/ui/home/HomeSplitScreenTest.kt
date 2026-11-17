@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -16,6 +17,8 @@ import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -29,7 +32,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.view.children
@@ -62,6 +67,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Home split in two from 600 dp wide (#1097): the cover and the position on the left, as tall as Home
@@ -108,6 +116,10 @@ class HomeSplitScreenTest {
     // Home as wide as [width] says, or as the screen when null: narrower, as a phone held upright.
     private var width by mutableStateOf<Dp?>(null)
 
+    // Or a window of its own, [short], and its font at [fontScale] times.
+    private var short by mutableStateOf<DpSize?>(null)
+    private var fontScale by mutableStateOf<Float?>(null)
+
     // The screen's saved state, as an activity keeps it ([turn]).
     private var emitted by mutableStateOf(true)
     private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
@@ -123,9 +135,17 @@ class HomeSplitScreenTest {
                     if (emitted) {
                         CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
                             SleevesightTheme {
-                                Box(width?.let { w -> Modifier.requiredWidth(w) } ?: Modifier) {
-                                    HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) {
-                                        NowPlayingContent(current, actions)
+                                val density = LocalDensity.current
+                                val font = fontScale?.let { Density(density.density, it) } ?: density
+                                val window =
+                                    short?.let { Modifier.requiredSize(it) }
+                                        ?: width?.let { w -> Modifier.requiredWidth(w) }
+                                        ?: Modifier
+                                Box(window.testTag(WINDOW_TAG)) {
+                                    CompositionLocalProvider(LocalDensity provides font) {
+                                        HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) {
+                                            NowPlayingContent(current, actions)
+                                        }
                                     }
                                 }
                             }
@@ -210,6 +230,29 @@ class HomeSplitScreenTest {
             assertTrue("title under the player row", title.top >= player.bottom && title.left >= pane.right)
             compose.onNodeWithText(playing.title).assertIsDisplayed()
         }
+
+    // Real text measurement, so the times wrap as they do on the phone.
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun inAShortWindowAtALargeFontTheCoverAndTheWrappedPositionFitTheHeight() {
+        // 600 × 200 dp at twice the font, an hour-long track: the times take two lines under a cover
+        // that narrow, and the cover gives way to them.
+        short = DpSize(600.dp, 200.dp)
+        fontScale = 2f
+        val long = playing.copy(duration = 1.hours + 5.minutes)
+        val paused = PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PAUSED, position = 1.hours + 2.minutes)
+        show(state(long).let { NowPlayingState(it.view, long, paused, it.art, it.settings) }) {
+            val window = laidOut(WINDOW_TAG)
+            val cover = laidOut(COVER_TAG)
+            val position =
+                compose.onNodeWithContentDescription(text(R.string.home_progress)).fetchSemanticsNode().let {
+                    Rect(it.positionInRoot, it.size.toSize())
+                }
+            assertTrue("the position under the cover: $position, $cover", position.top >= cover.bottom)
+            assertTrue("within the window: $position in $window", position.bottom <= window.bottom + 1f)
+            assertTrue("the times as wide as the cover", position.width <= cover.width + 1f)
+        }
+    }
 
     @Test
     fun theRightSideScrollsOnItsOwnWhileTheCoverStays() =
@@ -372,5 +415,7 @@ class HomeSplitScreenTest {
         const val ART_PX = 8
 
         const val TAPS = 3
+
+        const val WINDOW_TAG = "window"
     }
 }

@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,8 +81,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * ([openSources]), and the app's own [colors], since the back takes nothing from the art. For a
  * track *Clear history* holds under *On request* (#1112), [lookUp] asks for it to be looked up again,
  * as *Look up again* does: a turn of the cover over asks, and the back fills once the sources answer;
- * null otherwise. [backOf], the album whose back shows ([rememberCoverBack]), when it is kept above
- * the cover; null for the cover's own.
+ * null otherwise. [memory], the back as it was left ([rememberCoverMemory]), when it is kept above
+ * the cover (#1097); null for the cover's own.
  */
 @Suppress("LongParameterList") // What the back shows, what it asks, and where its buttons go.
 internal class CoverTurn(
@@ -94,7 +94,7 @@ internal class CoverTurn(
     val openSources: () -> Unit,
     val colors: ColorScheme,
     val lookUp: (() -> Unit)? = null,
-    val backOf: MutableState<String?>? = null,
+    val memory: CoverMemory? = null,
 )
 
 /**
@@ -110,7 +110,7 @@ internal fun coverTurn(
     header: NowPlaying,
     settings: Settings?,
     actions: NowPlayingActions,
-    backOf: MutableState<String?>? = null,
+    memory: CoverMemory? = null,
 ): CoverTurn {
     val colors = LocalAppColors.current ?: MaterialTheme.colorScheme
     val states by actions.tracklists.states.collectAsState()
@@ -135,7 +135,7 @@ internal fun coverTurn(
         openSources = { actions.openSettingsAt(SettingsTarget.sources) },
         colors = colors,
         lookUp = { actions.lookUpAgain(shown.playing) }.takeIf { shown.cleared },
-        backOf = backOf,
+        memory = memory,
     )
 }
 
@@ -163,9 +163,10 @@ internal fun FlippingCover(
 ) {
     // The album whose back shows, saved with it, so a back restored after another album has come
     // (the process gone meanwhile) is not shown on it; null for the cover. Home's own, when it gives
-    // one ([CoverTurn.backOf]), else this cover's ([coverBackOf]).
+    // one ([CoverTurn.memory]), else this cover's ([coverMemoryOf]), with where its tracklist was left.
     val album = turn.album.orEmpty()
-    var backOf by coverBackOf(turn)
+    val memory = coverMemoryOf(turn)
+    var backOf by memory.backOf
     LaunchedEffect(album) { if (backOf != album) backOf = null }
     val lookUp = lookUpOnTurn(album, turn.lookUp)
     // A back left turned over when a clear's hold comes, which asked nothing (#1148): the cover turns
@@ -178,7 +179,8 @@ internal fun FlippingCover(
     val toggle = {
         val over = backOf != album
         backOf = if (over) album else null
-        if (over) lookUp.ask()
+        // Turned back to the cover, the tracklist opens afresh next time, on the playing song.
+        if (over) lookUp.ask() else memory.tracklist.clear()
     }
     val still = animatorDurationScale() == 0f
     val target = if (flipped) HALF_TURN else 0f
@@ -217,7 +219,7 @@ internal fun FlippingCover(
         } else {
             // Turned once more, so the back reads the right way round once the cover has turned.
             Box(Modifier.fillMaxSize().graphicsLayer { rotationY = HALF_TURN }) {
-                MaterialTheme(colorScheme = turn.colors) { CoverBackFace(turn) }
+                MaterialTheme(colorScheme = turn.colors) { CoverBackFace(turn, memory.tracklist.of(turn.album)) }
             }
         }
     }
@@ -261,16 +263,25 @@ private fun lookUpOnTurn(
  * front, #1148).
  */
 @Composable
-private fun CoverBackFace(turn: CoverTurn) {
+private fun CoverBackFace(
+    turn: CoverTurn,
+    tracklist: TracklistMemory,
+) {
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxSize().background(colors.surfaceContainerHigh).testTag(COVER_BACK_TAG)) {
         CompositionLocalProvider(LocalContentColor provides colors.onSurface, LocalTrackCleared provides false) {
             when (val back = turn.back) {
                 is CoverBack.Found ->
                     if (back.discs.size == 1) {
-                        DiscTracks(back.discs.single().tracks, back.playing?.track, Modifier.fillMaxSize())
+                        DiscTracks(
+                            back.discs.single().tracks,
+                            back.playing?.track,
+                            Modifier.fillMaxSize(),
+                            0,
+                            tracklist,
+                        )
                     } else {
-                        DiscPages(back)
+                        DiscPages(back, tracklist)
                     }
                 CoverBack.NotFound ->
                     Why {
@@ -308,14 +319,24 @@ private fun Why(content: @Composable () -> Unit) {
  * which shows that disc.
  */
 @Composable
-private fun DiscPages(back: CoverBack.Found) {
+private fun DiscPages(
+    back: CoverBack.Found,
+    tracklist: TracklistMemory,
+) {
     val count = back.discs.size
     val playing = back.playing
-    val pager = rememberPagerState(initialPage = playing?.disc ?: 0) { count }
+    // Where it was left (#1097), else on the playing song's disc.
+    val kept = remember(back) { tracklist.page }
+    val pager = rememberPagerState(initialPage = (kept ?: playing?.disc ?: 0).coerceIn(0, count - 1)) { count }
     val still = animatorDurationScale() == 0f
     val scope = rememberCoroutineScope()
+    LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { tracklist.page = it } }
     LaunchedEffect(playing?.disc) {
-        playing?.disc?.takeIf { it != pager.currentPage }?.let { pager.scrollToPage(it) }
+        // Kept where it was left while the song is on the disc it followed; to another disc, it follows.
+        if (kept == null || tracklist.followedDisc != playing?.disc) {
+            playing?.disc?.takeIf { it != pager.currentPage }?.let { pager.scrollToPage(it) }
+        }
+        tracklist.followedDisc = playing?.disc
     }
     val colors = MaterialTheme.colorScheme
     Column(Modifier.fillMaxSize()) {
@@ -337,6 +358,8 @@ private fun DiscPages(back: CoverBack.Found) {
                     back.discs[page].tracks,
                     playing?.takeIf { it.disc == page }?.track,
                     Modifier.weight(1f).fillMaxWidth(),
+                    page,
+                    tracklist,
                 )
             }
         }
@@ -365,16 +388,34 @@ private fun DiscPages(back: CoverBack.Found) {
 /**
  * A disc's [tracks], a list that scrolls, opening with the [playing] one in view, and brought into
  * view when the song moves to another of them: the whole row, with up to two tracks above it as fit.
+ * Where it was left, kept in [tracklist] as the [disc]'s (#1097), it opens there instead while the
+ * song is the one it last brought into view.
  */
 @Composable
 private fun DiscTracks(
     tracks: List<MbTrack>,
     playing: Int?,
     modifier: Modifier,
+    disc: Int,
+    tracklist: TracklistMemory,
 ) {
-    val list = rememberLazyListState(initialFirstVisibleItemIndex = ((playing ?: 0) - LEAD).coerceAtLeast(0))
+    val kept = remember(tracks) { tracklist.place(disc) }
+    val list =
+        rememberLazyListState(
+            initialFirstVisibleItemIndex = kept?.index ?: ((playing ?: 0) - LEAD).coerceAtLeast(0),
+            initialFirstVisibleItemScrollOffset = kept?.offset ?: 0,
+        )
+    LaunchedEffect(list) {
+        snapshotFlow { list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset }.collect { (index, offset) ->
+            tracklist.keep(disc, index, offset, tracklist.place(disc)?.followed)
+        }
+    }
     LaunchedEffect(playing) {
-        if (playing != null && !list.wholly(playing)) {
+        // Left where it was while the song is the one it last brought into view.
+        val place = tracklist.place(disc)
+        val left = kept != null && place?.followed == playing
+        tracklist.keep(disc, place?.index ?: 0, place?.offset ?: 0, playing)
+        if (!left && playing != null && !list.wholly(playing)) {
             // Fewer tracks above it until the row fits (each scroll measures the list again).
             for (lead in LEAD downTo 0) {
                 list.scrollToItem((playing - lead).coerceAtLeast(0))

@@ -7,14 +7,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -119,7 +117,8 @@ internal fun PlayerAndCover(
 
 /**
  * The art, square, as large as the space given fits it with [progress] under it, [gap] apart: as wide
- * as that space, or as tall as it less the position's height; the position as wide as the art.
+ * as that space at most, and as tall as it less the position's height at the art's own width (a
+ * narrower art can put the position's times on two lines); the position as wide as the art.
  */
 @Composable
 internal fun FittedArt(
@@ -133,9 +132,17 @@ internal fun FittedArt(
         val space = gap.roundToPx()
         val position = positions.firstOrNull()
         val width = constraints.maxWidth
-        val under = position?.let { it.maxIntrinsicHeight(width) + space } ?: 0
-        val side =
-            if (constraints.hasBoundedHeight) min(width, constraints.maxHeight - under).coerceAtLeast(0) else width
+        val height = if (constraints.hasBoundedHeight) constraints.maxHeight else Constraints.Infinity
+        // The largest side whose art and position under it fit the height: the position grows as the
+        // side shrinks, so the side is searched for, not worked out once.
+        val fits = { side: Int -> side + (position?.let { space + it.maxIntrinsicHeight(side) } ?: 0) <= height }
+        var low = 0
+        var high = min(width, height)
+        while (low < high) {
+            val mid = (low + high + 1) / 2
+            if (fits(mid)) low = mid else high = mid - 1
+        }
+        val side = low
         val art = covers.first().measure(Constraints.fixed(side, side))
         val bar = position?.measure(Constraints(minWidth = side, maxWidth = side))
         layout(side, side + (bar?.let { space + it.height } ?: 0)) {
@@ -143,21 +150,6 @@ internal fun FittedArt(
             bar?.placeRelative(0, side + space)
         }
     }
-}
-
-/**
- * The album whose back the cover shows, saved with the screen (#1097): remembered where Home keeps its
- * other memories, above the art's colours and above where the cover is drawn, so it is kept when the
- * art's colours arrive and when the phone turns, the cover in Home's column or on a side of its own.
- */
-@Composable
-internal fun rememberCoverBack(): MutableState<String?> = rememberSaveable { mutableStateOf(null) }
-
-/** The album whose back [turn]'s cover shows: Home's ([CoverTurn.backOf]), else the cover's own. */
-@Composable
-internal fun coverBackOf(turn: CoverTurn): MutableState<String?> {
-    val own = rememberSaveable { mutableStateOf<String?>(null) }
-    return turn.backOf ?: own
 }
 
 /** The width from which Home splits in two (#1097): a phone held sideways, a tablet, an unfolded foldable. */
