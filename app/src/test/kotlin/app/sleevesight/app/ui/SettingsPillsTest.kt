@@ -21,7 +21,6 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
@@ -29,49 +28,21 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
-import app.sleevesight.app.MemoryStore
-import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.lab.PromptLab
-import app.sleevesight.app.memorySettings
-import app.sleevesight.app.pipeline.KeyRefusals
-import app.sleevesight.app.secrets.OpenRouterLogin
-import app.sleevesight.app.secrets.SecretId
-import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.lab.LAB_CLEAR_TAG
 import app.sleevesight.app.ui.lab.LAB_EXPORT_TAG
 import app.sleevesight.app.ui.lab.LocalPromptLab
 import app.sleevesight.app.ui.lab.PromptLabBlock
-import app.sleevesight.app.ui.settings.OPENROUTER_SIGN_IN_TAG
-import app.sleevesight.app.ui.settings.OPENROUTER_SIGN_OUT_TAG
-import app.sleevesight.app.ui.settings.OpenRouterAccess
-import app.sleevesight.app.ui.settings.SettingsScreen
-import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.SleevesightTheme
-import app.sleevesight.core.Secret
-import app.sleevesight.core.ai.AiErrorKind
-import app.sleevesight.core.ai.AiProvider
-import app.sleevesight.core.ai.CompletionEvent
-import app.sleevesight.core.ai.CompletionRequest
-import app.sleevesight.core.ai.KeyExchange
-import app.sleevesight.core.ai.KeySignIn
-import app.sleevesight.core.ai.ModelList
-import app.sleevesight.core.ai.SignInStart
-import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.synthesis.LabComparison
 import app.sleevesight.core.synthesis.PromptKind
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -87,11 +58,10 @@ import kotlin.time.Instant
 
 /**
  * The settings' buttons as one pill (#1387, as *Clear history*'s and *Load keys*'), drawn in the
- * app's theme, light and dark: OpenRouter's *Sign in*, labelled so and read "Sign in with
- * OpenRouter", and *Sign out*, outlined, unfilled, their text in the controls' colour (the theme's
- * `onSurface`), not the accent; *Sign in* disabled still readable, and grey; the prompt lab's
- * *Clear the log*, which deletes, in the error colour, its outline too, and in greys while disabled;
- * and a panel's *Close*, the same pill. Native graphics, for the pixels.
+ * app's theme, light and dark: the prompt lab's *Export the log*, its text in the controls' colour
+ * (the theme's `onSurface`), not the accent, and disabled still readable, and grey; its *Clear the
+ * log*, which deletes, in the error colour, its outline too, and in greys while disabled; and a
+ * panel's *Close*, the same pill, outlined and unfilled. Native graphics, for the pixels.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -104,24 +74,7 @@ class SettingsPillsTest {
     val folder = TemporaryFolder()
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val settings = memorySettings()
-    private val secrets = SecretStore(MemoryStore(), testCipher(), dispatcher = Dispatchers.Unconfined)
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val refusals = KeyRefusals()
-
-    private val signIn =
-        object : KeySignIn {
-            override val callback = "app.sleevesight://openrouter"
-
-            override fun begin() = SignInStart("verifier", "state", "https://openrouter.ai/auth?code_challenge=c")
-
-            override suspend fun exchange(
-                code: String,
-                verifier: String,
-            ): KeyExchange = KeyExchange.Refused
-        }
-
-    private val login = OpenRouterLogin(signIn, save = { true }, scope = saves)
 
     // The theme's colours, as drawn.
     private var colours: ColorScheme? = null
@@ -151,53 +104,6 @@ class SettingsPillsTest {
             }
             compose.waitUntil(WAIT_MS) { colours != null }
             block(colours!!)
-        }
-    }
-
-    // *AI services*, with OpenRouter's sign-in and a key saved and refused since, so *Sign in* is
-    // offered again with *Sign out* under it; without [access], no sign-in and no key, so *Sign in*
-    // is offered disabled.
-    private fun showOpenRouter(
-        dark: Boolean,
-        access: Boolean = true,
-        block: (ColorScheme) -> Unit,
-    ) {
-        if (access) refusedKey()
-        showing(dark, {
-            SettingsScreen(
-                settings,
-                secrets,
-                emptyMap(),
-                { CompletableDeferred(true) },
-                saves,
-                openRouter = if (access) OpenRouterAccess(login, refusals) else null,
-            ) { it }
-        }) { scheme ->
-            compose.waitUntil(WAIT_MS) {
-                compose.onAllNodes(hasText(app.getString(R.string.settings_title))).fetchSemanticsNodes().isNotEmpty()
-            }
-            compose.openSection(SettingsSection.AI_SERVICES)
-            waitFor(OPENROUTER_SIGN_IN_TAG)
-            block(scheme)
-        }
-    }
-
-    // OpenRouter's key saved, then refused by it.
-    private fun refusedKey() {
-        runBlocking {
-            secrets.set(SecretId.OPENROUTER, Secret("sk-or-v1-key"))
-            val refusing =
-                object : AiProvider {
-                    override val id = ProviderId.OPENROUTER
-
-                    override suspend fun models(key: Secret) = ModelList.Failed(AiErrorKind.UNAUTHORIZED)
-
-                    override fun stream(
-                        request: CompletionRequest,
-                        key: Secret,
-                    ): Flow<CompletionEvent> = flowOf(CompletionEvent.Error(AiErrorKind.UNAUTHORIZED))
-                }
-            refusals.watching(refusing).stream(CompletionRequest("m", "p"), Secret("sk-or-v1-key")).toList()
         }
     }
 
@@ -257,48 +163,25 @@ class SettingsPillsTest {
     }
 
     @Test
-    fun signInIsLabelledSignInAndReadAsSignInWithOpenRouter() =
-        showOpenRouter(dark = false) {
-            waitFor(OPENROUTER_SIGN_OUT_TAG)
-            assertEquals(Triple(Role.Button, "Sign in with OpenRouter", "Sign in"), button(OPENROUTER_SIGN_IN_TAG))
-            assertEquals(Triple(Role.Button, "Sign out of OpenRouter", "Sign out"), button(OPENROUTER_SIGN_OUT_TAG))
-        }
+    fun anEmptyLogsExportIsDisabledGreyAndReadableLight() = exportDisabled(dark = false)
 
     @Test
-    fun signInAndSignOutAreUnfilledInTheControlsColourLight() = inTheControlsColour(dark = false)
+    fun anEmptyLogsExportIsDisabledGreyAndReadableDark() = exportDisabled(dark = true)
 
-    @Test
-    fun signInAndSignOutAreUnfilledInTheControlsColourDark() = inTheControlsColour(dark = true)
-
-    private fun inTheControlsColour(dark: Boolean) =
-        showOpenRouter(dark) { scheme ->
-            waitFor(OPENROUTER_SIGN_OUT_TAG)
-            for (tag in listOf(OPENROUTER_SIGN_IN_TAG, OPENROUTER_SIGN_OUT_TAG)) {
-                compose.onNodeWithTag(tag).assertIsEnabled()
-                val pixels = pixels(tag)
-                val ink = ink(pixels)
-                assertTrue("dark=$dark: $tag in ${scheme.onSurface}: $ink", distance(ink, scheme.onSurface) < NEAR)
-                assertTrue("dark=$dark: $tag not in the accent: $ink", distance(ink, scheme.primary) > FAR)
-                assertTrue("dark=$dark: $tag not filled", fill(pixels) < UNFILLED)
-            }
-        }
-
-    @Test
-    fun aDisabledSignInIsGreyAndReadableLight() = disabledGrey(dark = false)
-
-    @Test
-    fun aDisabledSignInIsGreyAndReadableDark() = disabledGrey(dark = true)
-
-    private fun disabledGrey(dark: Boolean) =
-        showOpenRouter(dark, access = false) { scheme ->
-            compose.onNodeWithTag(OPENROUTER_SIGN_IN_TAG).assertIsNotEnabled()
-            val pixels = pixels(OPENROUTER_SIGN_IN_TAG)
+    // Nothing logged: *Export the log* disabled, its text still readable, and grey.
+    private fun exportDisabled(dark: Boolean) {
+        val lab = PromptLab(folder.root, saves, Dispatchers.Unconfined)
+        showing(dark, { LabBlock(lab) }) { scheme ->
+            waitFor(LAB_EXPORT_TAG)
+            compose.onNodeWithTag(LAB_EXPORT_TAG).assertIsNotEnabled()
+            val pixels = pixels(LAB_EXPORT_TAG)
             val ink = ink(pixels)
             assertTrue("dark=$dark: readable: $ink", distance(ink, pixels[0, 0]) > READABLE)
             assertTrue("dark=$dark: grey: $ink", chroma(ink) < GREY)
             assertTrue("dark=$dark: not in the accent: $ink", distance(ink, scheme.primary) > FAR)
             assertTrue("dark=$dark: not filled", fill(pixels) < UNFILLED)
         }
+    }
 
     @Test
     fun clearTheLogIsInTheErrorColourItsOutlineTooLight() = clearInRed(dark = false)

@@ -103,7 +103,7 @@ internal class InsightActions(
     val onSettings: () -> Unit = {},
     val onLookAgain: () -> Unit = {},
     val onLookUpAgain: () -> Unit = {},
-    // OpenRouter's key refused (#1157): *AI services*, to sign in again.
+    // OpenRouter's key refused (#1157): *AI services*, to set a new key.
     val onAiServices: () -> Unit = {},
     val onReport: (TrackState, InsightState.Written) -> Unit,
 )

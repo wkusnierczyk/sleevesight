@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.update
 /**
  * The AI services whose saved key the service refused (#1157): a call, or the model list, answered
  * [AiErrorKind.UNAUTHORIZED], as OpenRouter does for a key deleted there. *AI services* says so
- * under OpenRouter, and offers the sign-in again. A mark is kept with the key it was made with, in
+ * under OpenRouter, above the link to set a new key. A mark is kept with the key it was made with, in
  * memory only, as a fingerprint: a call with that key that succeeds lifts it, and so does another key
  * saved, or the key removed ([keysChanged]). Each start begins with none.
  *
