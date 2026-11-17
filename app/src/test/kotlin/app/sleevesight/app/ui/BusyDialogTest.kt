@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -31,6 +32,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.settings.LOAD_KEYS_BUTTON_TAG
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
@@ -191,7 +193,7 @@ class BusyDialogTest {
         // The scanner reads the setup code at once, as the camera would on a code held up to it.
         val code = "sleevesight-keys:v1\nlastfm=$lastFmKey"
         show(scanner = { onScanned -> LaunchedEffect(Unit) { onScanned(code) } }) {
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            compose.onNodeWithTag(LOAD_KEYS_BUTTON_TAG).performScrollTo().performClick()
             // Past the intro and the words that seal a code (#590, #765): these codes are clear
             // ones, read at once on the camera's step, whose *Next* goes on to the keys to save.
             compose.onNodeWithText(text(R.string.load_keys_start)).performClick()

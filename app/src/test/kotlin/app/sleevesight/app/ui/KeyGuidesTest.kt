@@ -19,6 +19,7 @@ import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
@@ -37,6 +38,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.settings.LOAD_KEYS_BUTTON_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import kotlinx.coroutines.CompletableDeferred
@@ -181,7 +183,7 @@ class KeyGuidesTest {
     fun loadKeysNamesNoCommandLineToolEvenInDeveloperMode() {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         show(scanner = notScanning) {
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            compose.onNodeWithTag(LOAD_KEYS_BUTTON_TAG).performScrollTo().performClick()
             waitForText(text(R.string.load_keys_intro_open))
             assertTrue(!shown(hasText("keys-qr", substring = true)))
             compose.onNodeWithText(text(R.string.load_keys_start)).performClick()

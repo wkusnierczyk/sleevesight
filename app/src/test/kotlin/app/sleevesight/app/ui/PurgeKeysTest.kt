@@ -15,6 +15,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -36,6 +37,7 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.KeyDialogs
+import app.sleevesight.app.ui.settings.PURGE_KEYS_BUTTON_TAG
 import app.sleevesight.app.ui.settings.SEARCH_FIELD_TAG
 import app.sleevesight.app.ui.settings.SettingsDialog
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -125,7 +127,7 @@ class PurgeKeysTest {
 
     private fun openPurge() {
         waitForText(text(R.string.settings_remove_all_keys))
-        compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
+        compose.onNodeWithTag(PURGE_KEYS_BUTTON_TAG).performScrollTo().performClick()
         waitForText(text(R.string.purge_keys_delete))
     }
 

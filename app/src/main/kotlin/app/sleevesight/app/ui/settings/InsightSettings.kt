@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.settings
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.core.settings.Crossfade
@@ -41,7 +42,6 @@ private val MAX_CROSSFADE_SECONDS =
 internal fun InsightsSection(
     settings: Settings,
     update: Update,
-    open: (SettingsDialog) -> Unit,
     chooseMode: ((WriteAutomatically) -> Unit)? = null,
 ) {
     SwitchRow(
@@ -82,7 +82,7 @@ internal fun InsightsSection(
             }
         }
     }
-    if (settings.writeAutomatically == WriteAutomatically.WHEN_I_SKIP) CrossfadeRow(settings, update, open)
+    if (settings.writeAutomatically == WriteAutomatically.WHEN_I_SKIP) CrossfadeRow(settings, update)
 
     SaverRows(settings, update)
 
@@ -148,27 +148,65 @@ internal fun crossfades(): List<Pair<Crossfade, String>> =
 
 /**
  * *Crossfade* (D5): autodetect, or a fixed 0 to 15 seconds, for telling a skip from a natural end
- * under *Skip*; indented under *Reactive*, as it belongs to that choice.
+ * under *Skip*; indented under *Reactive*, as it belongs to that choice. A stepped slider (#1365, as
+ * #1126 has a choice from a range), *Autodetect* at its start: seventeen stops, so only the ends are
+ * labelled, as a source's findings are. While *Show insights* is off it does not apply: the whole
+ * row dims and cannot be moved (#999).
  */
 @Composable
 private fun CrossfadeRow(
     settings: Settings,
     update: Update,
-    open: (SettingsDialog) -> Unit,
 ) {
-    val options = crossfades()
-    ValueRow(
-        title = stringResource(R.string.settings_crossfade),
-        value = crossfadeLabel(settings.crossfade),
-        summary = stringResource(R.string.settings_crossfade_summary),
-        indent = true,
-        onClick =
-            {
-                open(
-                    SettingsDialog.Choice(R.string.settings_crossfade, options, settings.crossfade) { c ->
-                        update { it.copy(crossfade = c) }
-                    },
-                )
-            }.takeIf { settings.writeInsights },
+    val title = stringResource(R.string.settings_crossfade)
+    if (!shownInSearch(title)) return
+    val stops = crossfadeStops()
+    SteppedRow(
+        title = title,
+        summary = { _, _ -> stringResource(R.string.settings_crossfade_summary) },
+        stops = stops,
+        stored = nearestCrossfadeStop(settings.crossfade),
+        applies = settings.writeInsights,
+        tags = SteppedTags(CROSSFADE_SLIDER_TAG, CROSSFADE_STOPS_TAG, CROSSFADE_VALUE_TAG),
+        // Every value the row stores is a stop; one stored otherwise shows at the nearest.
+        look = SteppedLook(start = NESTED, endsOnly = true),
+        choose = { c -> update { it.copy(crossfade = c) } },
     )
 }
+
+/** The test tag of *Crossfade*'s slider (#1365). */
+internal const val CROSSFADE_SLIDER_TAG = "settings-crossfade-slider"
+
+/** The test tag of the labels under *Crossfade*'s stops. */
+internal const val CROSSFADE_STOPS_TAG = "settings-crossfade-stops"
+
+/** The test tag of *Crossfade*'s value, at the row's right. */
+internal const val CROSSFADE_VALUE_TAG = "settings-crossfade-value"
+
+/**
+ * *Crossfade*'s stops (#1365): *Autodetect*, then 0 to 15 seconds, labelled as its choices were
+ * (*Autodetect*, *5 s*) and read in words (*5 seconds*).
+ */
+@Composable
+internal fun crossfadeStops(): Stops<Crossfade> {
+    val values = crossfades().map { it.first }
+    return Stops(values, values.map { crossfadeLabel(it) }, values.map { crossfadeSpoken(it) })
+}
+
+/** The index of *Crossfade*'s stop for [crossfade]: *Autodetect*'s, else the nearest whole second's. */
+internal fun nearestCrossfadeStop(crossfade: Crossfade): Int =
+    when (crossfade) {
+        Crossfade.Autodetect -> 0
+        is Crossfade.Fixed -> 1 + nearestStop((0..MAX_CROSSFADE_SECONDS).map { it.seconds }, crossfade.value)
+    }
+
+/** [crossfade] in words, as a screen reader reads it: *Autodetect*, *5 seconds*. */
+@Composable
+private fun crossfadeSpoken(crossfade: Crossfade): String =
+    when (crossfade) {
+        Crossfade.Autodetect -> crossfadeLabel(crossfade)
+        is Crossfade.Fixed -> {
+            val s = crossfade.value.inWholeSeconds.toInt()
+            pluralStringResource(R.plurals.settings_seconds, s, s)
+        }
+    }

@@ -48,7 +48,7 @@ import kotlin.math.roundToInt
 private const val DISABLED_ALPHA = 0.38f
 
 /** How far a row nested under another starts in. */
-private val NESTED = 16.dp
+internal val NESTED = 16.dp
 
 /** The gap between what starts a row ([ROW_MARK]) and its title. */
 private val LEADING_GAP = 16.dp

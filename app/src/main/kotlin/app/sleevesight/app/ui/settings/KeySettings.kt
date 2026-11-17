@@ -40,6 +40,12 @@ import kotlinx.coroutines.async
 // *Secrets* (#234, #444): *Load keys* (#268), *Purge keys*, and each key's row, with its button
 // that removes it; and their dialogs and screens (#446).
 
+/** The test tag of *Load keys*' button (#1365). */
+internal const val LOAD_KEYS_BUTTON_TAG = "settings-load-keys-button"
+
+/** The test tag of *Purge keys*' button (#1365). */
+internal const val PURGE_KEYS_BUTTON_TAG = "settings-purge-keys-button"
+
 /** The keys' rows under *Secrets*, in the order shown: the AI services', then the sources'. */
 internal val SHOWN_KEYS =
     listOf(SecretId.OPENROUTER, SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE, SecretId.LASTFM, SecretId.EXA)
@@ -92,19 +98,26 @@ internal fun SecretsSection(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    ValueRow(
-        title = stringResource(R.string.settings_scan_keys),
-        value = stringResource(R.string.settings_scan_keys_value),
-        onClick = { open(SettingsDialog.LoadKeys) },
-    )
+    // Actions, so rows with a button at their right (#1365, as #1126 has them), labelled with the
+    // action's name; *Purge keys* deletes, so its button is in the error colour.
+    val loadKeys = stringResource(R.string.settings_scan_keys)
+    ButtonRow(
+        title = loadKeys,
+        summary = stringResource(R.string.settings_scan_keys_value),
+        label = loadKeys,
+        tag = LOAD_KEYS_BUTTON_TAG,
+    ) { open(SettingsDialog.LoadKeys) }
     LoadKeysMore()
     if (keys.anyStored || keys.offerReset) {
         val why = if (keys.offerReset) R.string.settings_reset_keys_value else R.string.settings_remove_all_keys_value
-        ValueRow(
-            title = stringResource(R.string.settings_remove_all_keys),
-            value = stringResource(why),
-            onClick = { open(SettingsDialog.PurgeKeys) },
-        )
+        val purgeKeys = stringResource(R.string.settings_remove_all_keys)
+        ButtonRow(
+            title = purgeKeys,
+            summary = stringResource(why),
+            label = purgeKeys,
+            tag = PURGE_KEYS_BUTTON_TAG,
+            destructive = true,
+        ) { open(SettingsDialog.PurgeKeys) }
     }
     for (id in SHOWN_KEYS) KeyRow(stringResource(keyName(id)), id, keys.states, indent = false, open)
     // Its trade-off, that anyone nearby can see the phone's name during a session, is said in the
