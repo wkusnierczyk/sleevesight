@@ -30,7 +30,7 @@ internal fun saidByOpenRouter(
 
 /**
  * OpenRouter's line for a write that failed for [reason] ([saidByOpenRouter]): the key refused, it
- * may have been deleted there, with the link to *AI services* to sign in again ([onAiServices]); or
+ * may have been deleted there, with the link to *AI services* to set a new key ([onAiServices]); or
  * the account needs credit, with the link to add it on OpenRouter.
  */
 @Composable
@@ -44,7 +44,7 @@ internal fun OpenRouterFailure(
                 stringResource(R.string.home_openrouter_unauthorized),
                 TextPart.Action(
                     stringResource(R.string.home_settings_ai_services_link),
-                    OPENROUTER_SIGN_IN_AGAIN_TAG,
+                    OPENROUTER_SET_KEY_TAG,
                     onAiServices,
                 ),
             )
@@ -66,4 +66,4 @@ internal fun OpenRouterFailure(
 const val OPENROUTER_FAILURE_TAG: String = "openrouter_failure"
 
 /** The test tag of its link to *AI services*. */
-const val OPENROUTER_SIGN_IN_AGAIN_TAG: String = "openrouter_sign_in_again"
+const val OPENROUTER_SET_KEY_TAG: String = "openrouter_set_key"

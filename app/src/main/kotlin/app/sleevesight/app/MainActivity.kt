@@ -37,7 +37,6 @@ import app.sleevesight.app.ui.logo.endsOnKeys
 import app.sleevesight.app.ui.logo.followedAnimatorDurationScale
 import app.sleevesight.app.ui.report.TesterReportFeed
 import app.sleevesight.app.ui.settings.InstalledPlayers
-import app.sleevesight.app.ui.settings.OpenRouterAccess
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.isAppInDarkTheme
@@ -187,7 +186,7 @@ class MainActivity : ComponentActivity() {
                                         landOn = links.landOn,
                                         // Reactive's choice (#625): an automatic mode is the first action.
                                         chooseWritingMode = graph.chooseWritingMode,
-                                        openRouter = OpenRouterAccess(graph.openRouterLogin, graph.keyRefusals),
+                                        keyRefusals = graph.keyRefusals,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },

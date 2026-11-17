@@ -52,11 +52,9 @@ import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.pipeline.vocalsWanted
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.KeyGate
-import app.sleevesight.app.secrets.OpenRouterLogin
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
-import app.sleevesight.app.secrets.saveAndSwitchOn
 import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
@@ -376,20 +374,6 @@ class AppGraph internal constructor(
 
     /** The AI services' clients, for the settings screen's model list and the pipeline. */
     val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders.mapValues { keyRefusals.watching(it.value) }
-
-    /**
-     * Signing in with OpenRouter (#1157): its key saved as any other, and OpenRouter switched on at
-     * once, the service on before switched off, as its switch does; finished only once both are
-     * saved ([saveAndSwitchOn]).
-     */
-    val openRouterLogin =
-        OpenRouterLogin(
-            wiring.openRouterSignIn,
-            save = { key ->
-                saveAndSwitchOn(secrets, key) { settings.update { it.copy(aiProvider = ProviderId.OPENROUTER) } }
-            },
-            scope = mainScope,
-        )
 
     /**
      * Whether each AI service's selected model can be used (#540): checked against the service's

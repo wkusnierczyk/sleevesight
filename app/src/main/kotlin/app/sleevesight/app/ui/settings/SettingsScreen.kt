@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.KeyRefusals
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.UnavailableMark
 import app.sleevesight.app.secrets.SecretId
@@ -95,8 +96,8 @@ import kotlinx.coroutines.launch
  * tells the pipeline (#625: an automatic one starts automatic writing from the next track), its
  * result whether it was saved, which the screen announces as it does any change; null saves the
  * mode as any setting.
- * [openRouter] runs the sign-in with OpenRouter under *AI services* (#1157), and says whether
- * OpenRouter refused the key saved since; null for neither (tests).
+ * [keyRefusals] says whether OpenRouter refused the key saved since, under *AI services* (#1157);
+ * null for none (tests).
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -116,7 +117,7 @@ fun SettingsScreen(
     modelCheck: ModelCheck? = null,
     landOn: SettingsTarget? = null,
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
-    openRouter: OpenRouterAccess? = null,
+    keyRefusals: KeyRefusals? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -160,7 +161,7 @@ fun SettingsScreen(
                 scope.launch { failed(!saved.await()) }
             }
         }
-    val signIn = openRouterSignIn(openRouter)
+    val openRouterRefused = openRouterRefused(keyRefusals)
     val keys = KeysShown(secrets, offerReset = sealFailed || SecretState.UNREADABLE in secrets.values)
     val context = LocalContext.current
     val modelNames = remember(context) { ListedModelNames(context) }
@@ -185,7 +186,7 @@ fun SettingsScreen(
                         )
                     CompositionLocalProvider(
                         LocalHistoryLifetime provides historyLifetime,
-                        LocalOpenRouterSignIn provides signIn,
+                        LocalOpenRouterRefused provides openRouterRefused,
                     ) {
                         SettingsContent(current, keys, navigation, unavailable, landOn, jump, { jump = null }, update) {
                             dialog = it
@@ -346,9 +347,6 @@ internal sealed interface SettingsDialog {
     class RemoveKey(
         val id: SecretId,
     ) : Keys
-
-    /** *Sign out of OpenRouter?* (#1157): its key removed, once confirmed. */
-    data object SignOut : Keys
 
     /** *Purge keys*, offered while any key is stored, or after a failure: the screen (#446). */
     data object PurgeKeys : Keys
