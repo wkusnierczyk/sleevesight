@@ -313,8 +313,6 @@
     <!-- Under the title on Home, the track found under another spelling (#1293): %1$s is the title as
          the check spelled it; the title shown stays the player's. -->
     <string name="home_spelling_found">Found as “%1$s”</string>
-    <!-- The same, when the check spelled the artists otherwise too: %2$s is the artists so spelled. -->
-    <string name="home_spelling_found_by">Found as “%1$s” by %2$s</string>
     <!-- In Sources, under the table (#1293): %1$s is home_spelling_found's line, %2$s the model, as the AI
          settings name it, %3$s the title as the player gives it. -->
     <string name="sources_spelling_note">%1$s: the spelling %2$s found on the web for “%3$s”.</string>

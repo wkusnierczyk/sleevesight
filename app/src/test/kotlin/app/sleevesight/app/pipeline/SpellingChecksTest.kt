@@ -6,6 +6,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.SourceState
@@ -14,7 +15,15 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.resolution.MbArtistSearch
+import app.sleevesight.core.resolution.MbRecording
+import app.sleevesight.core.resolution.MbRecordingDetail
+import app.sleevesight.core.resolution.MbWork
+import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.resolution.RecordingResolver
+import app.sleevesight.core.resolution.RememberedMusicBrainz
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -78,7 +87,10 @@ class SpellingChecksTest {
     // The host's spellings, as `PipelineHost` holds them: added when found, all gone when forgotten.
     private val held = mutableMapOf<NowPlaying, FoundAs>()
 
-    private fun TestScope.checks(): SpellingChecks {
+    private fun TestScope.checks(
+        epoch: ClearEpoch = ClearEpoch(),
+        parts: MutableStateFlow<PipelineParts?> = this@SpellingChecksTest.parts,
+    ): SpellingChecks {
         val answers = AiSearchAnswers(GenreVocabulary.load(JvmResourceReader), JvmAccentFolder)
         val searches = AppAiSearches(parts, settings, answers, backgroundScope)
         val targets =
@@ -93,8 +105,80 @@ class SpellingChecksTest {
                     held.clear()
                 },
             )
-        return SpellingChecks(searches, parts, NameMatcher(JvmAccentFolder), backgroundScope, targets, settings, clock)
+        val names = NameMatcher(JvmAccentFolder)
+        return SpellingChecks(searches, parts, names, backgroundScope, targets, settings, clock, epoch)
     }
+
+    /** MusicBrainz held until [gate] opens: each search counted, nothing found but an empty list. */
+    private class GatedMusicBrainz(
+        private val gate: CompletableDeferred<Unit>,
+    ) : MusicBrainzLookup {
+        val searched = mutableListOf<Pair<String, String>>()
+
+        override suspend fun searchRecordings(
+            title: String,
+            artist: String,
+        ): Lookup<List<MbRecording>> {
+            searched += title to artist
+            gate.await()
+            return Lookup.Found(emptyList())
+        }
+
+        override suspend fun searchRecordingsBefore(
+            title: String,
+            artist: String,
+            date: String,
+        ): Lookup<List<MbRecording>> = Lookup.NotFound
+
+        override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = Lookup.NotFound
+
+        override suspend fun recordingReleases(mbid: String): Lookup<MbRecording> = Lookup.NotFound
+
+        override suspend fun work(mbid: String): Lookup<MbWork> = Lookup.NotFound
+
+        override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> = Lookup.NotFound
+    }
+
+    @Test
+    fun `MusicBrainz's answer to a question a clear overtook is not remembered after the clear`() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val gated = GatedMusicBrainz(gate)
+            val epoch = ClearEpoch()
+            val remembered = RememberedMusicBrainz(gated, epoch = epoch)
+            val resolver = RecordingResolver(remembered, NameMatcher(JvmAccentFolder))
+            val real =
+                MutableStateFlow<PipelineParts?>(
+                    PipelineParts(normalizer, emptyList(), TrackResolver(resolver::resolve), JvmHasher as Hasher),
+                )
+            val checks = checks(epoch, real)
+            checks.ask(track, spelling, "m", clock.at)
+            runCurrent()
+            val (title, artist) = gated.searched.first()
+            // *Clear history* as the app runs it: the epoch advanced, MusicBrainz's memory cleared, the
+            // question answering meanwhile, and only then the spelling check's own memory.
+            epoch.advance()
+            remembered.forget()
+            gate.complete(Unit)
+            runCurrent()
+            checks.forget()
+            val asked = gated.searched.size
+            remembered.searchRecordings(title, artist)
+            assertEquals("asked again, not remembered", asked + 1, gated.searched.size)
+            assertTrue(found.isEmpty())
+        }
+
+    @Test
+    fun `Stop before the question is registered keeps it from being asked`() =
+        runTest {
+            val checks = checks()
+            checks.stop(track, spelling)
+            checks.ask(track, spelling, "m", clock.at)
+            answer.complete(accepted)
+            runCurrent()
+            assertTrue(found.isEmpty())
+            assertEquals(SpellingOutcome.Stopped, checks.outcome(track, spelling).first())
+        }
 
     @Test
     fun `a clear while MusicBrainz is asked applies nothing after it`() =

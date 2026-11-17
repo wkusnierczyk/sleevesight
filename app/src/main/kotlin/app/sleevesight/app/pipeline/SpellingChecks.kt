@@ -3,6 +3,7 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.app.ui.home.NoDates
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.SearchState
@@ -66,9 +67,10 @@ class SpellingTargets(
  * What MusicBrainz answered is held in memory, by the track as the player names it, its length and
  * the spelling, no longer than *Keep history for* ([settings], by [clock]) after the answer was
  * written, so a spelling is asked once per process; a track played again with the answer kept asks
- * MusicBrainz again, free. *Clear history* ([forget]) cancels the questions under way and forgets
- * every answer and spelling found ([targets]' `forgotten`), under the lock a confirmation is applied
- * under, so none applied once the clear has started survives it.
+ * MusicBrainz again, free. Its questions are marked with the clear's [epoch], so what MusicBrainz
+ * answers after a *Clear history* started is not remembered. *Clear history* ([forget]) cancels the
+ * questions under way and forgets every answer and spelling found ([targets]' `forgotten`), under
+ * the lock a confirmation is applied under, so none applied once the clear has started survives it.
  */
 @Suppress("LongParameterList") // What it asks with, where it runs, its time, and where its answers go.
 class SpellingChecks(
@@ -79,6 +81,7 @@ class SpellingChecks(
     private val targets: SpellingTargets,
     private val settings: StateFlow<Settings?> = MutableStateFlow(null),
     private val clock: Clock = Clock.System,
+    private val epoch: ClearEpoch = ClearEpoch(),
 ) {
     // What MusicBrainz answered for each spelling asked, by [Asked], with when the answer was written.
     private val answered = MutableStateFlow<Map<Asked, Answer>>(emptyMap())
@@ -156,9 +159,10 @@ class SpellingChecks(
     ) = synchronized(lock) {
         val asked = Asked.of(track, spelling)
         asking.remove(asked)?.cancel()
-        val now = answered.value[asked] ?: return@synchronized
-        if (now.outcome == SpellingOutcome.Asking || now.outcome == SpellingOutcome.Found) {
-            answered.update { it + (asked to now.copy(outcome = SpellingOutcome.Stopped)) }
+        val now = answered.value[asked]
+        // Stopped before it was asked too (the answer shown, [follow] not yet at it): never asked then.
+        if (now == null || now.outcome == SpellingOutcome.Asking || now.outcome == SpellingOutcome.Found) {
+            answered.update { it + (asked to Answer(SpellingOutcome.Stopped, now?.writtenAt)) }
             targets.dropped(track.nowPlaying)
         }
     }
@@ -194,7 +198,9 @@ class SpellingChecks(
             answered.update { it + (asked to Answer(SpellingOutcome.Asking, writtenAt)) }
             val since = clears
             val job =
-                scope.launch(start = CoroutineStart.LAZY) {
+                // Marked with the clear's epoch, so MusicBrainz's answers it remembers (`RememberedMusicBrainz`)
+                // are dropped once a *Clear history* has started, before this is forgotten.
+                scope.launch(epoch.mark(), start = CoroutineStart.LAZY) {
                     val confirmed = confirmed(made, track, spelling, model, writtenAt)
                     applied(asked, since, track, confirmed)
                 }

@@ -325,7 +325,7 @@ internal fun KeyData(
         )
         foundAs?.let {
             Text(
-                foundAsLine(it, header),
+                foundAsLine(it),
                 Modifier.testTag(FOUND_AS_TAG),
                 style = MaterialTheme.typography.bodySmall,
                 fontStyle = FontStyle.Italic,

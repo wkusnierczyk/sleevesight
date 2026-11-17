@@ -195,7 +195,7 @@ internal fun SourcesBody(
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         // Asked in another spelling (#1293): which, and who found it; its pages are no lines.
         track?.foundAs?.let { found ->
-            val line = foundAsLine(found, track.nowPlaying)
+            val line = foundAsLine(found)
             Text(
                 stringResource(R.string.sources_spelling_note, line, found.model, track.nowPlaying.title),
                 Modifier.testTag(SOURCES_FOUND_AS_TAG),

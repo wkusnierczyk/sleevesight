@@ -39,7 +39,7 @@ class AskAiWired(
     answers: AiSearchAnswers,
     scope: CoroutineScope,
     settledNoDefinition: (TrackState, String) -> Boolean,
-    epoch: ClearEpoch = ClearEpoch(),
+    private val epoch: ClearEpoch = ClearEpoch(),
     modelName: (String) -> String = { it },
     private val clock: Clock = Clock.System,
     events: (PipelineEvent) -> Unit = {},
@@ -117,7 +117,7 @@ class AskAiWired(
         scope: CoroutineScope,
         targets: SpellingTargets,
     ): SpellingChecks =
-        SpellingChecks(searches, parts, NameMatcher(JvmAccentFolder), scope, targets, settings, clock).also {
+        SpellingChecks(searches, parts, NameMatcher(JvmAccentFolder), scope, targets, settings, clock, epoch).also {
             spellings = it
         }
 

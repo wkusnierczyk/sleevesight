@@ -150,17 +150,6 @@ internal fun UnderAlbum(
     InPlaceLine(listOfNotNull(dates, genres, lyrics), line.memory, playing, onePanel)
 }
 
-/**
- * The spelling the sources were asked with in place of [header]'s (#1293): "Found as “{title}”", and
- * " by {artists}" when the artists were spelled otherwise too.
- */
+/** The spelling the sources were asked with in place of the player's title (#1293): "Found as “{title}”". */
 @Composable
-internal fun foundAsLine(
-    found: FoundAs,
-    header: NowPlaying,
-): String =
-    if (found.artists == header.artists) {
-        stringResource(R.string.home_spelling_found, found.title)
-    } else {
-        stringResource(R.string.home_spelling_found_by, found.title, found.artists)
-    }
+internal fun foundAsLine(found: FoundAs): String = stringResource(R.string.home_spelling_found, found.title)

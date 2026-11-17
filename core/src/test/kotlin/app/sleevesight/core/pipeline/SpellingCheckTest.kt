@@ -133,7 +133,7 @@ class SpellingCheckTest {
     fun `an artist MusicBrainz names without its id, not credited by the recording, does not count`() {
         val check = SpellingCheck(Recording(accepted), normalizer, names)
         val unconfirmed = accepted.copy(artists = played.artists.map { ResolvedArtist(it, null) })
-        assertEquals(false, check.agrees(unconfirmed, played, played))
+        assertEquals(false, check.agrees(unconfirmed, played))
     }
 
     // MusicBrainz as the resolver asks it, holding [recordings] for any search.
@@ -170,15 +170,57 @@ class SpellingCheckTest {
         }
 
     @Test
-    fun `respelled artists are taken only when each is a respelling of the player's at its place`() {
-        val check = SpellingCheck(Recording(accepted), normalizer, names)
-        assertTrue(check.respelling(listOf("Luciano Pavarotti"), listOf("Luciano Pavarroti")))
-        assertEquals(false, check.respelling(listOf("Plácido Domingo"), listOf("Luciano Pavarotti")))
-        assertEquals(false, check.respelling(listOf("Luciano Pavarotti", "x"), listOf("Luciano Pavarotti")))
-    }
+    fun `a spelling naming another number, a work's or a movement's, is never asked`() =
+        runTest {
+            val symphony =
+                nowPlaying(
+                    "Symphony No. 5 in C minor, Op. 67: II. Andantte con moto",
+                    "Ludwig van Beethoven, Berliner Philharmoniker",
+                ).copy(duration = 600.seconds)
+            val normalized = normalizer.normalize(symphony)
+            val resolver = Recording(accepted)
+            val check = SpellingCheck(resolver, normalizer, names)
+            for (title in listOf(
+                "Symphony No. 6 in C minor, Op. 67: II. Andante con moto",
+                "Symphony No. 5 in C minor, Op. 68: II. Andante con moto",
+                "Symphony No. 5 in C minor, Op. 67: III. Andante con moto",
+            )) {
+                kotlin.test.assertNull(check.confirm(symphony, normalized, spelling(title), "m"), title)
+            }
+            assertTrue(resolver.asked.isEmpty())
+            assertTrue(
+                check.respelledTitle(
+                    "Symphony No. 5 in C minor, Op. 67: II. Andante con moto",
+                    symphony.title,
+                    normalized,
+                ),
+            )
+        }
 
     @Test
-    fun `another performer the AI names is not taken, the player's artists are asked`() =
+    fun `a recording crediting only a near name of the player's artist is not kept, whatever the AI's artists`() =
+        runTest {
+            val theme = nowPlaying("Star Wars Main Thme", "John Williams").copy(duration = 330.seconds)
+            val normalized = normalizer.normalize(theme)
+            val near =
+                Resolution(
+                    Outcome.SongArticle,
+                    recordingMbid = "sw",
+                    artists = listOf(ResolvedArtist("John Williamson", "jw")),
+                )
+            val check = SpellingCheck(Recording(near), normalizer, names)
+            val found =
+                check.confirm(
+                    theme,
+                    normalized,
+                    spelling("Star Wars Main Theme", listOf("John Williamson")),
+                    "m",
+                )
+            assertNull(found)
+        }
+
+    @Test
+    fun `the AI's artists are never used, the player's are asked`() =
         runTest {
             val resolver = Recording(accepted)
             val wrong = played.artists.map { if (it == "Luciano Pavarotti") "Plácido Domingo" else it }
