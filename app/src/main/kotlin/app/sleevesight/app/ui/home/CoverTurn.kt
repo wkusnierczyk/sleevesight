@@ -167,6 +167,9 @@ internal fun FlippingCover(
     val album = turn.album.orEmpty()
     val memory = coverMemoryOf(turn)
     var backOf by memory.backOf
+    // Of this album, whichever face shows: another album played meanwhile, with the cover on its front,
+    // empties it too, so coming back to the first opens its tracklist afresh.
+    val tracklist = memory.tracklist.of(album)
     LaunchedEffect(album) { if (backOf != album) backOf = null }
     val lookUp = lookUpOnTurn(album, turn.lookUp)
     // A back left turned over when a clear's hold comes, which asked nothing (#1148): the cover turns
@@ -219,7 +222,7 @@ internal fun FlippingCover(
         } else {
             // Turned once more, so the back reads the right way round once the cover has turned.
             Box(Modifier.fillMaxSize().graphicsLayer { rotationY = HALF_TURN }) {
-                MaterialTheme(colorScheme = turn.colors) { CoverBackFace(turn, memory.tracklist.of(turn.album)) }
+                MaterialTheme(colorScheme = turn.colors) { CoverBackFace(turn, tracklist) }
             }
         }
     }

@@ -133,16 +133,18 @@ internal fun FittedArt(
         val position = positions.firstOrNull()
         val width = constraints.maxWidth
         val height = if (constraints.hasBoundedHeight) constraints.maxHeight else Constraints.Infinity
-        // The largest side whose art and position under it fit the height: the position grows as the
-        // side shrinks, so the side is searched for, not worked out once.
-        val fits = { side: Int -> side + (position?.let { space + it.maxIntrinsicHeight(side) } ?: 0) <= height }
-        var low = 0
-        var high = min(width, height)
-        while (low < high) {
-            val mid = (low + high + 1) / 2
-            if (fits(mid)) low = mid else high = mid - 1
+        // The largest side whose art and position under it fit the height. The position never grows as
+        // the side grows (its times go side by side once they fit), but it can shrink by steps, so the
+        // fitting sides are not one range: from the widest, the side steps down to what the height
+        // leaves under its own position until it fits, which is the largest side that fits.
+        val under = { side: Int -> position?.let { space + it.maxIntrinsicHeight(side) } ?: 0 }
+        var side = min(width, height)
+        var steps = 0
+        while (steps++ < MAX_FIT_STEPS) {
+            val next = min(side, height - under(side)).coerceAtLeast(0)
+            if (next == side) break
+            side = next
         }
-        val side = low
         val art = covers.first().measure(Constraints.fixed(side, side))
         val bar = position?.measure(Constraints(minWidth = side, maxWidth = side))
         layout(side, side + (bar?.let { space + it.height } ?: 0)) {
@@ -151,6 +153,9 @@ internal fun FittedArt(
         }
     }
 }
+
+/** At most this many steps to the cover's side ([FittedArt]); one or two do on Home. */
+private const val MAX_FIT_STEPS = 32
 
 /** The width from which Home splits in two (#1097): a phone held sideways, a tablet, an unfolded foldable. */
 internal val SPLIT_WIDTH: Dp = 600.dp

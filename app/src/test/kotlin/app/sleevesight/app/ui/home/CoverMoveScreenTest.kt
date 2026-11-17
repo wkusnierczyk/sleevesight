@@ -55,6 +55,9 @@ class CoverMoveScreenTest {
             TrackAt(0, 2),
         )
 
+    // The album playing: its tracklist the same for the test's two albums.
+    private var album by mutableStateOf("two discs")
+
     // Whether the cover is drawn in its other place: in portrait's column or on a side of its own.
     private var moved by mutableStateOf(false)
 
@@ -85,7 +88,7 @@ class CoverMoveScreenTest {
                         val memory = rememberCoverMemory()
                         val turn =
                             CoverTurn(
-                                album = "two discs",
+                                album = album,
                                 back = twoDiscs,
                                 key = TracklistKey("g"),
                                 look = {},
@@ -124,6 +127,27 @@ class CoverMoveScreenTest {
                 track("21, Two 20").assertIsDisplayed()
                 track("1, Two 0").assertIsNotDisplayed()
             }
+        }
+
+    @Test
+    fun anotherAlbumPlayedMeanwhileWithTheCoverOnItsFrontStartsTheTracklistAfresh() =
+        shown {
+            compose.onNodeWithTag(COVER_TAG).performClick()
+            compose.onNodeWithContentDescription("Disc 2").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(TRACKLIST_TAG).performScrollToIndex(TWENTY)
+            compose.waitForIdle()
+            // Another album: the cover on its front, its back never opened; then the first again.
+            album = "another"
+            compose.waitForIdle()
+            compose.onNodeWithTag(COVER_BACK_TAG).assertDoesNotExist()
+            album = "two discs"
+            compose.waitForIdle()
+            compose.onNodeWithTag(COVER_TAG).performClick()
+            compose.waitForIdle()
+            // On the playing song's disc, the first, not where the first visit left it.
+            compose.onNodeWithContentDescription("Disc 1").assertIsSelected()
+            track("3, One 2").assertIsDisplayed()
         }
 
     // A track's row by the start of what it reads.
