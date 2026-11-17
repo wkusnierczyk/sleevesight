@@ -177,11 +177,17 @@ data class MbCredit(
     val names: List<String> get() = listOf(name, artistName) + aliases
 }
 
-/** A release group, the release's album, single or EP across its editions. */
+/**
+ * A release group, the release's album, single or EP across its editions: its [primaryType] (`Album`,
+ * `Single`, `EP`) and its [secondaryTypes] (`Compilation`, `Live`, `Soundtrack`), as MusicBrainz gives
+ * them, and the date of its [firstReleaseDate] (#1080: only a release's lookup reads these three).
+ */
 data class MbReleaseGroup(
     val mbid: String,
     val title: String,
     val primaryType: String?,
+    val secondaryTypes: List<String> = emptyList(),
+    val firstReleaseDate: String? = null,
 )
 
 /**
@@ -202,17 +208,29 @@ data class MbRelease(
 
 /**
  * A release's tracklist (#984): its [media] (discs, sides of a set, as MusicBrainz counts them) in
- * their order, each with its tracks. Core data, CC0.
+ * their order, each with its tracks. With what tells the release apart from others of its name, for
+ * the albums of one name the listener chooses among (#1080): its [date] as MusicBrainz writes it, the
+ * [country] it came out in (the first release event's area, as MusicBrainz names it, "Worldwide"
+ * without its brackets), its [labels]' names, and its release [group] with the group's types and first
+ * release date; null or empty when MusicBrainz gives none. Core data, CC0.
  */
 data class MbTracklist(
     val releaseMbid: String,
     val media: List<MbMedium>,
+    val date: String? = null,
+    val country: String? = null,
+    val labels: List<String> = emptyList(),
+    val group: MbReleaseGroup? = null,
 )
 
-/** One medium of a release: its [position] in the release, from 1, and its [tracks] in order. */
+/**
+ * One medium of a release: its [position] in the release, from 1, its [tracks] in order, and its
+ * [format] as MusicBrainz names it (`CD`, `12" Vinyl`, `Digital Media`; null when it gives none).
+ */
 data class MbMedium(
     val position: Int,
     val tracks: List<MbTrack>,
+    val format: String? = null,
 )
 
 /**
