@@ -6,12 +6,18 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import app.sleevesight.app.session.TrackIdentity
+import app.sleevesight.app.ui.theme.FocusHandoff
+import app.sleevesight.app.ui.theme.handoffTarget
+import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
@@ -119,8 +125,48 @@ internal fun peopleNamed(
 }
 
 /**
+ * Home's people while they are named (#1355): whether they are ([named], [peopleNamed]), and where
+ * the focus goes from a row's panel a new track closed while its rows are held back ([elsewhere]).
+ */
+internal class PeopleShown(
+    val named: Boolean,
+    val elsewhere: RowsHandBack,
+)
+
+/** [shown]'s [PeopleShown], by [normalized], the track as read; their memory kept as the rows' is. */
+@Composable
+internal fun peopleShown(
+    shown: Showing,
+    normalized: NormalizedTrack,
+): PeopleShown = PeopleShown(peopleNamed(rememberNamingMemory(), shown, normalized), rememberRowsHandBack())
+
+/**
  * How long Home holds back the naming of a track's people for MusicBrainz's answer (#1355) before
  * naming them by the title: a fresh track's resolution takes a few seconds (a request a second, a
  * few of them for a recording and its work).
  */
 internal val NAMING_WAIT: Duration = 10.seconds
+
+/**
+ * Where the focus goes when a new track closes a row's panel that held it and has no such row to go
+ * back to (#1355: its rows held back while its people are named): [target], under [modifier] on a
+ * control that stays, *Sources*' chip, or its *Close* while its panel is open; moved by [handoff].
+ */
+@Stable
+internal class RowsHandBack(
+    private val handoff: FocusHandoff,
+    private val target: FocusRequester,
+) {
+    /** The control's modifier: the target of the move. */
+    val modifier: Modifier get() = Modifier.handoffTarget(handoff, target)
+
+    /** Moves the focus to the control once it is laid out. */
+    fun move() = handoff.moveTo(target)
+}
+
+/** A [RowsHandBack] kept across recompositions, its moves run here. */
+@Composable
+internal fun rememberRowsHandBack(): RowsHandBack {
+    val handoff = rememberFocusHandoff()
+    return remember(handoff) { RowsHandBack(handoff, FocusRequester()) }
+}

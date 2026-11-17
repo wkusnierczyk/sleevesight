@@ -300,7 +300,7 @@ internal class NowPlayingActions(
  * The song's, the artist's and the album's rows unfold in place under *Expandable boxes*, several at
  * once, starting as *Song, Artist and Album on a new track* says, and open a page each under
  * *Separate pages*. The insight shows in full on Home either way. The rows and the artists under the
- * title are held back until the track's people are named ([peopleNamed], #1355), so they are named once.
+ * title are held back until the track's people are named ([peopleShown], #1355), so they are named once.
  */
 @Composable
 internal fun NowPlayingContent(
@@ -332,7 +332,7 @@ internal fun NowPlayingContent(
     // Its own evidence, with its album's lines once its insight gathered them (#522).
     val lines = sourcesLines(actions.itemNotes, track, actions.genreNotes, actions.aiSearches)
     val focus = rememberLineFocus(lines.evidence, track?.normalized)
-    val named = peopleNamed(rememberNamingMemory(), shown, remember(header) { actions.normalize(header) })
+    val people = peopleShown(shown, remember(header) { actions.normalize(header) })
     val fold = sourcesFold(foldMemory, playing, onNewTrack = settings?.sourcesOnNewTrack)
     // A citation tapped unfolds the list far enough to show its line, or opens it there on its page.
     val cite: (String) -> Unit =
@@ -352,7 +352,7 @@ internal fun NowPlayingContent(
                 ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
                 val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
-                TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions, named)
+                TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions, people.named)
                 InsightCard(
                     keyInsight(actions.itemNotes, track, view.nothingToNarrate) ?: NOT_YET,
                     insightContext(view, track, settings, shown.modelAllowed, state.unavailable, retries),
@@ -363,17 +363,17 @@ internal fun NowPlayingContent(
                     settings?.let { writingChoice(it, actions) },
                     insightReading(actions.readAloud, track),
                 )
-                val rows = if (named) homeItemRows(shown, header, actions) else emptyList()
+                val rows = if (people.named) homeItemRows(shown, header, actions) else emptyList()
                 // One width for every chip under *Key insights*: the rows' and *Sources*' (#1286).
                 val column = keyInsightsWidth(rows, ai = settings?.writeInsights == true)
-                HomeItems(state, shown, rows, column, itemMemory, cite, actions) { t, w, i ->
+                HomeItems(state, shown, rows, column, itemMemory, cite, actions, people.elsewhere) { t, w, i ->
                     reporting = Reported(t, w, i)
                 }
                 if (settings != null) {
                     // A dim line between the song's, the artist's and the album's rows and *Sources* (#894),
                     // under either layout; nothing a screen reader stops on.
                     PanelRule(Modifier.testTag(SOURCES_LINE_TAG).clearAndSetSemantics {})
-                    SourcesItem(pages, shown.sources(lines, retries::ofAll), focus, fold, column, actions)
+                    SourcesItem(pages, shown.sources(lines, retries::ofAll), focus, fold, column, actions, people)
                 }
             }
         }
@@ -392,7 +392,8 @@ private fun insightReading(
     }
 
 // *Sources* on Home: its chip, the way to its page, under *Separate pages* ([pages]), else the box
-// (#623); the chip [width] wide, as the rows' above it (#1286).
+// (#623); the chip [width] wide, as the rows' above it (#1286); the focus from a row's panel goes to
+// it while [people] are held back (#1355).
 @Suppress("LongParameterList") // What *Sources* shows, how wide its chip is, and where its taps go.
 @Composable
 private fun SourcesItem(
@@ -402,11 +403,15 @@ private fun SourcesItem(
     fold: SourcesFold,
     width: Dp,
     actions: NowPlayingActions,
+    people: PeopleShown,
 ) {
+    val elsewhere = people.elsewhere
     if (pages) {
-        SourcesChip(opensPage = true, width = width) { actions.openPage(HomePage.Sources()) }
+        SourcesChip(opensPage = true, modifier = elsewhere.modifier, width = width) {
+            actions.openPage(HomePage.Sources())
+        }
     } else {
-        SourcesSection(shown, focus, fold, actions.openSettings, width)
+        SourcesSection(shown, focus, fold, actions.openSettings, width, elsewhere.modifier)
     }
 }
 

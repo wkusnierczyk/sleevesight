@@ -15,9 +15,12 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.PipelineView
@@ -49,7 +52,8 @@ import org.robolectric.RobolectricTestRunner
  * it answers, named by its roles, or after [NAMING_WAIT] named by the title, renamed once if it
  * answers later, a screen recreated meanwhile waiting only what was left. A title leading with its
  * composer, MusicBrainz switched off (with or without a run of the track yet) or unreachable, and a
- * track played before name them at once. On virtual time: the clock advances only as a test says.
+ * track played before name them at once. A new track held back hands the focus from a row's open
+ * panel to *Sources*' chip. On virtual time: the clock advances only as a test says.
  */
 @RunWith(RobolectricTestRunner::class)
 class PeopleNamedOnceScreenTest {
@@ -240,6 +244,21 @@ class PeopleNamedOnceScreenTest {
             assertHeld()
             after(1_000)
             assertEquals("Song, $TITLE", said(InsightItem.SONG))
+        }
+
+    @Test
+    fun aNewTrackHeldBackHandsTheFocusFromAnOpenPanelToSourcesChip() =
+        show(beethoven(answered = true)) { current ->
+            // The panel's opening and closing animate: the clock runs on by itself here.
+            compose.mainClock.autoAdvance = true
+            compose.onNodeWithTag(itemRowTag(InsightItem.SONG)).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemPanelTag(InsightItem.SONG) + ":close").assertIsFocused()
+            val next = NINTH.copy(title = "$TITLE II", mediaId = "b2")
+            current.value = state(beethoven(answered = false, playing = next))
+            compose.waitForIdle()
+            assertHeld()
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).assertIsFocused()
         }
 
     @Test

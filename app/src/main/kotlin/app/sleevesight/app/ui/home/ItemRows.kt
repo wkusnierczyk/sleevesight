@@ -72,7 +72,8 @@ import app.sleevesight.core.settings.Layout as LayoutSetting
  *
  * The focus moves as the line under the album's does ([InPlaceLine]): to a panel's *Close* when its
  * button opens it, back to its button when *Close* closes it, and to its button when a new track
- * closes a panel while the focus is in it, if the new track has that row.
+ * closes a panel while the focus is in it, if the new track has that row; if it has not (its rows
+ * held back while its people are named, #1355, or no such row), to [elsewhere], a control that stays.
  */
 @Suppress(
     "LongParameterList", // The rows, how they open, and what each shows.
@@ -85,6 +86,7 @@ internal fun ItemRows(
     folds: ItemFolds,
     context: ItemContext,
     width: Dp = keyInsightsWidth(rows, ai = context.settings.writeInsights),
+    elsewhere: RowsHandBack? = null,
     openPage: (InsightItem) -> Unit,
 ) {
     val handoff = rememberFocusHandoff()
@@ -104,7 +106,11 @@ internal fun ItemRows(
         before.addAll(open)
         // No panel, no focus in it: a panel that goes may not be told it lost the focus.
         inside.retainAll(open)
-        if (handBack != null) handoff.moveTo(buttonOf(handBack))
+        when {
+            handBack == null -> Unit
+            rows.any { it.item == handBack } -> handoff.moveTo(buttonOf(handBack))
+            else -> elsewhere?.move()
+        }
     }
     val kinds = rows.map { itemKind(it.item, it) }
     // The mark on every button while insights are written (#948): what each opens is AI-written.
@@ -326,6 +332,7 @@ internal fun HomeItems(
     memory: ItemFoldMemory,
     cite: (String) -> Unit,
     actions: NowPlayingActions,
+    elsewhere: RowsHandBack? = null,
     onReport: (TrackState, InsightState.Written, InsightItem) -> Unit,
 ) {
     val settings = state.settings ?: return
@@ -341,7 +348,7 @@ internal fun HomeItems(
             sourcesLines(actions.itemNotes, shown.track, actions.genreNotes, actions.aiSearches).evidence,
             onReport,
         )
-    ItemRows(rows, pages, folds, context, width) { item -> actions.openPage(HomePage.Item(item.name)) }
+    ItemRows(rows, pages, folds, context, width, elsewhere) { item -> actions.openPage(HomePage.Item(item.name)) }
 }
 
 /** The test tag of the rows under *Key insights*. */
