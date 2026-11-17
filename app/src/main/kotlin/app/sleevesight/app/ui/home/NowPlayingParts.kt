@@ -258,11 +258,14 @@ private fun Progress(
  *
  * With [split], the roles telling the composer apart (#1199), the performers on one line (an arranger
  * the title names is in the title), then the composer, or every author, on a line of its own, after a quieter label
- * ("Composer: Wolfgang Amadeus Mozart"), as the row before the artist's names them.
+ * ("Composer: Wolfgang Amadeus Mozart"), as the row before the artist's names them; when it names
+ * anyone the player does not credit (#1298), MusicBrainz's line on the work among [notes]' lines as a
+ * citation chip at its end ([authorsCite]), a tap on which goes where [notes]' citations go.
  *
  * While [held] (#1355, [peopleNamed]), neither: an empty line in the artists' place, its height kept.
  */
 @OptIn(ExperimentalLayoutApi::class)
+@Suppress("LongParameterList") // The track, its years, its people, and where the authors' mark goes.
 @Composable
 internal fun KeyData(
     normalized: NormalizedTrack,
@@ -270,6 +273,7 @@ internal fun KeyData(
     years: HeaderYears,
     split: ArtistSplit? = null,
     held: Boolean = false,
+    notes: PanelNotes = PanelNotes(),
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
@@ -296,7 +300,10 @@ internal fun KeyData(
                     Text(if (i < artists.lastIndex) "$artist, " else artist, style = MaterialTheme.typography.bodyLarge)
                 }
             }
-            split?.let { AuthorsLine(it) }
+            split?.let {
+                val cite = remember(it, notes.lines) { authorsCite(it, notes.lines) }
+                AuthorsLine(it, cite, notes.onCite)
+            }
         }
         val album = header.album?.takeIf(String::isNotBlank)
         if (album == null) {

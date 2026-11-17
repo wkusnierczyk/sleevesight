@@ -39,4 +39,17 @@ class RetrievalRolesTest {
         assertFalse("roles" in none)
         assertNull(assertNotNull(RetrievalCodec.decode(none)).roles)
     }
+
+    @Test
+    fun `a classical work's uncredited composers round-trip, and an entry kept without them reads as none`() {
+        // #1298: Nessun Dorma credited to Pavarotti alone, the work's composer kept apart.
+        val roles =
+            ArtistRoles(emptyList(), listOf("Luciano Pavarotti"), true, uncredited = listOf("Giacomo Puccini"))
+        val told = result.copy(roles = roles)
+        val encoded = RetrievalCodec.encode(told)
+        assertEquals(told, RetrievalCodec.decode(encoded))
+        val before = encoded.replace(",\"uncredited\":[\"Giacomo Puccini\"]", "")
+        assertTrue(before != encoded)
+        assertEquals(emptyList(), assertNotNull(RetrievalCodec.decode(before)).roles?.uncredited)
+    }
 }

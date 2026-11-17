@@ -143,6 +143,59 @@ class ArtistSplitTest {
         assertNull(ArtistSplit.of(alone, ArtistRoles.of(alone), null))
     }
 
+    @Test
+    fun `a classical work's uncredited composer and librettists are its authors, every one marked uncredited`() {
+        // #1298: Spotify credits Nessun Dorma to Pavarotti alone; the aria's work names Puccini and two
+        // librettists.
+        val alone = track("Nessun Dorma", PAVAROTTI)
+        val roles = ArtistRoles(emptyList(), listOf(PAVAROTTI), classical = true, uncredited = listOf(PUCCINI))
+        val split = checkNotNull(ArtistSplit.of(alone, roles, WorkLyrics(librettists = listOf(ADAMI, SIMONI))))
+        assertEquals(listOf(PUCCINI), split.composers)
+        assertEquals(PAVAROTTI, split.lead)
+        assertEquals(AuthorsName.AUTHORS, split.name)
+        assertEquals(true, split.classical)
+        assertEquals(listOf(PUCCINI, ADAMI, SIMONI), split.uncredited)
+        // The composer alone: a Composer row, and the song's row Music.
+        val composer = checkNotNull(ArtistSplit.of(alone, roles, null))
+        assertEquals(AuthorsName.COMPOSER, composer.name)
+        assertEquals(listOf(PUCCINI), composer.uncredited)
+    }
+
+    @Test
+    fun `authors the player credits are not uncredited, librettists from MusicBrainz are`() {
+        // Spotify's Nessun doma credits Puccini: only the librettists are MusicBrainz's.
+        val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI, MEHTA, LA_PHIL), classical = true)
+        val libretto = WorkLyrics(librettists = listOf(ADAMI, SIMONI))
+        assertEquals(listOf(ADAMI, SIMONI), ArtistSplit.of(nessun, roles, libretto)?.uncredited)
+        // Every author credited: nothing to mark (Mozart's K. 545, Beethoven's Ninth).
+        assertEquals(emptyList(), ArtistSplit.of(k545, ArtistRoles.of(k545), null)?.uncredited)
+        assertEquals(emptyList(), ArtistSplit.of(nessun, roles, null)?.uncredited)
+    }
+
+    @Test
+    fun `a work not classical keeps its authors unmarked, whoever credits them`() {
+        // A song's lyricist from MusicBrainz beside its credited composer: an Authors line, no mark.
+        val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI), classical = false)
+        val split = checkNotNull(ArtistSplit.of(nessun, roles, WorkLyrics(lyricists = listOf(ADAMI))))
+        assertEquals(AuthorsName.AUTHORS, split.name)
+        assertEquals(false, split.classical)
+        assertEquals(listOf(PUCCINI, ADAMI), split.authors)
+        assertEquals(emptyList(), split.uncredited)
+    }
+
+    @Test
+    fun `librettists the player credits jointly are credited, and no author is then marked`() {
+        val joint = track("Nessun Dorma", "$PUCCINI, $ADAMI & $SIMONI, $PAVAROTTI")
+        val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI), classical = true)
+        val split = checkNotNull(ArtistSplit.of(joint, roles, WorkLyrics(librettists = listOf(ADAMI, SIMONI))))
+        assertEquals(listOf(PUCCINI, ADAMI, SIMONI), split.authors)
+        assertEquals(emptyList(), split.uncredited)
+        // One of them alone in the joint credit: the other is MusicBrainz's.
+        val one = track("Nessun Dorma", "$PUCCINI, $ADAMI & Someone Else, $PAVAROTTI")
+        val libretto = WorkLyrics(librettists = listOf(ADAMI, SIMONI))
+        assertEquals(listOf(SIMONI), ArtistSplit.of(one, roles, libretto)?.uncredited)
+    }
+
     private companion object {
         const val MOZART = "Wolfgang Amadeus Mozart"
         const val KHATIA = "Khatia Buniatishvili"
