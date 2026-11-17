@@ -176,6 +176,10 @@
     <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under Skip.</string>
     <string name="settings_crossfade_auto">Autodetect</string>
     <string name="settings_crossfade_seconds">%1$d s</string>
+    <!-- A crossfade stored in a fraction of a second, as shown (#1365): "7.6 s"; %1$s is the number, formatted for the language. -->
+    <string name="settings_crossfade_seconds_fraction">%1$s s</string>
+    <!-- The same as a screen reader reads it: "7.6 seconds". -->
+    <string name="settings_crossfade_seconds_fraction_spoken">%1$s seconds</string>
     <string name="settings_prepare_next">Proactive</string>
     <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead, and nothing is paid for.</string>
 
@@ -255,6 +259,8 @@
     <string name="settings_section_keys">Secrets</string>
     <string name="settings_scan_keys">Load keys</string>
     <string name="settings_scan_keys_value">Save several API keys at once from one QR code.</string>
+    <!-- The button at the right of the Load keys row; a screen reader reads it by the row's name. -->
+    <string name="settings_scan_keys_button">Load</string>
     <!-- Under Load keys (#541): %1$s is the address of the page that makes the code, as plain text
          (#765); %2$s is settings_scan_keys_docs, a link to the documentation. -->
     <string name="settings_scan_keys_more">Make the QR code on a computer, at %1$s: the page sends your keys nowhere. More in %2$s.</string>
@@ -293,6 +299,8 @@
     <string name="scan_no_camera">This phone has no camera Sleevesight can use. Type the key instead.</string>
     <string name="settings_remove_all_keys">Purge keys</string>
     <string name="settings_remove_all_keys_value">Safely delete all saved keys.</string>
+    <!-- The button at the right of the Purge keys row; a screen reader reads it by the row's name. -->
+    <string name="settings_remove_all_keys_button">Purge</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources, the fonts, the icons, the word list and the libraries, with their licences</string>
     <string name="settings_what_leaves">What leaves the device</string>

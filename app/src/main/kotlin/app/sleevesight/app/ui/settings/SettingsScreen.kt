@@ -596,7 +596,7 @@ private fun SettingsColumn(
         }
         Section(SettingsSection.SECRETS) { SecretsSection(settings, keys, update, open) }
         Section(SettingsSection.GENRES) { GenresSection(settings, secrets, update) }
-        Section(SettingsSection.INSIGHTS) { InsightsSection(settings, update, open, navigation.chooseMode) }
+        Section(SettingsSection.INSIGHTS) { InsightsSection(settings, update, navigation.chooseMode) }
         Section(SettingsSection.HISTORY) { HistorySection(settings, update, open) }
         Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update, navigation.restoreDismissed) }
         Section(SettingsSection.ABOUT) {

@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -34,6 +35,7 @@ import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.KeyRow
 import app.sleevesight.app.ui.settings.KeyTable
+import app.sleevesight.app.ui.settings.LOAD_KEYS_BUTTON_TAG
 import app.sleevesight.app.ui.settings.PurgeKeysScreen
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
@@ -216,7 +218,7 @@ class KeyTableTest {
         }.use {
             waitForText(text(R.string.settings_title))
             compose.openSection(SettingsSection.SECRETS)
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            compose.onNodeWithTag(LOAD_KEYS_BUTTON_TAG).performScrollTo().performClick()
             // Past the intro and the words that seal a code (#590, #765): these codes are clear
             // ones, read at once on the camera's step, whose *Next* goes on to the keys to save.
             compose.onNodeWithText(text(R.string.load_keys_start)).performClick()

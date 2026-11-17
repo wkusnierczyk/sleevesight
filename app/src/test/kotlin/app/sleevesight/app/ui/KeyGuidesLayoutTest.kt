@@ -30,6 +30,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.GUIDED_CAMERA_MIN_HEIGHT
+import app.sleevesight.app.ui.settings.LOAD_KEYS_BUTTON_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import kotlinx.coroutines.CompletableDeferred
@@ -146,7 +147,7 @@ class KeyGuidesLayoutTest {
     @Test
     fun loadKeysCameraStepKeepsItsCameraAndCancelInAShortWindowWithLargeText() =
         showSecrets {
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            compose.onNodeWithTag(LOAD_KEYS_BUTTON_TAG).performScrollTo().performClick()
             waitForNode(hasText(text(R.string.load_keys_start)))
             compose.onNodeWithText(text(R.string.load_keys_start)).performClick()
             waitForNode(hasText(text(R.string.load_keys_next)))
