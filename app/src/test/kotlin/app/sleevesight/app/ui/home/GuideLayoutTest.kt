@@ -17,6 +17,7 @@ class GuideLayoutTest {
         mapOf(
             GuidePart.SETTINGS to Rect(130f, 5f, 140f, 15f),
             GuidePart.PLAYER to Rect(6f, 25f, 60f, 33f),
+            GuidePart.COVER to Rect(6f, 45f, 144f, 183f),
             GuidePart.GENRES to Rect(6f, 230f, 70f, 245f),
             GuidePart.INSIGHT to Rect(6f, 265f, 144f, 290f),
             GuidePart.CITE to Rect(50f, 282f, 60f, 290f),
@@ -41,6 +42,23 @@ class GuideLayoutTest {
         val genres = shown.notes[GuidePart.GENRES.ordinal]
         assertEquals(parts.getValue(GuidePart.GENRES).center.y, genres.y + 10f, 0.01f)
         assertEquals(pictureWidth + metrics.gap, genres.x, 0.01f)
+    }
+
+    @Test
+    fun anArrowWhosePointWouldBeOnTheMagnifierPointsAboveIt() {
+        // A magnifier reaching up past the cover's middle, as at a large font in a narrow picture.
+        val magnifier = Rect(110f, 100f, 144f, 181f)
+        val reach = 6f + 1f
+        val shown = guideLayout(parts, GuidePart.entries.map { 20f }, pictureWidth, pictureHeight, metrics, magnifier)
+        val cover = shown.arrows[GuidePart.COVER.ordinal]
+        assertEquals(magnifier.top - reach, cover.end.y, 0.01f)
+        for (point in listOf(cover.end, cover.head, cover.head2)) assertFalse("$point", magnifier.contains(point))
+        // Without it, at the cover's middle, where the magnifier would be.
+        val plain = laidOut().arrows[GuidePart.COVER.ordinal]
+        assertEquals(parts.getValue(GuidePart.COVER).center.y, plain.end.y, 0.01f)
+        assertTrue(magnifier.contains(plain.end))
+        // The others, clear of it, as before.
+        assertEquals(laidOut().arrows[GuidePart.GENRES.ordinal], shown.arrows[GuidePart.GENRES.ordinal])
     }
 
     @Test
