@@ -72,6 +72,17 @@ class InsightPromptTest {
     }
 
     @Test
+    fun `a prompt naming an uncredited composer has its own version, composer-led or not (#1376)`() {
+        assertEquals(15, InsightPrompt.UNCREDITED_VERSION)
+        assertEquals(16, InsightPrompt.RECORDING_UNCREDITED_VERSION)
+        assertEquals(InsightPrompt.UNCREDITED_VERSION, InsightPrompt.version(composed = false, uncredited = true))
+        assertEquals(
+            InsightPrompt.RECORDING_UNCREDITED_VERSION,
+            InsightPrompt.version(composed = true, uncredited = true),
+        )
+    }
+
+    @Test
     fun `the system prompt for a composer-led track (#1195)`() {
         assertEquals(stored("insight-system-composed.txt"), InsightPrompt.system(allowModel = false, composed = true))
     }

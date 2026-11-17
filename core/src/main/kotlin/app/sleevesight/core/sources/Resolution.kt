@@ -147,8 +147,9 @@ data class Resolution(
  * @property uncredited the composers the work names whom the track does not credit (#1298), by
  *   MusicBrainz's names, in its order: only on a [classical] work, and only when every credited composer
  *   is one the work names, so no one is named twice in two spellings; empty otherwise. Home shows them
- *   as it shows the [composers] (`ArtistSplit`), marked as MusicBrainz's; searches and prompts that
- *   mean the credited composers read [composers] alone.
+ *   as it shows the [composers] (`ArtistSplit`), marked as MusicBrainz's; the key insight's prompt
+ *   names them as composers too ([named], #1376), and Wikipedia looks up their articles as a credited
+ *   artist's.
  */
 data class ArtistRoles(
     val composers: List<String>,
@@ -158,6 +159,18 @@ data class ArtistRoles(
 ) {
     /** The first performer, else [track]'s first credited artist ([NormalizedTrack.primary]). */
     fun lead(track: NormalizedTrack): String = performers.firstOrNull { it.isNotBlank() } ?: track.primary
+
+    /**
+     * These roles with the [uncredited] composers among the [composers], after the credited ones (#1376):
+     * the composers as Home names them, for a prompt that names the composer. Itself when there are none.
+     */
+    val named: ArtistRoles
+        get() =
+            if (uncredited.isEmpty()) {
+                this
+            } else {
+                copy(composers = (composers + uncredited).distinct(), uncredited = emptyList())
+            }
 
     companion object {
         /**
