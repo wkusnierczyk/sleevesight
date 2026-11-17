@@ -4,8 +4,14 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
@@ -27,6 +33,7 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
@@ -40,8 +47,9 @@ import org.robolectric.RobolectricTestRunner
  * A track's people named once (#1355): while MusicBrainz has not answered, the rows under *Key
  * insights* are held back and the line under the title is empty, its height kept; they come in when
  * it answers, named by its roles, or after [NAMING_WAIT] named by the title, renamed once if it
- * answers later. A title leading with its composer, a source off and a track played before name them
- * at once. On virtual time: the clock advances only as a test says.
+ * answers later, a screen recreated meanwhile waiting only what was left. A title leading with its
+ * composer, MusicBrainz switched off (with or without a run of the track yet) or unreachable, and a
+ * track played before name them at once. On virtual time: the clock advances only as a test says.
  */
 @RunWith(RobolectricTestRunner::class)
 class PeopleNamedOnceScreenTest {
@@ -50,26 +58,52 @@ class PeopleNamedOnceScreenTest {
 
     private val settings = Settings(writeAutomatically = WriteAutomatically.NEVER)
 
-    private fun state(track: TrackState) =
-        NowPlayingState(
-            PipelineView(track, aiReady = true),
-            track.nowPlaying,
-            PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
-            settings = settings,
-        )
+    private val musicBrainzOff =
+        settings.copy(enabledSources = settings.enabledSources - SourceSwitch.MUSICBRAINZ)
+
+    // [track] playing, as the pipeline has it; with none, [playing] before the pipeline has a run of it.
+    private fun state(
+        track: TrackState?,
+        settings: Settings = this.settings,
+        playing: NowPlaying = track?.nowPlaying ?: NINTH,
+    ) = NowPlayingState(
+        PipelineView(track, aiReady = true),
+        playing,
+        PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
+        settings = settings,
+    )
+
+    // The screen's saved state, as an activity keeps it: [recreate] saves it, drops the content and
+    // composes it afresh from what was saved, as Android does on a rotation (what
+    // `StateRestorationTester` does, which needs a content rule these tests do not use).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    private fun recreate() {
+        val saved = registry.performSave()
+        emitted = false
+        frames()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        frames()
+    }
 
     // Home showing [initial], on a clock that moves only as the test says; [block] may change it.
     private fun show(
-        initial: TrackState,
+        initial: NowPlayingState,
         block: (MutableState<NowPlayingState>) -> Unit,
     ) {
-        val current = mutableStateOf(state(initial))
+        val current = mutableStateOf(initial)
         compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        NowPlayingContent(current.value, NowPlayingActions(normalizer::normalize))
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                NowPlayingContent(current.value, NowPlayingActions(normalizer::normalize))
+                            }
+                        }
                     }
                 }
             }
@@ -78,8 +112,15 @@ class PeopleNamedOnceScreenTest {
         }
     }
 
-    // A few frames: recompositions and effects run, the clock all but still.
+    private fun show(
+        initial: TrackState,
+        block: (MutableState<NowPlayingState>) -> Unit,
+    ) = show(state(initial), block)
+
+    // A few frames: recompositions and effects run, the clock all but still; what the test changed
+    // told first, so the next frame recomposes it.
     private fun frames() {
+        Snapshot.sendApplyNotifications()
         repeat(FRAMES) { compose.mainClock.advanceTimeByFrame() }
         compose.waitForIdle()
     }
@@ -185,6 +226,37 @@ class PeopleNamedOnceScreenTest {
                     ),
             ),
         ) {
+            compose.onNodeWithTag(ARTISTS_HELD_TAG).assertDoesNotExist()
+            assertEquals("Song, $TITLE", said(InsightItem.SONG))
+        }
+
+    @Test
+    fun aScreenRecreatedDuringTheWaitNamesTheRowsAtTheOriginalTenSeconds() =
+        show(beethoven(answered = false)) {
+            after(NAMING_WAIT.inWholeMilliseconds - 2_000)
+            recreate()
+            assertHeld()
+            after(1_000)
+            assertHeld()
+            after(1_000)
+            assertEquals("Song, $TITLE", said(InsightItem.SONG))
+        }
+
+    @Test
+    fun withMusicBrainzOffATrackWithNoRunYetIsNamedAtOnce() =
+        show(state(null, musicBrainzOff)) {
+            compose.onNodeWithTag(ARTISTS_HELD_TAG).assertDoesNotExist()
+            assertEquals("Song, $TITLE", said(InsightItem.SONG))
+        }
+
+    @Test
+    fun switchingMusicBrainzOffDuringTheWaitNamesTheRowsAtOnce() =
+        show(beethoven(answered = false)) { current ->
+            after(2_000)
+            assertHeld()
+            // The run rebuilt for the new setting not published yet: MusicBrainz still pending in it.
+            current.value = state(beethoven(answered = false), musicBrainzOff)
+            frames()
             compose.onNodeWithTag(ARTISTS_HELD_TAG).assertDoesNotExist()
             assertEquals("Song, $TITLE", said(InsightItem.SONG))
         }
