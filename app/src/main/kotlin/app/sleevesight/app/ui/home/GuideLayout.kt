@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import app.sleevesight.app.R
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -32,6 +33,7 @@ internal enum class GuidePart(
 ) {
     SETTINGS(R.string.home_guide_note_settings, R.string.home_guide_part_settings, R.string.home_guide_about_settings),
     PLAYER(R.string.home_guide_note_player, R.string.home_guide_part_player, R.string.home_guide_about_player),
+    COVER(R.string.home_guide_note_cover, R.string.home_guide_part_cover, R.string.home_guide_about_cover),
     GENRES(R.string.home_guide_note_genres, R.string.home_guide_part_genres, R.string.home_guide_about_genres),
     INSIGHT(R.string.home_guide_note_insight, R.string.home_guide_part_insight, R.string.home_guide_about_insight),
     CITE(R.string.home_guide_note_cite, R.string.home_guide_part_cite, R.string.home_guide_about_cite),
@@ -122,14 +124,21 @@ internal data class GuideArrow(
  * between their texts, so a tap goes to the nearer note. So two notes' texts are at least twice the
  * larger of their margins apart (a margin: half of what a text lacks of the target's height), and
  * the first's target starts no higher than the guide.
+ *
+ * No arrow's point or head lies in [keepClear] (the magnifier on the cover's corner, #994): an arrow
+ * whose point would be in it, or within its head's length of it, points that much above it instead.
  */
-@Suppress("LongMethod") // One pass over the notes, then one over the arrows, as the mock-up draws them.
+@Suppress(
+    "LongMethod", // One pass over the notes, then one over the arrows, as the mock-up draws them.
+    "LongParameterList", // The picture's parts and size, the notes' heights, and what the arrows keep clear of.
+)
 internal fun guideLayout(
     parts: Map<GuidePart, Rect>,
     noteHeights: List<Float>,
     pictureWidth: Int,
     pictureHeight: Int,
     metrics: GuideMetrics,
+    keepClear: Rect? = null,
 ): GuideShown {
     val u = metrics.unit
     val order = GuidePart.entries.sortedBy { parts.getValue(it).center.y }
@@ -190,7 +199,8 @@ internal fun guideLayout(
                     fromBelow = true,
                 )
             } else {
-                val end = Offset(min(rect.right - 6 * u, pictureWidth - 6 * u), rect.center.y)
+                val end =
+                    clearOf(keepClear, Offset(min(rect.right - 6 * u, pictureWidth - 6 * u), rect.center.y), a + u)
                 val dx = end.x - start.x
                 val dy = end.y - start.y
                 // A slight, even bend, a little different for each, so the arrows look drawn.
@@ -212,6 +222,36 @@ internal fun guideLayout(
         }
     return GuideShown(notes.map { it!! }, arrows, bottom + 6 * u, targets)
 }
+
+/**
+ * Where the magnifier, [width] by [height], goes (#673): at the [cover]'s bottom right corner, clear
+ * of the arrows, which cross the picture's own corners and point at the cover's middle, or above the
+ * magnifier where that is too near it (#994).
+ */
+internal fun magnifierAt(
+    cover: Rect,
+    width: Int,
+    height: Int,
+    metrics: GuideMetrics,
+): IntOffset {
+    val inset = (metrics.unit * MAGNIFIER_INSET).roundToInt()
+    return IntOffset(cover.right.roundToInt() - width - inset, cover.bottom.roundToInt() - height - inset)
+}
+
+/**
+ * [end], or, where it is within [reach] of [keepClear], [reach] above it, so an arrow's point and
+ * head, no longer than [reach], stay out of it.
+ */
+private fun clearOf(
+    keepClear: Rect?,
+    end: Offset,
+    reach: Float,
+): Offset =
+    if (keepClear != null && keepClear.inflate(reach).contains(end)) {
+        Offset(end.x, keepClear.top - reach)
+    } else {
+        end
+    }
 
 /**
  * Where a note's panel, [height] high, goes in a picture [pictureHeight] high (#673): clear of the
@@ -300,6 +340,9 @@ private const val PICTURE_SHARE = 0.42f
 private const val MAX_PICTURE_DP = 200f
 private const val GAP_DP = 14f
 private const val FIRST_LINE_DP = 12f
+
+/** The magnifier's distance from the cover's bottom right corner, in dp. */
+private const val MAGNIFIER_INSET = 2f
 
 /** A note's touch target's least height, in dp. */
 private const val TARGET_DP = 48f
