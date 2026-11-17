@@ -127,25 +127,26 @@ internal fun insightRows(settings: Settings): List<IndexedRow> {
 
 @Composable
 internal fun historyRows(settings: Settings): List<IndexedRow> {
-    val lifetimes = historyLifetimes(settings.historyLifetime)
-    val gaps = sessionGaps(settings.sessionGap)
     val kept = stringResource(R.string.settings_cache_lifetimes)
+    val lifetimes = lifetimeStops().labels
     val caches =
         SHOWN_LIFETIMES.mapNotNull { (source, name) ->
-            settings.cacheLifetimes[source]?.let { lifetime ->
-                choiceRow(stringResource(name), kept, daysLabel(lifetime), cacheLifetimes(lifetime).map { it.second })
+            settings.cacheLifetimes[source]?.let { stringResource(name) }?.let { title ->
+                // The slider's stops (#1126), though only its ends are labelled.
+                IndexedRow(title, listOf(title, kept) + lifetimes)
             }
         }
     return listOf(
-        choiceRow(
-            stringResource(R.string.settings_keep_history),
-            stringResource(R.string.settings_keep_history_summary),
-            lifetimeLabel(settings.historyLifetime),
-            lifetimes.map { it.second },
-        ),
+        // The sliders (#1126): each one's name, description and its stops' labels.
+        stringResource(R.string.settings_keep_history).let { title ->
+            IndexedRow(
+                title,
+                listOf(title, stringResource(R.string.settings_keep_history_summary)) + historyStops().labels,
+            )
+        },
         indexRow(
             stringResource(R.string.settings_clear_history),
-            stringResource(R.string.settings_clear_history_value),
+            stringResource(R.string.settings_clear_history_summary),
         ),
         // *Look up the track again* (#1112): its name, description and choices.
         stringResource(R.string.settings_look_up_again).let { title ->
@@ -155,12 +156,12 @@ internal fun historyRows(settings: Settings): List<IndexedRow> {
                     lookUpAgainChoices().map { it.second },
             )
         },
-        choiceRow(
-            stringResource(R.string.settings_session_gap),
-            stringResource(R.string.settings_session_gap_summary),
-            durationLabel(settings.sessionGap),
-            gaps.map { it.second },
-        ),
+        stringResource(R.string.settings_session_gap).let { title ->
+            IndexedRow(
+                title,
+                listOf(title, stringResource(R.string.settings_session_gap_summary)) + sessionGapStops().labels,
+            )
+        },
     ) + caches +
         indexRow(stringResource(R.string.settings_keep_artists), stringResource(R.string.settings_keep_artists_summary))
 }

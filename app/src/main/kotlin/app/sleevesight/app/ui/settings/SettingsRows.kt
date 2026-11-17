@@ -3,6 +3,7 @@
 package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -213,14 +215,17 @@ internal fun SwitchRow(
  * where a [SwitchRow] has its switch, a small outlined button, [label], lined up with the title's
  * first line as a switch is; [onClick] runs on a tap on it, and a null [onClick] disables it. Only
  * the button is a control: a screen reader reads it by the row's name, and says when it is
- * disabled.
+ * disabled. A [destructive] action, one that deletes (*Clear history*, #1126), has its button in the
+ * theme's error colour, its outline too.
  */
+@Suppress("LongParameterList") // What the row shows, and what a tap does.
 @Composable
 internal fun ButtonRow(
     title: String,
     summary: String,
     label: String,
     tag: String,
+    destructive: Boolean = false,
     onClick: (() -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
@@ -233,10 +238,25 @@ internal fun ButtonRow(
         leading = null,
         trailing = {
             Spacer(Modifier.width(16.dp))
+            val error = MaterialTheme.colorScheme.error
             OutlinedButton(
                 onClick = { onClick?.invoke() },
                 enabled = onClick != null,
                 modifier = Modifier.alignBy(::middle).testTag(tag).semantics { contentDescription = title },
+                colors =
+                    if (destructive) {
+                        ButtonDefaults.outlinedButtonColors(contentColor = error)
+                    } else {
+                        ButtonDefaults.outlinedButtonColors()
+                    },
+                border =
+                    if (destructive) {
+                        BorderStroke(1.dp, error)
+                    } else {
+                        ButtonDefaults.outlinedButtonBorder(
+                            onClick != null,
+                        )
+                    },
             ) { Text(label) }
         },
     ) {
