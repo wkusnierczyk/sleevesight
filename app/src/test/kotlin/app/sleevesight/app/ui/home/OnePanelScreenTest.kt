@@ -1,17 +1,29 @@
 package app.sleevesight.app.ui.home
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.view.View
+import android.view.accessibility.AccessibilityManager
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -23,7 +35,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -44,12 +58,14 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -68,6 +84,8 @@ import org.robolectric.annotation.GraphicsMode
 class OnePanelScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()
+
+    private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
     private fun label(tag: String): TrackLabel {
         val genre = GenreLabel(tag, tag.replaceFirstChar(Char::uppercase), tag, level = GenreLevel.TRACK)
@@ -101,12 +119,62 @@ class OnePanelScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(current.value, actions) }
+                    focus = LocalFocusManager.current
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                NowPlayingContent(current.value, actions)
+                            }
+                        }
+                    }
                 }
             }
             compose.waitForIdle()
             block()
         }
+    }
+
+    // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
+    // composes it afresh from what was saved, as Android does for a recreated activity (a rotation).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+    private var focus: FocusManager? = null
+
+    // Saves the screen, then composes it again from what was saved, playing [then].
+    private fun restore(then: NowPlayingState) {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        current.value = then
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
+    private val accessibility get() = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+
+    // Puts the screen reader's focus on [tag]'s node, as TalkBack does when it moves there.
+    private fun accessibilityFocus(tag: String) {
+        val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
+        compose.runOnUiThread {
+            val host = node.root as View
+            val moved =
+                host.accessibilityNodeProvider?.performAction(
+                    node.id,
+                    AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS,
+                    null,
+                )
+            assertEquals(true, moved)
+        }
+        compose.waitForIdle()
+    }
+
+    @After
+    fun close() {
+        // The accessibility manager outlives the test: leave no screen reader on for the next one.
+        accessibility.setTouchExplorationEnabled(false)
+        accessibility.setEnabledAccessibilityServiceList(emptyList())
+        accessibility.setEnabled(false)
     }
 
     private fun tap(tag: String) {
@@ -196,6 +264,84 @@ class OnePanelScreenTest {
             tap(genres)
             compose.onNodeWithTag(folk).assertIsSelected()
         }
+
+    @Test
+    fun closeAndOpeningAgainStartsEachTabAfresh() =
+        show {
+            tap(GENRES_CHIP_TAG)
+            val folk = GENRE_PREFIX + "track:folk"
+            tap(folk)
+            tap(GENRES_PANEL_CLOSE_TAG)
+            tap(GENRES_CHIP_TAG)
+            // On Ballad, the first, as the panel opens on a track.
+            compose.onNodeWithTag(GENRE_PREFIX + "track:ballad").assertIsSelected()
+            compose.onNodeWithTag(folk).assertIsNotSelected()
+        }
+
+    @Test
+    fun aTabsStateSavedWithTheScreenIsNotRestoredOntoAnotherTrack() =
+        show {
+            // Folk chosen in *Genres*, then *Dates* shown: Genres' state is kept aside.
+            tap(GENRES_CHIP_TAG)
+            val folk = GENRE_PREFIX + "track:folk"
+            tap(folk)
+            tap(dates)
+            // The screen restored on another track with the same genres: the panel folded.
+            restore(state(labelled(carefree)))
+            onlyOpen("none")
+            tap(GENRES_CHIP_TAG)
+            compose.onNodeWithTag(GENRE_PREFIX + "track:ballad").assertIsSelected()
+            compose.onNodeWithTag(folk).assertIsNotSelected()
+        }
+
+    @Test
+    fun aTabsStateSavedWithTheScreenIsRestoredOnTheSameTrack() =
+        show {
+            tap(GENRES_CHIP_TAG)
+            val folk = GENRE_PREFIX + "track:folk"
+            tap(folk)
+            tap(dates)
+            restore(state())
+            onlyOpen(DATES_PANEL_TAG)
+            tap(genres)
+            compose.onNodeWithTag(folk).assertIsSelected()
+        }
+
+    @Test
+    fun aNewTrackHandsAScreenReadersFocusInThePanelToTheButtonWithNoInputFocusThere() {
+        accessibility.setEnabled(true)
+        accessibility.setTouchExplorationEnabled(true)
+        accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        show {
+            // The input focus gone from the panel, and the screen reader's on a tab in it.
+            tap(DATES_CHIP_TAG)
+            compose.runOnUiThread { focus!!.clearFocus(force = true) }
+            compose.waitForIdle()
+            accessibilityFocus(genres)
+            compose.onNodeWithTag(dates).assertIsNotFocused()
+            current.value = state(labelled(carefree))
+            compose.waitForIdle()
+            onlyOpen("none")
+            compose.onNodeWithTag(DATES_CHIP_TAG).assertIsFocused()
+        }
+    }
+
+    @Test
+    fun aNewTrackLeavesAScreenReadersFocusOutsideThePanelWhereItIs() {
+        accessibility.setEnabled(true)
+        accessibility.setTouchExplorationEnabled(true)
+        accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        show {
+            tap(DATES_CHIP_TAG)
+            // The screen reader moved on, out of the panel, to the player's row.
+            compose.runOnUiThread { focus!!.clearFocus(force = true) }
+            compose.waitForIdle()
+            accessibilityFocus(PLAYER_TAG)
+            current.value = state(labelled(carefree))
+            compose.waitForIdle()
+            compose.onNodeWithTag(DATES_CHIP_TAG).assertIsNotFocused()
+        }
+    }
 
     @Test
     fun aNewTrackFoldsThePanelAndHandsTheFocusToItsButton() =

@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.theme
 
+import android.graphics.Rect
 import android.view.View
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
@@ -185,3 +186,21 @@ internal fun moveAccessibilityFocusToFocused(host: View) {
             ?.performAction(focused.id, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
     }
 }
+
+/**
+ * Whether the screen reader's focus is on a node of [host]'s composition that lies in [area] (on the
+ * screen): asked of [host]'s accessibility nodes ([AccessibilityNodeInfo.FOCUS_ACCESSIBILITY]), as a
+ * screen reader's focus may stay on a control that no longer holds the input focus. False with none,
+ * or should the asking fail.
+ */
+internal fun accessibilityFocusIn(
+    host: View,
+    area: Rect,
+): Boolean =
+    !area.isEmpty &&
+        runCatching {
+            val focused =
+                host.accessibilityNodeProvider?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+                    ?: return false
+            Rect().also(focused::getBoundsInScreen).let { Rect.intersects(it, area) }
+        }.getOrDefault(false)

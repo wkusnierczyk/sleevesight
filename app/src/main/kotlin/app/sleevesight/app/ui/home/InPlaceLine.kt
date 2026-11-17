@@ -1,5 +1,8 @@
 package app.sleevesight.app.ui.home
 
+import android.graphics.Rect
+import android.view.View
+import android.view.accessibility.AccessibilityManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +28,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
@@ -38,10 +46,12 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.theme.ChipFrame
 import app.sleevesight.app.ui.theme.Panel
+import app.sleevesight.app.ui.theme.accessibilityFocusIn
 import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NowPlaying
+import kotlin.math.roundToInt
 
 // The line of buttons under the album, each opening a panel in place (#724: *Dates*; #772: *Genres*;
 // #728: *Lyrics*), and the panels open, stacked under it.
@@ -293,9 +303,15 @@ private fun OpenPanel(
  * stays a button that opens it, above the panel. The panel shown is the one opened last
  * ([InPlaceMemory.opened]), so a new track folds it, as it closes every panel.
  *
+ * Each tab's state is kept, the panel open, in one holder kept whether the panel is open or not, so
+ * that one restored with the screen (a rotation, Android restoring it) is always taken back; every
+ * tab's state is dropped whenever the panel is folded (*Close*, a new track, or restored onto a track
+ * other than the one it was open on), so a tab opened again starts afresh, never with another track's.
+ *
  * The focus: to the tab tapped when a button opens the panel, back to the button of the tab shown
- * when *Close* folds it, or when a new track folds it while the focus is in it; to *Close* when a
- * control in it that goes once tapped asks for it. A screen reader reads the tabs as tabs, the one
+ * when *Close* folds it, or when a new track folds it while the focus is in it, the input focus or,
+ * while a screen reader explores by touch, the screen reader's ([accessibilityFocusIn]); to *Close*
+ * when a control in it that goes once tapped asks for it. A screen reader reads the tabs as tabs, the one
  * shown selected, with their place among them ("Selected, Dates, tab, 1 of 3").
  */
 @Composable
@@ -305,6 +321,12 @@ private fun OnePanelLine(
     playing: NowPlaying,
 ) {
     val handoff = rememberFocusHandoff()
+    // Taken whether the panel is open or not: a state restored with the screen is never left waiting.
+    val states = rememberSaveableStateHolder()
+    val host = LocalView.current
+    val accessibility = LocalContext.current.getSystemService(AccessibilityManager::class.java)
+    // Where the panel is on the screen, as last laid out: plain, read as it goes.
+    val area = remember { Rect() }
     val buttons = remember { mutableMapOf<InPlace, FocusRequester>() }
     val tabs = remember { mutableMapOf<InPlace, FocusRequester>() }
     val closeTarget = remember { FocusRequester() }
@@ -316,12 +338,18 @@ private fun OnePanelLine(
     val inside = remember { BooleanArray(1) }
     val before = remember { arrayOfNulls<InPlace>(1).also { it[0] = shown } }
     // The panel gone by other than *Close* (a new track) while the focus was in it: back to the button
-    // of the tab it showed, or a keyboard's focus would fall to the top of the screen.
-    val handBack = before[0]?.takeIf { shown == null && inside[0] }
+    // of the tab it showed, or a keyboard's focus would fall to the top of the screen. A screen reader's
+    // focus may stay in it with no input focus there, so it is asked too, before the panel goes.
+    val reader = accessibility?.isTouchExplorationEnabled == true
+    val handBack = before[0]?.takeIf { shown == null && (inside[0] || reader && accessibilityFocusIn(host, area)) }
     SideEffect {
         memory.follow(playing)
         before[0] = shown
-        if (shown == null) inside[0] = false
+        if (shown == null) {
+            inside[0] = false
+            // Folded: no tab's state outlives it (nothing of it is composed now).
+            InPlace.entries.forEach { states.removeState(it) }
+        }
         if (handBack != null) handoff.moveTo(buttonOf(handBack))
     }
     if (items.isEmpty()) return
@@ -329,38 +357,58 @@ private fun OnePanelLine(
         val folded = if (shown == null) items else items.filter { it.page != null }
         if (folded.isNotEmpty()) {
             ClosedButtons(folded, { Modifier.handoffTarget(handoff, buttonOf(it)) }) { item ->
-                val page = item.page
-                if (page != null) {
-                    page()
-                } else {
-                    memory.open(item.id, playing)
-                    handoff.moveTo(tabOf(item.id))
-                }
+                item.page?.let { return@ClosedButtons it() }
+                memory.open(item.id, playing)
+                handoff.moveTo(tabOf(item.id))
             }
         }
         if (shown != null) {
             val item = inPanel.first { it.id == shown }
-            // Each tab's state kept while the panel is open (the genre open in *Genres*), dropped once it folds.
-            val states = rememberSaveableStateHolder()
-            Box(Modifier.onFocusChanged { inside[0] = it.hasFocus }) {
-                Panel(
-                    AnnotatedString(item.name),
-                    item.panelTag,
-                    onClose = {
-                        memory.closeAll(playing)
-                        handoff.moveTo(buttonOf(shown))
-                    },
-                    closeModifier = Modifier.handoffTarget(handoff, closeTarget),
-                    titleSlot = { room ->
-                        PanelTabs(inPanel, shown, room, { Modifier.handoffTarget(handoff, tabOf(it)) }) { tapped ->
-                            memory.open(tapped.id, playing)
-                        }
-                    },
-                ) {
-                    states.SaveableStateProvider(item.id) { item.content(this, { handoff.moveTo(closeTarget) }) }
-                }
+            SharedPanel(
+                item,
+                inPanel,
+                Modifier
+                    .onFocusChanged { inside[0] = it.hasFocus }
+                    .onGloballyPositioned { area.set(screenBounds(host, it)) },
+                Modifier.handoffTarget(handoff, closeTarget),
+                { Modifier.handoffTarget(handoff, tabOf(it)) },
+                pick = { tapped -> memory.open(tapped.id, playing) },
+                close = {
+                    memory.closeAll(playing)
+                    handoff.moveTo(buttonOf(shown))
+                },
+            ) {
+                // Each tab's state kept while the panel is open (the genre open in *Genres*), dropped once it folds.
+                states.SaveableStateProvider(item.id) { item.content(this, { handoff.moveTo(closeTarget) }) }
             }
         }
+    }
+}
+
+// The one panel open on [item] (#1128), the tabs of [tabs] at its top, [item]'s selected ([PanelTabs]),
+// each under [tabTarget]'s modifier for it and [pick]ed as tapped; its *Close*, under [closeModifier],
+// [close]s it; under them, [content]. [modifier] goes on its outside.
+@Suppress("LongParameterList") // What the panel shows, and its controls.
+@Composable
+private fun SharedPanel(
+    item: InPlaceItem,
+    tabs: List<InPlaceItem>,
+    modifier: Modifier,
+    closeModifier: Modifier,
+    tabTarget: (InPlace) -> Modifier,
+    pick: (InPlaceItem) -> Unit,
+    close: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Box(modifier) {
+        Panel(
+            AnnotatedString(item.name),
+            item.panelTag,
+            onClose = close,
+            closeModifier = closeModifier,
+            titleSlot = { room -> PanelTabs(tabs, item.id, room, tabTarget, pick) },
+            content = content,
+        )
     }
 }
 
@@ -414,3 +462,15 @@ internal const val IN_PLACE_TABS_TAG: String = "in-place-tabs"
 
 /** The test tag of [id]'s tab in the one panel (#1128): `in-place-tab:dates`. */
 internal fun inPlaceTabTag(id: InPlace): String = "in-place-tab:" + id.name.lowercase()
+
+// Where [coordinates] are on the screen, as a screen reader's node's bounds are given ([accessibilityFocusIn]).
+private fun screenBounds(
+    host: View,
+    coordinates: LayoutCoordinates,
+): Rect {
+    val origin = IntArray(2).also(host::getLocationOnScreen)
+    val at = coordinates.positionInWindow()
+    val left = origin[0] + at.x.roundToInt()
+    val top = origin[1] + at.y.roundToInt()
+    return Rect(left, top, left + coordinates.size.width, top + coordinates.size.height)
+}
