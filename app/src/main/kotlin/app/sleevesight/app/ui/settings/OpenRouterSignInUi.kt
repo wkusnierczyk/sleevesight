@@ -30,6 +30,7 @@ import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.openInOwnTask
 import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.flow.Flow

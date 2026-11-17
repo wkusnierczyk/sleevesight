@@ -41,8 +41,8 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.lab.PromptLab
-import app.sleevesight.app.ui.settings.PillButton
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.core.synthesis.LabSettings
 import app.sleevesight.core.synthesis.PromptKind
@@ -162,13 +162,18 @@ private fun Variants(
                     Text(variantName(id, variant?.name), style = MaterialTheme.typography.bodyMedium)
                     Quiet(variantDescription(id, variant?.description))
                     val showing = shown[id] == true
-                    val instructions =
-                        stringResource(if (showing) R.string.lab_hide_instructions else R.string.lab_show_instructions)
+                    // Read with the variant's name, as there is one for each variant (#1387).
+                    val name = variantName(id, variant?.name)
                     PillButton(
-                        instructions,
-                        instructions,
+                        stringResource(if (showing) R.string.lab_hide_instructions else R.string.lab_show_instructions),
                         onClick = { shown[id] = !showing },
                         modifier = Modifier.padding(top = 4.dp).testTag(labInstructionsTag(kind, id)),
+                        named =
+                            if (showing) {
+                                stringResource(R.string.lab_hide_instructions_named, name)
+                            } else {
+                                stringResource(R.string.lab_show_instructions_named, name)
+                            },
                     )
                     if (showing) Instructions(kind, id, settings, update)
                 }
@@ -209,10 +214,8 @@ private fun Instructions(
         textStyle = MaterialTheme.typography.bodySmall,
     )
     Quiet(stringResource(R.string.lab_custom_role))
-    val reset = stringResource(R.string.lab_custom_reset)
     PillButton(
-        reset,
-        reset,
+        stringResource(R.string.lab_custom_reset),
         onClick = {
             update { it.withCustom(kind, LabPrompts.ROLE) }
             lab?.applyCustom(kind)
@@ -245,18 +248,14 @@ private fun Logged(lab: PromptLab) {
         )
         // The settings' pills (#1387), each only while there is a log to export or clear.
         Row {
-            val export = stringResource(R.string.lab_export)
             PillButton(
-                label = export,
-                named = export,
+                label = stringResource(R.string.lab_export),
                 onClick = if (log.isNotEmpty()) ({ exporter.launch(exportName(Clock.System.now())) }) else null,
                 modifier = Modifier.testTag(LAB_EXPORT_TAG),
             )
             Spacer(Modifier.width(8.dp))
-            val clear = stringResource(R.string.lab_clear)
             PillButton(
-                label = clear,
-                named = clear,
+                label = stringResource(R.string.lab_clear),
                 onClick = if (log.isNotEmpty()) ({ asking = true }) else null,
                 modifier = Modifier.testTag(LAB_CLEAR_TAG),
                 // It deletes the comparisons logged.

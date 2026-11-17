@@ -43,8 +43,8 @@ import app.sleevesight.app.ui.home.CheckedProse
 import app.sleevesight.app.ui.home.Credit
 import app.sleevesight.app.ui.home.creditText
 import app.sleevesight.app.ui.logo.Busy
-import app.sleevesight.app.ui.settings.PillButton
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
@@ -148,8 +148,11 @@ private fun ComparePanel(
                 Modifier.weight(1f).semantics { heading() },
                 style = MaterialTheme.typography.titleSmall,
             )
-            val close = stringResource(R.string.lab_compare_close)
-            PillButton(close, close, onClick = onClose, modifier = Modifier.testTag(LAB_CLOSE_TAG))
+            PillButton(
+                stringResource(R.string.lab_compare_close),
+                onClick = onClose,
+                modifier = Modifier.testTag(LAB_CLOSE_TAG),
+            )
         }
         if (run.sent == null) {
             Note(stringResource(R.string.lab_compare_unsent))
@@ -164,14 +167,15 @@ private fun ComparePanel(
         when {
             run.revealed -> Note(stringResource(R.string.lab_logged))
             run.writing -> {
-                val stop = stringResource(R.string.lab_stop)
-                PillButton(stop, stop, onClick = run::stop, modifier = Modifier.testTag(LAB_STOP_TAG))
+                PillButton(
+                    stringResource(R.string.lab_stop),
+                    onClick = run::stop,
+                    modifier = Modifier.testTag(LAB_STOP_TAG),
+                )
             }
             else -> {
-                val show = stringResource(R.string.lab_show)
                 PillButton(
-                    show,
-                    show,
+                    stringResource(R.string.lab_show),
                     onClick = {
                         run.revealed = true
                         onShow()
@@ -272,10 +276,8 @@ private fun Marks(
         MarkChip(version, LabMark.GOOD, R.string.lab_good, open)
         MarkChip(version, LabMark.BAD, R.string.lab_bad, open)
         if (!version.noting && version.note.isEmpty() && open) {
-            val note = stringResource(R.string.lab_add_note)
             PillButton(
-                note,
-                note,
+                stringResource(R.string.lab_add_note),
                 onClick = { version.noting = true },
                 modifier = Modifier.testTag(labNoteTag(version.shown)),
             )

@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.ui.theme.PillButton
 
 // The key dialog's terms text and buttons (#543).
 
@@ -142,8 +143,7 @@ internal fun SaveKeyButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val save = stringResource(R.string.settings_save)
-    PillButton(save, save, onClick = onClick.takeIf { enabled })
+    PillButton(stringResource(R.string.settings_save), onClick = onClick.takeIf { enabled })
 }
 
 /**

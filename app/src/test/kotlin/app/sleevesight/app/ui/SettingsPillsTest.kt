@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.AnnotatedString
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -47,6 +49,7 @@ import app.sleevesight.app.ui.settings.OPENROUTER_SIGN_OUT_TAG
 import app.sleevesight.app.ui.settings.OpenRouterAccess
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
+import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
@@ -86,9 +89,9 @@ import kotlin.time.Instant
  * The settings' buttons as one pill (#1387, as *Clear history*'s and *Load keys*'), drawn in the
  * app's theme, light and dark: OpenRouter's *Sign in*, labelled so and read "Sign in with
  * OpenRouter", and *Sign out*, outlined, unfilled, their text in the controls' colour (the theme's
- * `onSurface`), not the accent; *Sign in* disabled still readable, and grey; and the prompt lab's
- * *Clear the log*, which deletes, in the error colour, its outline too. Native graphics, for the
- * pixels.
+ * `onSurface`), not the accent; *Sign in* disabled still readable, and grey; the prompt lab's
+ * *Clear the log*, which deletes, in the error colour, its outline too, and in greys while disabled;
+ * and a panel's *Close*, the same pill. Native graphics, for the pixels.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -306,14 +309,7 @@ class SettingsPillsTest {
     private fun clearInRed(dark: Boolean) {
         val lab = PromptLab(folder.root, saves, Dispatchers.Unconfined)
         lab.record(logged())
-        showing(dark, {
-            // On the theme's surface, as in Settings.
-            Surface {
-                CompositionLocalProvider(LocalPromptLab provides lab) {
-                    Column(Modifier.verticalScroll(rememberScrollState())) { PromptLabBlock(lab) }
-                }
-            }
-        }) { scheme ->
+        showing(dark, { LabBlock(lab) }) { scheme ->
             waitFor(LAB_CLEAR_TAG)
             compose.onNodeWithTag(LAB_CLEAR_TAG).assertIsEnabled()
             val pixels = pixels(LAB_CLEAR_TAG)
@@ -326,6 +322,60 @@ class SettingsPillsTest {
             assertTrue("dark=$dark: export in ${scheme.onSurface}: $export", distance(export, scheme.onSurface) < NEAR)
         }
     }
+
+    @Test
+    fun anEmptyLogsClearIsDisabledItsOutlineNoLongerRedLight() = clearDisabled(dark = false)
+
+    @Test
+    fun anEmptyLogsClearIsDisabledItsOutlineNoLongerRedDark() = clearDisabled(dark = true)
+
+    // Nothing logged: *Clear the log* disabled, its text and outline Material's disabled greys.
+    private fun clearDisabled(dark: Boolean) {
+        val lab = PromptLab(folder.root, saves, Dispatchers.Unconfined)
+        showing(dark, { LabBlock(lab) }) { scheme ->
+            waitFor(LAB_CLEAR_TAG)
+            compose.onNodeWithTag(LAB_CLEAR_TAG).assertIsNotEnabled()
+            val pixels = pixels(LAB_CLEAR_TAG)
+            val edge = outline(pixels)
+            assertTrue("dark=$dark: outline not ${scheme.error}: $edge", distance(edge, scheme.error) > FAR)
+            assertTrue("dark=$dark: outline grey: $edge", chroma(edge) < GREY)
+            val ink = ink(pixels)
+            assertTrue("dark=$dark: text not ${scheme.error}: $ink", distance(ink, scheme.error) > FAR)
+        }
+    }
+
+    @Test
+    fun aPanelsCloseIsTheUnfilledPillInTheControlsColourLight() = panelClose(dark = false)
+
+    @Test
+    fun aPanelsCloseIsTheUnfilledPillInTheControlsColourDark() = panelClose(dark = true)
+
+    private fun panelClose(dark: Boolean) =
+        showing(dark, {
+            Surface {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Panel(AnnotatedString("Genres"), tag = PANEL, onClose = {}) { Text("Blues") }
+                }
+            }
+        }) { scheme ->
+            waitFor("$PANEL:close")
+            val pixels = pixels("$PANEL:close")
+            val ink = ink(pixels)
+            assertTrue("dark=$dark: in ${scheme.onSurface}: $ink", distance(ink, scheme.onSurface) < NEAR)
+            assertTrue("dark=$dark: not in the accent: $ink", distance(ink, scheme.primary) > FAR)
+            assertTrue("dark=$dark: not filled", fill(pixels) < UNFILLED)
+            assertTrue("dark=$dark: outlined", distance(outline(pixels), pixels[0, 0]) > OUTLINED)
+            assertEquals(Triple(Role.Button, null, "Close"), button("$PANEL:close"))
+        }
+
+    // The lab's settings, scrolling, on the theme's surface, as in Settings.
+    @Composable
+    private fun LabBlock(lab: PromptLab) =
+        Surface {
+            CompositionLocalProvider(LocalPromptLab provides lab) {
+                Column(Modifier.verticalScroll(rememberScrollState())) { PromptLabBlock(lab) }
+            }
+        }
 
     private fun logged() =
         LabComparison(
@@ -354,5 +404,7 @@ class SettingsPillsTest {
         const val READABLE = 0.2f
         const val GREY = 0.12f
         const val UNFILLED = 0.05f
+        const val OUTLINED = 0.08f
+        const val PANEL = "panel"
     }
 }

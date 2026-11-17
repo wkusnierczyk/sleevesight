@@ -3,7 +3,6 @@
 package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,9 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -34,13 +31,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.ChoiceButtonGroup
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
 import kotlin.math.roundToInt
@@ -260,50 +257,6 @@ internal fun ButtonRow(
             )
         }
     }
-}
-
-/**
- * The app's small outlined button, a pill (#1126, #1365, #1387), for every button in Settings and
- * the prompt lab: [label] on it, read by [named], so it says what it does out of context.
- */
-@Composable
-internal fun PillButton(
-    label: String,
-    named: String,
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    destructive: Boolean = false,
-) = PillButton(onClick, modifier, named, destructive) { Text(label) }
-
-/**
- * A pill with [content] on it, read by [named], or, when null, by what [content] says (an
- * [app.sleevesight.app.ui.home.AiLabel]'s "…, uses AI"); [onClick] runs on a tap, and a null
- * [onClick] disables it. Its text in the controls' colour, black in light mode and white in dark, as
- * the switches' ([plainSwitchColors]), with Material's outline; a [destructive] one, which deletes,
- * in the theme's error colour, its outline too.
- */
-@Composable
-internal fun PillButton(
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    named: String? = null,
-    destructive: Boolean = false,
-    content: @Composable RowScope.() -> Unit,
-) {
-    val color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-    OutlinedButton(
-        onClick = { onClick?.invoke() },
-        enabled = onClick != null,
-        modifier = named?.let { modifier.semantics { contentDescription = it } } ?: modifier,
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
-        border =
-            if (destructive) {
-                BorderStroke(1.dp, color)
-            } else {
-                ButtonDefaults.outlinedButtonBorder(onClick != null)
-            },
-        content = content,
-    )
 }
 
 /**

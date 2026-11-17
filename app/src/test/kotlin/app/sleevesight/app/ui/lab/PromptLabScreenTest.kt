@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -241,6 +242,14 @@ class PromptLabScreenTest {
             compose.onNodeWithTag(labKindTag(PromptKind.SONG)).performScrollTo().performClick()
             val instructions = labInstructionsTag(PromptKind.SONG, LabPrompts.CUSTOM)
             compose.onNodeWithTag(instructions).performScrollTo().assertHasClickAction()
+            // Read with its variant's name, as each variant has one.
+            val named =
+                compose
+                    .onNodeWithTag(instructions)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.ContentDescription]
+                    .single()
+            assertTrue(named, named.startsWith("Show the instructions for ") && named.contains("Custom"))
             assertEquals(0, compose.onAllNodesWithTag(labCustomTag(PromptKind.SONG)).fetchSemanticsNodes().size)
             compose.onNodeWithTag(instructions).performClick()
             compose.onNodeWithTag(labCustomTag(PromptKind.SONG)).assertExists()
