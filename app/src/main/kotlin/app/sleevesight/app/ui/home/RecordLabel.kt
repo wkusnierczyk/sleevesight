@@ -31,11 +31,13 @@ internal sealed interface AlbumLabels {
 
     /**
      * The [labels] of the release, in MusicBrainz's order, none when it names none (or MusicBrainz is
-     * off, did not find the song, or could not be reached); and the release's own [year], when known.
+     * off, did not find the song, or could not be reached); the release's own [year], when known; and
+     * the year its release group first came out, [first], when MusicBrainz gives it.
      */
     data class Known(
         val labels: List<String> = emptyList(),
         val year: String? = null,
+        val first: String? = null,
     ) : AlbumLabels
 }
 
@@ -71,7 +73,13 @@ private fun labelsOf(state: TracklistState?): AlbumLabels =
     when (state) {
         null, TracklistState.Looking -> AlbumLabels.Looking
         is TracklistState.Found ->
-            AlbumLabels.Known(state.tracklist.labels, state.tracklist.date?.let(ReleaseDate::yearIn))
+            AlbumLabels.Known(
+                state.tracklist.labels,
+                state.tracklist.date?.let(ReleaseDate::yearIn),
+                state.tracklist.group
+                    ?.firstReleaseDate
+                    ?.let(ReleaseDate::yearIn),
+            )
         TracklistState.NotFound, TracklistState.Unclear, TracklistState.Failed -> NO_LABELS
     }
 
@@ -91,8 +99,11 @@ internal data class ReleaseLine(
 /**
  * The line under [album] (#729), from [labels], the release played, and [year], the album's year by
  * [ReleaseDate.albumYear]'s rules (`headerYears`), the one the album line showed before:
- * - with the release known, its own labels and its own year, and [year] in brackets when the two
- *   differ ("Apple Records · 2019 (1969)"); its labels alone when it has no date; its labels alone
+ * - with the release known, its own labels and its own year, and in brackets the year its release
+ *   group first came out when that is earlier ("Apple Records · 2019 (1969)"; [year] in its place
+ *   when MusicBrainz gives the group no date, under the same rule: never a later year, nor another
+ *   album's chosen among several of one name, which the release's own group never is); its labels
+ *   alone when it has no date; its labels alone
  *   too when the album's name gives its edition's year ([albumLineYear], #1116: "Material Girl (2024
  *   Remaster)");
  * - with no release known (MusicBrainz off, the release not found or with neither a label nor a date,
@@ -111,7 +122,7 @@ internal fun releaseLine(
         when {
             known.labels.isEmpty() && own == null -> ReleaseLine(emptyList(), albumLineYear(album, year))
             own == null || albumLineYear(album, own) == null -> ReleaseLine(known.labels, null)
-            else -> ReleaseLine(known.labels, own, year?.takeIf { it != own })
+            else -> ReleaseLine(known.labels, own, (known.first ?: year)?.takeIf { it < own })
         }
     return line.takeUnless { it.labels.isEmpty() && it.year == null }
 }

@@ -1,10 +1,14 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
@@ -66,14 +70,16 @@ private fun releaseLabels(
     // A feed that looks nothing up (a preview's) gives no label: none is waited for.
     val on = settings?.isEnabled(SourceId.MUSICBRAINZ) != false && actions.tracklists.looksUp
     val key = if (on) tracklistKey(shown.track, header, choices) else null
-    // Given up once the track it was for is no longer shown (a skip), so skipped tracks' lookups do
-    // not queue ahead of this one's under MusicBrainz's one request a second.
-    DisposableEffect(key, actions.tracklists) {
-        val feed = actions.tracklists
-        key?.let(feed::lookAhead)
-        onDispose { key?.let(feed::dropAhead) }
-    }
-    return albumLabels(shown.track, header, on, states, choices)
+    // Each look ahead gives up the one before it, still asked (a skipped track's), so it does not
+    // queue ahead of this one's under MusicBrainz's one request a second.
+    LaunchedEffect(key, actions.tracklists) { key?.let(actions.tracklists::lookAhead) }
+    val labels = albumLabels(shown.track, header, on, states, choices)
+    // The labels last known on this track stand while its key changes (a choice among albums of one
+    // name, a run again) and the new one is looked up, rather than the year alone in between.
+    var last by remember { mutableStateOf<Pair<NowPlaying, AlbumLabels.Known>?>(null) }
+    val kept = last?.takeIf { (track, _) -> TrackIdentity.playsOn(track, shown.playing) }?.second
+    SideEffect { if (labels is AlbumLabels.Known) last = shown.playing to labels }
+    return if (labels == AlbumLabels.Looking && kept != null) kept else labels
 }
 
 /**

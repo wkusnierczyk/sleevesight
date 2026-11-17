@@ -80,17 +80,12 @@ interface TracklistFeed {
 
     /**
      * Looks up [key]'s tracklist ahead of a flip (#729: the record label under Home's album), as [look]
-     * does, but given up by [dropAhead] while it is still asked, when the track it was for is no longer
-     * shown. A [look] of the same key meanwhile (the cover turned) keeps it.
+     * does, and again after it failed; and gives up every other lookup ahead still asked, superseded
+     * (a skipped track's), unless a [look] wants it (the cover turned to it): its request is
+     * cancelled, queued or under way, and its key forgotten, so a later ask asks again. What
+     * MusicBrainz answered before then stays remembered.
      */
     fun lookAhead(key: TracklistKey) = look(key)
-
-    /**
-     * Gives up [key]'s lookup [lookAhead] started, if it is still asked and no [look] wants it: its
-     * request is cancelled, queued or under way, and the key forgotten, so a later ask asks again.
-     * What MusicBrainz answered before then stays remembered.
-     */
-    fun dropAhead(key: TracklistKey) = Unit
 
     /** The albums of one name asked for (#1080), by their key, and where their tracklists are. */
     val albums: StateFlow<Map<AlbumsKey, AlbumsState>> get() = NO_ALBUMS
@@ -168,7 +163,7 @@ class AlbumTracklistFeed(
         }
     }
 
-    // The lookups [lookAhead] started that no [look] wants yet, by key, which [dropAhead] may cancel.
+    // The lookups [lookAhead] started that no [look] wants yet, by key, which the next [lookAhead] cancels.
     private val ahead = mutableMapOf<TracklistKey, Job>()
 
     override fun look(key: TracklistKey) {
@@ -177,15 +172,14 @@ class AlbumTracklistFeed(
     }
 
     override fun lookAhead(key: TracklistKey) {
-        val job = askTracklist(key, again = false) ?: return
+        val superseded = synchronized(ahead) { (ahead - key).also { ahead.keys.retainAll(setOf(key)) } }
+        superseded.values.forEach(Job::cancel)
+        shown.update { states ->
+            states.filterNot { (other, state) -> other in superseded && state == TracklistState.Looking }
+        }
+        val job = askTracklist(key, again = true) ?: return
         synchronized(ahead) { ahead[key] = job }
         job.invokeOnCompletion { synchronized(ahead) { if (ahead[key] === job) ahead.remove(key) } }
-    }
-
-    override fun dropAhead(key: TracklistKey) {
-        val job = synchronized(ahead) { ahead.remove(key) } ?: return
-        job.cancel()
-        shown.update { states -> if (states[key] == TracklistState.Looking) states - key else states }
     }
 
     override fun retry(key: TracklistKey) {

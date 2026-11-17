@@ -81,13 +81,6 @@ class RecordLabelScreenTest {
         }
 
         override fun retry(key: TracklistKey) = Unit
-
-        val dropped = mutableListOf<TracklistKey>()
-
-        override fun dropAhead(key: TracklistKey) {
-            dropped += key
-            shown.update { if (it[key] == TracklistState.Looking) it - key else it }
-        }
     }
 
     // The next song of the album, on another release of its group.
@@ -185,8 +178,7 @@ class RecordLabelScreenTest {
         show(state(resolved)) { current ->
             current.value = state(next)
             frames()
-            // The first song's release, still asked, given up; the next one's asked.
-            assertEquals(listOf(key), feed.dropped)
+            // The next song's release asked ahead (which gives up the first one's, still asked).
             assertEquals(listOf(key, nextKey), feed.asked.distinct())
             assertHeld()
             // Another song's release of the album found meanwhile does not end the wait.
@@ -194,6 +186,24 @@ class RecordLabelScreenTest {
             assertHeld()
             val release = MbTracklist("r2", emptyList(), "1974", labels = listOf("Warner"))
             feed.shown.update { it + (nextKey to TracklistState.Found(release)) }
+            frames()
+            assertEquals("Warner · 1974", line())
+        }
+
+    @Test
+    fun onTheSameTrackANewKeyKeepsTheLabelShownUntilItsOwnAnswers() =
+        show(state(resolved)) { current ->
+            answer("Reprise")
+            assertEquals("Reprise · 1974", line())
+            // The same track run again, matched to another recording of the album.
+            val other = TracklistKey(group, "rec-other")
+            current.value =
+                state(resolved.copy(resolution = resolved.resolution!!.copy(recordingMbid = "rec-other")))
+            frames()
+            assertEquals(listOf(key, other), feed.asked.distinct())
+            assertEquals("Reprise · 1974", line())
+            val release = MbTracklist("r3", emptyList(), "1974", labels = listOf("Warner"))
+            feed.shown.update { it + (other to TracklistState.Found(release)) }
             frames()
             assertEquals("Warner · 1974", line())
         }

@@ -10,6 +10,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.resolution.MbReleaseGroup
 import app.sleevesight.core.resolution.MbTracklist
 import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
@@ -124,6 +125,30 @@ class RecordLabelTest {
         )
         // No first year known: the release's own alone.
         assertEquals(ReleaseLine(listOf("Apple Records"), "2019"), releaseLine("Abbey Road", null, later))
+    }
+
+    @Test
+    fun theFirstYearIsTheReleasesOwnGroupsAndOnlyWhenEarlier() {
+        // Its group's first release: not the album year Home picked, another album of the name (#1080).
+        val chosen = AlbumLabels.Known(listOf("Apple Records"), "2019", "1969")
+        assertEquals(ReleaseLine(listOf("Apple Records"), "2019", "1969"), releaseLine("Abbey Road", "1987", chosen))
+        // A later year never goes in brackets: the player's year after the release's.
+        val first = AlbumLabels.Known(listOf("Apple Records"), "1969", "1969")
+        assertEquals(ReleaseLine(listOf("Apple Records"), "1969"), releaseLine("Abbey Road", "2019", first))
+        assertEquals(
+            ReleaseLine(listOf("Apple Records"), "1969"),
+            releaseLine("Abbey Road", "2019", AlbumLabels.Known(listOf("Apple Records"), "1969")),
+        )
+    }
+
+    @Test
+    fun theFirstYearComesFromTheReleaseGroupLookedUp() {
+        val sundownGroup = MbReleaseGroup(group, "Sundown", "Album", firstReleaseDate = "1974-01")
+        val reissue = TracklistState.Found(MbTracklist("r", emptyList(), "2003", group = sundownGroup))
+        assertEquals(
+            AlbumLabels.Known(emptyList(), "2003", "1974"),
+            albumLabels(resolved, sundown, true, mapOf(key to reissue)),
+        )
     }
 
     @Test
