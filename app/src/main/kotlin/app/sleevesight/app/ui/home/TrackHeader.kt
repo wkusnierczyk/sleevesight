@@ -78,7 +78,9 @@ internal fun UnderAlbum(
     val lyrics =
         if (shown.lyricsLinks) {
             val links = remember(track, shown.lyricsSearch) { homeLyrics(track, shown.lyricsSearch) }
-            lyricsItem(links, retry, openSources, search) { actions.openSettingsAt(SettingsTarget.lyricsSearch) }
+            lyricsItem(links, retry, openSources, search, line.notes) {
+                actions.openSettingsAt(SettingsTarget.lyricsSearch)
+            }
         } else {
             null
         }

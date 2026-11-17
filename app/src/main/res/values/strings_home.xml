@@ -22,6 +22,7 @@
     <!-- The parts the notes point at, as a screen reader names them, and the heading of a note's panel. -->
     <string name="home_guide_part_settings">Settings</string>
     <string name="home_guide_part_player">Player</string>
+    <string name="home_guide_part_cover">Album art</string>
     <string name="home_guide_part_genres">Genres</string>
     <string name="home_guide_part_insight">Insight</string>
     <string name="home_guide_part_cite">Citation</string>
@@ -30,6 +31,7 @@
     <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
     <string name="home_guide_note_player">tap to open</string>
+    <string name="home_guide_note_cover">tap to see contents</string>
     <string name="home_guide_note_genres">tap to see the genres</string>
     <string name="home_guide_note_insight">read about what’s playing</string>
     <string name="home_guide_note_cite">follow to references</string>
@@ -39,6 +41,7 @@
          name (home_guide_part_…). Each says what the app does; keep them in step with it. -->
     <string name="home_guide_about_settings">Opens Settings: the players Sleevesight follows, which sources it looks up, your AI service and the API keys, genres, when insights are written, history, and how the app looks (theme, font, layout).</string>
     <string name="home_guide_about_player">The player Sleevesight follows, and whether it is playing. A tap opens the player.</string>
+    <string name="home_guide_about_cover">The album’s cover. A tap turns it over to show the album’s tracklist from MusicBrainz: each track with its length, the playing song marked. An album of several discs has a page for each, swiped sideways, with the disc’s number at the top. A tap anywhere on the back turns it back. When there is no tracklist, the back says why: MusicBrainz is still looking, has no tracklist for the album, has several albums of that name, could not be reached, or is disabled.</string>
     <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
     <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A dimmed sentence rests on none.</string>
@@ -297,9 +300,9 @@
     <string name="home_lyrics_explaining">Reading about the song…</string>
     <!-- In the answer's place, under the rule, no page saying what the song is about; %1$s is the model. -->
     <string name="home_lyrics_explain_none">%1$s found nothing to explain the song.</string>
-    <!-- Under the explanation, in the quiet note style, over the pages its sentences cite, each a link
-         after its id ("S1"), opening in the browser; then "by {model}" (home_ai_by). -->
-    <string name="home_lyrics_pages_cited">Pages cited</string>
+    <!-- Last under the explanation (#1067), after its credit and when it was written, in Sources' small
+         muted type; %1$s: the site of each page its sentences cite, each a link, " · " between. -->
+    <string name="home_lyrics_read_more">Read more: %1$s</string>
     <!-- Said by a screen reader for a citation in the explanation naming no page it was given; %1$s: the id. -->
     <string name="home_lyrics_cite_unknown">%1$s: no such page</string>
     <!-- Search Genius when there is no link is off: this line, then home_lyrics_search_off_see on its own line. -->
@@ -804,6 +807,9 @@
     <!-- A web line in Sources named by what it was read for (#1053): the page the check of the
          track's vocals cites, "vocals check · bandcamp.com". -->
     <string name="home_line_purpose_vocals_check">vocals check</string>
+    <!-- A web line in Sources named by what it was read for (#1067): a page the song's explanation
+         (Explain the song) cites, "explanation · genius.com". -->
+    <string name="home_line_purpose_explanation">explanation</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <!-- The From line under when the music was composed, when the infobox of the work's Wikipedia
          article dates it (#1273): "From Wikipedia", "Wikipedia" linking the article. -->

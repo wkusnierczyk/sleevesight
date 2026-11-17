@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
@@ -47,7 +48,27 @@ internal fun FromSource(
  * reader reaches each site as a link of its own. Nothing when there are no pages.
  */
 @Composable
-internal fun FromSites(urls: List<String>) {
+internal fun FromSites(urls: List<String>) =
+    SitesLine(
+        stringResource(R.string.home_ai_from),
+        urls,
+        MaterialTheme.typography.bodySmall,
+        Modifier.testTag(AI_SEARCH_FROM_TAG),
+    )
+
+/**
+ * [template] ("From %1$s", "Read more: %1$s") with each page's site ([siteOf]) in its slot, a link of
+ * its own to its page ([urls], in their order, each address once), " · " between, as [FromSites]
+ * sets them, in [style] and the muted colour: the line wraps between sites, never inside one, and the
+ * words before the slot stay with the first site. Nothing when there are no pages.
+ */
+@Composable
+internal fun SitesLine(
+    template: String,
+    urls: List<String>,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+) {
     val pages = urls.distinct()
     if (pages.isEmpty()) return
     val sites =
@@ -56,23 +77,18 @@ internal fun FromSites(urls: List<String>) {
             if (i == 0) listOf(link) else listOf(TextPart.Words(SITE_SEPARATOR), link)
         }
     val slot = TextPart.Words(SITES_SLOT)
-    val template = linkedParts(stringResource(R.string.home_ai_from), slot)
+    val words = linkedParts(template, slot)
     val parts =
-        template.flatMapIndexed { i, part ->
+        words.flatMapIndexed { i, part ->
             when {
                 part === slot -> sites
                 // The space before the sites, a no-break one: "From" never ends a line alone.
-                template.getOrNull(i + 1) === slot && part is TextPart.Words && part.text.endsWith(" ") ->
+                words.getOrNull(i + 1) === slot && part is TextPart.Words && part.text.endsWith(" ") ->
                     listOf(TextPart.Words(part.text.dropLast(1) + NO_BREAK_SPACE))
                 else -> listOf(part)
             }
         }
-    LinkedText(
-        parts,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.testTag(AI_SEARCH_FROM_TAG),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    LinkedText(parts, style = style, modifier = modifier, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /**
