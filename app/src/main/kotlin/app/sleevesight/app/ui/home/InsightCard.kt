@@ -212,10 +212,9 @@ private fun Written(
  * - written from evidence that holds nothing beyond what Home shows (#1142), that no more source
  *   information was found; and a source not reached ([InsightPartial]), with its *Retry*, whose focus
  *   goes once tapped to *Report the insight* (#1121);
- * - the grounding line ([GroundingLine]): the note on the dimmed sentences, or, with
- *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
- *   stays where the counts are, which take its place in developer mode: under the credit and above
- *   *Report the insight*, the action it leads to;
+ * - the grounding line ([GroundingLine]): the note on the dimmed sentences, where their `?` chips go
+ *   (#954), and under it, with [groundingDetails] (developer mode, inside its mark), the grounding
+ *   check's counts: under the credit and above *Report the insight*, the action it leads to;
  * - which citations it translated from the track's language ([TranslatedLine], #902);
  * - that the reply stopped early, for an incomplete insight;
  * - *Report the insight* ([ReportAction]), in the theme's error colour, where the focus goes from the

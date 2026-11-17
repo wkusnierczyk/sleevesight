@@ -16,12 +16,13 @@ import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 
 /**
- * The grounding line under a written insight or a genre's reason: with [details] (*Show grounding
- * details*, a developer option, #437) the grounding check's counts in full ([Meta]), else a note
- * only when there is something to say ([Note]). Whether it was kept from before is not its to say:
+ * The grounding line under a written insight or a genre's reason: a note only when there is
+ * something to say ([Note]), the one the dimmed sentences' `?` chips go to (#954), and under it, with
+ * [details] (*Show grounding details*, a developer option, #437), the grounding check's counts in
+ * full ([Meta]). Whether it was kept from before is not its to say:
  * the insight's credit says who wrote it (#1162), a genre's reason its own line
  * (`KeptLine`, #851).
- * [modifier] goes to the line's text. With no note, nothing is drawn, and the modifier with it: a
+ * [modifier] goes to the note. With no note, nothing is drawn, and the modifier with it: a
  * caller that sets the line in a row beside other content fills the space itself, so that content
  * keeps its place (a weighted `Box` around the line, a `Spacer(Modifier.weight(1f))`, or
  * `Arrangement.End`).
@@ -32,8 +33,9 @@ internal fun GroundingLine(
     details: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // The full counts show only in developer mode, and are marked as such (#536).
-    if (details) DeveloperMark { Meta(grounded, modifier) } else Note(grounded, modifier)
+    Note(grounded, modifier)
+    // The full counts show only in developer mode, and are marked as such (#536); the note stays (#954).
+    if (details) DeveloperMark { Meta(grounded, Modifier) }
 }
 
 /**
@@ -153,8 +155,7 @@ private fun Meta(
             }
             if (grounded.withdrawn != null) add(stringResource(R.string.home_meta_self_corrected))
         }
-    // The dimmed text's `?` chips go to the counts, which take the note's place (#954).
-    MetaLine(parts.joinToString(" · "), modifier.noteTarget())
+    MetaLine(parts.joinToString(" · "), modifier)
 }
 
 /**
