@@ -21,6 +21,7 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SongWebLookup
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.WebSearcher
+import app.sleevesight.core.synthesis.PromptChoices
 import app.sleevesight.core.text.DateForm
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
@@ -55,10 +56,14 @@ fun interface TrackResolver {
     ): Resolution
 }
 
-/** The AI service the user chose, and their key for it. */
+/**
+ * The AI service the user chose, and their key for it; in the debug build, the prompt lab's
+ * [choices] (#1003), which the app's client applies to each request and each card's key holds.
+ */
 class AiAccess(
     val provider: AiProvider,
     val key: Secret,
+    val choices: PromptChoices = PromptChoices.NONE,
 )
 
 /**

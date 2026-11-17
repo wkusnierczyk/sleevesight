@@ -220,12 +220,14 @@ object TesterReport {
 
     /**
      * The report as a mail to [Mail.SUPPORT]: the tester's [note], then each of [parts] the tester
-     * kept, as they left it, under its label. A part left out is not in it at all.
+     * kept, as they left it, under its label, then each of [extra] by its label (the prompt lab's log,
+     * #1003, in the debug build only). A part left out is not in it at all.
      */
     fun mail(
         snapshot: TesterSnapshot,
         note: String,
         parts: List<Pair<TesterPart, String>>,
+        extra: List<Pair<String, String>> = emptyList(),
     ): Mail {
         val body =
             buildString {
@@ -233,9 +235,9 @@ object TesterReport {
                 appendLine()
                 appendLine("## Note")
                 appendLine(note.trim().ifEmpty { NONE })
-                for ((part, text) in parts) {
+                for ((label, text) in parts.map { (part, text) -> part.label to text } + extra) {
                     appendLine()
-                    appendLine("## ${part.label}")
+                    appendLine("## $label")
                     appendLine(text.trim().ifEmpty { NONE })
                 }
             }

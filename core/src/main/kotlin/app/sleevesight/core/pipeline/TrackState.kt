@@ -306,6 +306,9 @@ sealed interface InsightState {
  * whether the model's own knowledge was allowed ([modelKnowledge]) and the fingerprint of the
  * evidence it was written from ([evidenceFingerprint]), null where no card's key says (a genre's
  * reason, a test's fixture).
+ *
+ * In the debug build's prompt lab (#1003), the [variant] it was written with and its card's identity
+ * ([card], `CardKey.card`), from its card's key; null otherwise.
  */
 data class WrittenBy(
     val promptVersion: Int,
@@ -314,4 +317,6 @@ data class WrittenBy(
     val effort: ReasoningEffort?,
     val modelKnowledge: Boolean? = null,
     val evidenceFingerprint: String? = null,
+    val variant: String? = null,
+    val card: String? = null,
 )

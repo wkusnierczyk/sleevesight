@@ -28,6 +28,7 @@ import app.sleevesight.app.ui.ThemeButtonFeed
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
 import app.sleevesight.app.ui.home.NowPlayingPage
+import app.sleevesight.app.ui.lab.LocalPromptLab
 import app.sleevesight.app.ui.logo.LocalAnimatorDurationScale
 import app.sleevesight.app.ui.logo.LocalLogoIntro
 import app.sleevesight.app.ui.logo.LogoIntro
@@ -135,6 +136,9 @@ class MainActivity : ComponentActivity() {
         ThemeButtonFeed(graph.latestSettings, graph.settings.themeChooser(graph.settingsSaves))
     }
 
+    // One spread, of the prompt lab's local, which only the debug build provides (#1003); and one
+    // content, every screen's arguments in it, which the prompt lab and OpenRouter (#1157) each add to.
+    @Suppress("SpreadOperator", "LongMethod")
     override fun onCreate(savedInstanceState: Bundle?) {
         // The window light or dark as *Theme* (#444) last read, from its first frame: the starting
         // window before this follows the system below Android 12, where the theme cannot reach it.
@@ -155,6 +159,8 @@ class MainActivity : ComponentActivity() {
                     LocalLogoIntro provides intro,
                     // One observer of *Remove animations* for every turning record (#785).
                     LocalAnimatorDurationScale provides followedAnimatorDurationScale(),
+                    // The prompt lab (#1003): the debug build's alone; in any other, not even its local.
+                    *(if (BuildConfig.DEBUG) arrayOf(LocalPromptLab provides graph.promptLab) else emptyArray()),
                 ) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
                     // accessibility services (Switch Access and the like), as it is of touch.

@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.report.Mail
@@ -46,7 +47,8 @@ import java.text.NumberFormat
  * part ([TesterPart]) with a switch that keeps it in or leaves it out, and *Edit*, which opens its
  * text for editing; then the whole mail as it will be sent, which only the tester hands to their
  * mail app. The history is left out until the tester turns it on, and only then read
- * ([readHistory]), as of the tap.
+ * ([readHistory]), as of the tap. In the debug build, given [readLab] (the prompt lab, #1003), one
+ * more part, the lab's log, likewise off until turned on and read then; no other build has it.
  *
  * Everything is as it was at the tap ([snapshot]), whatever happens meanwhile. Held only while the
  * dialog is open, not saved: closed by a rotation, a report starts afresh from a new tap.
@@ -62,11 +64,24 @@ internal fun TesterReportDialog(
     snapshot: TesterSnapshot,
     readHistory: suspend () -> String,
     handoff: MailHandoff,
+    readLab: (suspend () -> String)? = null,
     onDismiss: () -> Unit,
 ) {
     var note by remember { mutableStateOf("") }
     val drafts =
-        remember(snapshot) { TesterPart.entries.associateWith { PartDraft(TesterReport.part(it, snapshot), it) } }
+        remember(snapshot) { TesterPart.entries.associateWith { PartDraft.of(it, TesterReport.part(it, snapshot)) } }
+    val labLabel = if (BuildConfig.DEBUG) stringResource(R.string.lab_report_label) else ""
+    // The prompt lab's log (#1003): the debug build's alone, read when turned on.
+    val lab =
+        remember(snapshot, readLab) {
+            if (BuildConfig.DEBUG &&
+                readLab != null
+            ) {
+                PartDraft(null, LAB_PART, labLabel, includedAtFirst = false)
+            } else {
+                null
+            }
+        }
     val scope = rememberCoroutineScope()
     val mail by remember(snapshot) {
         derivedStateOf {
@@ -78,11 +93,12 @@ internal fun TesterReportDialog(
                         ?.text
                         ?.let { part to it }
                 }
-            TesterReport.mail(snapshot, note, kept)
+            val extra = listOfNotNull(lab?.takeIf { it.included }?.text?.let { lab.label to it })
+            TesterReport.mail(snapshot, note, kept, extra)
         }
     }
     val fits by remember(snapshot) { derivedStateOf { TesterReport.fits(mail) } }
-    val reading = drafts.values.any { it.included && it.reading }
+    val reading = (drafts.values + listOfNotNull(lab)).any { it.included && it.reading }
     val held =
         when {
             reading -> stringResource(R.string.tester_report_waits_for_history)
@@ -104,7 +120,9 @@ internal fun TesterReportDialog(
         previewHint = stringResource(R.string.tester_report_preview_hint),
         held = held,
     ) {
-        TesterInputs(note, { note = it }, drafts) { draft, on -> include(draft, on, scope, readHistory) }
+        TesterInputs(note, { note = it }, drafts, lab) { draft, on ->
+            include(draft, on, scope, if (draft === lab && readLab != null) readLab else readHistory)
+        }
     }
 }
 
@@ -118,6 +136,7 @@ private fun TesterInputs(
     note: String,
     onNote: (String) -> Unit,
     drafts: Map<TesterPart, PartDraft>,
+    lab: PartDraft?,
     onInclude: (PartDraft, Boolean) -> Unit,
 ) {
     DeveloperMark(spacing = 8.dp) {
@@ -132,27 +151,35 @@ private fun TesterInputs(
         Text(stringResource(R.string.tester_report_parts), style = MaterialTheme.typography.titleSmall)
         for (part in TesterPart.entries) {
             val draft = drafts.getValue(part)
-            PartRow(part, draft) { on -> onInclude(draft, on) }
+            PartRow(draft, summary(part)) { on -> onInclude(draft, on) }
+        }
+        if (BuildConfig.DEBUG) {
+            lab?.let {
+                PartRow(
+                    it,
+                    stringResource(R.string.lab_report_part),
+                ) { on -> onInclude(it, on) }
+            }
         }
     }
 }
 
 // Keeps [draft] in the report or leaves it out; kept for the first time with no text (the
-// history), it is read then, once.
+// history, the prompt lab's log), it is read then, once, by [read].
 private fun include(
     draft: PartDraft,
     on: Boolean,
     scope: CoroutineScope,
-    readHistory: suspend () -> String,
+    read: suspend () -> String,
 ) {
     draft.included = on
     if (!on || draft.text != null || draft.reading) return
     draft.reading = true
     scope.launch {
         try {
-            val read = readHistory()
-            draft.editable = read.length <= EDIT_LIMIT
-            draft.text = read
+            val text = read()
+            draft.editable = text.length <= EDIT_LIMIT
+            draft.text = text
         } finally {
             draft.reading = false
         }
@@ -163,19 +190,28 @@ private fun include(
 // history), whether it is kept, whether its text is open for editing, and whether it is being read.
 private class PartDraft(
     text: String?,
-    part: TesterPart,
+    val key: String,
+    val label: String,
+    includedAtFirst: Boolean,
 ) {
     var text by mutableStateOf(text)
     var editable by mutableStateOf(text == null || text.length <= EDIT_LIMIT)
-    var included by mutableStateOf(part.includedAtFirst)
+    var included by mutableStateOf(includedAtFirst)
     var editing by mutableStateOf(false)
     var reading by mutableStateOf(false)
+
+    companion object {
+        fun of(
+            part: TesterPart,
+            text: String?,
+        ): PartDraft = PartDraft(text, part.name, part.label, part.includedAtFirst)
+    }
 }
 
 @Composable
 private fun PartRow(
-    part: TesterPart,
     draft: PartDraft,
+    summary: String,
     onInclude: (Boolean) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -184,30 +220,27 @@ private fun PartRow(
                 Modifier
                     .fillMaxWidth()
                     .toggleable(value = draft.included, role = Role.Switch, onValueChange = onInclude)
-                    .testTag(testerPartTag(part))
+                    .testTag("tester_part_${draft.key}")
                     .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                Text(part.label, style = MaterialTheme.typography.bodyLarge)
+                Text(draft.label, style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    summary(part),
+                    summary,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Switch(checked = draft.included, onCheckedChange = null)
         }
-        if (draft.included) PartText(part, draft)
+        if (draft.included) PartText(draft)
     }
 }
 
 // The part's text, behind *Edit*; for the history, while it is read, that it is.
 @Composable
-private fun PartText(
-    part: TesterPart,
-    draft: PartDraft,
-) {
+private fun PartText(draft: PartDraft) {
     val text = draft.text
     if (text == null) {
         if (draft.reading) {
@@ -221,15 +254,15 @@ private fun PartText(
             stringResource(R.string.tester_report_too_long_to_edit),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.testTag(testerTooLongTag(part)),
+            modifier = Modifier.testTag("tester_too_long_${draft.key}"),
         )
         return
     }
-    val description = stringResource(R.string.tester_report_edit_description, part.label)
+    val description = stringResource(R.string.tester_report_edit_description, draft.label)
     TextButton(
         onClick = { draft.editing = !draft.editing },
         modifier =
-            Modifier.testTag(testerEditTag(part)).semantics {
+            Modifier.testTag("tester_edit_${draft.key}").semantics {
                 if (!draft.editing) contentDescription = description
             },
     ) {
@@ -239,10 +272,10 @@ private fun PartText(
         OutlinedTextField(
             value = text,
             onValueChange = { draft.text = it },
-            label = { Text(part.label) },
+            label = { Text(draft.label) },
             maxLines = EDIT_LINES,
             textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-            modifier = Modifier.fillMaxWidth().testTag(testerTextTag(part)),
+            modifier = Modifier.fillMaxWidth().testTag("tester_text_${draft.key}"),
         )
     }
 }
@@ -284,3 +317,6 @@ fun testerTooLongTag(part: TesterPart): String = "tester_too_long_${part.name}"
 
 /** The test tag of [part]'s text, open for editing. */
 fun testerTextTag(part: TesterPart): String = "tester_text_${part.name}"
+
+/** The key of the prompt lab's log among the parts (#1003), in the debug build only. */
+internal const val LAB_PART: String = "PROMPT_LAB"

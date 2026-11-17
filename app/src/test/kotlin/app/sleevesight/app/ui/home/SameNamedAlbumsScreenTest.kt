@@ -110,6 +110,7 @@ class SameNamedAlbumsScreenTest {
                                 retry = {},
                                 openSources = {},
                                 colors = MaterialTheme.colorScheme,
+                                memory = rememberCoverMemory(),
                                 albums =
                                     AlbumChoosing(
                                         states = states,
