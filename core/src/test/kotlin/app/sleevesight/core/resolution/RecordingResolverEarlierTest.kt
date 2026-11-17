@@ -72,6 +72,8 @@ class RecordingResolverEarlierTest {
             val resolution = resolve(musicBrainz, track("Dream On", "Aerosmith"), 267)
             assertEquals(Outcome.None, resolution.outcome)
             assertTrue(resolution.provisional)
+            // A search left incomplete, not a work that failed to load (#1376): Wikipedia's result is kept.
+            assertFalse(resolution.workUnknown)
             assertEquals(emptyList(), musicBrainz.beforeAsked)
         }
 

@@ -306,7 +306,7 @@ class RecordingResolver(
         return when (val lookup = fetched?.let { Lookup.Found(it) } ?: musicBrainz.recording(recording.mbid)) {
             is Lookup.Found -> withDetail(track, chosen, base, lookup.value, lent)
             Lookup.NotFound -> base.copy(lyrics = WorkLyrics())
-            is Lookup.Failed -> base.copy(provisional = true)
+            is Lookup.Failed -> base.copy(provisional = true, workUnknown = true)
         }
     }
 
@@ -341,6 +341,7 @@ class RecordingResolver(
                 lyrics = lyricsOf(detail, lookup),
                 // The work's lyrics links not known (#728): a later run asks again.
                 provisional = lookup is Lookup.Failed,
+                workUnknown = lookup is Lookup.Failed,
             )
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
@@ -823,9 +824,15 @@ class RecordingResolver(
             }
         }
 
-        /** [resolution], provisional when a lookup of [detail] failed ([incomplete]). */
+        /**
+         * [resolution], provisional when a lookup of [detail] or of a work failed ([incomplete]), and its
+         * work then not known (`Resolution.workUnknown`, #1376).
+         */
         fun applied(resolution: Resolution): Resolution =
-            resolution.copy(provisional = resolution.provisional || incomplete)
+            resolution.copy(
+                provisional = resolution.provisional || incomplete,
+                workUnknown = resolution.workUnknown || incomplete,
+            )
 
         // A recording's detail, kept once found; a lookup that fails marks the choice [incomplete].
         private suspend fun detail(mbid: String): Lookup<MbRecordingDetail> =

@@ -368,9 +368,10 @@ work's `composer` relationship naming them (`Resolution.credits`), never by name
 that composer, so the composer's insight is written from them, and the lone credited performer's
 insight leaves them out (`ItemInsights.artistLines`: a line about another artist is never the lone
 credited artist's, whatever this play's roles say, so a result kept with Puccini's article and
-replayed without MusicBrainz still keeps it apart); Wikipedia's result made while a part of the
-resolution failed (`Resolution.provisional`, a work not looked up) is not kept, so a later run that
-has the work looks the composer up; a genre their article or item states goes to the
+replayed without MusicBrainz still keeps it apart); Wikipedia's result made while the recording's detail or its work
+failed to load (`Resolution.workUnknown`) is not kept, so a later run that has the work looks the
+composer up; a resolution provisional only for a search left incomplete (a heavily recorded track's
+earlier releases) keeps Wikipedia's result as before; a genre their article or item states goes to the
 composer's own row, as for a credited composer (`GenreDescribed`). Wikipedia awaits MusicBrainz's
 resolution already, and the key insight is written once every source has landed, so neither waits
 for MusicBrainz any longer than before; when MusicBrainz does not answer on a play, the prompt and

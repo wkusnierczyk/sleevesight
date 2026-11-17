@@ -67,7 +67,8 @@ class WikipediaUncreditedComposerTest {
 
     private fun resolution(
         uncredited: List<String>,
-        provisional: Boolean = false,
+        workUnknown: Boolean = false,
+        provisional: Boolean = workUnknown,
     ) = Resolution(
         outcome = Outcome.SongArticle,
         recordingMbid = "mb-r",
@@ -79,8 +80,9 @@ class WikipediaUncreditedComposerTest {
             ),
         roles =
             ArtistRoles(emptyList(), listOf("Luciano Pavarotti"), classical = true, uncredited = uncredited)
-                .takeUnless { provisional },
+                .takeUnless { workUnknown },
         provisional = provisional,
+        workUnknown = workUnknown,
     )
 
     private suspend fun lookup(
@@ -132,7 +134,7 @@ class WikipediaUncreditedComposerTest {
         runTest {
             // The work not looked up: no roles, no uncredited composer; the result shown, not kept.
             val failed = Wikidata()
-            val first = lookup(failed, resolution(emptyList(), provisional = true))
+            val first = lookup(failed, resolution(emptyList(), workUnknown = true))
             assertTrue(first.provisional)
             assertEquals(listOf("mb-lp"), failed.asked)
             // MusicBrainz answers on the next run: Puccini's article is looked up, and the result kept.
@@ -140,6 +142,15 @@ class WikipediaUncreditedComposerTest {
             val again = lookup(recovered, resolution(listOf("Giacomo Puccini")))
             assertFalse(again.provisional)
             assertEquals(listOf("mb-lp", "mb-gp"), recovered.asked)
+        }
+
+    @Test
+    fun `a resolution provisional only from an incomplete search gives a result that is kept`() =
+        runTest {
+            // A heavily recorded track's search left incomplete (`RecordingResolver.earlierThan`): the work
+            // is known, so Wikipedia's result is kept, and the next play asks nothing again.
+            val result = lookup(Wikidata(), resolution(listOf("Giacomo Puccini"), provisional = true))
+            assertFalse(result.provisional)
         }
 
     private companion object {

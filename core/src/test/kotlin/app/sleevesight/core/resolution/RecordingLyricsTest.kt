@@ -98,8 +98,9 @@ class RecordingLyricsTest {
                 )
             val resolved = resolve(musicBrainz, track("Song", "Act"))
             assertEquals(WorkLyrics(links = null, languages = listOf("eng"), instrumental = false), resolved.lyrics)
-            // Not kept, so a later run asks again.
+            // Not kept, so a later run asks again; the work not known (#1376).
             assertTrue(resolved.provisional)
+            assertTrue(resolved.workUnknown)
         }
 
     @Test
@@ -109,8 +110,9 @@ class RecordingLyricsTest {
             val resolved = resolve(musicBrainz, track("Song", "Act"))
             assertTrue(resolved.resolved)
             assertEquals(WorkLyrics.NONE, resolved.lyrics)
-            // Not kept, so a later run asks again.
+            // Not kept, so a later run asks again; the work not known (#1376).
             assertTrue(resolved.provisional)
+            assertTrue(resolved.workUnknown)
         }
 
     @Test
