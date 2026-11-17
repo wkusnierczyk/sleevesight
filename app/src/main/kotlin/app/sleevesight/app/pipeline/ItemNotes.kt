@@ -637,8 +637,8 @@ class AppItemNotes(
 
     // Whether an automatic write of [key]'s insight on [track] is held back (#911): none of its own,
     // and on this play its row showed one another model (or prompt lab variant, #1388) wrote, before
-    // the model (or the lab) changed. It stays,
-    // with *Rewrite insight*, as the key insight does after a settings change; nothing writes it unasked.
+    // the model (or the lab) changed. It stays, with *Rewrite insight*, as the key insight does after
+    // a settings change; nothing writes it unasked.
     private fun held(
         key: CardKey,
         track: TrackState,

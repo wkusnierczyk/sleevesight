@@ -64,6 +64,7 @@ class PromptLab(
 ) {
     private val developerState = MutableStateFlow(false)
     private val onState = MutableStateFlow(false)
+    private val onLock = Any()
     private val settingsState = MutableStateFlow(LabSettings())
     private val logState = MutableStateFlow<List<LabComparison>>(emptyList())
     private val appliedCustom = MutableStateFlow<Map<PromptKind, String>>(emptyMap())
@@ -106,9 +107,13 @@ class PromptLab(
         save(SETTINGS)
     }
 
-    // Whether the lab is on, after developer mode or the lab's switch changed.
+    // Whether the lab is on, after developer mode or the lab's switch changed: under a lock, as the
+    // settings are read on [io] while developer mode is set on main, so the last to run reads both
+    // as they are and no interleave leaves it stale.
     private fun refreshOn() {
-        onState.value = developerState.value && settingsState.value.enabled
+        synchronized(onLock) {
+            onState.value = developerState.value && settingsState.value.enabled
+        }
     }
 
     /**

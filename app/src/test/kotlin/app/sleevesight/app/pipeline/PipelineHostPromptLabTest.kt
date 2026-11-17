@@ -117,6 +117,25 @@ internal class PipelineHostPromptLabTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `switched on under the most eager mode, the release prompt's insight is not written again on its own`() =
+        runTest {
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+            started()
+            play("Sundown")
+            settle()
+            tap()
+            settle()
+            assertTrue(insight() is InsightState.Written)
+            assertTrue(variant() == null || variant() == LabPrompts.RELEASE)
+            val calls = provider.requests
+
+            labSwitched(variantB)
+            settle()
+            assertEquals("no call on its own", calls, provider.requests)
+            assertFalse("the release text not shown as the variant's", variant() == "B")
+        }
+
+    @Test
     fun `switched on again, the card the variant wrote is shown again`() =
         runTest {
             writtenWithB()

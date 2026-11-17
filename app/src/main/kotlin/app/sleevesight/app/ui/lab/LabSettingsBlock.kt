@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.lab.PromptLab
+import app.sleevesight.app.ui.settings.DISABLED_ALPHA
 import app.sleevesight.app.ui.settings.SwitchRow
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.PillButton
@@ -65,9 +66,9 @@ import kotlin.time.toJavaInstant
  * *Clear the log*, which asks first.
  *
  * With the switch off the kinds' rows do not apply: as any setting that does not apply, they dim, the
- * whole of each, and cannot be changed or opened (an open one shown closed until the switch is on again), their
- * choices kept. The log
- * stays as it is: what was compared before can still be exported or cleared.
+ * whole of each, and cannot be changed or opened (an open one shown closed until the switch is on
+ * again), their choices kept. The log stays as it is: what was compared before can still be exported
+ * or cleared.
  */
 @Composable
 internal fun PromptLabBlock(lab: PromptLab) {
@@ -83,7 +84,7 @@ internal fun PromptLabBlock(lab: PromptLab) {
         ) { on -> lab.update { it.withEnabled(on) } }
         Quiet(stringResource(R.string.lab_summary))
         Quiet(stringResource(R.string.lab_twice))
-        Column(Modifier.fillMaxWidth().alpha(if (enabled) 1f else NOT_APPLYING_ALPHA)) {
+        Column(Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA)) {
             for (kind in PromptKind.entries) {
                 KindRow(kind, settings, enabled && open[kind] == true, { open[kind] = it }) { change ->
                     lab.update(change)
@@ -363,9 +364,6 @@ internal fun exportName(at: kotlin.time.Instant): String =
         DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault()).format(at.toJavaInstant()) + ".json"
 
 private const val EXPORT_TYPE = "application/json"
-
-// The kinds' rows while the lab's switch is off: dimmed as a setting that does not apply (`SwitchRow`).
-private const val NOT_APPLYING_ALPHA = 0.38f
 
 /** The test tag of the lab's block in Settings. */
 const val LAB_BLOCK_TAG: String = "lab-block"

@@ -44,6 +44,7 @@ import app.sleevesight.app.pipeline.SpellingChecks
 import app.sleevesight.app.ui.lab.LabCompare
 import app.sleevesight.app.ui.lab.LabSubject
 import app.sleevesight.app.ui.lab.labCreditText
+import app.sleevesight.app.ui.lab.labOnNow
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.CHIP_PADDING
 import app.sleevesight.app.ui.theme.DeveloperMark
@@ -186,10 +187,11 @@ private fun Answered(
     answer(shown.answer, shown.model)
     val credit = creditString(Credit(shown.model, shown.effort))
     val byTag = Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG))
-    // The prompt lab's variant that wrote it (#1003), in the debug build only.
+    // The prompt lab's variant that wrote it (#1003), in the debug build only, while the lab is on (#1388).
     val variant =
         if (BuildConfig.DEBUG &&
-            kind == SearchKind.EXPLAIN
+            kind == SearchKind.EXPLAIN &&
+            labOnNow()
         ) {
             shown.variant?.takeIf { it != LabPrompts.RELEASE }
         } else {

@@ -42,7 +42,8 @@ import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
 import kotlin.math.roundToInt
 
-private const val DISABLED_ALPHA = 0.38f
+/** A row's alpha where its setting does not apply (#999), and the prompt lab's kinds' while it is off (#1388). */
+internal const val DISABLED_ALPHA = 0.38f
 
 /** How far a row nested under another starts in. */
 internal val NESTED = 16.dp
