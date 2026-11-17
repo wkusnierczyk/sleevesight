@@ -366,7 +366,11 @@ composer-led title naming one too), so a card kept from before is written again 
 up the uncredited composer's article as a credited artist's (#1376), by the MusicBrainz id of the
 work's `composer` relationship naming them (`Resolution.credits`), never by name; its lines are about
 that composer, so the composer's insight is written from them, and the lone credited performer's
-insight leaves them out (`ItemInsights.artistLines`); a genre their article or item states goes to the
+insight leaves them out (`ItemInsights.artistLines`: a line about another artist is never the lone
+credited artist's, whatever this play's roles say, so a result kept with Puccini's article and
+replayed without MusicBrainz still keeps it apart); Wikipedia's result made while a part of the
+resolution failed (`Resolution.provisional`, a work not looked up) is not kept, so a later run that
+has the work looks the composer up; a genre their article or item states goes to the
 composer's own row, as for a credited composer (`GenreDescribed`). Wikipedia awaits MusicBrainz's
 resolution already, and the key insight is written once every source has landed, so neither waits
 for MusicBrainz any longer than before; when MusicBrainz does not answer on a play, the prompt and

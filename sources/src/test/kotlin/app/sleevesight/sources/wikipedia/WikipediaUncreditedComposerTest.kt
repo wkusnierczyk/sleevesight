@@ -13,12 +13,15 @@ import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
+import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.sources.RecordedTracks
 import app.sleevesight.sources.web.ReplayNetClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * The composer MusicBrainz names for a classical work whom the track does not credit (#1376,
@@ -62,31 +65,41 @@ class WikipediaUncreditedComposerTest {
 
     private val track = RecordedTracks.normalize("Nessun Dorma", "Luciano Pavarotti")
 
-    private fun resolution(uncredited: List<String>) =
-        Resolution(
-            outcome = Outcome.SongArticle,
-            recordingMbid = "mb-r",
-            artists = listOf(ResolvedArtist("Luciano Pavarotti", "mb-lp")),
-            credits =
-                listOf(
-                    Credit(CreditRole.COMPOSER, "Giacomo Puccini", "mb-gp"),
-                    Credit(CreditRole.LIBRETTIST, "Giuseppe Adami", "mb-ga"),
-                ),
-            roles = ArtistRoles(emptyList(), listOf("Luciano Pavarotti"), classical = true, uncredited = uncredited),
-        )
+    private fun resolution(
+        uncredited: List<String>,
+        provisional: Boolean = false,
+    ) = Resolution(
+        outcome = Outcome.SongArticle,
+        recordingMbid = "mb-r",
+        artists = listOf(ResolvedArtist("Luciano Pavarotti", "mb-lp")),
+        credits =
+            listOf(
+                Credit(CreditRole.COMPOSER, "Giacomo Puccini", "mb-gp"),
+                Credit(CreditRole.LIBRETTIST, "Giuseppe Adami", "mb-ga"),
+            ),
+        roles =
+            ArtistRoles(emptyList(), listOf("Luciano Pavarotti"), classical = true, uncredited = uncredited)
+                .takeUnless { provisional },
+        provisional = provisional,
+    )
 
-    private suspend fun stated(
+    private suspend fun lookup(
         wikidata: Wikidata,
         resolution: Resolution,
-    ): List<StatedGenre> {
+    ): SourceResult {
         val adapter =
             WikipediaSource(
                 WikipediaClient(ReplayNetClient.ok("""{"query":{"pages":[]}}""")),
                 IdentityCheck(wikidata, RecordedTracks.names, true),
                 RecordedTracks.names,
             )
-        return adapter.lookup(track, CompletableDeferred(resolution)).statedGenres
+        return adapter.lookup(track, CompletableDeferred(resolution))
     }
+
+    private suspend fun stated(
+        wikidata: Wikidata,
+        resolution: Resolution,
+    ): List<StatedGenre> = lookup(wikidata, resolution).statedGenres
 
     @Test
     fun `the uncredited composer's item is reached by the work's id and stated as theirs, after the performer's`() =
@@ -112,6 +125,21 @@ class WikipediaUncreditedComposerTest {
                 stated(wikidata, resolution(emptyList())),
             )
             assertEquals(listOf("mb-lp"), wikidata.asked)
+        }
+
+    @Test
+    fun `a result made while the work's lookup failed is not kept, so the run that has the work finds the composer`() =
+        runTest {
+            // The work not looked up: no roles, no uncredited composer; the result shown, not kept.
+            val failed = Wikidata()
+            val first = lookup(failed, resolution(emptyList(), provisional = true))
+            assertTrue(first.provisional)
+            assertEquals(listOf("mb-lp"), failed.asked)
+            // MusicBrainz answers on the next run: Puccini's article is looked up, and the result kept.
+            val recovered = Wikidata()
+            val again = lookup(recovered, resolution(listOf("Giacomo Puccini")))
+            assertFalse(again.provisional)
+            assertEquals(listOf("mb-lp", "mb-gp"), recovered.asked)
         }
 
     private companion object {

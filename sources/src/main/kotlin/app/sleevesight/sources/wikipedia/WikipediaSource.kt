@@ -131,6 +131,9 @@ class WikipediaSource(
             // (#1132): its own song's, or for a cover the original's, whose music it is.
             composed = findings.song?.let { songLines?.composed ?: ComposedDates.ofItem(it.item) },
             freshUntil = parts.mapNotNull { it.freshUntil }.minOrNull(),
+            // Not kept while a part of the resolution failed (#1376): a work not looked up names no
+            // uncredited composer, whose article a later run, with the work, looks up.
+            provisional = resolved.provisional,
             // Every credited artist's article is looked up, and its finding, found or not, is about
             // the artist (#420): only a track with no artist to look up is about the track alone.
             trackOnly = credits.isEmpty(),
