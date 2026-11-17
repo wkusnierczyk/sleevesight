@@ -255,7 +255,11 @@ class TesterReportTest {
     fun theHistoryIsNotAmongThePartsTakenAtTheTapAndIsOffAtFirst() {
         assertNull(TesterReport.part(TesterPart.HISTORY, snapshot()))
         assertFalse(TesterPart.HISTORY.includedAtFirst)
-        assertTrue(TesterPart.entries.filter { it != TesterPart.HISTORY }.all { it.includedAtFirst })
+        // The prompt lab's log (#1003) is read apart and off at first as well.
+        assertNull(TesterReport.part(TesterPart.PROMPT_LAB, snapshot()))
+        assertFalse(TesterPart.PROMPT_LAB.includedAtFirst)
+        val apart = setOf(TesterPart.HISTORY, TesterPart.PROMPT_LAB)
+        assertTrue(TesterPart.entries.filter { it !in apart }.all { it.includedAtFirst })
     }
 
     @Test
@@ -299,7 +303,7 @@ class TesterReportTest {
         assertEquals("Sleevesight tester report: 1.2.3, 2026-10-25 13:03:12 +01:00 (Europe/Warsaw)", mail.subject)
         val head = "A tester report from Sleevesight.\n\n## Note\nThe insight came late.\n\n## App\n"
         assertTrue(mail.body.startsWith(head))
-        for (part in TesterPart.entries - TesterPart.HISTORY) {
+        for (part in TesterPart.entries - TesterPart.HISTORY - TesterPart.PROMPT_LAB) {
             assertTrue(part.label, mail.body.contains("\n## ${part.label}\n"))
         }
         assertFalse(mail.body.contains("## ${TesterPart.HISTORY.label}"))
