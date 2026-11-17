@@ -27,12 +27,8 @@ import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -168,26 +164,6 @@ internal fun unbackedAt(runs: List<ShownRun>): Pair<List<ShownRun>, List<ShownRu
     val before = last.text.substring(0, end.range.first)
     val head = runs.dropLast(1) + listOfNotNull(ShownRun.Text(before).takeIf { before.isNotEmpty() })
     return head to listOf(ShownRun.Text(last.text.substring(end.range.first)))
-}
-
-/**
- * The `?` chip after a dimmed sentence's [before] runs (#954), a space before it unless they end in
- * one: on a tap, it goes to the note under the reply ([NoteFocus.go]); with no [note] to go to, it
- * only shows.
- */
-internal fun AnnotatedString.Builder.appendUnbacked(
-    before: List<ShownRun>,
-    styles: CiteStyles,
-    note: NoteFocus?,
-) {
-    val spaced = (before.lastOrNull() as? ShownRun.Text)?.text?.lastOrNull()?.isWhitespace() == true
-    if (before.isNotEmpty() && !spaced) append(' ')
-    if (note == null) {
-        withStyle(styles.unbacked) { append(UNBACKED_LABEL) }
-    } else {
-        val link = LinkAnnotation.Clickable(UNBACKED_LINK_TAG, TextLinkStyles(styles.unbacked)) { note.go() }
-        withLink(link) { append(UNBACKED_LABEL) }
-    }
 }
 
 /**

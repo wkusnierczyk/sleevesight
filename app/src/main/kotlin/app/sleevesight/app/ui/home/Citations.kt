@@ -55,10 +55,6 @@ private class ProseText(
 internal val DIMMED_STATUSES: Set<SentenceStatus> =
     setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.UNSUPPORTED)
 
-/** The paragraphs of text not checked yet, split as the grounding check splits them: on a blank line. */
-internal fun paragraphsOf(text: String): List<String> =
-    text.split(BLANK_LINE).map(String::trim).filter(String::isNotEmpty)
-
 /**
  * A checked paragraph of [grounded]: a sentence uncited, citing a line that does not exist, or citing
  * lines that do not back it ([SentenceStatus.UNSUPPORTED], #1036), is dimmed: upright, in the text's
@@ -330,6 +326,27 @@ internal fun AnnotatedString.Builder.appendText(
 }
 
 /**
+ * The `?` chip after a dimmed sentence's [before] runs (#954), a space before it unless they end in
+ * one: on a tap, it goes to the note under the reply ([NoteFocus.go]); with no [note] to go to, it
+ * only shows.
+ */
+internal fun AnnotatedString.Builder.appendUnbacked(
+    before: List<ShownRun>,
+    styles: CiteStyles,
+    note: NoteFocus?,
+) {
+    val spaced = (before.lastOrNull() as? ShownRun.Text)?.text?.lastOrNull()?.isWhitespace() == true
+    if (before.isNotEmpty() && !spaced) append(' ')
+    val label = UNBACKED_LABEL
+    if (note == null) {
+        withStyle(styles.unbacked) { append(label) }
+    } else {
+        val link = LinkAnnotation.Clickable(UNBACKED_LINK_TAG, TextLinkStyles(styles.unbacked)) { note.go() }
+        withLink(link) { append(label) }
+    }
+}
+
+/**
  * A citation as a chip, shown as [shownAs]: a line's scrolls to it ([onCite] with [id]), with no
  * fill and an outline the paragraph draws ([OUTLINE_TAG]) when it does not back its sentence
  * ([unsupported], #1036); the model's and a missing line's only say what they are. Also *Explain the
@@ -369,7 +386,6 @@ const val OUTLINE_TAG: String = "outline"
 const val UNBACKED_LINK_TAG: String = "unbacked"
 
 private val CITE_SIZE = 0.8.em
-private val BLANK_LINE = Regex("\\n\\s*\\n")
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
 
