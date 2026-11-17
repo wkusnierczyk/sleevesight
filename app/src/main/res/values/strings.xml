@@ -65,12 +65,12 @@
     <string name="settings_ai_model_of">%1$s model</string>
     <string name="settings_ai_model_default">%1$s (default)</string>
     <string name="settings_ai_effort_of">%1$s reasoning effort</string>
-    <string name="settings_ai_effort_summary">How much the model may reason before it writes. Less is faster and cheaper.</string>
+    <string name="settings_ai_effort_summary">How much the model may reason before it writes. Less is faster and cheaper. The credit under a text (“Written by …”) names the effort only when it is not the default.</string>
     <string name="settings_effort_minimal">Minimal</string>
     <string name="settings_effort_low">Low</string>
     <string name="settings_effort_medium">Medium</string>
     <string name="settings_effort_high">High</string>
-    <string name="settings_effort_provider_default">The service’s default</string>
+    <string name="settings_effort_provider_default">Set by the service</string>
 
     <string name="settings_key_absent">Not set</string>
     <string name="settings_key_saved">Saved</string>
