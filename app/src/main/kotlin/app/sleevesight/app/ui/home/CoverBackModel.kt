@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.pipeline.TracklistState
 import app.sleevesight.core.model.NowPlaying
@@ -40,18 +41,25 @@ internal sealed interface CoverBack {
      * MusicBrainz has several albums of the name the player gives, and nothing tells which one is
      * playing (#1062), the playing recording on none of them, on several, or not known (#1078):
      * "MusicBrainz reports several albums of this name for this artist. Sleevesight could not decide
-     * which one this is." ([albumPick]).
+     * which one this is." ([albumPick]), with *See the {n} albums*, [albums], for the listener to
+     * choose (#1080).
      */
-    data object Ambiguous : CoverBack
+    data class Ambiguous(
+        val albums: SameName? = null,
+    ) : CoverBack
 
     /**
      * The album's [discs], each with its tracks, and the track [playing] among them, when found; of
-     * [media] in the release, those with no track left out.
+     * [media] in the release, those with no track left out. Of several [albums] of its name, [pickedBy]
+     * says who picked it (#1080), above the tracks with *Change*; null when nothing needed picking, or
+     * the playing recording told them apart.
      */
     data class Found(
         val discs: List<BackDisc>,
         val playing: TrackAt?,
         val media: Int = discs.size,
+        val albums: SameName? = null,
+        val pickedBy: PickedBy? = null,
     ) : CoverBack
 }
 
@@ -99,18 +107,26 @@ internal fun albumIdentity(header: NowPlaying): String? =
 /**
  * The tracklist to ask for [track] beside [header] (#984): the album's group ([albumPick]), with the
  * others its name names, and the playing recording ([playingRecording]), whose release is shown; of
- * several and none picked, the one the recording is on (#1078). Null with no group, or several and no
+ * several, the one the listener chose, of [choices] (#1080); of several and none picked, the one the
+ * recording is on (#1078). Null with no group, or several and no
  * recording known.
  */
 internal fun tracklistKey(
     track: TrackState?,
     header: NowPlaying,
-): TracklistKey? =
-    when (val pick = albumPick(track, header)) {
-        is AlbumPick.Groups -> pick.key(playingRecording(track))
-        is AlbumPick.Ambiguous -> pick.key(playingRecording(track))
-        null -> null
+    choices: Map<String, AlbumChoice> = emptyMap(),
+): TracklistKey? {
+    val chosen = sameName(track, header, choices)?.chosen
+    return when {
+        chosen != null -> TracklistKey(chosen, playingRecording(track))
+        else ->
+            when (val pick = albumPick(track, header)) {
+                is AlbumPick.Groups -> pick.key(playingRecording(track))
+                is AlbumPick.Ambiguous -> pick.key(playingRecording(track))
+                null -> null
+            }
     }
+}
 
 /**
  * What the back shows for [track] beside [header] (#984), with [musicBrainzOn] as *Sources* has it,
@@ -120,64 +136,71 @@ internal fun tracklistKey(
  * groups and none is picked, the one of them the recording is on, else [CoverBack.Ambiguous]
  * ([albumPick]). While a new song of the album is still looked up, the album's tracklist last found
  * shows, its mark moved, rather than "Looking" (not for several none picked, which may differ).
+ * Of several albums of the name, the one the listener chose, of [choices] (#1080), shows in place of
+ * the pick, said to be theirs, before the song's own lookup is read: another song of the album that
+ * MusicBrainz does not find still shows it; the one picked by date is said to be so ([PickedBy]).
  */
 internal fun coverBack(
     track: TrackState?,
     header: NowPlaying,
     musicBrainzOn: Boolean,
     states: Map<TracklistKey, TracklistState>,
+    choices: Map<String, AlbumChoice> = emptyMap(),
 ): CoverBack {
-    if (!musicBrainzOn) return CoverBack.Off
-    return when (NoDates.of(track)) {
-        NoDates.LOOKING -> CoverBack.Looking
-        NoDates.OFF -> CoverBack.Off
-        NoDates.UNREACHABLE -> CoverBack.Unreachable(key = null)
-        NoDates.NOT_FOUND -> CoverBack.NotFound
-        NoDates.NO_DATES ->
-            when (val pick = albumPick(track, header)) {
-                null -> CoverBack.NotFound
-                is AlbumPick.Ambiguous ->
-                    pick.key(playingRecording(track))?.let { tracklistBack(it, states, track, header) }
-                        ?: CoverBack.Ambiguous
-                is AlbumPick.Groups -> tracklistBack(pick.key(playingRecording(track)), states, track, header)
+    val none = NoDates.of(track)
+    // The listener's choice for the album and its artist holds whatever this song's own lookup found.
+    val chosen = sameName(track, header, choices)?.takeIf { it.chosen != null }
+    return when {
+        !musicBrainzOn || none == NoDates.OFF -> CoverBack.Off
+        chosen != null -> chosenBack(chosen, states, track, header)
+        else ->
+            when (none) {
+                NoDates.LOOKING -> CoverBack.Looking
+                NoDates.OFF -> CoverBack.Off
+                NoDates.UNREACHABLE -> CoverBack.Unreachable(key = null)
+                NoDates.NOT_FOUND -> CoverBack.NotFound
+                NoDates.NO_DATES -> pickedBack(track, header, states, choices)
             }
     }
 }
 
 // [key]'s state; while it is still looked up, the album's tracklist found last for another song of it,
 // when its group is picked: of several none picked, another song's may be another album's.
-private fun stateOf(
+internal fun stateOf(
     key: TracklistKey,
     states: Map<TracklistKey, TracklistState>,
 ): TracklistState? {
     val state = states[key]
     return if (key.group != null && (state == null || state == TracklistState.Looking)) {
-        states.entries.lastOrNull { it.key.group == key.group && it.value is TracklistState.Found }?.value ?: state
+        // Only a tracklist of that group: a pick's entry may hold another group's of the name (#1080).
+        states.entries
+            .lastOrNull { (other, found) ->
+                other.group == key.group &&
+                    found is TracklistState.Found &&
+                    found.tracklist.group
+                        ?.mbid
+                        .let { it == null || it == key.group }
+            }?.value ?: state
     } else {
         state
     }
 }
 
 // What the back shows for the album [key] once the track is found: its tracklist as looked up, of [states].
-private fun tracklistBack(
+// [same]: the albums of the name, when it names several, for a back that cannot tell them apart.
+internal fun tracklistBack(
     key: TracklistKey,
     states: Map<TracklistKey, TracklistState>,
     track: TrackState?,
     header: NowPlaying,
+    same: SameName?,
 ): CoverBack =
     when (val state = stateOf(key, states)) {
         null, TracklistState.Looking -> CoverBack.Looking
         TracklistState.Failed -> CoverBack.Unreachable(key)
         TracklistState.NotFound -> CoverBack.NotFound
-        TracklistState.Unclear -> CoverBack.Ambiguous
-        is TracklistState.Found -> {
-            val discs =
-                state.tracklist.media
-                    .filter { it.tracks.isNotEmpty() }
-                    .map { BackDisc(it.position, it.tracks) }
-            val media = state.tracklist.media.size
-            if (discs.isEmpty()) CoverBack.NotFound else CoverBack.Found(discs, playingIn(discs, track, header), media)
-        }
+        TracklistState.Unclear -> CoverBack.Ambiguous(same)
+        is TracklistState.Found -> found(state.tracklist.media, track, header) ?: CoverBack.NotFound
     }
 
 /**
@@ -185,7 +208,7 @@ private fun tracklistBack(
  * MusicBrainz's result); else the first whose title is the track's, as [NameMatcher.key] reads titles.
  * Null when neither is on the album's release.
  */
-private fun playingIn(
+internal fun playingIn(
     discs: List<BackDisc>,
     track: TrackState?,
     header: NowPlaying,
@@ -197,7 +220,7 @@ private fun playingIn(
 }
 
 // The playing recording, as resolved, else as kept with MusicBrainz's result; null when not known.
-private fun playingRecording(track: TrackState?): String? =
+internal fun playingRecording(track: TrackState?): String? =
     track?.resolution?.recordingMbid ?: keptResult(track)?.recordingTags?.mbid
 
 private fun find(
@@ -212,7 +235,7 @@ private fun find(
 }
 
 // MusicBrainz's result for [track], as the run gave it or the retrieval cache kept it.
-private fun keptResult(track: TrackState?): SourceResult? =
+internal fun keptResult(track: TrackState?): SourceResult? =
     (track?.sources?.get(SourceId.MUSICBRAINZ) as? SourceState.Done)?.result
 
 // Names compared as the pipeline compares them.
