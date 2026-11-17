@@ -98,23 +98,22 @@ internal fun SecretsSection(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    // Actions, so rows with a button at their right (#1365, as #1126 has them), labelled with the
-    // action's name; *Purge keys* deletes, so its button is in the error colour.
-    val loadKeys = stringResource(R.string.settings_scan_keys)
+    // Actions, so rows with a button at their right (#1365, as #1126 has them), each labelled with
+    // a short verb, as *Clear history*'s *Clear*, and read by the row's name; *Purge keys* deletes,
+    // so its button is in the error colour.
     ButtonRow(
-        title = loadKeys,
+        title = stringResource(R.string.settings_scan_keys),
         summary = stringResource(R.string.settings_scan_keys_value),
-        label = loadKeys,
+        label = stringResource(R.string.settings_scan_keys_button),
         tag = LOAD_KEYS_BUTTON_TAG,
     ) { open(SettingsDialog.LoadKeys) }
     LoadKeysMore()
     if (keys.anyStored || keys.offerReset) {
         val why = if (keys.offerReset) R.string.settings_reset_keys_value else R.string.settings_remove_all_keys_value
-        val purgeKeys = stringResource(R.string.settings_remove_all_keys)
         ButtonRow(
-            title = purgeKeys,
+            title = stringResource(R.string.settings_remove_all_keys),
             summary = stringResource(why),
-            label = purgeKeys,
+            label = stringResource(R.string.settings_remove_all_keys_button),
             tag = PURGE_KEYS_BUTTON_TAG,
             destructive = true,
         ) { open(SettingsDialog.PurgeKeys) }

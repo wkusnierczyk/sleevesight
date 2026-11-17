@@ -9,7 +9,6 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
-import app.sleevesight.core.settings.Crossfade
 import kotlin.time.Duration
 
 @Composable
@@ -17,17 +16,6 @@ internal fun daysLabel(lifetime: Duration): String {
     val days = lifetime.inWholeDays.toInt()
     return pluralStringResource(R.plurals.settings_days, days, days)
 }
-
-@Composable
-internal fun crossfadeLabel(crossfade: Crossfade): String =
-    when (crossfade) {
-        Crossfade.Autodetect -> stringResource(R.string.settings_crossfade_auto)
-        is Crossfade.Fixed ->
-            stringResource(
-                R.string.settings_crossfade_seconds,
-                crossfade.value.inWholeSeconds.toInt(),
-            )
-    }
 
 /** What the screen says of a stored key: whether there is one, never what it is. */
 @Composable

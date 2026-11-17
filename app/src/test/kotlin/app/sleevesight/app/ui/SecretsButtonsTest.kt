@@ -47,7 +47,8 @@ import kotlin.math.abs
 
 /**
  * *Secrets*' actions as rows with a button at their right (#1365, as #1126 has *Clear history*):
- * *Load keys* and *Purge keys*, each button labelled with the action's name and read by it, with
+ * *Load keys* and *Purge keys*, each button labelled with a short verb (*Load*, *Purge*, as
+ * *Clear history*'s *Clear*) and read by the row's name ("Load keys, button"), with
  * the row's description beside it as before; *Purge keys*' button, which deletes, in the error
  * colour, *Load keys*' not. Native graphics, for the pixels.
  */
@@ -128,7 +129,7 @@ class SecretsButtonsTest {
     @Test
     fun loadKeysIsARowWithAButtonNamedForItNotInTheErrorColour() =
         showSecrets {
-            assertEquals(Triple(Role.Button, "Load keys", "Load keys"), button(LOAD_KEYS_BUTTON_TAG))
+            assertEquals(Triple(Role.Button, "Load keys", "Load"), button(LOAD_KEYS_BUTTON_TAG))
             val color = ink(LOAD_KEYS_BUTTON_TAG)
             assertTrue("not red: $color", !red(color))
             // No key stored: nothing to purge.
@@ -142,7 +143,7 @@ class SecretsButtonsTest {
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithTag(PURGE_KEYS_BUTTON_TAG).fetchSemanticsNodes().isNotEmpty()
             }
-            assertEquals(Triple(Role.Button, "Purge keys", "Purge keys"), button(PURGE_KEYS_BUTTON_TAG))
+            assertEquals(Triple(Role.Button, "Purge keys", "Purge"), button(PURGE_KEYS_BUTTON_TAG))
             assertTrue(shows(text(R.string.settings_remove_all_keys_value)))
             val color = ink(PURGE_KEYS_BUTTON_TAG)
             assertTrue("red: $color", red(color))

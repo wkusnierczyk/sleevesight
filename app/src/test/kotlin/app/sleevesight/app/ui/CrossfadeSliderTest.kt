@@ -47,7 +47,8 @@ import kotlin.time.Duration.Companion.seconds
  * *Insights* → *Crossfade* as a stepped slider (#1365, as #1126 has a choice from a range):
  * *Autodetect*, then 0 to 15 seconds, seventeen stops, labelled only at the ends; the value at the
  * title's right; read by a screen reader by name and value in words; a move stored at once; dimmed
- * and still while *Show insights* is off; a stored value between the stops shown at the nearest.
+ * and still while *Show insights* is off; a stored value between the stops (a fraction of a
+ * second) shown and read as stored, not rewritten.
  */
 @RunWith(RobolectricTestRunner::class)
 class CrossfadeSliderTest {
@@ -137,10 +138,13 @@ class CrossfadeSliderTest {
         }
 
     @Test
-    fun aStoredCrossfadeBetweenTheStopsShowsAtTheNearest() =
-        showInsights({ it.copy(crossfade = Crossfade.Fixed(7400.milliseconds)) }) {
-            assertEquals(listOf("7 s"), texts(CROSSFADE_VALUE_TAG))
-            assertEquals("Crossfade" to "7 seconds", read())
+    fun aStoredCrossfadeBetweenTheStopsIsShownAsStoredAndNotRewritten() =
+        showInsights({ it.copy(crossfade = Crossfade.Fixed(7600.milliseconds)) }) {
+            // The thumb at the nearest stop, the value shown and read as stored.
+            assertEquals(listOf("7.6 s"), texts(CROSSFADE_VALUE_TAG))
+            assertEquals("Crossfade" to "7.6 seconds", read())
+            compose.waitForIdle()
+            assertEquals(Crossfade.Fixed(7600.milliseconds), settings.now().crossfade)
         }
 
     @Test
