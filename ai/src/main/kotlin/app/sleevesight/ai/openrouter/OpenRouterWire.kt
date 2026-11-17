@@ -39,13 +39,20 @@ internal data class WireUsage(
 
 /**
  * An error, in an error response's body or a chunk: its [code], the HTTP status it stands for (a
- * number, or a string from a provider), and its [message], read only to tell a free model's daily
- * limit and an unknown model apart, never logged.
+ * number, or a string from a provider), its [message], read only to tell a free model's daily
+ * limit, a budget spent and an unknown model apart, never logged, and its [metadata].
  */
 @Serializable
 internal data class WireError(
     val code: JsonPrimitive? = null,
     val message: String? = null,
+    val metadata: WireErrorMetadata? = null,
+)
+
+/** What a budget's refusal adds: which budget was spent (`limit_source`). */
+@Serializable
+internal data class WireErrorMetadata(
+    @SerialName("limit_source") val limitSource: String? = null,
 )
 
 @Serializable

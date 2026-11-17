@@ -39,6 +39,7 @@ class SignInCallbacks(
         if (!handles(activity)) return
         login().pending?.let { pending ->
             outState.putString(VERIFIER, pending.verifier)
+            outState.putString(STATE, pending.state)
             outState.putLong(STARTED, pending.started.toEpochMilliseconds())
         }
     }
@@ -60,21 +61,34 @@ class SignInCallbacks(
         saved: Bundle,
     ) {
         val verifier = saved.getString(VERIFIER) ?: return
-        login.restore(OpenRouterLogin.Pending(verifier, Instant.fromEpochMilliseconds(saved.getLong(STARTED))))
+        val state = saved.getString(STATE) ?: return
+        login.restore(OpenRouterLogin.Pending(verifier, state, Instant.fromEpochMilliseconds(saved.getLong(STARTED))))
     }
 
-    // [intent], if it is OpenRouter's answer at the sign-in's callback: its code, or none.
+    // [intent], if it is OpenRouter's answer at the sign-in's callback: its code, or none, with the
+    // state it carried back. Not an intent the activity was started with again from Recents, which
+    // still holds an answer taken before.
     private fun take(
         login: OpenRouterLogin,
         intent: Intent?,
     ) {
-        val data = intent?.data ?: return
-        if (OpenRouterLogin.isCallback(data.toString(), login.callback)) login.callback(data.getQueryParameter("code"))
+        val data =
+            intent
+                ?.takeIf { it.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0 }
+                ?.data
+                ?.takeIf { OpenRouterLogin.isCallback(it.toString(), login.callback) }
+                ?: return
+        val answer = OpenRouterLogin.answerOf(data.encodedQuery)
+        login.callback(answer[CODE], answer[OpenRouterLogin.STATE])
     }
 
     private companion object {
         // A sign-in under way, in the saved state: its verifier and when it began.
         const val VERIFIER = "openrouter.verifier"
         const val STARTED = "openrouter.started"
+        const val STATE = "openrouter.state"
+
+        // The code in OpenRouter's answer.
+        const val CODE = "code"
     }
 }

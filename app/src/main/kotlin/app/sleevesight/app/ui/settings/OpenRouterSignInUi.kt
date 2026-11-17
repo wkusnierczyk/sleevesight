@@ -12,7 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -30,7 +30,7 @@ import app.sleevesight.app.secrets.SignInStep
 import app.sleevesight.app.ui.ExternalLink
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.logo.Busy
-import app.sleevesight.app.ui.openWebLink
+import app.sleevesight.app.ui.openInOwnTask
 import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.linkedParts
@@ -164,14 +164,14 @@ internal fun failureLine(why: SignInFailure): Int =
 // *Sign in with OpenRouter*, what it does, its terms, and the link to the key under *Secrets*.
 @Composable
 private fun SignInOffer(ui: OpenRouterSignInUi?) {
-    val uris = LocalUriHandler.current
+    val context = LocalContext.current
     val style = MaterialTheme.typography.bodySmall
     val color = MaterialTheme.colorScheme.onSurface
     Button(
         onClick = {
             ui?.let {
                 it.dismiss()
-                if (!openWebLink(uris, it.start())) it.notOpened()
+                if (!openInOwnTask(context, it.start())) it.notOpened()
             }
         },
         enabled = ui != null,

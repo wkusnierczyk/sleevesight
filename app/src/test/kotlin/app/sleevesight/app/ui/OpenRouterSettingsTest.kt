@@ -87,7 +87,7 @@ class OpenRouterSettingsTest {
         object : KeySignIn {
             override val callback = "app.sleevesight://openrouter"
 
-            override fun begin() = SignInStart("verifier", "https://openrouter.ai/auth?code_challenge=c")
+            override fun begin() = SignInStart("verifier", "state", "https://openrouter.ai/auth?code_challenge=c")
 
             override suspend fun exchange(
                 code: String,
@@ -163,6 +163,8 @@ class OpenRouterSettingsTest {
             onActivity { started = shadowOf(it).nextStartedActivity }
             assertEquals(Intent.ACTION_VIEW, started?.action)
             assertEquals("https://openrouter.ai/auth?code_challenge=c", started?.dataString)
+            // In a task of its own, so the answer comes back to this activity, not a second one.
+            assertTrue(started!!.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
             assertTrue(login.pending != null)
         }
 

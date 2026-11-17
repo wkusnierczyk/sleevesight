@@ -208,6 +208,22 @@ class OpenRouterProviderTest {
         }
 
     @Test
+    fun `a key past its spending limit is billing, never a key refused, as an answer or in the stream`() =
+        runTest {
+            val limit = """{"error":{"code":403,"message":"Key limit exceeded"}}"""
+            val budget =
+                """{"error":{"code":403,"message":"Budget spent","metadata":{"limit_source":"openrouter_key_limit"}}}"""
+            for (body in listOf(limit, budget)) {
+                val (answered, _) = events { response(403, body) }
+                assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), answered, body)
+                val (streamed, _) = events { ok(sse(body)) }
+                assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), streamed, body)
+            }
+            val (credit, _) = events { response(402, """{"error":{"code":402,"message":"Insufficient credits"}}""") }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), credit)
+        }
+
+    @Test
     fun `a 403 to the model list is a key refused`() =
         runTest {
             val forbidden = """{"error":{"code":403,"message":"Forbidden"}}"""

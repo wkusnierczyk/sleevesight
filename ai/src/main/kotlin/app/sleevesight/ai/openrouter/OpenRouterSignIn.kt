@@ -19,7 +19,8 @@ import kotlin.io.encoding.Base64
 /**
  * Signing in with OpenRouter (#1157), its OAuth flow with PKCE
  * (https://openrouter.ai/docs/guides/overview/auth/oauth): [begin] makes a new `code_verifier` of
- * [VERIFIER_BYTES] random bytes, and the page to open, `/auth` with the `callback_url`, the
+ * [VERIFIER_BYTES] random bytes and a state of [STATE_BYTES], and the page to open, `/auth` with the
+ * `callback_url` (the callback with the state, `?s=`, which OpenRouter's answer carries back), the
  * `code_challenge` (the verifier's SHA-256, base64url) and `code_challenge_method=S256`, and
  * `key_label` naming the key on the user's account; [exchange] trades the code OpenRouter sends to
  * the callback, with the verifier, for the key (`POST /api/v1/auth/keys`). The verifier goes only
@@ -47,14 +48,15 @@ class OpenRouterSignIn(
 
     override fun begin(): SignInStart {
         val verifier = BASE64URL.encode(random(VERIFIER_BYTES))
+        val state = BASE64URL.encode(random(STATE_BYTES))
         val query =
             listOf(
-                "callback_url" to callback,
+                "callback_url" to "$callback?$STATE=$state",
                 "code_challenge" to challengeOf(verifier, hasher),
                 "code_challenge_method" to METHOD,
                 "key_label" to KEY_LABEL,
             ).joinToString("&") { (name, value) -> "$name=${encoded(value)}" }
-        return SignInStart(verifier, "$baseUrl/auth?$query")
+        return SignInStart(verifier, state, "$baseUrl/auth?$query")
     }
 
     override suspend fun exchange(
@@ -92,6 +94,12 @@ class OpenRouterSignIn(
     companion object {
         /** Where OpenRouter sends the code: the app's own scheme, which its main activity takes. */
         const val CALLBACK: String = "app.sleevesight://openrouter"
+
+        /** The callback's parameter that carries the sign-in's state back. */
+        const val STATE: String = "s"
+
+        /** 16 bytes of state: 22 characters, enough that no other sign-in's answer matches. */
+        const val STATE_BYTES: Int = 16
 
         /** 32 bytes: a 43-character verifier, as RFC 7636 asks (43 to 128). */
         const val VERIFIER_BYTES: Int = 32

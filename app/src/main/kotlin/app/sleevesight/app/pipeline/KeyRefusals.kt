@@ -47,13 +47,16 @@ class KeyRefusals {
     /** The services whose saved key was refused. */
     val refused: Flow<Set<ProviderId>> = book.map { it.refused() }.distinctUntilChanged()
 
-    /** [provider], with its refusals heard: its calls' ends and its model lists. */
+    /**
+     * [provider], with its refusals heard: its calls' ends and its model lists. Only a call that
+     * completes lifts a mark: a model list is no proof, since OpenRouter's is public and lists
+     * whatever key is sent.
+     */
     fun watching(provider: AiProvider): AiProvider =
         object : AiProvider by provider {
             override suspend fun models(key: Secret): ModelList =
                 provider.models(key).also { list ->
                     if (list is ModelList.Failed && list.kind == AiErrorKind.UNAUTHORIZED) mark(provider.id, key)
-                    if (list is ModelList.Listed) lift(provider.id, key)
                 }
 
             override fun stream(

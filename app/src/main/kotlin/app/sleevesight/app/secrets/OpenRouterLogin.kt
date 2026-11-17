@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -72,9 +72,10 @@ class OpenRouterLogin(
     private val scope: CoroutineScope,
     private val clock: Clock = Clock.System,
 ) {
-    /** A sign-in under way: its verifier and when it began. */
+    /** A sign-in under way: its verifier, its state (which its answer carries back), and when it began. */
     class Pending(
         val verifier: String,
+        val state: String,
         val started: Instant,
     ) {
         override fun toString(): String = "Pending(started=$started)"
@@ -96,7 +97,7 @@ class OpenRouterLogin(
     /** Begins a sign-in: the page to open in the browser. */
     fun start(): String {
         val begun = signIn.begin()
-        pending = Pending(begun.verifier, clock.now())
+        pending = Pending(begun.verifier, begun.state, clock.now())
         now.value = SignInStep.InBrowser
         return begun.url
     }
@@ -120,10 +121,15 @@ class OpenRouterLogin(
 
     /**
      * What came to the callback: a [code], or none (OpenRouter's page sent back no code: not
-     * approved). Ignored with no sign-in under way.
+     * approved), with the [state] it carried back. Ignored with no sign-in under way, or with another
+     * sign-in's state (or none), which the one under way still waits past.
      */
-    fun callback(code: String?) {
-        val under = pending ?: return
+    @Suppress("TooGenericExceptionCaught") // Any failure ends the sign-in as one not finished.
+    fun callback(
+        code: String?,
+        state: String?,
+    ) {
+        val under = pending?.takeIf { it.state == state } ?: return
         pending = null
         if (code.isNullOrBlank()) {
             now.value = SignInStep.Failed(SignInFailure.DECLINED)
@@ -132,22 +138,36 @@ class OpenRouterLogin(
         now.value = SignInStep.Exchanging
         scope.launch {
             now.value =
-                when (val exchange = signIn.exchange(code, under.verifier)) {
-                    is KeyExchange.Key -> {
-                        if (save(exchange.key)) SignInStep.Idle else SignInStep.Failed(SignInFailure.REFUSED)
-                    }
-
-                    KeyExchange.Offline -> {
-                        SignInStep.Failed(SignInFailure.OFFLINE)
-                    }
-
-                    KeyExchange.Refused -> {
-                        val late = clock.now() - under.started >= CODE_LIFETIME
-                        SignInStep.Failed(if (late) SignInFailure.EXPIRED else SignInFailure.REFUSED)
-                    }
+                try {
+                    finish(code, under)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // Whatever else fails, the sign-in did not finish: it says so, and can be tried again.
+                    SignInStep.Failed(SignInFailure.REFUSED)
                 }
         }
     }
+
+    // The key for [code], saved: where the sign-in [under] way ends.
+    private suspend fun finish(
+        code: String,
+        under: Pending,
+    ): SignInStep =
+        when (val exchange = signIn.exchange(code, under.verifier)) {
+            is KeyExchange.Key -> {
+                if (save(exchange.key)) SignInStep.Idle else SignInStep.Failed(SignInFailure.REFUSED)
+            }
+
+            KeyExchange.Offline -> {
+                SignInStep.Failed(SignInFailure.OFFLINE)
+            }
+
+            KeyExchange.Refused -> {
+                val late = clock.now() - under.started >= CODE_LIFETIME
+                SignInStep.Failed(if (late) SignInFailure.EXPIRED else SignInFailure.REFUSED)
+            }
+        }
 
     /**
      * The app is in front again. With the browser still open for a sign-in and no code come, it was
@@ -166,8 +186,22 @@ class OpenRouterLogin(
     }
 
     companion object {
+        /** The callback's parameter that carries a sign-in's state back (`OpenRouterSignIn.STATE`). */
+        const val STATE: String = "s"
+
         /** How long OpenRouter takes a code: ten minutes from its issue. */
         val CODE_LIFETIME: Duration = 10.minutes
+
+        /**
+         * The parameters of a callback's [query] (`s=…&code=…`), each value as given; split at `?`
+         * too, should OpenRouter add its own `?code=` after the state the callback already carries.
+         */
+        fun answerOf(query: String?): Map<String, String> =
+            query
+                .orEmpty()
+                .split('&', '?')
+                .filter { '=' in it }
+                .associate { it.substringBefore('=') to it.substringAfter('=') }
 
         /** Whether [uri] (as a string) is a sign-in's callback at [callback]. */
         fun isCallback(
@@ -184,6 +218,7 @@ class OpenRouterLogin(
  * finish, and the service on before stays on; the sign-in then says OpenRouter did not hand over the
  * key, to try again.
  */
+@Suppress("TooGenericExceptionCaught") // Any failure of the switch ends the sign-in as one not finished.
 suspend fun saveAndSwitchOn(
     store: SecretStore,
     key: Secret,
@@ -193,7 +228,10 @@ suspend fun saveAndSwitchOn(
     return try {
         switchOn()
         true
-    } catch (_: IOException) {
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        // Whatever stops the switch (storage, or anything else), the sign-in did not finish.
         store.clear(SecretId.OPENROUTER)
         false
     }

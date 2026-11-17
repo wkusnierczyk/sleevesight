@@ -60,7 +60,9 @@ class OpenRouterSignInTest {
         assertEquals(43, start.verifier.length)
         assert(start.url.startsWith("https://openrouter.ai/auth?"))
         val query = query(start.url)
-        assertEquals("app.sleevesight://openrouter", query["callback_url"])
+        // The callback with the sign-in's state, which the answer carries back.
+        assertEquals("app.sleevesight://openrouter?s=${start.state}", query["callback_url"])
+        assertEquals(22, start.state.length)
         assertEquals(OpenRouterSignIn.challengeOf(start.verifier, JvmHasher), query["code_challenge"])
         assertEquals("S256", query["code_challenge_method"])
         assertEquals("Sleevesight", query["key_label"])

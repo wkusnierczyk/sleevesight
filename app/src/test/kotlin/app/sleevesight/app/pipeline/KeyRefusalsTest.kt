@@ -61,6 +61,17 @@ class KeyRefusalsTest {
         }
 
     @Test
+    fun aModelListAfterARefusalKeepsTheMark() =
+        runTest {
+            // OpenRouter's model list is public: listing it proves nothing of the key.
+            val refusals = KeyRefusals()
+            val client = Answering(refused, ModelList.Listed(emptyList()))
+            refusals.watching(client).stream(request, Secret("old")).toList()
+            refusals.watching(client).models(Secret("old"))
+            assertEquals(setOf(ProviderId.OPENROUTER), refusals.refused.first())
+        }
+
+    @Test
     fun anotherErrorMarksNothing() =
         runTest {
             val refusals = KeyRefusals()

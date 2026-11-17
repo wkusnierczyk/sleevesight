@@ -267,44 +267,70 @@ internal fun kindOf(error: NetError): AiErrorKind =
 
 /** The kind of an error response `:net` passes on (400, 402, 404, 429 and the like), by its status and body. */
 internal fun kindOf(response: NetResponse): AiErrorKind =
-    kindOf(response.status, decode<WireErrorBody>(response.body)?.error?.message)
+    kindOf(response.status, decode<WireErrorBody>(response.body)?.error)
 
 /**
  * The kind of an error with [status] (an error response's, or the code of an error in the stream),
- * and its [message], which tells a free model's daily allowance from a rate limit, and a model
- * OpenRouter does not know from another request it refused.
+ * and its [error], whose message tells a free model's daily allowance from a rate limit, and a model
+ * OpenRouter does not know from another request it refused. A 403 for a budget spent ([limited]:
+ * the key's own limit, its workspace's or a guardrail's, as OpenRouter's errors page has it) is
+ * [AiErrorKind.BILLING], as a 402 for credits is: read before the key, so a key past its limit is
+ * never taken for refused.
  */
 internal fun kindOf(
     status: Int?,
-    message: String?,
-): AiErrorKind =
-    when (status) {
-        BAD_REQUEST -> if (namesModel(message)) AiErrorKind.MODEL_NOT_FOUND else AiErrorKind.INVALID_REQUEST
-        UNAUTHORIZED, FORBIDDEN -> AiErrorKind.UNAUTHORIZED
+    error: WireError?,
+): AiErrorKind {
+    val message = error?.message
+    return when (status) {
+        BAD_REQUEST -> badRequest(message)
+        FORBIDDEN -> if (limited(error)) AiErrorKind.BILLING else AiErrorKind.UNAUTHORIZED
+        UNAUTHORIZED -> AiErrorKind.UNAUTHORIZED
         PAYMENT_REQUIRED -> AiErrorKind.BILLING
         NOT_FOUND -> AiErrorKind.MODEL_NOT_FOUND
         REQUEST_TIMEOUT -> AiErrorKind.TIMED_OUT
         CONTENT_TOO_LARGE -> AiErrorKind.REQUEST_TOO_LARGE
-        TOO_MANY_REQUESTS ->
-            if (message?.contains(OpenRouterProvider.FREE_DAILY) == true) {
-                AiErrorKind.QUOTA_EXHAUSTED
-            } else {
-                AiErrorKind.RATE_LIMITED
-            }
+        TOO_MANY_REQUESTS -> tooMany(message)
         UNAVAILABLE -> AiErrorKind.OVERLOADED
         null -> AiErrorKind.UNEXPECTED_RESPONSE
         else -> if (status >= SERVER_ERRORS) AiErrorKind.SERVER else AiErrorKind.UNEXPECTED_RESPONSE
     }
+}
+
+// A 400: a model OpenRouter does not know ([namesModel]), else a request it refused.
+private fun badRequest(message: String?): AiErrorKind =
+    if (namesModel(message)) AiErrorKind.MODEL_NOT_FOUND else AiErrorKind.INVALID_REQUEST
+
+// A 429: a free model's daily allowance used up ([OpenRouterProvider.FREE_DAILY]), else a rate limit.
+private fun tooMany(message: String?): AiErrorKind =
+    if (message?.contains(OpenRouterProvider.FREE_DAILY) ==
+        true
+    ) {
+        AiErrorKind.QUOTA_EXHAUSTED
+    } else {
+        AiErrorKind.RATE_LIMITED
+    }
 
 /**
- * Whether an error with [status] and [message] is a moderation refusal (#1157): a 403 whose message
- * does not name the key. OpenRouter answers 403 when the model's moderation flags the prompt; that is
- * the prompt declined, not the key refused, so the key is never marked refused for it.
+ * Whether an error with [status] and [error] is a moderation refusal (#1157): a 403 for neither a
+ * budget spent ([limited]) nor the key. OpenRouter answers 403 when the model's moderation flags the
+ * prompt, or a guardrail blocks it; that is the prompt declined, not the key refused, so the key is
+ * never marked refused for it.
  */
 internal fun moderated(
     status: Int?,
-    message: String?,
-): Boolean = status == FORBIDDEN && !namesKey(message)
+    error: WireError?,
+): Boolean = status == FORBIDDEN && !limited(error) && !namesKey(error?.message)
+
+/**
+ * Whether [error] is a budget spent: its `metadata.limit_source` names one
+ * (`openrouter_key_limit`, `openrouter_workspace_budget`, `openrouter_guardrail_budget`), or its
+ * message speaks of a limit ("Key limit exceeded").
+ */
+internal fun limited(error: WireError?): Boolean =
+    error?.metadata?.limitSource != null || error?.message?.let(LIMIT_WORD::containsMatchIn) == true
+
+private val LIMIT_WORD = Regex("\\blimit", RegexOption.IGNORE_CASE)
 
 // Whether [message] is about the API key (a word "key", not "keyword").
 private fun namesKey(message: String?): Boolean = message != null && KEY_WORD.containsMatchIn(message)

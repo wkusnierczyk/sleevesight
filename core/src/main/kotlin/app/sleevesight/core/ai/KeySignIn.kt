@@ -12,7 +12,7 @@ interface KeySignIn {
     /** Where the service sends the code back to the app: the app's own scheme. */
     val callback: String
 
-    /** A new sign-in: its verifier, made for it alone, and the page to open. */
+    /** A new sign-in: its verifier and its state, made for it alone, and the page to open. */
     fun begin(): SignInStart
 
     /** The key for [code], with the [verifier] of the sign-in that asked for it; or why there is none. */
@@ -22,9 +22,14 @@ interface KeySignIn {
     ): KeyExchange
 }
 
-/** A sign-in begun ([KeySignIn.begin]): the [verifier] to keep, and the page to open ([url]). */
+/**
+ * A sign-in begun ([KeySignIn.begin]): the [verifier] to keep; its [state], a random value the
+ * callback carries back (`s`), so an answer is taken only for the sign-in that asked for it; and the
+ * page to open ([url]).
+ */
 class SignInStart(
     val verifier: String,
+    val state: String,
     val url: String,
 ) {
     /** Never the verifier. */

@@ -102,7 +102,7 @@ internal class ChatStream(
     // An error answer: a moderation refusal (a 403 not about the key, `moderated`) ends as a refusal
     // does, so the key is never taken for refused; any other with its kind.
     private fun refusedOr(response: NetResponse): CompletionEvent =
-        if (moderated(response.status, decode<WireErrorBody>(response.body)?.error?.message)) {
+        if (moderated(response.status, decode<WireErrorBody>(response.body)?.error)) {
             CompletionEvent.Done(Usage(inputTokens, outputTokens), StopReason.REFUSAL)
         } else {
             errorOf(response, clock.now())
@@ -111,10 +111,10 @@ internal class ChatStream(
     // A moderation refusal ends as a refusal does; any other error with its kind.
     private fun streamError(error: WireError): CompletionEvent {
         val status = error.code?.content?.toIntOrNull()
-        return if (moderated(status, error.message)) {
+        return if (moderated(status, error)) {
             CompletionEvent.Done(Usage(inputTokens, outputTokens), StopReason.REFUSAL)
         } else {
-            CompletionEvent.Error(kindOf(status, error.message), detail = codeDetail(error.code?.content))
+            CompletionEvent.Error(kindOf(status, error), detail = codeDetail(error.code?.content))
         }
     }
 

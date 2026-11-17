@@ -49,7 +49,7 @@ class SignInSwitchTest {
         object : KeySignIn {
             override val callback = "app.sleevesight://openrouter"
 
-            override fun begin() = SignInStart("verifier", "https://openrouter.ai/auth")
+            override fun begin() = SignInStart("verifier", "state", "https://openrouter.ai/auth")
 
             override suspend fun exchange(
                 code: String,
@@ -72,7 +72,7 @@ class SignInSwitchTest {
             settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) }
             val login = login()
             login.start()
-            login.callback("code")
+            login.callback("code", "state")
             assertEquals(SignInStep.Idle, login.step.value)
             assertEquals(ProviderId.OPENROUTER, settings.settings.first().aiProvider)
             assertEquals(SecretState.SAVED, secrets.states.first()[SecretId.OPENROUTER])
@@ -85,7 +85,7 @@ class SignInSwitchTest {
             file.failing = true
             val login = login()
             login.start()
-            login.callback("code")
+            login.callback("code", "state")
             assertEquals(SignInStep.Failed(SignInFailure.REFUSED), login.step.value)
             assertEquals(ProviderId.ANTHROPIC, settings.settings.first().aiProvider)
             assertEquals(SecretState.ABSENT, secrets.states.first()[SecretId.OPENROUTER])
