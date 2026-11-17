@@ -115,7 +115,7 @@ class OpenRouterSettingsTest {
             compose.onNodeWithText(text(R.string.settings_ai_provider_openrouter)).assertIsOff()
             // First of the services offered, so first under *AI services*.
             assertEquals(ProviderId.OPENROUTER, OFFERED_PROVIDERS.first())
-            compose.onNodeWithText("Set your OpenRouter API key here.").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Set OpenRouter API key").performScrollTo().assertIsDisplayed()
             assertTrue(absent(hasTestTag(OPENROUTER_PROBLEM_TAG)))
             noSignIn()
         }
@@ -124,7 +124,7 @@ class OpenRouterSettingsTest {
     fun aKeySavedOffersToUpdateItAsTheOthersDo() {
         runBlocking { secrets.set(SecretId.OPENROUTER, Secret("sk-or-v1-key")) }
         show {
-            waitForNode(hasText("Update your OpenRouter API key here."))
+            waitForNode(hasText("Update OpenRouter API key"))
             assertTrue(absent(hasTestTag(OPENROUTER_PROBLEM_TAG)))
             noSignIn()
         }
@@ -154,7 +154,7 @@ class OpenRouterSettingsTest {
                     "OpenRouter no longer accepts this key: it may have been deleted there. Set a new key.",
                 ).performScrollTo()
                 .assertIsDisplayed()
-            compose.onNodeWithText("Update your OpenRouter API key here.").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Update OpenRouter API key").performScrollTo().assertIsDisplayed()
             noSignIn()
         }
     }
