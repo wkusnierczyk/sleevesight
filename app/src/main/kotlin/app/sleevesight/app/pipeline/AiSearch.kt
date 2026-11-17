@@ -71,7 +71,8 @@ sealed interface AiSearch {
     /**
      * Answered by [model] at [effort] (null at the default, `Settings.creditedEffort`, #1162), as checked, asked as [way]
      * says (#801, #802); kept from before when [keptAt] says when it was written (#851): before this
-     * play of the track, served from what was kept; null for one written on this play.
+     * play of the track, served from what was kept; null for one written on this play. [writtenAt] is
+     * when it was written, whenever that was: what the spelling check counts *Keep history for* from (#1293).
      */
     data class Answered(
         val answer: SearchAnswer,
@@ -81,6 +82,7 @@ sealed interface AiSearch {
         val effort: ReasoningEffort? = null,
         val variant: String? = null,
         val card: String? = null,
+        val writtenAt: Instant? = null,
     ) : AiSearch
 
     /**
@@ -123,6 +125,30 @@ interface AiSearchFeed {
         track: TrackState,
         kind: SearchKind,
     ): Flow<AiSearch> = search(track, kind)
+
+    /**
+     * What MusicBrainz answered for [spelling], the spelling check's answer for [track] (#1293,
+     * `SpellingChecks`); null before it is asked. By default, never asked.
+     */
+    fun spelled(
+        track: TrackState,
+        spelling: SearchAnswer.Spelling,
+    ): Flow<SpellingOutcome?> = flowOf(null)
+
+    /**
+     * *Stop* beside the spelling check (#1293) once [spelling] was found for [track]: MusicBrainz's
+     * question about it cancelled, or, confirmed, its use. By default, nothing.
+     */
+    fun stopSpelling(
+        track: TrackState,
+        spelling: SearchAnswer.Spelling,
+    ) = Unit
+
+    /**
+     * Whether [track]'s spelling check (#1293) is still to come or under way, as it changes
+     * (`SpellingChecks.pending`): what is written by itself for the track waits for it. By default, never.
+     */
+    fun spellingPending(track: TrackState): Flow<Boolean> = flowOf(false)
 
     /**
      * A tap on *Search with AI* or *Retry*, or, [automatic], the search starting by itself (*Search
@@ -358,7 +384,7 @@ class AppAiSearches(
                     expired(entry.writtenAt, lifetime) -> AiSearch.Offered.also { drop(key) }
                     else ->
                         shownAs(
-                            entry.state,
+                            entry,
                             modelName(key.model),
                             keptAt(entry, track, play),
                             Settings.creditedEffort(key.provider, key.effort),
@@ -426,6 +452,20 @@ class AppAiSearches(
             asking.remove(key, job)
             shown.removeSearching(key)
         }
+    }
+
+    /**
+     * [track]'s search of [kind] as it stands now (#1293, `SpellingChecks.concluded`): its state shown;
+     * [SearchState.NothingFound] for one that cannot be asked (no AI service ready, or not asked from
+     * what the settings say) or that was stopped; null for one not asked yet.
+     */
+    internal fun ran(
+        track: TrackState,
+        kind: SearchKind,
+    ): SearchState? {
+        val key = keyOf(track, kind, null)?.second ?: return SearchState.NothingFound()
+        val stopped = synchronized(lock) { Declined.of(key) in declined }
+        return shown.entries.value[key]?.state ?: if (stopped) SearchState.NothingFound() else null
     }
 
     /**
@@ -819,13 +859,13 @@ internal class Entry(
 // kept from before when [keptAt] says when. The prompt lab's variant and card identity (#1003) are
 // [key]'s, null outside the lab.
 private fun shownAs(
-    state: SearchState,
+    entry: Entry,
     model: String,
     keptAt: Instant?,
     effort: ReasoningEffort?,
     key: CardKey,
 ): AiSearch =
-    when (state) {
+    when (val state = entry.state) {
         is SearchState.Searching -> AiSearch.Searching(state.web)
         is SearchState.Answered ->
             AiSearch.Answered(
@@ -836,6 +876,7 @@ private fun shownAs(
                 effort,
                 key.variant,
                 key.card,
+                entry.writtenAt,
             )
         is SearchState.NothingFound -> AiSearch.NothingFound(model, state.way, keptAt)
         is SearchState.Failed -> AiSearch.Failed(state.reason)

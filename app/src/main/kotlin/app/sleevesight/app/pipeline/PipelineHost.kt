@@ -8,6 +8,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.InsightState.Written
@@ -304,6 +305,12 @@ class PipelineHost(
     // The track whose run failed during its insight, shown as failed until another run starts.
     private val failed = MutableStateFlow<RunKey?>(null)
 
+    // The spellings the spelling check found and MusicBrainz confirmed (#1293), by the key of the
+    // track as the player reports it, each no longer than *Keep history for* after its answer was
+    // written ([spellingFor]):
+    // track as the player reports it: each run of it asks its sources with them. Forgotten by a clear.
+    private val spellings = ConcurrentHashMap<RunKey, FoundAs>()
+
     // The pipelines built, until the coordinator swaps one in. A build superseded before it was
     // swapped in stays here until the next swap, which clears them all.
     private val built = ConcurrentHashMap<Long, Pair<Pipeline, PipelineParts>>()
@@ -315,6 +322,9 @@ class PipelineHost(
     // The insights hidden as past *Keep history for* (#643) whose expiry was sent, by their track
     // and when they were written, so each is sent once. Touched only by [publish].
     private val expiredSent = HashSet<Pair<RunKey, Instant>>()
+
+    // The spellings past *Keep history for* that a rebuild was asked for (#1293), each once.
+    private val expiredSpellings = HashSet<FoundAs>()
 
     // Touched only by the loop.
     private val runs = HashMap<RunId, RunHandle>()
@@ -454,6 +464,46 @@ class PipelineHost(
     }
 
     /**
+     * The spelling check (#1293, `SpellingChecks`) found [shown] as [found], which MusicBrainz
+     * confirmed: every run of it from now on asks its sources with that spelling, and the track is
+     * looked up again with it if the session layer still shows it, by a rebuild, as an insight past
+     * *Keep history for* is (#643): its run then starts again, once a model call under way has ended.
+     */
+    fun spellingFound(
+        shown: NowPlaying,
+        found: FoundAs,
+    ) {
+        spellings[RunKey.of(normalizer, shown)] = found
+        val latest = latestPlaying() ?: return
+        if (sameInsightTrack(shown, latest)) queue.trySend(CoordinatorEvent.RebuildRequested)
+    }
+
+    /**
+     * The spelling found for [shown] is no longer to be used (#1293: *Stop* while it was confirmed or
+     * applied): forgotten, and the track looked up again with the player's spelling if the session
+     * layer still shows it and its run had taken the spelling.
+     */
+    fun spellingDropped(shown: NowPlaying) {
+        if (spellings.remove(RunKey.of(normalizer, shown)) == null) return
+        val latest = latestPlaying() ?: return
+        if (sameInsightTrack(shown, latest)) queue.trySend(CoordinatorEvent.RebuildRequested)
+    }
+
+    /** Forgets every spelling found (#1293), for *Clear history*: under the spelling check's own lock. */
+    fun forgetSpellings() = spellings.clear()
+
+    // The spelling to ask [nowPlaying]'s sources with (#1293): the one found, unless past *Keep history
+    // for* after its answer was written, then forgotten.
+    private fun spellingFor(nowPlaying: NowPlaying): FoundAs? {
+        val key = RunKey.of(normalizer, nowPlaying)
+        val found = spellings[key]
+        val past =
+            found != null && pastKeepHistory(found.writtenAt, latestSettings?.value?.historyLifetime, clock.now())
+        if (past) spellings.remove(key, found)
+        return found.takeUnless { past }
+    }
+
+    /**
      * The user tapped *Retry* beside an item's own lookups not reached (#1187: the album's), beside
      * [shown], before they are gathered again: the run of that track then writes nothing unasked
      * ([CoordinatorEvent.ItemRetryTapped]); dropped for a track the session layer no longer shows.
@@ -509,6 +559,7 @@ class PipelineHost(
         forgetting.add(taken)
         // Queued without suspending, so that a clear queued always reaches the finally below.
         queue.trySend(CoordinatorEvent.Cleared(lookUp))
+        spellings.clear()
         try {
             taken.await()
             return wipe()
@@ -688,7 +739,15 @@ class PipelineHost(
         handle.job =
             current.scope.launch(epoch.mark()) {
                 try {
-                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain, effect.items)
+                    val spelling = spellingFor(effect.nowPlaying)
+                    current.pipeline.run(
+                        effect.nowPlaying,
+                        handle,
+                        effect.again,
+                        effect.lookAgain,
+                        effect.items,
+                        spelling,
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (
@@ -1073,14 +1132,18 @@ class PipelineHost(
         lifetime: Duration?,
     ) {
         if (track == null) return
-        val key = RunKey.of(track.normalized, track.nowPlaying)
+        val key = RunKey.of(track.played, track.nowPlaying)
         val past =
             listOfNotNull(track.insight as? Written, cardFor(owner, track)?.insight)
                 .filter { past(it, lifetime) }
                 .mapNotNull { it.writtenAt }
                 .filter { expiredSent.add(key to it) }
         past.forEach { queue.trySend(CoordinatorEvent.CardExpired(it)) }
-        if (past.isNotEmpty()) queue.trySend(CoordinatorEvent.RebuildRequested)
+        // A spelling the run took past *Keep history for* (#1293): the track looked up again without it.
+        val spelled = track.foundAs?.takeIf { pastKeepHistory(it.writtenAt, lifetime, clock.now()) }
+        spelled?.let { spellings.remove(key, it) }
+        val respell = spelled != null && expiredSpellings.add(spelled)
+        if (past.isNotEmpty() || respell) queue.trySend(CoordinatorEvent.RebuildRequested)
     }
 
     // The card paid for, from the ledger, if [track] is of its written track.
@@ -1108,7 +1171,7 @@ class PipelineHost(
         track: TrackState,
         failedKey: RunKey?,
     ): TrackState {
-        val stuck = track.insight is InsightState.Writing && failedKey == RunKey.of(track.normalized, track.nowPlaying)
+        val stuck = track.insight is InsightState.Writing && failedKey == RunKey.of(track.played, track.nowPlaying)
         return if (stuck) track.copy(insight = InsightState.Failed(FAILED)) else track
     }
 
@@ -1119,7 +1182,7 @@ class PipelineHost(
     ): TrackState {
         val withdrawn =
             (track.insight as? InsightState.Idle)?.canWrite == true &&
-                !owner.offersWrite(RunKey.of(track.normalized, track.nowPlaying))
+                !owner.offersWrite(RunKey.of(track.played, track.nowPlaying))
         return if (withdrawn) track.copy(insight = InsightState.Idle(canWrite = false)) else track
     }
 

@@ -149,7 +149,8 @@ internal fun coverTurn(
                 retry = actions.tracklists::retryAlbums,
                 choose = actions.tracklists::choose,
                 rows = { albumRows(it, track, header) },
-                song = track?.normalized?.title?.ifEmpty { null } ?: header.title,
+                // The player's title, not a spelling the sources were asked in (#1293).
+                song = track?.played?.title?.ifEmpty { null } ?: header.title,
             ),
     )
 }

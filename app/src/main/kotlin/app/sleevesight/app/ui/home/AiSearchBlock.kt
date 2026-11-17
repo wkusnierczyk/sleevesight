@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.isSpecified
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.pipeline.SpellingChecks
 import app.sleevesight.app.ui.lab.LabCompare
 import app.sleevesight.app.ui.lab.LabSubject
 import app.sleevesight.app.ui.lab.labCreditText
@@ -56,6 +57,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.core.synthesis.PromptKind
@@ -130,7 +132,7 @@ internal fun AiSearchBlock(
             SearchFacts.ofGenre(
                 it.label,
             )
-        } ?: searchFacts(track, search.header ?: track.nowPlaying)
+        } ?: panelFacts(track, kind, search.header)
     }
     val ask = {
         feed.ask(track, kind, facts(), genre = about)
@@ -216,7 +218,7 @@ private fun Answered(
 // automatically: " for a question asked by itself (#801, #802); kept from before, when it was
 // written (#851).
 @Composable
-private fun NothingFound(
+internal fun NothingFound(
     texts: SearchTexts,
     shown: AiSearch.NothingFound,
 ) {
@@ -252,16 +254,25 @@ internal fun SearchCredit(
  * (#624), and its [action] for a screen reader; while it runs on the web, [searching]; when it found
  * nothing there, [nothingWeb]. From the model's knowledge the lines are *Ask AI*'s whatever the kind.
  */
-private class SearchTexts(
+internal class SearchTexts(
     @StringRes val label: Int,
     val marked: Boolean,
     @StringRes val action: Int,
     @StringRes val searching: Int,
     @StringRes val nothingWeb: Int,
-    private val explain: Boolean = false,
+    private val tagOf: (String) -> String = { it },
 ) {
-    /** The test tag [base] for this search: [explainTag]'s for *Explain the song*, so the panel's two stand apart. */
-    fun tag(base: String): String = if (explain) explainTag(base) else base
+    /**
+     * The test tag [base] for this search: [explainTag]'s for *Explain the song*, [spellingTag]'s for the
+     * spelling check (#1293), so a panel's searches stand apart.
+     */
+    fun tag(base: String): String = tagOf(base)
+
+    /**
+     * Whether a screen reader reads the mark ("{label}, uses AI"): not for the spelling check (#1293),
+     * read by its label alone, as picked.
+     */
+    val readsMark: Boolean get() = label != R.string.home_spelling_check
 
     companion object {
         private val ASK =
@@ -291,14 +302,29 @@ private class SearchTexts(
                 R.string.home_lyrics_explain_action,
                 R.string.home_lyrics_explaining,
                 R.string.home_lyrics_explain_none,
-                explain = true,
+                ::explainTag,
             )
 
-        /** [kind]'s texts: *Ask AI*'s for *Dates*, *Genres* and a genre's definition; the *Lyrics* panel's own. */
+        // The spelling check (#1293): its button marked, its line on the web.
+        private val SPELL =
+            SearchTexts(
+                R.string.home_spelling_check,
+                marked = true,
+                R.string.home_spelling_check_action,
+                R.string.home_spelling_checking,
+                R.string.home_spelling_none,
+                ::spellingTag,
+            )
+
+        /**
+         * [kind]'s texts: *Ask AI*'s for *Dates*, *Genres* and a genre's definition; the *Lyrics* panel's
+         * own; the spelling check's (#1293).
+         */
         fun of(kind: SearchKind): SearchTexts =
             when (kind) {
                 SearchKind.LYRICS -> FIND
                 SearchKind.EXPLAIN -> EXPLAIN
+                SearchKind.SPELLING -> SPELL
                 SearchKind.DATES, SearchKind.GENRES, SearchKind.DEFINITION -> ASK
             }
     }
@@ -311,7 +337,7 @@ private class SearchTexts(
  * the AI mark where they say (#908), which a screen reader reads as "{label}, uses AI".
  */
 @Composable
-private fun SearchButton(
+internal fun SearchButton(
     texts: SearchTexts,
     enabled: Boolean,
     width: Dp,
@@ -342,16 +368,16 @@ private fun SearchButton(
                 .padding(PADDING),
     ) {
         val label = stringResource(texts.label)
+        val described = if (texts.readsMark) stringResource(R.string.home_uses_ai, label) else label
         if (texts.marked && width.isSpecified) {
             // One of a column (#1343): the mark at the end, read in the description, as [AiLabel]'s is.
-            val described = stringResource(R.string.home_uses_ai, label)
             ColumnChipLabel(label, ink, ai = true, Modifier.semantics { contentDescription = described })
         } else if (texts.marked) {
             // A fallback: no marked button is shown without a column's width today. [ColumnChipLabel]
             // fills the bounded width this box hands it, so here it would stretch the button across
             // the panel; [AiLabel] keeps the button to its label.
             ProvideTextStyle(MaterialTheme.typography.labelLarge) {
-                CompositionLocalProvider(LocalContentColor provides ink) { AiLabel(label) }
+                CompositionLocalProvider(LocalContentColor provides ink) { AiLabel(label, described = described) }
             }
         } else {
             Text(label, style = MaterialTheme.typography.labelLarge, color = ink)
@@ -363,7 +389,7 @@ private fun SearchButton(
 // AI…", in the quiet style ([Busy]), with *Stop* (under [stopModifier]) at the right of the line,
 // centred on it, as *Retry* is beside its line.
 @Composable
-private fun SearchingLine(
+internal fun SearchingLine(
     texts: SearchTexts,
     web: Boolean,
     stopModifier: Modifier,
@@ -456,7 +482,9 @@ internal fun searchFacts(
  * and *Lyrics* with no page (while *Lyrics links* is on; not for an instrumental, nor with a page
  * among the track's web search results, #801), as each panel
  * tells its empty states ([NoDates], [GenresShown], [homeLyrics]), beside the header the pipeline's
- * track reports.
+ * track reports. With MusicBrainz finding nothing for the track as the player names it, and *AI web
+ * search* on as used, the spelling check too (#1293, `SpellingChecks.wanted`), which the others wait
+ * for (`AskAiWired`).
  */
 internal fun emptyPanels(
     track: TrackState,
@@ -473,6 +501,7 @@ internal fun emptyPanels(
         if (settings.lyricsLinks && lyrics is LyricsLinks.NoLink && lyrics.web.isEmpty()) {
             add(SearchKind.LYRICS)
         }
+        if (settings.aiWebSearchUsed != AiWebSearch.OFF && SpellingChecks.wanted(track)) add(SearchKind.SPELLING)
     }
 }
 

@@ -106,7 +106,8 @@ internal fun splitOf(
     track: TrackState?,
     normalized: NormalizedTrack,
 ): ArtistSplit? =
-    if (track != null && track.normalized == normalized) {
+    // The track as the player names it (#1293: not a spelling the sources were asked in).
+    if (track != null && track.played == normalized) {
         track.artistSplit(NAMES::sameName)
     } else {
         ArtistSplit.of(normalized, ArtistRoles.of(normalized), null, NAMES::sameName)

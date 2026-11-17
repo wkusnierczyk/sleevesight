@@ -55,6 +55,10 @@ import kotlin.time.Instant
  * @property albumIds the ids of the lines of [evidence] that the album's evidence brought (#1131,
  *   [ItemLines.album]), not the run's own sources: set with it, empty for a run that took none.
  *   *Sources* says "album" of them.
+ * @property foundAs the spelling the sources were asked with in place of the player's (#1293,
+ *   [FoundAs]): another spelling of the title and artists the AI service found on the web, which
+ *   MusicBrainz confirmed; [normalized] is then that spelling's, [nowPlaying] still the player's.
+ *   Null for a run with the player's spelling.
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -73,7 +77,15 @@ data class TrackState(
     val searchingInLanguage: Boolean = false,
     val libraryUnreachable: Boolean = false,
     val albumIds: Set<String> = emptySet(),
+    val foundAs: FoundAs? = null,
 ) {
+    /**
+     * The track as the player names it, cleaned for the sources (#1293): [normalized], unless the
+     * sources were asked with another spelling ([foundAs]), then the player's own. What a run's
+     * identity and the spelling check's answer are kept by.
+     */
+    val played: NormalizedTrack get() = foundAs?.played ?: normalized
+
     /**
      * Who of the credited artists composed the work and who performs it (#1180, [ArtistRoles.of]): as
      * MusicBrainz's resolution told, else as its result kept from an earlier play holds it
@@ -97,6 +109,23 @@ data class TrackState(
                 !searchingInLanguage &&
                 inLanguage?.sources?.values?.none { it is SourceState.Pending } != false
 }
+
+/**
+ * Another spelling the sources were asked with (#1293): the [title] and the [artists] (as the player
+ * joins them, one string) the AI service found on the web ([model], as the AI settings name it,
+ * which *Sources* names), in place of the track as the player names it, cleaned for the sources
+ * ([played]); MusicBrainz then found a recording that agrees with the player's ([resolution], which
+ * the run uses rather than asking MusicBrainz again). [writtenAt] is when the check's answer was
+ * written: past *Keep history for* after it, the spelling is no longer used (`PipelineHost`).
+ */
+data class FoundAs(
+    val title: String,
+    val artists: String,
+    val played: NormalizedTrack,
+    val model: String,
+    val resolution: Resolution? = null,
+    val writtenAt: Instant? = null,
+)
 
 /**
  * The search in the track's language (#902), once a run decided to make it: the [language]'s code

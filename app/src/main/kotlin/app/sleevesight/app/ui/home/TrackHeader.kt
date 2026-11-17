@@ -8,10 +8,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.R
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.settings.Settings
 
 // The track's header on Home: its key data, and under the album the line of buttons that open in
@@ -45,6 +48,7 @@ internal fun TrackHeader(
         split,
         held = !named,
         notes = line.notes,
+        foundAs = shown.track?.foundAs,
         labels = labels,
         labelHeld = labelHeld,
     )
@@ -145,3 +149,7 @@ internal fun UnderAlbum(
     val genres = genresItem(track, line.settings, line.notes, retries, actions.openSettingsAt, page, search)
     InPlaceLine(listOfNotNull(dates, genres, lyrics), line.memory, playing, onePanel)
 }
+
+/** The spelling the sources were asked with in place of the player's title (#1293): "Found as “{title}”". */
+@Composable
+internal fun foundAsLine(found: FoundAs): String = stringResource(R.string.home_spelling_found, found.title)

@@ -1,7 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.emptyPanels
-import app.sleevesight.app.ui.home.searchFacts
+import app.sleevesight.app.ui.home.panelFacts
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -11,10 +11,13 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Clock
 
 /**
@@ -32,13 +35,13 @@ import kotlin.time.Clock
 @Suppress("LongParameterList") // What the searches are made with, and where their answers and events go.
 class AskAiWired(
     parts: StateFlow<PipelineParts?>,
-    settings: StateFlow<Settings?>,
+    private val settings: StateFlow<Settings?>,
     answers: AiSearchAnswers,
     scope: CoroutineScope,
     settledNoDefinition: (TrackState, String) -> Boolean,
-    epoch: ClearEpoch = ClearEpoch(),
+    private val epoch: ClearEpoch = ClearEpoch(),
     modelName: (String) -> String = { it },
-    clock: Clock = Clock.System,
+    private val clock: Clock = Clock.System,
     events: (PipelineEvent) -> Unit = {},
     plays: StateFlow<Play?>,
 ) {
@@ -49,6 +52,10 @@ class AskAiWired(
     /** *Ask AI automatically* for a genre's definition (#786). */
     lateinit var definitions: AutoSearches<String>
         private set
+
+    /** The spelling check's answers asked of MusicBrainz (#1293); set by [checkSpellings]. */
+    @Volatile
+    private var spellings: SpellingChecks? = null
 
     /** The searches: Home's panels' and a genre's definition. */
     val searches: AppAiSearches =
@@ -81,15 +88,51 @@ class AskAiWired(
             plays = plays,
         )
 
+    /**
+     * The searches as Home's panels show them: [searches], with what MusicBrainz answered for the
+     * spelling the check found (#1293, [checkSpellings]).
+     */
+    val feed: AiSearchFeed =
+        object : AiSearchFeed by searches {
+            override fun spelled(
+                track: TrackState,
+                spelling: SearchAnswer.Spelling,
+            ): Flow<SpellingOutcome?> = spellings?.outcome(track, spelling) ?: flowOf(null)
+
+            override fun stopSpelling(
+                track: TrackState,
+                spelling: SearchAnswer.Spelling,
+            ) {
+                spellings?.stop(track, spelling)
+            }
+
+            override fun spellingPending(track: TrackState): Flow<Boolean> =
+                spellings?.pendingFor(track) ?: flowOf(false)
+        }
+
+    /**
+     * The spelling check's answers asked of MusicBrainz with the live pipeline's [parts] in [scope]
+     * (#1293), each confirmed one handed to [targets]: the check comes first among the panels' searches
+     * of *Ask AI automatically*, which wait until it has run ([SpellingChecks.concluded]).
+     */
+    fun checkSpellings(
+        parts: StateFlow<PipelineParts?>,
+        scope: CoroutineScope,
+        targets: SpellingTargets,
+    ): SpellingChecks =
+        SpellingChecks(searches, parts, NameMatcher(JvmAccentFolder), scope, targets, settings, clock, epoch).also {
+            spellings = it
+        }
+
     init {
         val albums = NameMatcher(JvmAccentFolder)
         panels =
             AutoSearches(
-                ::emptyPanels,
+                { track, settings -> spellingFirst(emptyPanels(track, settings), track) },
                 { track, kind ->
                     Triple(track.normalized, track.nowPlaying.duration, AiSearches.subject(track, kind, albums))
                 },
-            ) { track, kind -> searches.ask(track, kind, searchFacts(track, track.nowPlaying), automatic = true) }
+            ) { track, kind -> searches.ask(track, kind, panelFacts(track, kind), automatic = true) }
         definitions =
             AutoSearches(
                 { track, _ -> genresWithNoDefinition(track, settledNoDefinition) },
@@ -102,4 +145,16 @@ class AskAiWired(
                 searches.ask(track, SearchKind.DEFINITION, SearchFacts.ofGenre(label), automatic = true, genre = genre)
             }
     }
+
+    // Of the [panels] wanting a search for [track], the spelling check alone while it has not run
+    // (#1293): it may bring the sources' answers back, so the others wait for it.
+    private fun spellingFirst(
+        panels: Set<SearchKind>,
+        track: TrackState,
+    ): Set<SearchKind> =
+        if (SearchKind.SPELLING in panels && spellings?.concluded(track) == false) {
+            setOf(SearchKind.SPELLING)
+        } else {
+            panels
+        }
 }

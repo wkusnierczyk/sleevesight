@@ -23,6 +23,7 @@ import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.lab.PromptLab
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.AlbumTracklistFeed
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
@@ -39,6 +40,8 @@ import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.Plays
 import app.sleevesight.app.pipeline.PromptDump
 import app.sleevesight.app.pipeline.ReleaseGroupFeed
+import app.sleevesight.app.pipeline.SpellingChecks
+import app.sleevesight.app.pipeline.SpellingTargets
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
@@ -775,6 +778,22 @@ class AppGraph internal constructor(
 
     private val autoSearches: AutoSearches<SearchKind> get() = askAi.panels
 
+    /** The searches as Home's panels show them: [aiSearches], with the spelling check's (#1293). */
+    val aiFeed: AiSearchFeed get() = askAi.feed
+
+    /**
+     * The spelling check (#1293): the spelling the AI service found on the web for a track MusicBrainz
+     * found nothing for, asked of MusicBrainz with the live pipeline's resolver, and, confirmed, the
+     * track looked up again with it ([PipelineHost.spellingFound]).
+     */
+    private val spellingChecks: SpellingChecks by lazy {
+        askAi.checkSpellings(
+            pipeline.liveParts,
+            pipelineScope,
+            SpellingTargets(pipeline::spellingFound, pipeline::spellingDropped, pipeline::forgetSpellings),
+        )
+    }
+
     private val autoDefinitions: AutoSearches<String> get() = askAi.definitions
 
     /**
@@ -785,9 +804,19 @@ class AppGraph internal constructor(
      */
     private val autoVocals: AutoSearches<Unit> by lazy {
         AutoSearches(
-            { track, settings -> if (vocalsWanted(track, settings)) setOf(Unit) else emptySet() },
+            // Not while the track's spelling check is to come or under way (#1293): the vocals check would
+            // be paid for again once the track is looked up in another spelling.
+            { track, settings ->
+                if (vocalsWanted(track, settings) &&
+                    !spellingChecks.pending(track, settings)
+                ) {
+                    setOf(Unit)
+                } else {
+                    emptySet()
+                }
+            },
             // The check's own subject: the track, its length and album, so another album starts its own.
-            { track, _ -> Triple(track.normalized, track.nowPlaying.duration, VocalsChecks.subject(track)) },
+            { track, _ -> Triple(track.played, track.nowPlaying.duration, VocalsChecks.subject(track)) },
         ) { track, _ -> genreNotes.checkVocals(track) }
     }
 
@@ -882,8 +911,16 @@ class AppGraph internal constructor(
         // nothing, open or not, for the playing track, while the app is on screen; again once an AI
         // service is ready.
         pipelineScope.launch {
-            autoSearches.run(pipeline.state.map { it.track }, latestSettings, pipeline.onScreen, pipeline.liveParts)
+            autoSearches.run(
+                pipeline.state.map { it.track },
+                latestSettings,
+                pipeline.onScreen,
+                // Again as the spelling check runs, which the other searches wait for (#1293).
+                combine(pipeline.liveParts, aiSearches.shown.entries, spellingChecks.outcomes) { parts, _, _ -> parts },
+            )
         }
+        // The spelling the check found for the playing track, asked of MusicBrainz (#1293).
+        pipelineScope.launch { spellingChecks.follow(pipeline.state.map { it.track }) }
         // The check of the track's vocals (#998), by itself with the setting on, as soon as the genres
         // *Genres* composes are settled and call for it, while the app is on screen; again once it is
         // back, for one whose gates closed.
@@ -896,7 +933,8 @@ class AppGraph internal constructor(
                 },
                 latestSettings,
                 pipeline.onScreen,
-                pipeline.liveParts,
+                // Again as the spelling check runs, which the vocals check waits for (#1293).
+                combine(pipeline.liveParts, aiSearches.shown.entries, spellingChecks.outcomes) { parts, _, _ -> parts },
             )
         }
         // Every genre of the playing track's table has its definition looked up as soon as the genres
@@ -1005,6 +1043,7 @@ class AppGraph internal constructor(
             tracklists.forget()
             releaseGroups.forget()
             aiSearches.forget()
+            spellingChecks.forget()
             sessionFacts.forget()
             sessions.forgetLastChange()
             diagnostics.log.clear()

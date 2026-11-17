@@ -47,14 +47,18 @@ internal fun spokenSentences(
     }
 }
 
-/** The track line read first, with *Read the track line first* on: [track]'s title and artists, as cleaned up. */
+/**
+ * The track line read first, with *Read the track line first* on: [track]'s title and artists, as
+ * cleaned up, as the player names them (`TrackState.played`): never a spelling the sources were asked
+ * in (#1293), as Home shows the player's title.
+ */
 internal fun spokenTrackLine(
     track: TrackState,
     words: SpokenWords,
 ): String {
-    val title = track.normalized.title.ifBlank { track.nowPlaying.title }
+    val title = track.played.title.ifBlank { track.nowPlaying.title }
     val artists =
-        track.normalized.artists
+        track.played.artists
             .joinToString(", ")
             .ifBlank { track.nowPlaying.artists }
     return words.trackLine(title, artists)

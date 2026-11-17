@@ -57,6 +57,17 @@ sealed interface SearchAnswer {
         val grounded: GroundedText,
         val pages: List<CitedPage>,
     ) : SearchAnswer
+
+    /**
+     * The spelling check's answer (#1293): the track's [title] as the page [source] spells it, and
+     * its credited [artists] as it spells them, every one in the player's order, or none when they
+     * are spelled as the player gives them.
+     */
+    data class Spelling(
+        val title: String,
+        val artists: List<String>,
+        val source: String,
+    ) : SearchAnswer
 }
 
 /**
@@ -197,7 +208,7 @@ class AiSearchAnswers(
                     SearchKind.GENRES -> genres(answer)
                     SearchKind.LYRICS -> lyrics(answer, artists)
                     SearchKind.DEFINITION -> definition(answer)
-                    SearchKind.EXPLAIN -> null
+                    SearchKind.EXPLAIN, SearchKind.SPELLING -> null
                 }
             }
         return found?.let(SearchReading::Found) ?: SearchReading.NothingUsable
@@ -223,6 +234,7 @@ class AiSearchAnswers(
                     ?.let(SearchAnswer::Lyrics)
             SearchKind.DEFINITION -> definition(answer)
             SearchKind.EXPLAIN -> null
+            SearchKind.SPELLING -> spellingIn(answer, artists, found)
         }
     }
 
@@ -519,3 +531,33 @@ fun sameAddress(
     fun plain(text: String) = text.trim().substringBefore('#').trimEnd('/')
     return plain(page).isNotEmpty() && plain(page) == plain(address)
 }
+
+// The spelling from the web (#1293): its title on one line, without quotation marks around it, with its
+// page ([found]); its artists only as many as the player's [artists], each on one line, else none.
+// Null with no title or page.
+private fun spellingIn(
+    answer: JsonObject,
+    artists: List<String>,
+    found: (String?) -> String?,
+): SearchAnswer.Spelling? {
+    val source = found(answer.text("source"))
+    val title = answer.name("title")?.trim { it in QUOTES || it.isWhitespace() }?.takeIf { it.isNotEmpty() }
+    val named =
+        (answer["artists"] as? JsonArray)
+            .orEmpty()
+            .mapNotNull {
+                (it as? JsonPrimitive)
+                    ?.takeIf { p -> p.isString }
+                    ?.content
+                    ?.let(::oneLine)
+                    ?.trim()
+            }.filter { it.isNotEmpty() && it.length <= AiSearchAnswers.NAME_MAX }
+    return if (source == null || title == null) {
+        null
+    } else {
+        SearchAnswer.Spelling(title, named.takeIf { it.size == artists.size }.orEmpty(), source)
+    }
+}
+
+// The quotation marks a spelled title may come in, which are not part of it (#1293).
+private const val QUOTES = "\"“”„«»'‘’"
