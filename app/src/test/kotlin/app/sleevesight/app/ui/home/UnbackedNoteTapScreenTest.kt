@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
@@ -34,6 +35,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.ItemEvidence
 import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
@@ -164,6 +166,38 @@ class UnbackedNoteTapScreenTest {
     @Test
     fun withGroundingDetailsTheKeyInsightsActionGoesToItsNote() = keyInsight(details = true) { runTheAction() }
 
+    @Test
+    fun aLaterRepliesNoteDoesNotFlashForAnEarlierTap() {
+        // A tap, then a reply with no dimmed text (no note), then one with: its note stays still.
+        val track = HomeFixtures.track()
+        val context =
+            InsightContext(track, aiReady = true, insightsOn = true, modelAllowed = false, offers = InsightOffers())
+        val actions = InsightActions({}, {}, {}, onReport = { _, _ -> })
+        val insight = mutableStateOf<InsightState>(HomeFixtures.written(reply))
+        show({ InsightCard(insight.value, context, actions) }) {
+            tapTheChip()
+            // The tap's flash over.
+            compose.mainClock.advanceTimeBy(FLASH_MILLIS)
+            compose.waitForIdle()
+            compose.onNodeWithTag(UNBACKED_NOTE_FLASHING_TAG, useUnmergedTree = true).assertDoesNotExist()
+            compose.mainClock.autoAdvance = false
+            try {
+                compose.runOnUiThread { insight.value = HomeFixtures.written("Sundown was recorded in 1973 [MB1].") }
+                compose.waitForIdle()
+                compose.mainClock.advanceTimeByFrame()
+                note().assertDoesNotExist()
+                compose.runOnUiThread { insight.value = HomeFixtures.written("It is old. It sold [MB1].") }
+                compose.waitForIdle()
+                compose.mainClock.advanceTimeBy(INTO_VIEW_MILLIS)
+                compose.waitForIdle()
+                compose.onNodeWithTag(UNBACKED_NOTE_FLASHING_TAG, useUnmergedTree = true).assertDoesNotExist()
+                note().assertExists()
+            } finally {
+                compose.mainClock.autoAdvance = true
+            }
+        }
+    }
+
     // The song's insight, its row opened.
     private fun itemInsight(block: () -> Unit) {
         val track = HomeFixtures.track(sundown, sources = mapOf(SourceId.MUSICBRAINZ to done()))
@@ -233,5 +267,6 @@ class UnbackedNoteTapScreenTest {
         const val VIEW = 240
         const val BACKED = 24
         const val INTO_VIEW_MILLIS = 600L
+        const val FLASH_MILLIS = 2000L
     }
 }

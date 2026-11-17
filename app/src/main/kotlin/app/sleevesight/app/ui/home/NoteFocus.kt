@@ -15,7 +15,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,21 +40,30 @@ import kotlinx.coroutines.delay
 
 /**
  * The way to a reply's note on its dimmed text (#954): a `?` chip tapped ([go]) brings the note into
- * view ([requester]) and flashes it, as a citation's chip does its line ([LineFocus]). Each tap
- * counts ([taps]), so the same chip tapped again flashes again.
+ * view ([requester]) and flashes it, as a citation's chip does its line ([LineFocus]): a request
+ * ([request]) pending until the note has flashed ([flashed]), so a note composed later, for another
+ * reply, does not flash untapped. Each tap is a new request, so the same chip tapped again flashes
+ * again.
  */
 @Stable
 internal class NoteFocus {
     /** The note's way into view. */
     val requester: BringIntoViewRequester = BringIntoViewRequester()
 
-    /** The `?` chips tapped so far; the note flashes on each. */
-    var taps: Int by mutableIntStateOf(0)
+    /** The tap the note is to flash for, until it has, or null. */
+    var request: Int? by mutableStateOf(null)
         private set
+
+    private var taps = 0
 
     /** Brings the note into view and flashes it. */
     fun go() {
-        taps++
+        request = ++taps
+    }
+
+    /** The note has flashed for [done] (or stopped while it did): no longer pending, unless tapped since. */
+    fun flashed(done: Int) {
+        if (request == done) request = null
     }
 }
 
@@ -80,9 +88,9 @@ internal fun WithUnbackedNote(content: @Composable () -> Unit) {
 internal fun Modifier.noteTarget(): Modifier {
     val focus = LocalNoteFocus.current ?: return this
     var flashing by remember { mutableStateOf(false) }
-    val taps = focus.taps
-    LaunchedEffect(focus, taps) {
-        if (taps == 0) return@LaunchedEffect
+    val request = focus.request
+    LaunchedEffect(focus, request) {
+        if (request == null) return@LaunchedEffect
         // Flashing from the tap, as a citation's line is, while it scrolls into view.
         flashing = true
         try {
@@ -91,6 +99,7 @@ internal fun Modifier.noteTarget(): Modifier {
             delay(FLASH)
         } finally {
             flashing = false
+            focus.flashed(request)
         }
     }
     val colors = MaterialTheme.colorScheme

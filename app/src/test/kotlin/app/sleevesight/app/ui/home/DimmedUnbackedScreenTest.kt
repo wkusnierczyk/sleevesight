@@ -185,11 +185,14 @@ class DimmedUnbackedScreenTest {
 
     @Test
     fun aRunThatEndsAParagraphKeepsItsMarkAtTheEnd() =
-        show(written("It topped the charts [W1]. It is great. It is loved.\n\nIt was recorded in 1973 [MB1].")) {
-            val first = textOf("It topped the charts")
-            assertTrue(first.text.endsWith("It is great. It is loved $mark."))
+        show(written("It is great. It is loved.\n\nIt is old.")) {
+            // Each paragraph's run ends with its own `?`, at the paragraph's end.
+            val first = textOf("It is great")
+            assertEquals("It is great. It is loved $mark.", first.text)
             assertEquals(1, marks(first).size)
-            assertEquals(0, marks(textOf("It was recorded")).size)
+            val second = textOf("It is old")
+            assertEquals("It is old $mark.", second.text)
+            assertEquals(1, marks(second).size)
         }
 
     @Test
