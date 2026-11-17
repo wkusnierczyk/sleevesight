@@ -20,6 +20,7 @@ import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.ComposedDate
+import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -43,7 +44,10 @@ import kotlin.time.TimeSource
  * the resolution. Then every candidate goes through the identity check: the items MusicBrainz
  * links first, then the articles found by name; the first confirmed song is the song or original
  * song article. Each credited artist's article is reached through its MusicBrainz id, and an
- * article found by an artist's name is checked against it.
+ * article found by an artist's name is checked against it. So is the article of each composer
+ * MusicBrainz names for a classical work whom the track does not credit (`ArtistRoles.uncredited`,
+ * #1376), by the id the work's `composer` relationship gives, after the credited artists: the resolution
+ * is awaited anyway, so nothing waits longer for MusicBrainz.
  *
  * Lines (D1): from each confirmed article's lead, at most [MAX_SENTENCES] sentences, verbatim,
  * those that name the article's subject and are at most [MAX_SENTENCE_LENGTH] characters, each
@@ -93,7 +97,8 @@ class WikipediaSource(
         if (byName is Lookup.Failed) findings.unreachable = true
         val pages = (byName as? Lookup.Found)?.value.orEmpty()
         findings.song = song(track, resolved, pages, findings)
-        val credits = resolved.artists.ifEmpty { credited.map { ResolvedArtist(it, null) } }
+        val own = resolved.artists.ifEmpty { credited.map { ResolvedArtist(it, null) } }
+        val credits = own + uncreditedComposers(resolved, own)
         val kept = credits.map { stored(it) }
         val verdicts =
             credits.mapIndexed { i, artist -> artist.takeIf { kept[i] == null }?.let { artist(it, pages[it.name]) } }
@@ -516,9 +521,11 @@ class WikipediaSource(
          * [ARTIST_PART] goes with it ([ARTIST_PART_VERSION] 4). 10: a sentence no longer ends at a
          * catalogue abbreviation before its number (`Op. 27`, `Nos. 20 & 23`, `LastFmBio.split`,
          * #1192), so a song's result kept with a work's lead cut there is made again; [ARTIST_PART]
-         * stays, since an artist's lead seldom holds one.
+         * stays, since an artist's lead seldom holds one. 11: the article of a composer MusicBrainz names
+         * for a classical work whom the track does not credit is looked up too (#1376), so a result kept
+         * without it is looked up again; [ARTIST_PART] stays (the composer's own is kept as any artist's).
          */
-        const val EXTRACTION_VERSION: Int = 10
+        const val EXTRACTION_VERSION: Int = 11
 
         private val json = Json { encodeDefaults = false }
 
@@ -648,3 +655,24 @@ private fun Lookup<String?>.asLead(): Lookup<WpLead?> =
         Lookup.NotFound -> Lookup.NotFound
         is Lookup.Failed -> this
     }
+
+// The composers [resolved]'s work names whom the track does not credit (#1376, `ArtistRoles.uncredited`,
+// by MusicBrainz's names), each with the MusicBrainz id of the work's `composer` relationship naming
+// them, so their article is reached and checked as a credited artist's is; none without an id, nor
+// one of the track's own artists ([own]) has.
+private fun uncreditedComposers(
+    resolved: Resolution,
+    own: List<ResolvedArtist>,
+): List<ResolvedArtist> {
+    val ids = own.mapNotNull { it.mbid }.toSet()
+    return resolved.roles
+        ?.uncredited
+        .orEmpty()
+        .mapNotNull { name ->
+            resolved.credits
+                .firstOrNull { it.role == CreditRole.COMPOSER && it.name == name }
+                ?.mbid
+                ?.takeIf { it.isNotBlank() && it !in ids }
+                ?.let { ResolvedArtist(name, it) }
+        }.distinctBy { it.mbid }
+}

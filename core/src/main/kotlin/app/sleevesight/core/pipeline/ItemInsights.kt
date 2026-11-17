@@ -1104,7 +1104,9 @@ class ItemInsights(
     }
 
     // The artist-level lines of the track's [own] evidence about [artist] (the primary artist, or the
-    // one an item is about, #1199): all of them when [track] credits one and it is [artist]; else
+    // one an item is about, #1199): all of them when [track] credits one and it is [artist], but those
+    // about a composer it does not credit (#1376: Wikipedia's on Puccini, on *Nessun Dorma* by Pavarotti
+    // alone, `ArtistRoles.uncredited`); else
     // those its adapter says are about [artist] ([EvidenceLine.about]), so a collaboration gives the
     // lines a solo track does, whatever their text names. A line that does not say (kept before #522)
     // is taken when it names the artist.
@@ -1117,7 +1119,12 @@ class ItemInsights(
         // artists: `EvidenceLine.aggregate`), whose numbers and order change from one lookup to the
         // next: in the artist's fingerprint, they would key the same artist anew on each.
         val lines = own.lines.filter { it.scope == Scope.ARTIST && !it.aggregate }
-        if (track.normalized.artists.size <= 1 && artist == track.normalized.primary) return lines
+        if (track.normalized.artists.size <= 1 && artist == track.normalized.primary) {
+            val others = track.roles.uncredited.filterNot { names.sameName(it, artist) }
+            return lines.filter { line ->
+                line.about?.let { about -> others.none { names.sameName(it, about) } } ?: true
+            }
+        }
         val key = " ${names.key(artist)} "
         return lines.filter { line ->
             line.about?.let { names.sameName(it, artist) } ?: (key.isNotBlank() && key in " ${names.key(line.text)} ")
