@@ -49,7 +49,7 @@ import kotlin.time.Instant
 
 /**
  * The developer mark (#536) on the reports, in developer mode with marking on: the tester's report
- * button, its menu and the review's own inputs are marked; the production *Report a problem*
+ * button, its menu and the review's own inputs are marked; the production *Report the insight*
  * dialog, which every user has, is not.
  */
 @RunWith(RobolectricTestRunner::class)

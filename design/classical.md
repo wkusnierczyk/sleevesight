@@ -375,6 +375,16 @@ and with no split, it stays *Song*. The insight's two parts stay *The music* and
 the prompts' song kind stays as it is, and Settings keep *Song* (*Song, Artist and Album on a new
 track*).
 
+Beside a *Composer* or *Authors* row, the song's row names the title without its composer lead
+(#1356, the mock-up's pick, 2026-11-17): Spotify's *Barber: Adagio for Strings* is **Music**
+*Adagio for Strings*, the row beside it naming Barber. The lead is the one the normalizer finds
+(`NormalizedTrack.composer`) and leaves out of the searches (`searchTitle`), and it goes only when
+the row beside names that composer: a lead naming a performer (*Gould: Interview*, with Bach the
+composer) stays, and with no split the title is as under the cover. The row, its panel's heading, its
+page's title and what a screen reader reads ("Music, Adagio for Strings, uses AI…") all follow it;
+the title under the cover keeps the player's title, and the version line (*Version: 2019 Remaster*)
+is not affected, coming from the title's end.
+
 A performer's or an author's chip gives way to its insight (#1288, the 0.7.0 phone check's pick):
 the tap puts in the chip's place a panel titled with the name, *Close* at its top right, then the
 insight, so the name is not shown twice; *Close* puts the chip back where it was. Each chip opens

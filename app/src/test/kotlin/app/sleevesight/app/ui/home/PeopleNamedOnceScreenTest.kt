@@ -219,7 +219,8 @@ class PeopleNamedOnceScreenTest {
     fun aTitleLeadingWithItsComposerIsNamedAtOnce() =
         show(barber()) {
             compose.onNodeWithTag(ARTISTS_HELD_TAG).assertDoesNotExist()
-            assertEquals("Music, Barber: Adagio for Strings", said(InsightItem.SONG))
+            // Read as shown, without the composer's lead (#1356).
+            assertEquals("Music, Adagio for Strings", said(InsightItem.SONG))
             assertEquals("Composer, Samuel Barber", said(InsightItem.COMPOSER))
         }
 

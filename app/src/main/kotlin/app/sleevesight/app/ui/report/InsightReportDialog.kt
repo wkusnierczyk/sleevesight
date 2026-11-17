@@ -35,7 +35,7 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 
 /**
- * *Report a problem* for [insight], written for [track] (#390): a reason, one of three, and an
+ * *Report the insight* for [insight], written for [track] (#390): a reason, one of three, and an
  * optional note, then the report as it will be sent ([insightReport]), through [ReportDialog].
  * Both are as they were when the dialog opened, whatever plays meanwhile.
  */
