@@ -439,7 +439,7 @@ private val LANDING = 1300.milliseconds
  * link that unfolds *Secrets* and lands on the key's row, so the key is always one tap away; once a
  * key is saved ([state]), "Update Anthropic API key" (#667), the row there changing it.
  * A key saved but no longer readable is updated too: it is entered again. Nothing before the keys'
- * states are read (a null [state]), which would say "Set your …" for a moment beside a saved key. A
+ * states are read (a null [state]), which would say "Set …" for a moment beside a saved key. A
  * row that shows it says what is wrong with the key without naming *Secrets* ([keyNote] with
  * `linked`).
  */

@@ -112,7 +112,7 @@ class SettingsKeyLinksTest {
             },
         )
 
-    /** The sentence under a service that needs the key [id]: "Set your …", or "Update your …" once [saved] (#667). */
+    /** The sentence under a service that needs the key [id]: "Set …", or "Update …" once [saved] (#667). */
     private fun sentence(
         id: SecretId,
         saved: Boolean = false,
