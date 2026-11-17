@@ -60,6 +60,7 @@ import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -167,6 +168,18 @@ class OnePanelScreenTest {
             assertEquals(true, moved)
         }
         compose.waitForIdle()
+    }
+
+    // Whether the screen reader's focus is on [tag]'s node, as the node provider tells a screen reader.
+    private fun accessibilityFocused(tag: String): Boolean {
+        val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
+        var focused = false
+        compose.runOnUiThread {
+            val host = node.root as View
+            focused =
+                host.accessibilityNodeProvider?.createAccessibilityNodeInfo(node.id)?.isAccessibilityFocused == true
+        }
+        return focused
     }
 
     @After
@@ -307,38 +320,67 @@ class OnePanelScreenTest {
             compose.onNodeWithTag(folk).assertIsSelected()
         }
 
-    @Test
-    fun aNewTrackHandsAScreenReadersFocusInThePanelToTheButtonWithNoInputFocusThere() {
+    // A screen reader exploring by touch, as TalkBack does, for Compose to report to.
+    private fun startScreenReader() {
         accessibility.setEnabled(true)
         accessibility.setTouchExplorationEnabled(true)
         accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+    }
+
+    // The clock stopped, then [action] and frames after it, each laid out as a phone lays out each
+    // frame. Robolectric's clock run without a layout in each frame (`waitForIdle`) drops the screen
+    // reader's focus a few frames after it is placed, which a phone, laying out every frame, does not.
+    private fun framed(action: () -> Unit) {
+        compose.mainClock.autoAdvance = false
+        action()
+        repeat(FRAMES) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.onAllNodesWithTag(IN_PLACE_TABS_TAG).fetchSemanticsNodes()
+        }
+    }
+
+    private fun click(tag: String) = compose.onNodeWithTag(tag).performScrollTo().performClick()
+
+    @Test
+    fun withAScreenReaderOpeningPutsItsFocusOnTheTabAndCloseOnTheButton() {
+        startScreenReader()
         show {
-            // The input focus gone from the panel, and the screen reader's on a tab in it.
-            tap(DATES_CHIP_TAG)
-            compose.runOnUiThread { focus!!.clearFocus(force = true) }
-            compose.waitForIdle()
+            framed { click(GENRES_CHIP_TAG) }
+            assertTrue("on the Genres tab", accessibilityFocused(genres))
+            framed { click(GENRES_PANEL_CLOSE_TAG) }
+            assertTrue("on the Genres button", accessibilityFocused(GENRES_CHIP_TAG))
+        }
+    }
+
+    @Test
+    fun aNewTrackHandsAScreenReadersFocusInThePanelToTheButtonWithNoInputFocusThere() {
+        startScreenReader()
+        show {
+            framed { click(DATES_CHIP_TAG) }
+            // The input focus gone from the panel, and the screen reader's on another tab in it.
+            framed { focus!!.clearFocus(force = true) }
             accessibilityFocus(genres)
             compose.onNodeWithTag(dates).assertIsNotFocused()
-            current.value = state(labelled(carefree))
-            compose.waitForIdle()
+            framed { current.value = state(labelled(carefree)) }
             onlyOpen("none")
+            assertTrue("on the Dates button", accessibilityFocused(DATES_CHIP_TAG))
             compose.onNodeWithTag(DATES_CHIP_TAG).assertIsFocused()
         }
     }
 
     @Test
-    fun aNewTrackLeavesAScreenReadersFocusOutsideThePanelWhereItIs() {
-        accessibility.setEnabled(true)
-        accessibility.setTouchExplorationEnabled(true)
-        accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+    fun aNewTrackDoesNotPullAScreenReadersFocusFromOutsideThePanel() {
+        startScreenReader()
         show {
-            tap(DATES_CHIP_TAG)
+            framed { click(DATES_CHIP_TAG) }
             // The screen reader moved on, out of the panel, to the player's row.
-            compose.runOnUiThread { focus!!.clearFocus(force = true) }
-            compose.waitForIdle()
+            framed { focus!!.clearFocus(force = true) }
             accessibilityFocus(PLAYER_TAG)
-            current.value = state(labelled(carefree))
-            compose.waitForIdle()
+            framed { current.value = state(labelled(carefree)) }
+            onlyOpen("none")
+            // Not checked: that it stays on the player's row. Here a new track drops the screen reader's
+            // focus from that row with no panel open at all, so it says nothing of this line.
+            assertFalse("not moved to the Dates button", accessibilityFocused(DATES_CHIP_TAG))
             compose.onNodeWithTag(DATES_CHIP_TAG).assertIsNotFocused()
         }
     }
@@ -439,4 +481,9 @@ class OnePanelScreenTest {
             assertEquals(first.center.y, close.center.y, 8f)
             assertTrue(close.left >= bounds(IN_PLACE_TABS_TAG).right - 1f)
         }
+
+    private companion object {
+        // Frames enough for the focus to be handed on: the move runs a frame or two after it is asked for.
+        const val FRAMES = 10
+    }
 }
