@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -13,10 +14,11 @@ import app.sleevesight.core.settings.Settings
 // place (#724, #772).
 
 /**
- * The key data of [header] ([KeyData]: the title, the artists, the album and its year), then under
- * the album the line of buttons that open in place ([UnderAlbum]), each a child of Home's column.
- * The artists under the title are held back, their line's space kept, until the track's people are
- * [named] ([peopleNamed], #1355).
+ * The key data of [header] ([KeyData]: the title, the artists, the album, and under it its record
+ * label and year), then under it the line of buttons that open in place ([UnderAlbum]), each a child
+ * of Home's column. The artists under the title are held back, their line's space kept, until the
+ * track's people are [named] ([peopleNamed], #1355); the line under the album likewise until the
+ * release's labels are known ([releaseLabels], #729), as [line]'s memory keeps the wait.
  */
 @Composable
 internal fun TrackHeader(
@@ -28,20 +30,59 @@ internal fun TrackHeader(
 ) {
     val normalized = remember(header) { actions.normalize(header) }
     val split = remember(shown.track, normalized) { splitOf(shown.track, normalized) }
-    KeyData(normalized, header, headerYears(shown.track, header), split, held = !named, notes = line.notes)
+    val labels = releaseLabels(shown, header, line.settings, actions)
+    val known = shown.cleared || labels is AlbumLabels.Known
+    val own = rememberNamingMemory()
+    val labelHeld = !waitedFor(line.labelMemory ?: own, shown.playing, known)
+    KeyData(
+        normalized,
+        header,
+        headerYears(shown.track, header),
+        split,
+        held = !named,
+        notes = line.notes,
+        labels = labels,
+        labelHeld = labelHeld,
+    )
     UnderAlbum(shown, header, line, actions)
 }
 
 /**
- * What the line under the album needs besides the track: its [memory] of the panels open, the
+ * The record labels of the release of [header]'s album being played (#729, [albumLabels]), with
+ * [settings] (MusicBrainz taken as on until their first read, as the cover's back takes it): the
+ * release the back of the cover shows (#984), its tracklist looked up as soon as the track's release
+ * is known rather than on the first flip, so the label is there without one. One lookup per release,
+ * through the remembered MusicBrainz answers the back reads too, so a flip then asks nothing more.
+ */
+@Composable
+private fun releaseLabels(
+    shown: Showing,
+    header: NowPlaying,
+    settings: Settings?,
+    actions: NowPlayingActions,
+): AlbumLabels {
+    val states by actions.tracklists.states.collectAsState()
+    val choices by actions.tracklists.choices.collectAsState()
+    // A feed that looks nothing up (a preview's) gives no label: none is waited for.
+    val on = settings?.isEnabled(SourceId.MUSICBRAINZ) != false && actions.tracklists.looksUp
+    val key = if (on) tracklistKey(shown.track, header, choices) else null
+    LaunchedEffect(key, actions.tracklists) { key?.let(actions.tracklists::look) }
+    return albumLabels(shown.track, header, on, states, choices)
+}
+
+/**
+ * What the lines under the album need besides the track: its [memory] of the panels open, the
  * [settings] (null until their first read), what a genre's box shows above its table ([notes]),
- * and, under *Separate pages*, the way to the genres' page ([genresPage], #772).
+ * under *Separate pages* the way to the genres' page ([genresPage], #772), and the wait for the
+ * record label ([labelMemory], #729), kept above whatever comes and goes with the track (none: one
+ * of the header's own).
  */
 internal class UnderAlbumLine(
     val memory: InPlaceMemory,
     val settings: Settings?,
     val notes: PanelNotes,
     val genresPage: (() -> Unit)? = null,
+    val labelMemory: NamingMemory? = null,
 )
 
 /**

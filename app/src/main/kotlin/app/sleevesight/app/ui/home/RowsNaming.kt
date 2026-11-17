@@ -99,10 +99,23 @@ internal fun peopleNamed(
     shown: Showing,
     normalized: NormalizedTrack,
     wait: Duration = NAMING_WAIT,
+): Boolean =
+    waitedFor(memory, shown.playing, shown.cleared || shown.musicBrainzOff || rolesKnown(shown.track, normalized), wait)
+
+/**
+ * Whether Home shows what it holds back on [playing] for MusicBrainz's answer: at once when it is
+ * [known]; else once [wait] has passed since the track was first shown, as [memory] keeps it. Once
+ * shown, a track stays shown: what MusicBrainz answers later is shown in its place once. For the
+ * people (#1355, [peopleNamed]) and the record label under the album (#729), each with its own memory.
+ */
+@Composable
+internal fun waitedFor(
+    memory: NamingMemory,
+    playing: NowPlaying,
+    known: Boolean,
+    wait: Duration = NAMING_WAIT,
 ): Boolean {
-    val playing = shown.playing
     val same = memory.track?.let { TrackIdentity.playsOn(it, playing) } == true
-    val known = shown.cleared || shown.musicBrainzOff || rolesKnown(shown.track, normalized)
     val named = known || (same && memory.named)
     SideEffect {
         if (!same) {

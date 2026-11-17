@@ -56,9 +56,10 @@ sealed interface TracklistState {
 /**
  * The albums' tracklists Home's cover shows on its back (#984), by [TracklistKey], the album's release
  * group (`ReleaseDate.group`) with the playing recording, whose release is shown:
- * [states], and the asks. A tracklist is looked up on the first flip of the cover ([look]), not ahead:
- * most covers are never turned, and every request waits its turn under MusicBrainz's one request a
- * second, behind the pipeline's own.
+ * [states], and the asks. A tracklist is looked up ([look]) as soon as Home knows the track's release,
+ * for the record label under the album (#729), which the release gives; the first flip of the cover
+ * then finds it. One lookup per release, each request waiting its turn under MusicBrainz's one request
+ * a second, behind the pipeline's own.
  */
 interface TracklistFeed {
     /** Each album asked for, by its key, and where its tracklist is. */
@@ -69,6 +70,12 @@ interface TracklistFeed {
 
     /** Looks up [key]'s tracklist again after it failed (*Retry*). */
     fun retry(key: TracklistKey)
+
+    /**
+     * Whether a tracklist asked for may be found: false for one that never looks any up, so what waits
+     * for one (the record label under Home's album, #729) does not.
+     */
+    val looksUp: Boolean get() = true
 
     /** The albums of one name asked for (#1080), by their key, and where their tracklists are. */
     val albums: StateFlow<Map<AlbumsKey, AlbumsState>> get() = NO_ALBUMS
@@ -94,6 +101,8 @@ interface TracklistFeed {
     /** No tracklists: a preview's, or a test's that shows none. */
     object None : TracklistFeed {
         override val states: StateFlow<Map<TracklistKey, TracklistState>> = MutableStateFlow(emptyMap())
+
+        override val looksUp: Boolean = false
 
         override fun look(key: TracklistKey) = Unit
 

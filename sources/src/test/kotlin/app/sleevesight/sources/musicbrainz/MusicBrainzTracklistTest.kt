@@ -83,6 +83,29 @@ class MusicBrainzTracklistTest {
         }
 
     @Test
+    fun `MusicBrainz's no-label label names no label, the others kept in order`() =
+        runTest {
+            // #729: "[no label]" is MusicBrainz's special label for a self-released release.
+            val labelled =
+                ReplayNetClient.ok(
+                    "{\"id\":\"r4\",\"media\":[],\"label-info\":[" +
+                        "{\"label\":{\"name\":\"[no label]\"}}," +
+                        "{\"label\":{\"name\":\"Harvest\"}}," +
+                        "{\"label\":{\"name\":\"Capitol Records\"}}]}",
+                )
+            val tracklist = assertIs<Lookup.Found<MbTracklist>>(MusicBrainzClient(labelled).tracklist("r4")).value
+            assertEquals(listOf("Harvest", "Capitol Records"), tracklist.labels)
+            val none =
+                ReplayNetClient.ok(
+                    "{\"id\":\"r5\",\"media\":[],\"label-info\":[{\"label\":{\"name\":\"[no label]\"}}]}",
+                )
+            assertEquals(
+                emptyList(),
+                assertIs<Lookup.Found<MbTracklist>>(MusicBrainzClient(none).tracklist("r5")).value.labels,
+            )
+        }
+
+    @Test
     fun `a group's official releases, browsed by status, page after page up to the cap`() =
         runTest {
             val page = (1..100).joinToString(",") { """{"id":"o$it","title":"Kind of Blue","status":"Official"}""" }

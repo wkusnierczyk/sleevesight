@@ -88,20 +88,26 @@ internal class Unanswered(
  * [R.string.home_sources_list_last]).
  */
 @Composable
-internal fun namedTogether(names: List<String>): String {
-    val sorted = names.distinct().sorted()
-    return when (sorted.size) {
-        1 -> sorted.single()
-        2 -> stringResource(R.string.home_sources_two, sorted[0], sorted[1])
+internal fun namedTogether(names: List<String>): String = namedInOrder(names.distinct().sorted())
+
+/**
+ * [names] said together in their order, as [namedTogether] says them: "Harvest and Capitol Records"
+ * for a release's labels (#729). Empty for none.
+ */
+@Composable
+internal fun namedInOrder(names: List<String>): String =
+    when (names.size) {
+        0 -> ""
+        1 -> names.single()
+        2 -> stringResource(R.string.home_sources_two, names[0], names[1])
         else -> {
             val head =
-                sorted.dropLast(1).drop(1).fold(sorted.first()) { all, next ->
+                names.dropLast(1).drop(1).fold(names.first()) { all, next ->
                     stringResource(R.string.home_sources_list, all, next)
                 }
-            stringResource(R.string.home_sources_list_last, head, sorted.last())
+            stringResource(R.string.home_sources_list_last, head, names.last())
         }
     }
-}
 
 /**
  * The sources the insight draws on that did not answer for [track] (#1121): those whose lookup ended
