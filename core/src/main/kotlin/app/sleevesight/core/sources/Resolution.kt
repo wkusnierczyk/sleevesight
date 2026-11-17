@@ -144,11 +144,17 @@ data class Resolution(
  *   read it (the work's type, or with none its parent's, `RecordingResolver.COMPOSED_FORMS`; a `Song`
  *   of a song cycle), or, told by the title alone, one whose title leads with its composer. What the
  *   Composer row is called reads it (`ArtistSplit`).
+ * @property uncredited the composers the work names whom the track does not credit (#1298), by
+ *   MusicBrainz's names, in its order: only on a [classical] work, and only when every credited composer
+ *   is one the work names, so no one is named twice in two spellings; empty otherwise. Home shows them
+ *   as it shows the [composers] (`ArtistSplit`), marked as MusicBrainz's; searches and prompts that
+ *   mean the credited composers read [composers] alone.
  */
 data class ArtistRoles(
     val composers: List<String>,
     val performers: List<String>,
     val classical: Boolean = false,
+    val uncredited: List<String> = emptyList(),
 ) {
     /** The first performer, else [track]'s first credited artist ([NormalizedTrack.primary]). */
     fun lead(track: NormalizedTrack): String = performers.firstOrNull { it.isNotBlank() } ?: track.primary

@@ -28,7 +28,7 @@ internal fun TrackHeader(
 ) {
     val normalized = remember(header) { actions.normalize(header) }
     val split = remember(shown.track, normalized) { splitOf(shown.track, normalized) }
-    KeyData(normalized, header, headerYears(shown.track, header), split, held = !named)
+    KeyData(normalized, header, headerYears(shown.track, header), split, held = !named, notes = line.notes)
     UnderAlbum(shown, header, line, actions)
 }
 
