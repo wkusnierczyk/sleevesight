@@ -108,10 +108,41 @@ class LyricsExplanationSourcesTest {
 
     @Test
     fun aKeptExplanationListsTheSameLines() {
-        val fresh = sources(answered(songfacts, untitled))
-        val kept = sources(answered(songfacts, untitled, keptAt = at))
-        assertEquals(fresh.evidence, kept.evidence)
+        // Kept as it was stored: its title not yet cleaned, its address with a trailing slash.
+        val stored = songfacts.copy(url = songfacts.url + "/", title = "\u200BSundown song facts\u202E")
+        val fresh = sources(answered(songfacts, untitled, again))
+        val kept = sources(answered(stored, untitled, again, keptAt = at))
+        val shown = { lines: SourcesLines ->
+            checkNotNull(lines.evidence).lines.map { Triple(it.id, it.text, it.source) }
+        }
+        assertEquals(shown(fresh), shown(kept))
         assertEquals(fresh.purposes, kept.purposes)
+        assertEquals(
+            citedLines(answer(songfacts, untitled, again).pages, fresh.evidence).mapValues { it.value.shown },
+            citedLines(answer(stored, untitled, again).pages, kept.evidence).mapValues { it.value.shown },
+        )
+    }
+
+    @Test
+    fun aPageOfTheTracksOwnOfAnotherSourceIsItsLine() {
+        // The song's Wikipedia article, which the explanation is given from the track's evidence.
+        val article = EvidenceDraft(SourceId.WIKIPEDIA, Scope.SONG, "It topped the charts.", WIKI, at)
+        val evidence =
+            EvidenceSet.of(
+                own.lines.map { EvidenceDraft(it.source, it.scope, it.text, it.url, at) } + article,
+                JvmHasher,
+            )
+        val cited = CitedPage("S2", "$WIKI/", "Wikipedia")
+        val lines =
+            withPages(SourcesLines(evidence), explainedPages(answered(songfacts, cited)), LinePurpose.EXPLANATION)
+        // Songfacts alone is new: the article is not listed again, nor named *explanation*.
+        val added = checkNotNull(lines.evidence).lines.filter { it.id !in evidence.ids.toSet() }
+        assertEquals(listOf(songfacts.url), added.map { it.url })
+        assertEquals(listOf(LinePurpose.EXPLANATION), lines.purposes.values.toList())
+        val chip = citedLines(listOf(cited), lines.evidence).getValue("S2")
+        assertEquals("W1", chip.shown)
+        assertTrue(chip.inSources)
+        assertNull(lines.purposes["W1"])
     }
 
     @Test
@@ -128,6 +159,15 @@ class LyricsExplanationSourcesTest {
         assertEquals("Sundown: song facts", shownTitle("Sundown:​ song\n facts‮"))
         assertNull(shownTitle("​ ⁠"))
         assertNull(shownTitle(null))
+        // A joiner that shapes what shows is kept: an emoji's, a Persian word's.
+        assertEquals(
+            "Family \uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67",
+            shownTitle("Family \uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67"),
+        )
+        assertEquals(
+            "\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645",
+            shownTitle("\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645"),
+        )
         val blank = CitedPage("S1", "https://www.music.example/x", "​ ⁠")
         assertEquals("music.example", explainedPages(answered(blank)).single().text)
     }
@@ -227,5 +267,6 @@ class LyricsExplanationSourcesTest {
 
     private companion object {
         const val MODEL = "Claude Haiku 5.5"
+        const val WIKI = "https://en.wikipedia.org/wiki/Sundown"
     }
 }

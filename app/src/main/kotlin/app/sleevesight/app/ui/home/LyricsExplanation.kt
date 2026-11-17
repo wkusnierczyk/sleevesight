@@ -111,16 +111,28 @@ internal class CitedLine(
 
 /**
  * [pages], by the id each was given ("S1"), as their citations show them: the line [lines]
- * (*Sources*' own) lists each page's address under ([webLineOf], #1067), else the page itself.
+ * (*Sources*' own) lists each page's address under ([lineOf], #1067), else the page itself.
  */
 internal fun citedLines(
     pages: List<CitedPage>,
     lines: EvidenceSet?,
 ): Map<String, CitedLine> =
     pages.associate { page ->
-        val line = webLineOf(page.url, lines)
+        val line = lineOf(page.url, lines)
         page.id to CitedLine(line ?: page.id, page.url, line != null)
     }
+
+/**
+ * The id of the line [lines] shows the page at [url] under (`sameAddress`), among any of its lines
+ * (#1067: the song's explanation cites the track's own pages too, its Wikipedia article among them),
+ * a web line first; null for none.
+ */
+internal fun lineOf(
+    url: String,
+    lines: EvidenceSet?,
+): String? =
+    webLineOf(url, lines)
+        ?: lines?.lines?.firstOrNull { line -> line.url?.let { sameAddress(it, url) } == true }?.id
 
 // Whether [sentence] is shown dimmed: no page backs it.
 private fun doubtful(sentence: CheckedSentence): Boolean =

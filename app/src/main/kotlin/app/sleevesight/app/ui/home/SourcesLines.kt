@@ -77,8 +77,10 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
 /**
  * [lines] with [pages] as web lines after them, each named [purpose] (#1205), numbered on from the
  * web lines they have (`S7` after `S6`); a page whose address a web line has already (`sameAddress`)
- * is that line, not listed twice, and keeps its own name. [lines] itself with no page to add, or no
- * evidence to add them to.
+ * is that line, not listed twice, and keeps its own name. The song's explanation (#1067,
+ * [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources (its Wikipedia
+ * article): a page any line has the address of is that line ([lineOf]). [lines] itself with no page
+ * to add, or no evidence to add them to.
  */
 internal fun withPages(
     lines: SourcesLines,
@@ -90,7 +92,7 @@ internal fun withPages(
         evidence
             ?.lines
             .orEmpty()
-            .filter { it.source == SourceId.WEB }
+            .filter { purpose == LinePurpose.EXPLANATION || it.source == SourceId.WEB }
             .mapNotNull { it.url }
     // Each address once, as `sameAddress` reads them (#1205): a page the list and a reason's search
     // both found, one with a trailing slash, is one line.
@@ -179,7 +181,7 @@ internal fun withAlbum(
  * [search] with them) still weigh its answer ([checkedPage]), and not again when another line has its
  * address; after it, the pages the song's explanation from [search] cites (#1067, [explainedPages]),
  * fresh or kept, named *explanation*, each address once. A reason's citations, the check's and the
- * explanation's show these ids by address ([shownLine], [webLineOf]), so they never point at another
+ * explanation's show these ids by address ([shownLine], [webLineOf], [lineOf]), so they never point at another
  * page.
  */
 @Composable
@@ -244,16 +246,15 @@ internal fun explainedPages(search: AiSearch): List<WebPage> {
 }
 
 /**
- * A page's [title] as a line of *Sources* shows it: cleaned as its evidence is (`SourceText.clean`:
- * what a person does not see, a tag character among it), then without the marks that show nothing
- * or turn the text around (format and control characters: a zero-width space, a right-to-left
- * override), its spaces one; null for none, or one with nothing left to show, so a kept title of
- * invisible characters alone falls back to the site as a fresh one does.
+ * A page's [title] as a line of *Sources* shows it: cleaned as its evidence is (`SourceText.titleOf`:
+ * without what a person does not see, a tag character, a zero-width space or a right-to-left
+ * override among it; a joiner that shapes an emoji or a Persian word kept), its spaces one; null for
+ * none, or one with nothing left to show, so a kept title of invisible characters alone falls back
+ * to the site as a fresh one does.
  */
 internal fun shownTitle(title: String?): String? =
-    title
-        ?.let(SourceText::clean)
-        ?.filterNot { Character.getType(it) == Character.FORMAT.toInt() }
+    SourceText
+        .titleOf(title)
         ?.replace(BLANKS, " ")
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
@@ -292,5 +293,6 @@ internal fun shownId(
 // When a page the AI's genre list rests on was retrieved, which *Sources* does not show: not kept.
 private val UNDATED = Instant.fromEpochMilliseconds(0)
 
-// Spaces and control characters (a tab, a line break), each run read as one space.
-private val BLANKS = Regex("[\\s\\p{Cc}]+")
+// Spaces and control characters (a tab, a line break), each run read as one space; classes ICU and
+// the JVM read alike.
+private val BLANKS = Regex("[\\p{Cc}\\p{Zs}]+")
