@@ -127,6 +127,37 @@
          gives (two compilations named "Greatest Hits"), and nothing tells which one is playing, so no
          tracklist is shown. -->
     <string name="home_tracklist_ambiguous">MusicBrainz reports several albums of this name for this artist. Sleevesight could not decide which one this is.</string>
+    <!-- Several albums of one name on the back (#1080). Under home_tracklist_ambiguous: opens the
+         list of the albums; %1$d is how many there are (always two or more). -->
+    <string name="home_albums_see">See the %1$d albums</string>
+    <!-- The list's heading: %1$d albums, %2$s the album's name as the player gives it. -->
+    <string name="home_albums_heading">%1$d albums named %2$s</string>
+    <!-- On an album opened from the list: back to the list. -->
+    <string name="home_albums_all">All albums</string>
+    <!-- On an album opened from the list: keeps it as the album playing, for this name and artist. -->
+    <string name="home_albums_select">Select</string>
+    <!-- On an album of the list: where the playing song is on it. %1$s the song, %2$s its number
+         ("6", or "2-3" for the third track of the second disc). -->
+    <string name="home_albums_playing_at">%1$s: track %2$s</string>
+    <!-- An album with no date, in place of its year. -->
+    <string name="home_albums_no_date">No date</string>
+    <!-- How many tracks an album of the list has. -->
+    <plurals name="home_albums_tracks">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+    <!-- Above a tracklist the listener chose of several albums of its name; %1$d how many. -->
+    <string name="home_albums_chosen">Chosen by you from %1$d albums of this name.</string>
+    <!-- Above a tracklist Sleevesight picked by date of several albums of its name; %1$d how many. -->
+    <string name="home_albums_by_date">Picked by date from %1$d albums of this name.</string>
+    <!-- Beside home_albums_chosen and home_albums_by_date: opens the albums. -->
+    <string name="home_albums_change">Change</string>
+    <!-- In the list, on the album the listener chose. -->
+    <string name="home_albums_yours">Your choice</string>
+    <!-- Under the list, after a choice: forgets it. -->
+    <string name="home_albums_decide">Let Sleevesight decide</string>
+    <!-- An album of the list's action, as a screen reader names it ("Double-tap to open"). -->
+    <string name="home_albums_open">open</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
     <!-- Under the title, on a track whose roles tell the composer apart from the performers (#1199):

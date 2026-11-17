@@ -81,8 +81,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * ([openSources]), and the app's own [colors], since the back takes nothing from the art. For a
  * track *Clear history* holds under *On request* (#1112), [lookUp] asks for it to be looked up again,
  * as *Look up again* does: a turn of the cover over asks, and the back fills once the sources answer;
- * null otherwise. [memory], the back as it was left ([rememberCoverMemory]), kept above where the
- * cover is drawn (#1097).
+ * null otherwise. [albums]: the albums of one name to choose among (#1080), opened for the album and
+ * artist [albumArtist] ([albumArtist]), and closed on another. [memory], the back as it was left
+ * ([rememberCoverMemory]), kept above where the cover is drawn (#1097).
  */
 @Suppress("LongParameterList") // What the back shows, what it asks, and where its buttons go.
 internal class CoverTurn(
@@ -95,6 +96,8 @@ internal class CoverTurn(
     val colors: ColorScheme,
     val memory: CoverMemory,
     val lookUp: (() -> Unit)? = null,
+    val albums: AlbumChoosing = AlbumChoosing(),
+    val albumArtist: String? = album,
 )
 
 /**
@@ -114,9 +117,11 @@ internal fun coverTurn(
 ): CoverTurn {
     val colors = LocalAppColors.current ?: MaterialTheme.colorScheme
     val states by actions.tracklists.states.collectAsState()
+    val albums by actions.tracklists.albums.collectAsState()
+    val choices by actions.tracklists.choices.collectAsState()
     val track = shown.track
     val on = settings?.isEnabled(SourceId.MUSICBRAINZ) != false
-    val back = coverBack(track, header, on, states)
+    val back = coverBack(track, header, on, states, choices)
     val retry =
         (back as? CoverBack.Unreachable)?.let { unreachable ->
             val key = unreachable.key
@@ -128,14 +133,24 @@ internal fun coverTurn(
         }
     return CoverTurn(
         album = albumIdentity(header),
+        albumArtist = albumArtist(track, header),
         back = back,
-        key = if (on) tracklistKey(track, header) else null,
+        key = if (on) tracklistKey(track, header, choices) else null,
         look = actions.tracklists::look,
         retry = retry,
         openSources = { actions.openSettingsAt(SettingsTarget.sources) },
         colors = colors,
         lookUp = { actions.lookUpAgain(shown.playing) }.takeIf { shown.cleared },
         memory = memory,
+        albums =
+            AlbumChoosing(
+                states = albums,
+                look = actions.tracklists::lookAlbums,
+                retry = actions.tracklists::retryAlbums,
+                choose = actions.tracklists::choose,
+                rows = { albumRows(it, track, header) },
+                song = track?.normalized?.title?.ifEmpty { null } ?: header.title,
+            ),
     )
 }
 
@@ -264,6 +279,12 @@ private fun lookUpOnTurn(
  * history." (#1112): a back shown for a track a clear holds was turned over during the hold, which
  * asked for it to be looked up, so it says it is looking (a back left turned over gives way to the
  * front, #1148).
+ *
+ * Of several albums of one name (#1080): the note's *See the {n} albums*, and the line above a
+ * tracklist picked among them with its *Change*, open the albums ([SameNamedAlbums]) in place of the
+ * back's content, until one is selected or Sleevesight left to decide; kept with the screen for the
+ * album shown. The albums are those of the name when the listener opened them, looked up then, and
+ * only then ([rememberBrowsing]): another song playing meanwhile asks nothing more.
  */
 @Composable
 private fun CoverBackFace(
@@ -271,35 +292,47 @@ private fun CoverBackFace(
     tracklist: TracklistMemory,
 ) {
     val colors = MaterialTheme.colorScheme
+    val back = turn.back
+    val same = (back as? CoverBack.Ambiguous)?.albums ?: (back as? CoverBack.Found)?.albums
+    val browsing = rememberBrowsing(turn.albumArtist, turn.albums)
+    val list = { same?.let(browsing.open) ?: Unit }
     Box(Modifier.fillMaxSize().background(colors.surfaceContainerHigh).testTag(COVER_BACK_TAG)) {
         CompositionLocalProvider(LocalContentColor provides colors.onSurface, LocalTrackCleared provides false) {
-            when (val back = turn.back) {
-                is CoverBack.Found ->
-                    if (back.discs.size == 1) {
-                        DiscTracks(
-                            back.discs.single().tracks,
-                            back.playing?.track,
-                            Modifier.fillMaxSize(),
-                            0,
-                            tracklist,
-                        )
-                    } else {
-                        DiscPages(back, tracklist)
-                    }
-                CoverBack.NotFound ->
+            val browsed = browsing.albums
+            if (browsed != null) {
+                SameNamedAlbums(
+                    browsed,
+                    turn.albums,
+                    browsing.opened,
+                    open = browsing.openAlbum,
+                    done = browsing.close,
+                ) { none, retry ->
                     Why {
-                        Text(stringResource(R.string.home_tracklist_none), style = MaterialTheme.typography.bodyLarge)
+                        if (none == null) {
+                            Text(
+                                stringResource(R.string.home_tracklist_none),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        } else {
+                            NoDatesText(none, retry, turn.openSources)
+                        }
                     }
-                CoverBack.Ambiguous ->
-                    Why {
-                        Text(
-                            stringResource(R.string.home_tracklist_ambiguous),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
-                CoverBack.Looking -> Why { NoDatesText(NoDates.LOOKING, null, turn.openSources) }
-                CoverBack.Off -> Why { NoDatesText(NoDates.OFF, null, turn.openSources) }
-                is CoverBack.Unreachable -> Why { NoDatesText(NoDates.UNREACHABLE, turn.retry, turn.openSources) }
+                }
+            } else {
+                when (back) {
+                    is CoverBack.Found -> FoundBack(back, list, tracklist)
+                    CoverBack.NotFound ->
+                        Why {
+                            Text(
+                                stringResource(R.string.home_tracklist_none),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    is CoverBack.Ambiguous -> Why { AmbiguousNote(back.albums, list) }
+                    CoverBack.Looking -> Why { NoDatesText(NoDates.LOOKING, null, turn.openSources) }
+                    CoverBack.Off -> Why { NoDatesText(NoDates.OFF, null, turn.openSources) }
+                    is CoverBack.Unreachable -> Why { NoDatesText(NoDates.UNREACHABLE, turn.retry, turn.openSources) }
+                }
             }
         }
     }
@@ -322,9 +355,9 @@ private fun Why(content: @Composable () -> Unit) {
  * which shows that disc.
  */
 @Composable
-private fun DiscPages(
+internal fun DiscPages(
     back: CoverBack.Found,
-    tracklist: TracklistMemory,
+    tracklist: TracklistMemory = rememberSaveable(saver = TracklistMemory.Saver) { TracklistMemory() },
 ) {
     val count = back.discs.size
     val playing = back.playing
@@ -395,12 +428,12 @@ private fun DiscPages(
  * song is the one it last brought into view.
  */
 @Composable
-private fun DiscTracks(
+internal fun DiscTracks(
     tracks: List<MbTrack>,
     playing: Int?,
     modifier: Modifier,
-    disc: Int,
-    tracklist: TracklistMemory,
+    disc: Int = 0,
+    tracklist: TracklistMemory = rememberSaveable(saver = TracklistMemory.Saver) { TracklistMemory() },
 ) {
     val kept = remember(tracks) { tracklist.place(disc) }
     val list =
