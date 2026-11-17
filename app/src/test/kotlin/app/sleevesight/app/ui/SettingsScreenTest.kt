@@ -237,7 +237,8 @@ class SettingsScreenTest {
             assertEquals(0, compose.onAllNodes(isDialog()).fetchSemanticsNodes().size)
             val high = row and hasText(text(R.string.settings_effort_high))
             assertEquals(0, compose.onAllNodes(high).fetchSemanticsNodes().size)
-            compose.onNode(row and hasText(text(R.string.settings_effort_low))).performScrollTo().assertIsDisplayed()
+            val low = app.getString(R.string.settings_ai_model_default, text(R.string.settings_effort_low))
+            compose.onNode(row and hasText(low)).performScrollTo().assertIsDisplayed()
             assertEquals(ReasoningEffort.LOW, current(store).effort(ProviderId.ANTHROPIC))
         }
     }
