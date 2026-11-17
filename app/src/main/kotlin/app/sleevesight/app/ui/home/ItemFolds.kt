@@ -113,17 +113,22 @@ internal fun splitOf(
 // Names compared as the resolution compares them.
 private val NAMES = NameMatcher(JvmAccentFolder)
 
-// The song's row: its title as under the cover ([KeyData]), with the version dropped from it; the
-// player's whole title, and no version, when normalizing leaves no title. Called *Music* on a
-// classical track ([ArtistSplit.classical], #1331: beside a Composer row, or an Authors row on a
-// classical work), *Song* otherwise.
+// The song's row: its title as under the cover ([KeyData]), with the version dropped from it, and
+// beside a Composer or Authors row ([split]) without the title's composer lead ("Barber: ",
+// [NormalizedTrack.composer]) when that row names the composer it leads with (#1356), as searched
+// ([NormalizedTrack.searchTitle]: the whole title when the lead is all there is); a lead naming a
+// performer (`Gould: Interview`, Bach the composer) stays. The player's whole title, and no version,
+// when normalizing leaves no title. Called *Music* on a classical track ([ArtistSplit.classical], #1331:
+// beside a Composer row, or an Authors row on a classical work), *Song* otherwise.
 private fun songRow(
     header: NowPlaying,
     normalized: NormalizedTrack,
     split: ArtistSplit?,
 ): ItemRow? {
     if (header.title.isBlank()) return null
-    val title = normalized.title.takeIf { it.isNotEmpty() }
+    val lead = normalized.composer
+    val told = lead != null && split?.composers.orEmpty().any { NAMES.sameName(it, lead.name) }
+    val title = (if (told) normalized.searchTitle else normalized.title).takeIf { it.isNotEmpty() }
     val version = normalized.dropped.takeIf { title != null }
     return if (split?.classical == true) {
         ItemRow(
