@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
@@ -21,6 +22,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.pipeline.PipelineView
@@ -35,6 +37,8 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.settings.Layout
+import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WriteAutomatically
@@ -260,6 +264,72 @@ class PeopleNamedOnceScreenTest {
             assertHeld()
             compose.onNodeWithTag(SOURCES_CHIP_TAG).assertIsFocused()
         }
+
+    @Test
+    fun theSameTrackBackAfterAWhileWithNothingPlayingIsNotHeldAgain() =
+        show(beethoven(answered = false)) { current ->
+            after(NAMING_WAIT.inWholeMilliseconds + 1_000)
+            assertEquals("Song, $TITLE", said(InsightItem.SONG))
+            current.value = state(null).let { NowPlayingState(it.view, null, it.playback, settings = settings) }
+            frames()
+            compose.onNodeWithTag(itemRowTag(InsightItem.SONG)).assertDoesNotExist()
+            current.value = state(beethoven(answered = false))
+            frames()
+            compose.onNodeWithTag(ARTISTS_HELD_TAG).assertDoesNotExist()
+            assertEquals("Song, $TITLE", said(InsightItem.SONG))
+        }
+
+    @Test
+    fun underSeparatePagesAFocusedRowsButtonHandsTheFocusToSourcesLinkWhenTheRowsAreHeld() =
+        show(state(beethoven(answered = true), settings.copy(layout = Layout.SEPARATE_PAGES))) { current ->
+            compose.mainClock.autoAdvance = true
+            focus(itemRowTag(InsightItem.SONG))
+            val next = NINTH.copy(title = "$TITLE II", mediaId = "b2")
+            current.value =
+                state(beethoven(answered = false, playing = next), settings.copy(layout = Layout.SEPARATE_PAGES))
+            compose.waitForIdle()
+            assertHeld()
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).assertIsFocused()
+        }
+
+    @Test
+    fun withSourcesOpenTheFocusGoesToItsCloseWhenTheRowsAreHeld() {
+        val left = settings.copy(sourcesOnNewTrack = NewTrackFold.AS_LEFT)
+        show(state(beethoven(answered = true), left)) { current ->
+            compose.mainClock.autoAdvance = true
+            compose.onNodeWithTag(SOURCES_CHIP_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemRowTag(InsightItem.SONG)).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemPanelTag(InsightItem.SONG) + ":close").assertIsFocused()
+            val next = NINTH.copy(title = "$TITLE II", mediaId = "b2")
+            current.value = state(beethoven(answered = false, playing = next), left)
+            compose.waitForIdle()
+            assertHeld()
+            compose.onNodeWithTag("$SOURCES_PANEL_TAG:close").assertIsFocused()
+        }
+    }
+
+    @Test
+    fun aNewTrackWithoutTheOpenPanelsRowHandsTheFocusToItsFirstRow() =
+        show(beethoven(answered = true)) { current ->
+            compose.mainClock.autoAdvance = true
+            compose.onNodeWithTag(itemRowTag(InsightItem.ALBUM)).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemPanelTag(InsightItem.ALBUM) + ":close").assertIsFocused()
+            val next = NINTH.copy(title = "$TITLE II", mediaId = "b2", album = null)
+            current.value = state(beethoven(answered = true, playing = next))
+            compose.waitForIdle()
+            compose.onNodeWithTag(itemRowTag(InsightItem.ALBUM)).assertDoesNotExist()
+            compose.onNodeWithTag(itemRowTag(InsightItem.SONG)).assertIsFocused()
+        }
+
+    // [tag]'s control given the input focus, as a keyboard would.
+    private fun focus(tag: String) {
+        compose.onNodeWithTag(tag).performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+        compose.onNodeWithTag(tag).assertIsFocused()
+    }
 
     @Test
     fun withMusicBrainzOffATrackWithNoRunYetIsNamedAtOnce() =

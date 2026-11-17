@@ -21,6 +21,7 @@ import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import kotlinx.coroutines.delay
@@ -117,7 +118,7 @@ internal fun peopleNamed(
         if (held != null && !memory.named) {
             val now = withFrameNanos { it }
             val deadline = memory.deadline ?: (now + wait.inWholeNanoseconds).also { memory.deadline = it }
-            delay((deadline - now).coerceAtLeast(0).nanoseconds)
+            delay((deadline - now).coerceIn(0, wait.inWholeNanoseconds).nanoseconds)
             if (memory.track === held) memory.named = true
         }
     }
@@ -133,12 +134,17 @@ internal class PeopleShown(
     val elsewhere: RowsHandBack,
 )
 
-/** [shown]'s [PeopleShown], by [normalized], the track as read; their memory kept as the rows' is. */
+/**
+ * [shown]'s [PeopleShown], by [normalized], the track as read, from [memory]: remembered above
+ * whatever comes and goes with the track (a while with nothing playing, an ad), as the rows' folds
+ * are, so the same track back is named as it was.
+ */
 @Composable
 internal fun peopleShown(
+    memory: NamingMemory,
     shown: Showing,
     normalized: NormalizedTrack,
-): PeopleShown = PeopleShown(peopleNamed(rememberNamingMemory(), shown, normalized), rememberRowsHandBack())
+): PeopleShown = PeopleShown(peopleNamed(memory, shown, normalized), rememberRowsHandBack())
 
 /**
  * How long Home holds back the naming of a track's people for MusicBrainz's answer (#1355) before
@@ -148,9 +154,39 @@ internal fun peopleShown(
 internal val NAMING_WAIT: Duration = 10.seconds
 
 /**
- * Where the focus goes when a new track closes a row's panel that held it and has no such row to go
+ * The item of the row whose button, among [buttons], holds [handoff]'s focus though [rows], the new
+ * track's, have no such row (#1355: its rows held back): read before the button goes. Null for none.
+ */
+internal fun goneButton(
+    buttons: Map<InsightItem, FocusRequester>,
+    handoff: FocusHandoff,
+    rows: List<ItemRow>,
+): InsightItem? =
+    buttons.entries.firstOrNull { (item, button) -> handoff.holds(button) && rows.none { it.item == item } }?.key
+
+/**
+ * Where the focus goes from [gone]'s panel or button, gone with a new track: back to its button when
+ * [rows] have it; else to the first row's button, or its *Close* while it is [open]; null when there
+ * are no rows (held back, #1355), for the control that stays ([RowsHandBack]).
+ */
+internal fun handBackTo(
+    gone: InsightItem,
+    rows: List<ItemRow>,
+    open: Set<InsightItem>,
+    buttonOf: (InsightItem) -> FocusRequester,
+    closeOf: (InsightItem) -> FocusRequester,
+): FocusRequester? =
+    when {
+        rows.any { it.item == gone } -> buttonOf(gone)
+        rows.isEmpty() -> null
+        else -> rows.first().item.let { if (it in open) closeOf(it) else buttonOf(it) }
+    }
+
+/**
+ * Where the focus goes when a new track closes a row's panel that held it and has no rows to go
  * back to (#1355: its rows held back while its people are named): [target], under [modifier] on a
- * control that stays, *Sources*' chip, or its *Close* while its panel is open; moved by [handoff].
+ * control that stays, *Sources*' chip, or its *Close* while its panel is open, or its page link
+ * under *Separate pages*; moved by [handoff].
  */
 @Stable
 internal class RowsHandBack(

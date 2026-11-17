@@ -72,8 +72,10 @@ import app.sleevesight.core.settings.Layout as LayoutSetting
  *
  * The focus moves as the line under the album's does ([InPlaceLine]): to a panel's *Close* when its
  * button opens it, back to its button when *Close* closes it, and to its button when a new track
- * closes a panel while the focus is in it, if the new track has that row; if it has not (its rows
- * held back while its people are named, #1355, or no such row), to [elsewhere], a control that stays.
+ * closes a panel while the focus is in it, if the new track has that row; if it has not, to its first
+ * row's (its *Close* while that row is open); and with no rows at all (held back while its people are
+ * named, #1355), to [elsewhere], a control that stays. A row's button that held the focus, under either
+ * layout, and is gone with the new track hands it on the same way.
  */
 @Suppress(
     "LongParameterList", // The rows, how they open, and what each shows.
@@ -100,16 +102,17 @@ internal fun ItemRows(
     val before = remember { mutableSetOf<InsightItem>().apply { addAll(open) } }
     // A panel gone by other than *Close* (a new track) while the focus was in it: back to its button,
     // or a keyboard's focus would fall to the top of the screen. Read before the panel goes.
-    val handBack = before.firstOrNull { it !in open && it in inside }
+    // Or a row's button holding the focus, the new track having no such row (its rows held back,
+    // #1355, under either layout): its focus goes on as the panel's would. Read before the button goes.
+    val handBack = before.firstOrNull { it !in open && it in inside } ?: goneButton(buttons, handoff, rows)
     SideEffect {
         before.clear()
         before.addAll(open)
         // No panel, no focus in it: a panel that goes may not be told it lost the focus.
         inside.retainAll(open)
-        when {
-            handBack == null -> Unit
-            rows.any { it.item == handBack } -> handoff.moveTo(buttonOf(handBack))
-            else -> elsewhere?.move()
+        handBack?.let { gone ->
+            val to = handBackTo(gone, rows, open, buttonOf, closeOf)
+            if (to != null) handoff.moveTo(to) else elsewhere?.move()
         }
     }
     val kinds = rows.map { itemKind(it.item, it) }

@@ -312,18 +312,19 @@ internal fun NowPlayingContent(
     // the insight and track it was opened on, whatever plays meanwhile.
     var reporting by remember { mutableStateOf<Reported?>(null) }
     reporting?.let { ReportOpen(it, actions.mail) { reporting = null } }
-    // Above the return, so the fold and the panels open under the album outlive a while with nothing playing.
+    // Above the return, so the fold, the panels open under the album and the rows' naming (#1355)
+    // outlive a while with nothing playing or an ad.
     val foldMemory = rememberFoldMemory()
     val itemMemory = rememberItemFoldMemory()
+    val naming = rememberNamingMemory()
     val inPlace = rememberInPlaceMemory()
     if (playing == null || state.ad != null) {
         NoTrackHome(state, actions)
         return
     }
     val shown = Showing(state, playing)
-    val view = shown.view
     // *Retry* beside the sources that did not answer, under the insight and in *Sources* (#1121).
-    val retries = Retries(view, playing, actions.askAgain)
+    val retries = Retries(shown.view, playing, actions.askAgain)
     val track = shown.track
     // The header from the pipeline's track (its latest report of the track) once it has one.
     val header = track?.nowPlaying ?: playing
@@ -332,7 +333,7 @@ internal fun NowPlayingContent(
     // Its own evidence, with its album's lines once its insight gathered them (#522).
     val lines = sourcesLines(actions.itemNotes, track, actions.genreNotes, actions.aiSearches)
     val focus = rememberLineFocus(lines.evidence, track?.normalized)
-    val people = peopleShown(shown, remember(header) { actions.normalize(header) })
+    val people = peopleShown(naming, shown, remember(header) { actions.normalize(header) })
     val fold = sourcesFold(foldMemory, playing, onNewTrack = settings?.sourcesOnNewTrack)
     // A citation tapped unfolds the list far enough to show its line, or opens it there on its page.
     val cite: (String) -> Unit =
@@ -354,8 +355,8 @@ internal fun NowPlayingContent(
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
                 TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions, people.named)
                 InsightCard(
-                    keyInsight(actions.itemNotes, track, view.nothingToNarrate) ?: NOT_YET,
-                    insightContext(view, track, settings, shown.modelAllowed, state.unavailable, retries),
+                    keyInsight(actions.itemNotes, track, shown.view.nothingToNarrate) ?: NOT_YET,
+                    insightContext(shown.view, track, settings, shown.modelAllowed, state.unavailable, retries),
                     insightActions(state, playing, actions, cite) { reportedTrack, written ->
                         reporting = Reported(reportedTrack, written)
                     },
