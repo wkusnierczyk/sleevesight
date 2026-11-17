@@ -55,7 +55,8 @@ import kotlin.math.abs
 
 /**
  * The key dialog's terms and buttons (#543): an AI service's agreement in bold; *Cancel* at the
- * start, and *Remove*, while a key is saved, and *Save*, filled, at the end, in every key's dialog;
+ * start, and *Remove*, while a key is saved, and *Save*, a black pill (#1387), at the end, in every
+ * key's dialog;
  * *Remove* in the error colour, named for the key it removes, and asking first, in a confirmation
  * laid out the same. Drawn with native graphics on a phone's width and density, to see the colour.
  */
@@ -78,6 +79,7 @@ class KeyDialogButtonsTest {
     private class Shown {
         var error = Color.Unspecified
         var primary = Color.Unspecified
+        var text = Color.Unspecified
         var removed = 0
         var dismissed by mutableIntStateOf(0)
     }
@@ -102,6 +104,7 @@ class KeyDialogButtonsTest {
                     SleevesightTheme(darkTheme = dark) {
                         shown.error = MaterialTheme.colorScheme.error
                         shown.primary = MaterialTheme.colorScheme.primary
+                        shown.text = MaterialTheme.colorScheme.onSurface
                         if (shown.dismissed == 0) {
                             KeyDialog(
                                 id = id,
@@ -221,8 +224,9 @@ class KeyDialogButtonsTest {
                 val saving = compose.onNode(save).captureToImage().asAndroidBitmap()
                 assertTrue("dark=$dark: Remove in ${shown.error}", share(removing, shown.error) > MARKED)
                 assertEquals("dark=$dark: Save not", 0f, share(saving, shown.error), 0f)
-                // *Save*, the main action, is filled with the primary colour.
-                assertTrue("dark=$dark: Save filled in ${shown.primary}", share(saving, shown.primary) > FILLED)
+                // *Save*, as every button in Settings (#1387): unfilled, its text in the controls' colour.
+                assertTrue("dark=$dark: Save not filled", share(saving, shown.primary) < MARKED)
+                assertTrue("dark=$dark: Save in ${shown.text}", share(saving, shown.text) > MARKED)
             }
         }
     }
@@ -346,8 +350,5 @@ class KeyDialogButtonsTest {
 
         /** The share of a button's pixels in the error colour that marks it: its outline alone is more. */
         const val MARKED = 0.02f
-
-        /** The share of a filled button's pixels in its fill, less its text and rounded corners. */
-        const val FILLED = 0.5f
     }
 }

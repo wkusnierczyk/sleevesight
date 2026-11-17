@@ -4,7 +4,6 @@ package app.sleevesight.app.ui.lab
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -163,13 +162,13 @@ private fun Variants(
                     Text(variantName(id, variant?.name), style = MaterialTheme.typography.bodyMedium)
                     Quiet(variantDescription(id, variant?.description))
                     val showing = shown[id] == true
-                    Text(
-                        stringResource(if (showing) R.string.lab_hide_instructions else R.string.lab_show_instructions),
-                        Modifier
-                            .clickable(role = Role.Button) { shown[id] = !showing }
-                            .padding(vertical = 4.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                    val instructions =
+                        stringResource(if (showing) R.string.lab_hide_instructions else R.string.lab_show_instructions)
+                    PillButton(
+                        instructions,
+                        instructions,
+                        onClick = { shown[id] = !showing },
+                        modifier = Modifier.padding(top = 4.dp).testTag(labInstructionsTag(kind, id)),
                     )
                     if (showing) Instructions(kind, id, settings, update)
                 }
@@ -210,12 +209,16 @@ private fun Instructions(
         textStyle = MaterialTheme.typography.bodySmall,
     )
     Quiet(stringResource(R.string.lab_custom_role))
-    TextButton(onClick = {
-        update { it.withCustom(kind, LabPrompts.ROLE) }
-        lab?.applyCustom(kind)
-    }) {
-        Text(stringResource(R.string.lab_custom_reset))
-    }
+    val reset = stringResource(R.string.lab_custom_reset)
+    PillButton(
+        reset,
+        reset,
+        onClick = {
+            update { it.withCustom(kind, LabPrompts.ROLE) }
+            lab?.applyCustom(kind)
+        },
+        modifier = Modifier.testTag(labResetTag(kind)),
+    )
 }
 
 // The comparisons logged, and the log's export and clearing.
@@ -256,6 +259,8 @@ private fun Logged(lab: PromptLab) {
                 named = clear,
                 onClick = if (log.isNotEmpty()) ({ asking = true }) else null,
                 modifier = Modifier.testTag(LAB_CLEAR_TAG),
+                // It deletes the comparisons logged.
+                destructive = true,
             )
         }
         exported?.let { Quiet(stringResource(if (it) R.string.lab_exported else R.string.lab_export_failed)) }
@@ -368,3 +373,12 @@ fun labCompareTag(
 
 /** The test tag of [kind]'s *Custom* field. */
 fun labCustomTag(kind: PromptKind): String = "lab-custom-${kind.key}"
+
+/** The test tag of *Show the instructions* (or *Hide*) of [kind]'s variant [id]. */
+fun labInstructionsTag(
+    kind: PromptKind,
+    id: String,
+): String = "lab-instructions-${kind.key}-$id"
+
+/** The test tag of *Custom*'s *Reset* for [kind]. */
+fun labResetTag(kind: PromptKind): String = "lab-reset-${kind.key}"

@@ -263,11 +263,8 @@ internal fun ButtonRow(
 }
 
 /**
- * The settings' small outlined button, a pill (#1126, #1365, #1387): [label] on it, read by
- * [named], so it says what it does out of context; [onClick] runs on a tap, and a null [onClick]
- * disables it. Its text in the controls' colour, black in light mode and white in dark, as the
- * switches' ([plainSwitchColors]), with Material's outline; a [destructive] one, which deletes, in
- * the theme's error colour, its outline too.
+ * The app's small outlined button, a pill (#1126, #1365, #1387), for every button in Settings and
+ * the prompt lab: [label] on it, read by [named], so it says what it does out of context.
  */
 @Composable
 internal fun PillButton(
@@ -276,12 +273,28 @@ internal fun PillButton(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     destructive: Boolean = false,
+) = PillButton(onClick, modifier, named, destructive) { Text(label) }
+
+/**
+ * A pill with [content] on it, read by [named], or, when null, by what [content] says (an
+ * [app.sleevesight.app.ui.home.AiLabel]'s "…, uses AI"); [onClick] runs on a tap, and a null
+ * [onClick] disables it. Its text in the controls' colour, black in light mode and white in dark, as
+ * the switches' ([plainSwitchColors]), with Material's outline; a [destructive] one, which deletes,
+ * in the theme's error colour, its outline too.
+ */
+@Composable
+internal fun PillButton(
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    named: String? = null,
+    destructive: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
 ) {
     val color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     OutlinedButton(
         onClick = { onClick?.invoke() },
         enabled = onClick != null,
-        modifier = modifier.semantics { contentDescription = named },
+        modifier = named?.let { modifier.semantics { contentDescription = it } } ?: modifier,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
         border =
             if (destructive) {
@@ -289,7 +302,8 @@ internal fun PillButton(
             } else {
                 ButtonDefaults.outlinedButtonBorder(onClick != null)
             },
-    ) { Text(label) }
+        content = content,
+    )
 }
 
 /**

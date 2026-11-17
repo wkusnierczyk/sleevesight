@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
@@ -228,6 +229,27 @@ class PromptLabScreenTest {
             compose.onNodeWithTag(labCompareTag(PromptKind.SONG, LabPrompts.CUSTOM)).performScrollTo().performClick()
             compose.waitUntil(WAIT_MS) { LabPrompts.CUSTOM in lab.settings.value.compared(PromptKind.SONG) }
             compose.waitUntil(WAIT_MS) { count("Compare 4 prompts · 4 paid calls") == 1 }
+        }
+    }
+
+    @Test
+    fun aVariantsInstructionsOpenAndCloseOnTheirPillAndCustomsResetPutsTheRoleBack() {
+        lab.developerMode(true)
+        lab.update { it.withCustom(PromptKind.SONG, "Write a haiku.") }
+        show {
+            compose.onNodeWithTag(LAB_BLOCK_TAG).performScrollTo()
+            compose.onNodeWithTag(labKindTag(PromptKind.SONG)).performScrollTo().performClick()
+            val instructions = labInstructionsTag(PromptKind.SONG, LabPrompts.CUSTOM)
+            compose.onNodeWithTag(instructions).performScrollTo().assertHasClickAction()
+            assertEquals(0, compose.onAllNodesWithTag(labCustomTag(PromptKind.SONG)).fetchSemanticsNodes().size)
+            compose.onNodeWithTag(instructions).performClick()
+            compose.onNodeWithTag(labCustomTag(PromptKind.SONG)).assertExists()
+            compose.onNodeWithTag(labResetTag(PromptKind.SONG)).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) { lab.settings.value.custom(PromptKind.SONG) == LabPrompts.ROLE }
+            compose.onNodeWithTag(instructions).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) {
+                compose.onAllNodesWithTag(labCustomTag(PromptKind.SONG)).fetchSemanticsNodes().isEmpty()
+            }
         }
     }
 
