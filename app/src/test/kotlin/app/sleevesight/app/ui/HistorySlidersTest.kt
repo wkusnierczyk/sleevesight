@@ -231,7 +231,7 @@ class HistorySlidersTest {
         }
 
     @Test
-    fun aStoredValueThatIsNotAStopShowsAtTheNearest() {
+    fun aStoredValueThatIsNotAStopIsShownAndReadAsItIsAtTheNearestStop() {
         runBlocking {
             settings.update {
                 it.copy(
@@ -242,11 +242,31 @@ class HistorySlidersTest {
             }
         }
         showHistory {
-            assertEquals("Keep history for" to "7 days", read(KEEP_HISTORY_SLIDER_TAG))
-            assertEquals("New session idle trigger" to "1 hour", read(SESSION_GAP_SLIDER_TAG))
-            assertEquals("Web search" to "7 days", read(lifetimeTags(SourceId.WEB).slider))
-            // Shown, not written.
+            assertEquals("Keep history for" to "12 hours", read(KEEP_HISTORY_SLIDER_TAG))
+            assertEquals(listOf("12 hours"), texts(KEEP_HISTORY_VALUE_TAG))
+            assertEquals("New session idle trigger" to "50 minutes", read(SESSION_GAP_SLIDER_TAG))
+            assertEquals(listOf("50 min"), texts(SESSION_GAP_VALUE_TAG))
+            val web = lifetimeTags(SourceId.WEB)
+            assertEquals("Web search" to "10 days", read(web.slider))
+            assertEquals(listOf("10 days"), texts(web.value))
+            // The thumbs at the nearest stops, the values not written.
+            assertEquals(0f, progress(KEEP_HISTORY_SLIDER_TAG))
+            assertEquals(3f, progress(SESSION_GAP_SLIDER_TAG))
+            assertEquals(2f, progress(web.slider))
             assertEquals(12.hours, settings.now().historyLifetime)
+
+            // Once moved, the stop's own words.
+            moveTo(SESSION_GAP_SLIDER_TAG, 4)
+            compose.waitUntil(WAIT_MS) { settings.now().sessionGap == 2.hours }
+            assertEquals("New session idle trigger" to "2 hours", read(SESSION_GAP_SLIDER_TAG))
         }
     }
+
+    /** Where the slider [tag]'s thumb is, by stop. */
+    private fun progress(tag: String): Float? =
+        slider(tag)
+            .fetchSemanticsNode()
+            .config
+            .getOrNull(SemanticsProperties.ProgressBarRangeInfo)
+            ?.current
 }

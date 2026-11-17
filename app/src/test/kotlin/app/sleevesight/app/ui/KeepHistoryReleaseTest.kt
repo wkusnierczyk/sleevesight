@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -186,7 +187,7 @@ class KeepHistoryReleaseTest {
     fun aStoredValueBetweenTheStopsAsksWhenTheThumbComesBackToItsStop() {
         storeHistory(100)
         showHistory { _ ->
-            assertEquals("shown at the nearest stop", "90 days", spoken())
+            assertEquals("read as it is", "100 days", spoken())
             dragAwayAndBack(2, 3)
             assertTrue("90 days is shorter than 100", shows("Keep history for 90 days?"))
             compose.onNodeWithText(app.getString(R.string.settings_cancel)).performClick()
@@ -198,6 +199,40 @@ class KeepHistoryReleaseTest {
             compose.waitUntil(WAIT_MS) { settings.now().historyLifetime == 90.days }
         }
     }
+
+    // A drag by touch, as by a finger: the thumb swiped from 90 days to 30 days and let go asks,
+    // and nothing is stored before *Shorten*.
+    @Test
+    fun aSwipeToAShorterTimeAsksAndStoresNothingBeforeShorten() =
+        showHistory { _ ->
+            slider().performTouchInput {
+                val inset = 12.dp.toPx()
+                val stop = { i: Int -> Offset(inset + (width - 2 * inset) * i / 4, centerY) }
+                swipe(stop(2), stop(1))
+            }
+            compose.waitForIdle()
+            assertTrue(shows("Keep history for 30 days?"))
+            assertEquals("nothing stored before the answer", 90.days, settings.now().historyLifetime)
+            compose.onNodeWithText(app.getString(R.string.settings_keep_history_shorten)).performClick()
+            compose.waitUntil(WAIT_MS) { settings.now().historyLifetime == 30.days }
+        }
+
+    // The question stays through the activity made again, as on a rotation, and nothing is stored.
+    @Test
+    fun theQuestionOutlivesTheActivityMadeAgainAndStoresNothing() =
+        showHistory { scenario ->
+            moveTo(1)
+            assertTrue(shows("Keep history for 30 days?"))
+            scenario.recreate()
+            showOn(scenario, open = true)
+            compose.waitUntil(WAIT_MS) { shows("Keep history for 30 days?") }
+            assertEquals("nothing stored", 90.days, settings.now().historyLifetime)
+            compose.onNodeWithText(app.getString(R.string.settings_cancel)).performClick()
+            compose.waitForIdle()
+            assertTrue(!shows("Keep history for 30 days?"))
+            assertEquals(90.days, settings.now().historyLifetime)
+            assertEquals("90 days", spoken())
+        }
 
     @Test
     fun aStoredValueBetweenTheStopsGoesLongerAtOnce() {

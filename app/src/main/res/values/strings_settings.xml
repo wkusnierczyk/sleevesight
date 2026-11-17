@@ -79,7 +79,6 @@
     <string name="settings_musicbrainz_wait_summary">When MusicBrainz is busy, Sleevesight asks again, waiting longer each time, for up to this long before going on without it. A longer wait gives fuller genres and dates; a shorter one shows the insight sooner.</string>
     <string name="settings_musicbrainz_wait_none">Don’t wait</string>
     <string name="settings_musicbrainz_wait_seconds">%1$d s</string>
-    <string name="settings_musicbrainz_wait_minutes">%1$d min</string>
     <!-- *AI services* → *Retry when the AI fails* (#1164), the section's last row: a stepped slider
          as Wait when busy's; the stops' labels are settings_ai_retry_none and the units above.
          %1$s in the description is the value chosen, as under its stop ("30 s"). -->

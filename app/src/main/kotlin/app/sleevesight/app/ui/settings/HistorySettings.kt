@@ -72,7 +72,17 @@ internal fun HistorySection(
                 stored = nearestStop(stops.values, settings.sessionGap),
                 applies = true,
                 tags = SteppedTags(SESSION_GAP_SLIDER_TAG, SESSION_GAP_STOPS_TAG, SESSION_GAP_VALUE_TAG),
-                look = SteppedLook(start = 0.dp),
+                look =
+                    SteppedLook(
+                        start = 0.dp,
+                        between =
+                            between(
+                                settings.sessionGap,
+                                stops.values,
+                                { shortDuration(it) },
+                                { durationLabel(it) },
+                            ),
+                    ),
             ) { gap -> update { it.copy(sessionGap = gap) } }
         }
     }
@@ -117,14 +127,19 @@ private fun KeepHistoryRow(
     if (!shownInSearch(title)) return
     val writer = LocalHistoryLifetime.current
     val stored = settings.historyLifetime
+    val stops = historyStops()
     SteppedRow(
         title = title,
         summary = { _, _ -> stringResource(R.string.settings_keep_history_summary) },
-        stops = historyStops(),
-        stored = nearestHistoryStop(settings.historyLifetime),
+        stops = stops,
+        stored = nearestHistoryStop(stored),
         applies = true,
         tags = SteppedTags(KEEP_HISTORY_SLIDER_TAG, KEEP_HISTORY_STOPS_TAG, KEEP_HISTORY_VALUE_TAG),
-        look = SteppedLook(start = 0.dp),
+        look =
+            SteppedLook(
+                start = 0.dp,
+                between = between(stored, stops.values, { lifetimeLabel(it) }, { lifetimeLabel(it) }),
+            ),
         askBeforeLower = AskBeforeLower({ held(writer, stored) }, ::shorter, ::ShortenHistoryDialog),
     ) { chosen ->
         if (writer != null) writer.choose(chosen) else update { it.copy(historyLifetime = chosen) }
@@ -185,7 +200,13 @@ private fun LifetimeRows(
             stored = nearestStop(stops.values, lifetime),
             applies = true,
             tags = lifetimeTags(source),
-            look = SteppedLook(start = 0.dp, leading = { ServiceBadge(badgeLetter(source)) }, endsOnly = true),
+            look =
+                SteppedLook(
+                    start = 0.dp,
+                    leading = { ServiceBadge(badgeLetter(source)) },
+                    endsOnly = true,
+                    between = between(lifetime, stops.values, { durationLabel(it) }, { durationLabel(it) }),
+                ),
         ) { chosen -> update { it.copy(cacheLifetimes = it.cacheLifetimes + (source to chosen)) } }
     }
 }

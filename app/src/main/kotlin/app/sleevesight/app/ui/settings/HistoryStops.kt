@@ -6,6 +6,7 @@ import app.sleevesight.app.R
 import app.sleevesight.core.model.SourceId
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
 // *History*'s stepped sliders (#1126): their stops and test tags.
@@ -54,8 +55,6 @@ private val HISTORY_DAYS = listOf(7, 30, 90, 365)
 @Suppress("MagicNumber") // The values are the offer itself.
 private val SESSION_GAP_MINUTES = listOf(10, 20, 30, 60, 120)
 
-private const val MINUTES_IN_HOUR = 60L
-
 /** The lifetimes offered, which include every default (D9). */
 @Suppress("MagicNumber") // The values are the offer itself.
 private val LIFETIME_DAYS = listOf(1, 3, 7, 14, 30, 90)
@@ -82,15 +81,7 @@ internal fun nearestHistoryStop(lifetime: Duration?): Int =
 @Composable
 internal fun sessionGapStops(): Stops<Duration> {
     val values = SESSION_GAP_MINUTES.map { it.minutes }
-    val labels =
-        values.map {
-            if (it.inWholeMinutes % MINUTES_IN_HOUR == 0L) {
-                stringResource(R.string.settings_hours_short, it.inWholeHours.toInt())
-            } else {
-                stringResource(R.string.settings_musicbrainz_wait_minutes, it.inWholeMinutes.toInt())
-            }
-        }
-    return Stops(values, labels, values.map { durationLabel(it) })
+    return Stops(values, values.map { shortDuration(it) }, values.map { durationLabel(it) })
 }
 
 /** A source's lifetime's stops (D9, #1126), in days, each read as labelled. */
@@ -112,3 +103,26 @@ internal fun shorter(
     lifetime: Duration?,
     than: Duration?,
 ): Boolean = lifetime != null && (than == null || lifetime < than)
+
+/** [value] as a [Between], where it is not one of [stops]; [label] and [spoken] name it. */
+@Composable
+internal fun <T> between(
+    value: T,
+    stops: List<T>,
+    label: @Composable (T) -> String,
+    spoken: @Composable (T) -> String,
+): Between? = if (value in stops) null else Between(label(value), spoken(value))
+
+/**
+ * A time short, as under a slider's stop: *1 h* in whole hours, *45 min* in whole minutes, else in
+ * words ([durationLabel]).
+ */
+@Composable
+internal fun shortDuration(duration: Duration): String =
+    when {
+        duration >= 1.hours && duration == duration.inWholeHours.hours ->
+            stringResource(R.string.settings_hours_short, duration.inWholeHours.toInt())
+        duration >= 1.minutes && duration == duration.inWholeMinutes.minutes ->
+            stringResource(R.string.settings_minutes_short, duration.inWholeMinutes.toInt())
+        else -> durationLabel(duration)
+    }

@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import kotlin.math.abs
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
@@ -56,7 +57,7 @@ internal fun stopLabel(
     when {
         stop == Duration.ZERO -> none
         stop >= 1.minutes && stop == stop.inWholeMinutes.minutes ->
-            stringResource(R.string.settings_musicbrainz_wait_minutes, stop.inWholeMinutes.toInt())
+            stringResource(R.string.settings_minutes_short, stop.inWholeMinutes.toInt())
         else -> stringResource(R.string.settings_musicbrainz_wait_seconds, stop.inWholeSeconds.toInt())
     }
 
@@ -86,3 +87,9 @@ internal fun musicBrainzWaitIndexRow(): IndexedRow {
     val none = stringResource(R.string.settings_musicbrainz_wait_none)
     return IndexedRow(title, listOf(title, summary) + Settings.MUSICBRAINZ_WAITS.map { stopLabel(it, none) })
 }
+
+/** The index of the stop of [stops] nearest [value]: a value stored that is not a stop shows at the nearest. */
+internal fun nearestStop(
+    stops: List<Duration>,
+    value: Duration,
+): Int = stops.indices.minBy { abs((stops[it] - value).inWholeMilliseconds) }

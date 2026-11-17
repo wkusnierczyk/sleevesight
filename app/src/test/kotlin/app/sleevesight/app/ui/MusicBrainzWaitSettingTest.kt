@@ -128,7 +128,7 @@ class MusicBrainzWaitSettingTest {
         )
         assertEquals("Don’t wait", text(R.string.settings_musicbrainz_wait_none))
         assertEquals("15 s", app.getString(R.string.settings_musicbrainz_wait_seconds, 15))
-        assertEquals("1 min", app.getString(R.string.settings_musicbrainz_wait_minutes, 1))
+        assertEquals("1 min", app.getString(R.string.settings_minutes_short, 1))
         assertEquals(listOf(Duration.ZERO, 15.seconds, 30.seconds, 1.minutes), Settings.MUSICBRAINZ_WAITS)
         assertEquals(15.seconds, Settings().musicBrainzWait)
     }

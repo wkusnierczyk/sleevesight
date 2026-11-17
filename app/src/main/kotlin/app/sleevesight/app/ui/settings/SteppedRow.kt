@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,9 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlin.time.Duration
 
 // The stepped slider of a setting chosen from a range (#1120, #1164, #1126): *Wait when busy*,
 // *Retry when the AI fails*, and *History*'s lifetimes.
@@ -79,13 +78,25 @@ internal class Stops<T>(
 /**
  * How a [SteppedRow] looks beyond its stops: where it [start]s (at the name of the badged row above
  * it, [UNDER_BADGE], for a row nested under a source), what goes before its title ([leading], a
- * source's badge, [ROW_MARK] a side, #1126), and whether every stop is labelled or only the first
- * and the last ([endsOnly], for a row among several alike, #1126).
+ * source's badge, [ROW_MARK] a side, #1126), whether every stop is labelled or only the first
+ * and the last ([endsOnly], for a row among several alike, #1126), and how a value stored between
+ * the stops is shown ([between]; null where the value stored is a stop).
  */
 internal data class SteppedLook(
     val start: Dp = UNDER_BADGE,
     val leading: (@Composable () -> Unit)? = null,
     val endsOnly: Boolean = false,
+    val between: Between? = null,
+)
+
+/**
+ * A value stored that lies between a [SteppedRow]'s stops (#1126), as it is shown at the row's
+ * right ([label]: *12 h*) and read ([spoken]: *12 hours*) while the thumb rests at the nearest
+ * stop, unmoved: the setting is shown as it is, not as the stop it is drawn at.
+ */
+internal class Between(
+    val label: String,
+    val spoken: String,
 )
 
 /**
@@ -105,7 +116,7 @@ internal class AskBeforeLower<T>(
 
 /** Whether a [SteppedRow]'s thumb moved off its stop since it was last let go ([AskBeforeLower]). */
 private class Release {
-    var moved = false
+    var moved by mutableStateOf(false)
 
     /**
      * The thumb let go at [value]: nothing where it did not move or came back to the value held, a
@@ -157,14 +168,16 @@ internal fun <T> SteppedRow(
     val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
     val indices = stops.values.indices
     // Follows a drag at once; the stored value catches up as it is written.
-    var shown by remember(stored) { mutableFloatStateOf(stored.toFloat()) }
-    // The stop let go at that waits for an answer ([askBeforeLower]).
-    var asking by remember { mutableStateOf<Int?>(null) }
+    // The stop let go at that waits for an answer ([askBeforeLower]), kept through a rotation.
+    var asking by rememberSaveable { mutableStateOf<Int?>(null) }
+    var shown by remember(stored) { mutableFloatStateOf((asking ?: stored).toFloat()) }
     val release = remember { Release() }
     val index = shown.roundToInt().coerceIn(indices)
     val labels = stops.labels
+    // The value stored, as it is, while the thumb rests at its stop.
+    val (valueLabel, valueSpoken) = shownValue(look.between, index, stored, !release.moved && asking == null, stops)
     Column(Modifier.fillMaxWidth().padding(start = look.start, top = 8.dp, bottom = 8.dp)) {
-        SteppedTitle(title, labels[index], look.leading, alpha, tags.value)
+        SteppedTitle(title, valueLabel, look.leading, alpha, tags.value)
         summary?.let { Description(title, it(stops.values[index], labels[index]), color = color) }
         StopsSlider(
             value = shown,
@@ -184,7 +197,7 @@ internal fun <T> SteppedRow(
                         if (release.letGo(stops.values[chosen], ask, choose)) asking = chosen
                     }
                 },
-            spoken = title to stops.spoken[index],
+            spoken = title to valueSpoken,
             count = stops.values.size,
             alpha = alpha,
             tag = tags.slider,
@@ -249,6 +262,23 @@ private fun StopsSlider(
     )
 }
 
+/**
+ * The value shown at the row's right and read, as label and words: [between]'s, where given, while
+ * the thumb rests unmoved at the [stored] stop and no question waits; else stop [index]'s.
+ */
+private fun shownValue(
+    between: Between?,
+    index: Int,
+    stored: Int,
+    still: Boolean,
+    stops: Stops<*>,
+): Pair<String, String> =
+    if (between != null && index == stored && still) {
+        between.label to between.spoken
+    } else {
+        stops.labels[index] to stops.spoken[index]
+    }
+
 /** [labels] with those between the first and the last left blank: a slider labelled at its ends (#1126). */
 private fun endsOnly(labels: List<String>): List<String> =
     labels.mapIndexed { i, label -> if (i == 0 || i == labels.lastIndex) label else "" }
@@ -290,12 +320,6 @@ private fun SteppedTitle(
 
 /** The gap between a [SteppedRow]'s [leading][SteppedLook.leading] and its title, as a badged row's. */
 private val ROW_GAP = 16.dp
-
-/** The index of the stop of [stops] nearest [value]: a value stored that is not a stop shows at the nearest. */
-internal fun nearestStop(
-    stops: List<Duration>,
-    value: Duration,
-): Int = stops.indices.minBy { abs((stops[it] - value).inWholeMilliseconds) }
 
 /** The slider's thumb, a circle in the colour of the settings' other controls (the switches', #1126). */
 @Composable

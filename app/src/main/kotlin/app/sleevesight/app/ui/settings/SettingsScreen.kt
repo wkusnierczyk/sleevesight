@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -133,10 +134,12 @@ fun SettingsScreen(
     val save = scope.saver(settingsStore, saves, failed)
     val update: Update = { transform -> save { settingsStore.update(transform) } }
     // *Keep history for* (#1126), its last choice kept with the store, as its save is.
+    // Made once per store: `save` is made anew at each composition, so it is read as it is now.
+    val latestSave by rememberUpdatedState(save)
     val historyLifetime =
-        remember(settingsStore, save, saves) {
+        remember(settingsStore, saves) {
             val asked = settingsStore.historyLifetimeAsked
-            HistoryLifetimeWriter(asked::held) { lifetime -> asked.save(lifetime, save, saves) }
+            HistoryLifetimeWriter(asked::held) { lifetime -> asked.save(lifetime, latestSave, saves) }
         }
     // *Dismiss* and its *Undo* (#759: *Players*' note), and *Restore dismissed messages*, saved as
     // any change is, a failure announced as any change's is.
