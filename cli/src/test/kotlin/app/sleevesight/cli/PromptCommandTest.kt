@@ -91,6 +91,7 @@ class PromptCommandTest {
         assertEquals(1, options.repeat)
         assertNull(options.system)
         assertEquals(Keys.DEFAULT_FILE, options.keysFile)
+        assertFalse(options.json)
 
         val google = PromptOptions.parse(listOf("--file", prompt.path, "--provider", "google", "--effort", "high"))
         assertEquals("gemini-3.5-flash-lite", google.model)
@@ -142,6 +143,16 @@ class PromptCommandTest {
         assertTrue(run.out.startsWith("--- reply 1/2\nHello there.\n--- input 12 tokens, output 3, stop reason end, "))
         assertTrue("--- reply 2/2\nHello there.\n" in run.out)
         assertFalse("sk-ant" in run.out + run.err)
+    }
+
+    @Test
+    fun `--json asks for the reply as one JSON object`() {
+        val provider = Answering(listOf(CompletionEvent.Delta("{}"), done))
+        val run = run(provider, "--file", prompt.path, "--json")
+
+        assertEquals(0, run.status)
+        assertTrue(provider.requests.single().json)
+        assertTrue("asked for as JSON" in run.err)
     }
 
     @Test

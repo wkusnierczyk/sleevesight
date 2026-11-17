@@ -79,7 +79,15 @@ class PromptCommand(
         val key =
             Keys.load(environment, options.keysFile).forProvider(options.provider)
                 ?: throw Refused("No ${Keys.variableOf(options.provider)}, in the environment or the keys file.")
-        val request = CompletionRequest(options.model, prompt, options.maxTokens, options.effort, system = system)
+        val request =
+            CompletionRequest(
+                options.model,
+                prompt,
+                options.maxTokens,
+                options.effort,
+                system = system,
+                json = options.json,
+            )
         return Triple(options, request, key)
     }
 
@@ -94,7 +102,8 @@ class PromptCommand(
         err.println(
             "${Options.nameOf(provider.id)} ${request.model}, effort $effort, " +
                 "max tokens ${request.maxTokens}; prompt ${request.prompt.length} characters" +
-                (request.system?.let { ", system prompt ${it.length}" } ?: ", no system prompt"),
+                (request.system?.let { ", system prompt ${it.length}" } ?: ", no system prompt") +
+                (if (request.json) ", asked for as JSON" else ""),
         )
         var failed = 0
         for (n in 1..repeat) {
@@ -157,6 +166,7 @@ class PromptCommand(
             """
             Usage: sleevesight-cli prompt --file <file|-> [--system <file>] [--provider <name>] [--model <id>]
                                           [--effort <level>] [--max-tokens <n>] [--repeat <n>] [--keys <file>]
+                                          [--json]
 
               Sends the prompt in --file (- for standard input), as the one user message, to an AI
               service, through the client the app uses, and prints each reply as it comes, then its
@@ -175,6 +185,9 @@ class PromptCommand(
               --repeat <n>        send it n times, one after another (default 1)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env), read as
                                   live reads it
+              --json              the prompt asks for one JSON object, as the app's searches and
+                                  checks do: a client whose service takes a JSON mode asks for it
+                                  (OpenRouter's response_format); the others send the prompt alone
 
             Exit status: 0 when every reply ended; 2 for a usage error, or no key; 3 when a call failed.
             """.trimIndent()
@@ -191,6 +204,7 @@ data class PromptOptions(
     val maxTokens: Int,
     val repeat: Int,
     val keysFile: File,
+    val json: Boolean = false,
 ) {
     companion object {
         private val VALUED =
@@ -205,10 +219,14 @@ data class PromptOptions(
                 "--keys",
             )
 
+        /** The option that takes no value. */
+        private const val JSON = "--json"
+
         /** Parses [args]; throws [IllegalArgumentException] with the reason for a bad command line. */
         fun parse(args: List<String>): PromptOptions {
             val values = mutableMapOf<String, String>()
-            val rest = args.iterator()
+            val json = JSON in args
+            val rest = args.filterNot { it == JSON }.iterator()
             while (rest.hasNext()) {
                 val arg = rest.next()
                 require(arg in VALUED) { "Unknown option $arg" }
@@ -244,6 +262,7 @@ data class PromptOptions(
                 maxTokens = positive(values, "--max-tokens") ?: CompletionRequest.maxTokensFor(effort),
                 repeat = positive(values, "--repeat") ?: 1,
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
+                json = json,
             )
         }
 

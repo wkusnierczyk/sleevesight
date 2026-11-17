@@ -155,8 +155,9 @@ class OpenRouterProviderTest {
     /*
      * *Explain the song* through OpenRouter (#1400), the replies recorded on the phone: the same
      * prompt was answered in prose with no JSON mode, which the app cannot read, and as the JSON
-     * object it asks for through Anthropic directly. A fake OpenRouter answers each way by whether the
-     * request sends the mode.
+     * object it asks for through Anthropic directly. The test below documents those replies: its fake
+     * OpenRouter answers each way by whether the request body carries `response_format`, so it shows
+     * the reply each body is read into, not how OpenRouter's model behaves.
      */
     private val proseExplanation =
         "Annie Lennox has said the song is fundamentally about aspiration, motivation and purpose [S8]. " +
