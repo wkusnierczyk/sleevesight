@@ -162,6 +162,71 @@ class ItemRowsTest {
         assertEquals(plain, pop.kind to pop.action)
     }
 
+    // The song's row of [title] by [artists], split by [roles] when given (#1356).
+    private fun music(
+        title: String,
+        artists: String,
+        roles: ArtistRoles? = null,
+    ): ItemRow {
+        val header = sundown.copy(title = title, artists = artists)
+        val read = normalizer.normalize(header)
+        return itemRows(header, read, roles?.let { ArtistSplit.of(read, it, null) }).single {
+            it.item == InsightItem.SONG
+        }
+    }
+
+    @Test
+    fun besideAComposerRowTheSongsRowLeavesOutTheTitlesComposerLead() {
+        // #1356: the Composer row names Barber; under the cover keeps the player's title.
+        val credits = "Samuel Barber, New York Philharmonic, Leonard Bernstein"
+        val barber = ArtistRoles(listOf("Samuel Barber"), listOf("New York Philharmonic", "Leonard Bernstein"))
+        assertEquals("Adagio for Strings", music("Barber: Adagio for Strings", credits, barber).name)
+        // The composer's full name as the lead, as his short one.
+        assertEquals("Adagio for Strings", music("Samuel Barber: Adagio for Strings", credits, barber).name)
+        // Told by the title alone, before MusicBrainz answers ([ArtistRoles.of]); the page's title too.
+        val header = sundown.copy(title = "Barber: Adagio for Strings", artists = credits)
+        val byTitle = itemRow(InsightItem.SONG, header, normalizer.normalize(header))!!
+        assertEquals("Adagio for Strings", byTitle.name)
+        assertEquals(R.string.home_item_song_classical, byTitle.kind)
+        // With a work's colon after it (K. 545): only the lead goes.
+        val mozart = ArtistRoles(listOf("Wolfgang Amadeus Mozart"), listOf("Khatia Buniatishvili"))
+        assertEquals(
+            "Piano Sonata No. 16 in C Major, K. 545: II. Andante",
+            music(
+                "Mozart: Piano Sonata No. 16 in C Major, K. 545: II. Andante",
+                "Wolfgang Amadeus Mozart, Khatia Buniatishvili",
+                mozart,
+            ).name,
+        )
+    }
+
+    @Test
+    fun theVersionLineIsNotAffectedByTheComposerLead() {
+        // #1356: the version comes from the title's end, the lead from its start.
+        val barber = ArtistRoles(listOf("Samuel Barber"), listOf("New York Philharmonic"))
+        val row = music("Barber: Adagio for Strings - 2019 Remaster", "Samuel Barber, New York Philharmonic", barber)
+        assertEquals("Adagio for Strings", row.name)
+        assertEquals("2019 Remaster", row.version)
+    }
+
+    @Test
+    fun aTitleKeepsWhatIsNotAComposerLeadTheRowBesideItNames() {
+        val barber = ArtistRoles(listOf("Samuel Barber"), listOf("New York Philharmonic"))
+        val credits = "Samuel Barber, New York Philharmonic"
+        // No lead: the title as it is.
+        assertEquals("Adagio for Strings, Op. 11", music("Adagio for Strings, Op. 11", credits, barber).name)
+        // A title that is only the composer's name: nothing to leave out.
+        assertEquals("Barber", music("Barber", credits, barber).name)
+        assertEquals("Samuel Barber:", music("Samuel Barber:", credits, barber).name)
+        // No Composer row: the whole title, as under the cover.
+        assertEquals("Barber: Adagio for Strings", music("Barber: Adagio for Strings", credits).name)
+        // A lead naming a performer, MusicBrainz telling Bach the composer: kept.
+        val bach = ArtistRoles(listOf("Johann Sebastian Bach"), listOf("Glenn Gould"))
+        assertEquals("Gould: Interview", music("Gould: Interview", "Johann Sebastian Bach, Glenn Gould", bach).name)
+        // A pop track with a colon in its title: untouched.
+        assertEquals("Star Wars: Main Title", music("Star Wars: Main Title", "Gotye, Kimbra").name)
+    }
+
     @Test
     fun theArtistRowIsArtistWhenNothingTellsTheComposerApart() {
         // #1276: no split, one Artist row as before, whatever the track credits.
