@@ -110,4 +110,4 @@ private fun evidenceParts(
  * rewrite under it would use too, which the song's, the artist's and the album's rows offer (#911).
  */
 fun CardKey.writtenBy(): WrittenBy =
-    WrittenBy(promptVersion, provider, model, effort, modelKnowledge, evidenceFingerprint)
+    WrittenBy(promptVersion, provider, model, effort, modelKnowledge, evidenceFingerprint, variant, card)

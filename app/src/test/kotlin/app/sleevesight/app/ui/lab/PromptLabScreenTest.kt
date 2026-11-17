@@ -88,17 +88,17 @@ class PromptLabScreenTest {
                 )
         }
 
+    // The request of the card shown, `card-1`.
     private val songRequest =
-        CompletionRequest("claude-haiku-5-5", LabPrompts.release(PromptKind.SONG) + "\nTitle: Sundown")
-
-    // What the fake service writes from the release prompt, and from prompt B.
-    private val releaseReply = reply(songRequest)
-    private val bReply =
-        reply(LabPrompts.withInstructions(songRequest, LabPrompts.variant(PromptKind.SONG, "B")!!.instructions))
+        CompletionRequest("claude-haiku-5-5", LabPrompts.release(PromptKind.SONG) + "\nTitle: Sundown", card = CARD)
 
     private fun reply(request: CompletionRequest) = "Written from " + LabPrompts.opening(request).takeLast(TAIL)
 
-    private fun subject(text: String) = LabSubject(PromptKind.SONG, "Sundown", "Gordon Lightfoot", null, text)
+    private fun subject(card: String) = LabSubject(PromptKind.SONG, "Sundown", "Gordon Lightfoot", null, card)
+
+    // The song's request sent through the lab, as its pipeline would.
+    private fun written() =
+        runBlocking { lab.through(provider, lab.choices()).stream(songRequest, Secret("k")).toList() }
 
     @After
     fun close() {
@@ -110,7 +110,8 @@ class PromptLabScreenTest {
     private fun count(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size
 
     private fun show(
-        shown: String = releaseReply,
+        card: String = CARD,
+        variant: String? = null,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -119,8 +120,8 @@ class PromptLabScreenTest {
                     SleevesightTheme(MutableStateFlow(FontChoice.APP_FONT), developerMarks = MutableStateFlow(true)) {
                         CompositionLocalProvider(LocalPromptLab provides lab) {
                             Column(Modifier.verticalScroll(rememberScrollState())) {
-                                CreditRow("Written by Claude Haiku 5.5.", lab = LabText(PromptKind.SONG, shown))
-                                LabCompare(subject(shown))
+                                CreditRow("Written by Claude Haiku 5.5.", variant = variant)
+                                LabCompare(subject(card))
                                 PromptLabBlock(lab)
                             }
                         }
@@ -148,7 +149,7 @@ class PromptLabScreenTest {
     @Test
     fun theVersionsAreMarkedAndLoggedOnceThePromptsAreShown() {
         lab.developerMode(true)
-        runBlocking { lab.through(provider).stream(songRequest, Secret("k")).toList() }
+        written()
         show {
             compose.onNodeWithTag(LAB_COMPARE_ACTION_TAG).performScrollTo().performClick()
             compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag(LAB_SHOW_TAG).fetchSemanticsNodes().isNotEmpty() }
@@ -168,10 +169,10 @@ class PromptLabScreenTest {
     }
 
     @Test
-    fun aComparisonIsRefusedForATextNoRequestWroteSinceTheAppStarted() {
+    fun aComparisonIsRefusedForACardNoRequestWroteSinceTheAppStarted() {
         lab.developerMode(true)
-        runBlocking { lab.through(provider).stream(songRequest, Secret("k")).toList() }
-        show(shown = "Another song's insight, read from the cache, never written this session.") {
+        written()
+        show(card = "a card read from the cache") {
             compose.onNodeWithTag(LAB_COMPARE_ACTION_TAG).performScrollTo().performClick()
             compose.waitUntil(WAIT_MS) { count(text(R.string.lab_compare_unsent)) == 1 }
             compose.onNodeWithTag(labVersionTag(1)).assertDoesNotExist()
@@ -181,9 +182,7 @@ class PromptLabScreenTest {
     @Test
     fun theCreditNamesTheVariantThatWroteTheTextInsideTheMarkWhateverTheLabIsSetToNow() {
         lab.developerMode(true)
-        lab.update { it.use(PromptKind.SONG, "B") }
-        runBlocking { lab.through(provider).stream(songRequest, Secret("k")).toList() }
-        show(shown = bReply) {
+        show(variant = "B") {
             compose.waitUntil(WAIT_MS) { count("Written by Claude Haiku 5.5 · prompt B.") == 1 }
             val marked =
                 compose
@@ -193,7 +192,7 @@ class PromptLabScreenTest {
                         useUnmergedTree = true,
                     ).fetchSemanticsNodes()
             assertEquals(1, marked.size)
-            // Switched back: the text shown was still written by prompt B.
+            // The lab switched: the text shown was still written by prompt B.
             lab.update { it.use(PromptKind.SONG, LabPrompts.RELEASE) }
             compose.waitForIdle()
             assertEquals(1, count("Written by Claude Haiku 5.5 · prompt B."))
@@ -203,12 +202,11 @@ class PromptLabScreenTest {
     @Test
     fun aTextTheReleasePromptWroteHasThePlayBuildsCreditWhileAVariantIsInUse() {
         lab.developerMode(true)
-        runBlocking { lab.through(provider).stream(songRequest, Secret("k")).toList() }
         lab.update { it.use(PromptKind.SONG, "B") }
-        show {
+        show(variant = LabPrompts.RELEASE) {
             compose.waitForIdle()
             assertEquals(1, count("Written by Claude Haiku 5.5."))
-            assertEquals(0, count("prompt B"))
+            assertEquals(0, count("· prompt"))
         }
     }
 
@@ -228,5 +226,6 @@ class PromptLabScreenTest {
 
     private companion object {
         const val TAIL = 20
+        const val CARD = "card-1"
     }
 }

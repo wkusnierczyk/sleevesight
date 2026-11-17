@@ -96,6 +96,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.AiSearchAnswers
+import app.sleevesight.core.synthesis.PromptChoices
 import app.sleevesight.core.synthesis.SearchKind
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
@@ -117,6 +118,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -332,13 +334,8 @@ class AppGraph internal constructor(
             genres = { latestSettings.value?.showGenres != false },
             epoch = clearEpoch,
             musicBrainzThrough = musicBrainzThrough,
-            // Every AI request and its reply in logcat, in debug builds only (#767); there too, the
-            // prompt lab's variants (#1003).
-            aiThrough = { provider ->
-                PromptDump.watching(provider).let { watched ->
-                    if (BuildConfig.DEBUG) promptLab?.through(watched) ?: watched else watched
-                }
-            },
+            // Every AI request and its reply in logcat, in debug builds only (#767).
+            aiThrough = PromptDump::watching,
             // What the search in the track's language found about an artist or an album (#939): in
             // [artistResults] while the switch is on, else in memory for the process.
             keepsArtists = { artistKeeping.on },
@@ -559,7 +556,14 @@ class AppGraph internal constructor(
             settings = latestSettings.filterNotNull(),
             // A rebuild too when the switched-on service's model is found unavailable, or no longer
             // is (#540): the parts then leave out, or bring back, the AI access.
-            keyChanges = merge(secrets.changes, modelCheck.rebuilds(latestSettings)),
+            // And when the prompt lab's choices change (#1003), in the debug build only: they are taken
+            // at each build.
+            keyChanges =
+                merge(
+                    secrets.changes,
+                    modelCheck.rebuilds(latestSettings),
+                    if (BuildConfig.DEBUG) promptLab?.rebuilds ?: emptyFlow() else emptyFlow(),
+                ),
             readKeys = secrets::pipelineKeys,
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.
@@ -573,12 +577,14 @@ class AppGraph internal constructor(
                     aiRetry = { latestSettings.value?.aiRetry ?: Settings.DEFAULT_AI_RETRY },
                     // Each try that failed, in the diagnostics' events (#1164).
                     aiTried = { diagnostics.log.record(it) },
-                ) {
-                    // Cards written with a prompt lab's variant kept under keys of their own (#1003).
-                    StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch).let { store ->
-                        if (BuildConfig.DEBUG) promptLab?.cache(store) ?: store else store
-                    }
-                },
+                    // The prompt lab's choices (#1003), taken at each build, in the debug build only.
+                    choices = {
+                        if (BuildConfig.DEBUG) promptLab?.choices() ?: PromptChoices.NONE else PromptChoices.NONE
+                    },
+                    labThrough = { provider, chosen ->
+                        if (BuildConfig.DEBUG) promptLab?.through(provider, chosen) ?: provider else provider
+                    },
+                ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },

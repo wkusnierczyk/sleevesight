@@ -28,6 +28,26 @@ enum class PromptKind(
     companion object {
         /** The kind kept under [key], or null for none. */
         fun of(key: String): PromptKind? = entries.firstOrNull { it.key == key }
+
+        /**
+         * The lab's kind of a card kept as [kind] about [subject] (`CardKey`), whose key a variant sets
+         * apart; null for a card the lab does not vary. Apart from [LabPrompts], so a build with no lab
+         * holds none of the variants.
+         */
+        fun ofCard(
+            kind: CardKind,
+            subject: String?,
+        ): PromptKind? =
+            when (kind) {
+                CardKind.INSIGHT -> KEY
+                CardKind.SONG -> SONG
+                CardKind.ARTIST -> ARTIST
+                CardKind.ALBUM -> ALBUM
+                CardKind.GENRE -> GENRE_REASONS
+                CardKind.GENRE_LIST -> GENRE_LIST
+                CardKind.SEARCH -> EXPLAIN.takeIf { subject == SearchKind.EXPLAIN.key }
+                else -> null
+            }
     }
 }
 
@@ -150,43 +170,6 @@ object LabPrompts {
         return explanation?.takeIf { it.isString }?.content?.trim() ?: reply.trim()
     }
 
-    /**
-     * [text], a reply or a kept card of [kind] or the text shown from it, as the lab tells written texts
-     * apart by it: what a reader is shown of it ([shownReply]), its whitespace runs made one space.
-     */
-    fun textKey(
-        kind: PromptKind,
-        text: String,
-    ): String = shownReply(kind, text).split(WHITESPACE).filter { it.isNotEmpty() }.joinToString(" ")
-
-    /**
-     * Whether [a] and [b], each a [textKey], are one written text: the same, or, both long enough to
-     * be told apart, one holding the other whole (a text shown with a note of the model's taken out).
-     */
-    fun sameText(
-        a: String,
-        b: String,
-    ): Boolean = a == b || (minOf(a.length, b.length) >= SAME_TEXT_LEAST && (a in b || b in a))
-
-    /**
-     * The lab's kind of a card kept as [kind] about [subject] (`CardKey`), whose key a variant in use
-     * sets apart; null for a card the lab does not vary.
-     */
-    fun kindOfCard(
-        kind: CardKind,
-        subject: String?,
-    ): PromptKind? =
-        when (kind) {
-            CardKind.INSIGHT -> PromptKind.KEY
-            CardKind.SONG -> PromptKind.SONG
-            CardKind.ARTIST -> PromptKind.ARTIST
-            CardKind.ALBUM -> PromptKind.ALBUM
-            CardKind.GENRE -> PromptKind.GENRE_REASONS
-            CardKind.GENRE_LIST -> PromptKind.GENRE_LIST
-            CardKind.SEARCH -> PromptKind.EXPLAIN.takeIf { subject == SearchKind.EXPLAIN.key }
-            else -> null
-        }
-
     private fun firstLine(text: String): String = text.substringBefore('\n')
 
     private fun replaceFirstLine(
@@ -203,11 +186,6 @@ object LabPrompts {
                 .trim()
         return line + text.substring(first.length)
     }
-
-    private val WHITESPACE = Regex("\\s+")
-
-    // The fewest characters a text shown from a reply holds for [sameText] to take it as part of it.
-    private const val SAME_TEXT_LEAST = 40
 
     private const val GENRE_LIST_OPENING = "You name the genres of one recorded track for a music app"
     private const val GENRE_REASON_OPENING = "You explain a genre label on a music app's now-playing screen."
@@ -313,4 +291,54 @@ object LabPrompts {
                     ),
                 ),
         )
+}
+
+/**
+ * The prompt lab's variant a kind of card is written with (#1003): its [id] (`A`, `B`,
+ * [LabPrompts.RELEASE], [LabPrompts.CUSTOM]) and its [instructions], null for the release prompt's.
+ */
+data class PromptChoice(
+    val id: String,
+    val instructions: String?,
+)
+
+/**
+ * The prompt lab's choice for each kind ([byKind]), taken once when a pipeline is built, so every
+ * card the pipeline writes, and the request it is written from, have the same: the request's opening
+ * line (the app's client applies it) and the card's key ([style], `CardKey.variant`), whatever
+ * the lab is set to meanwhile. [NONE] outside the debug build and outside developer mode: no choice,
+ * the release prompt, and keys as ever.
+ */
+class PromptChoices(
+    private val byKind: Map<PromptKind, PromptChoice>,
+) {
+    /** Whether the lab chose for this pipeline: it is on. */
+    val on: Boolean get() = byKind.isNotEmpty()
+
+    /** The choice for [kind], or null with the lab off. */
+    operator fun get(kind: PromptKind): PromptChoice? = byKind[kind]
+
+    /** The choice for a card kept as [kind] about [subject] (`CardKey`), or null for one the lab does not vary. */
+    fun of(
+        kind: CardKind,
+        subject: String?,
+    ): PromptChoice? = PromptKind.ofCard(kind, subject)?.let(byKind::get)
+
+    /**
+     * The style a card kept as [kind] about [subject] is written with, hashed into its key: none for
+     * the release prompt, which keeps the release card's key; else the variant's id and instructions.
+     */
+    fun style(
+        kind: CardKind,
+        subject: String?,
+    ): String {
+        val choice = of(kind, subject)
+        val instructions = choice?.instructions ?: return ""
+        return "prompt-lab\n" + choice.id + "\n" + instructions
+    }
+
+    companion object {
+        /** No lab: the release prompt for every kind. */
+        val NONE: PromptChoices = PromptChoices(emptyMap())
+    }
 }

@@ -57,6 +57,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.core.synthesis.PromptKind
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
@@ -183,10 +184,12 @@ private fun Answered(
     answer(shown.answer, shown.model)
     val credit = creditString(Credit(shown.model, shown.effort))
     val byTag = Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG))
-    val explained = (shown.answer as? SearchAnswer.Explanation)?.grounded?.text
+    // The prompt lab's variant that wrote it (#1003), in the debug build only.
     val variant =
-        if (BuildConfig.DEBUG && kind == SearchKind.EXPLAIN && explained != null) {
-            labVariant(PromptKind.EXPLAIN, explained)
+        if (BuildConfig.DEBUG &&
+            kind == SearchKind.EXPLAIN
+        ) {
+            shown.variant?.takeIf { it != LabPrompts.RELEASE }
         } else {
             null
         }
@@ -202,9 +205,9 @@ private fun Answered(
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(texts.tag(AI_SEARCH_KNOWLEDGE_TAG)))
     }
     shown.keptAt?.let { KeptLine(it) }
-    if (BuildConfig.DEBUG && kind == SearchKind.EXPLAIN && explained != null) {
+    if (BuildConfig.DEBUG && kind == SearchKind.EXPLAIN) {
         val playing = track.nowPlaying
-        LabCompare(LabSubject(PromptKind.EXPLAIN, playing.title, playing.artists, playing.album, explained))
+        LabCompare(LabSubject(PromptKind.EXPLAIN, playing.title, playing.artists, playing.album, shown.card))
     }
     last(shown.answer)
 }

@@ -102,7 +102,7 @@ internal fun LabCompare(subject: LabSubject) {
                     run =
                         Comparing.start(
                             subject,
-                            lab.written(subject.kind, subject.text)?.sent,
+                            lab.sent(subject.card),
                             settings,
                             scope,
                             failure = { failureText(it, resources) },

@@ -18,7 +18,6 @@ import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.Unavailability
 import app.sleevesight.app.ui.GENRE_LABELS_DOCS_URL
 import app.sleevesight.app.ui.lab.LabCompareUnder
-import app.sleevesight.app.ui.lab.LabText
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
@@ -253,7 +252,7 @@ private fun ReasonCredits(
         CreditRow(
             shown.model?.let { creditString(Credit(it, shown.effort, web = fromWeb)) },
             readAloud = readAloud?.let { { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) } },
-            lab = if (BuildConfig.DEBUG) LabText(PromptKind.GENRE_REASONS, state.grounded.text) else null,
+            variant = state.writtenBy?.variant,
         )
         GroundingLine(state.grounded, details = false)
         TranslatedLine(state.grounded, evidence, label = shownAs)

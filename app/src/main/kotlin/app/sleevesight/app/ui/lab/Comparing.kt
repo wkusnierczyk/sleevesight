@@ -8,6 +8,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.lab.PromptLab
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
+import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.synthesis.LabComparison
 import app.sleevesight.core.synthesis.LabMark
 import app.sleevesight.core.synthesis.LabPrompts
@@ -49,8 +50,9 @@ internal class VersionState(
 /**
  * A comparison under way (#1003): [subject]'s request as it was sent ([sent]; null when none was
  * since the app started, and nothing is written), written again with each variant taking part, in
- * shuffled order ([versions]), each a paid call of its own in [scope], with its tools left out, so
- * every version is written from the evidence given alone. Its prompts' names are [revealed] by
+ * shuffled order ([versions]), each a paid call of its own in [scope], frozen ([frozen]): the request
+ * as it was last sent, the web pages its searches found among its tools' answers, and no further
+ * search, so every version is written from the same evidence. Its prompts' names are [revealed] by
  * *Show the prompts*, which logs it ([logged]).
  */
 internal class Comparing private constructor(
@@ -109,7 +111,7 @@ internal class Comparing private constructor(
                     .orEmpty(),
             model = request?.model.orEmpty(),
             effort = request?.effort?.name?.lowercase(),
-            evidence = request?.let { if (it.system != null) it.prompt else it.prompt.substringAfter('\n') }.orEmpty(),
+            evidence = request?.let(::evidenceOf).orEmpty(),
             instructions =
                 versions.associate { v ->
                     v.id to (request?.let { LabPrompts.opening(withVariant(it, v)) } ?: "")
@@ -132,7 +134,7 @@ internal class Comparing private constructor(
                 try {
                     sent.provider
                         .stream(
-                            withVariant(sent.request, version).copy(tools = emptyList()),
+                            frozen(withVariant(sent.request, version)),
                             sent.key,
                         ).collect { event ->
                             when (event) {
@@ -151,7 +153,7 @@ internal class Comparing private constructor(
     }
 
     private fun withVariant(
-        request: app.sleevesight.core.ai.CompletionRequest,
+        request: CompletionRequest,
         version: VersionState,
     ) = version.instructions?.let { LabPrompts.withInstructions(request, it) } ?: request
 
@@ -198,4 +200,23 @@ internal fun labCreditText(
 ): String {
     val name = if (id == LabPrompts.CUSTOM) resources.getString(R.string.lab_variant_custom) else id
     return resources.getString(R.string.lab_credit, credit.removeSuffix("."), name)
+}
+
+/**
+ * [request], the last a card's call sent, for a comparison: as it was, with the tools' answers it had
+ * (the pages *AI web search* found), but no further search ([CompletionRequest.toolsAllowed] false,
+ * its tools still declared, as a conversation that used them must), so each version is written from
+ * the same evidence (#1003).
+ */
+internal fun frozen(request: CompletionRequest): CompletionRequest = request.copy(toolsAllowed = false)
+
+/**
+ * The evidence [request] was written from, as the log keeps it: its data (the user message, or the
+ * prompt past its opening line where there is no system prompt), then each tool's answer it had,
+ * the pages a web search found.
+ */
+internal fun evidenceOf(request: CompletionRequest): String {
+    val data = if (request.system != null) request.prompt else request.prompt.substringAfter('\n')
+    val answers = request.exchanges.flatMap { it.results }.map { it.content }
+    return (listOf(data) + answers).joinToString("\n\n")
 }

@@ -34,6 +34,7 @@ import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.ItemPrompt
+import app.sleevesight.core.synthesis.PromptChoices
 import app.sleevesight.core.synthesis.SelfRevision
 import app.sleevesight.core.text.DateForm
 import kotlin.coroutines.cancellation.CancellationException
@@ -864,7 +865,7 @@ class ItemInsights(
     ): SearchedWrite? {
         val searching = searching(first, item, track, settings, evidence) ?: return null
         val question = searching.question
-        val base = CompletionRequest(first.model, "", CompletionRequest.maxTokensFor(first.effort), first.effort)
+        val base = requestOf(first, "")
         val questions = WebQuestions(searching.access, searching.engine)
         val reply =
             questions.ask(question, AiWebSearch.UP_TO, Settings.AI_WEB_SEARCH_LIMIT, base, counted, gates.mayPay)
@@ -1292,9 +1293,16 @@ class ItemInsights(
                 model = model,
                 modelKnowledge = settings.isEnabled(SourceId.MODEL),
                 effort = settings.effort(provider),
-            )
+            ).let { key -> (ai?.choices ?: PromptChoices.NONE).keyed(key) { styleHash(hasher, it) } }
         }
     }
+
+    // The request of [key]'s card with [prompt], named by its card for the prompt lab (#1003).
+    private fun requestOf(
+        key: CardKey,
+        prompt: String,
+    ): CompletionRequest =
+        CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort, card = key.card)
 
     // The version of the prompt a card from [evidence] is written with, part of its key: the song's in
     // two parts its own (#1133), whatever its lines.
@@ -1406,7 +1414,7 @@ class ItemInsights(
                 evidence.parts,
                 evidence.composerLines,
             )
-        val request = CompletionRequest(key.model, prompt, CompletionRequest.maxTokensFor(key.effort), key.effort)
+        val request = requestOf(key, prompt)
         var billed: Usage? = null
         var calls = 0
         var last: InsightState? = null

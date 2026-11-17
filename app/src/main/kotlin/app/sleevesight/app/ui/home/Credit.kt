@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -21,8 +20,6 @@ import androidx.compose.ui.text.withStyle
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.settings.ListedModelNames
-import app.sleevesight.app.ui.lab.LabText
-import app.sleevesight.app.ui.lab.LocalPromptLab
 import app.sleevesight.app.ui.lab.labCreditText
 import app.sleevesight.app.ui.settings.effortName
 import app.sleevesight.app.ui.theme.DeveloperMark
@@ -31,7 +28,6 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.LabPrompts
-import app.sleevesight.core.synthesis.PromptKind
 
 // The one credit line of a text an AI model wrote (#1162), under the text, first in its notes (#959).
 
@@ -138,10 +134,11 @@ internal fun creditString(credit: Credit): String = creditText(credit, LocalReso
  * reader reads the credit and what follows as the line shows them, then *Read aloud*. With no credit,
  * what follows alone; with neither, *Read aloud* alone at the row's end; nothing with none.
  *
- * In the debug build, with the prompt lab on, for [lab], a text a variant wrote (#1003), the credit
+ * In the debug build, for a text the prompt lab's [variant] wrote (#1003), the credit
  * names that variant ("Written by Claude Haiku 5.5 · prompt B."), its text in the developer mark
  * tagged *Debug build*, so a screenshot shows the line is not the Play build's. The variant is the
- * one that wrote the text ([labVariant]), whatever the lab is set to now.
+ * one that wrote the text (`WrittenBy.variant`), whatever the lab is set to now; none for the release
+ * prompt's.
  */
 @Composable
 internal fun CreditRow(
@@ -149,10 +146,12 @@ internal fun CreditRow(
     modifier: Modifier = Modifier,
     after: List<String> = emptyList(),
     readAloud: (@Composable () -> Unit)? = null,
-    lab: LabText? = null,
+    variant: String? = null,
 ) {
     // The credit naming the variant that wrote the text, if one did; none outside the debug build.
-    val labbed = if (BuildConfig.DEBUG && credit != null && lab != null) labCredited(credit, lab) else null
+    val resources = LocalResources.current
+    val named = variant?.takeIf { BuildConfig.DEBUG && it != LabPrompts.RELEASE }
+    val labbed = if (credit != null && named != null) labCreditText(credit, named, resources) else null
     val credited = labbed ?: credit
     val said = credited != null || after.isNotEmpty()
     if (!said && readAloud == null) return
@@ -188,31 +187,3 @@ internal fun CreditRow(
 
 /** The test tag of the credit under an insight, the key insight's and an item's (#811, #1162). */
 const val INSIGHT_BY_TAG: String = "insight-by"
-
-// [credit] naming the variant that wrote [lab]'s text, while the lab is on and it is not the release
-// prompt; null otherwise.
-@Composable
-private fun labCredited(
-    credit: String,
-    lab: LabText,
-): String? {
-    val resources = LocalResources.current
-    return labVariant(lab.kind, lab.text)?.let { labCreditText(credit, it, resources) }
-}
-
-/**
- * The variant that wrote [text], a text of [kind] on screen, while the prompt lab is on and it is not
- * the release prompt (#1003): as the lab saw it written or read (`PromptLab.written`), so switching
- * the lab never relabels a text already shown; null otherwise.
- */
-@Composable
-internal fun labVariant(
-    kind: PromptKind,
-    text: String,
-): String? {
-    val lab = LocalPromptLab.current ?: return null
-    val on by lab.on.collectAsState()
-    // Read so a text the lab notes after it is shown (written, or read from the cache) recomposes.
-    val seen by lab.seen.collectAsState()
-    return seen[kind]?.let { lab.written(kind, text) }?.variant?.takeIf { on && it != LabPrompts.RELEASE }
-}

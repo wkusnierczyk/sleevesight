@@ -8,6 +8,9 @@ import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.ToolCall
+import app.sleevesight.core.ai.ToolExchange
+import app.sleevesight.core.ai.ToolResult
 import app.sleevesight.core.ai.ToolSpec
 import app.sleevesight.core.ai.ToolTurn
 import app.sleevesight.core.ai.Usage
@@ -72,7 +75,7 @@ class ComparingTest {
         )
 
     private val subject =
-        LabSubject(PromptKind.KEY, "Sundown", "Gordon Lightfoot", null, "Sundown was written at a farm.")
+        LabSubject(PromptKind.KEY, "Sundown", "Gordon Lightfoot", null, "card-1")
 
     private fun TestScope.start(settings: LabSettings): Comparing =
         Comparing.start(
@@ -86,13 +89,13 @@ class ComparingTest {
         )
 
     @Test
-    fun eachVariantIsWrittenFromTheSameRequestWithItsOwnOpeningAndNoTools() =
+    fun eachVariantIsWrittenFromTheSameRequestWithItsOwnOpeningAndNoFurtherSearch() =
         runTest {
             val run = start(LabSettings().compare(PromptKind.KEY, LabPrompts.CUSTOM, on = true))
             advanceUntilIdle()
 
             assertEquals(4, sent.size)
-            assertTrue(sent.all { it.tools.isEmpty() && it.prompt == request.prompt })
+            assertTrue(sent.all { !it.toolsAllowed && it.tools == request.tools && it.prompt == request.prompt })
             assertEquals(listOf(1, 2, 3, 4), run.versions.map { it.shown })
             assertEquals(
                 setOf(LabPrompts.RELEASE, "A", "B", LabPrompts.CUSTOM),
@@ -127,6 +130,36 @@ class ComparingTest {
             assertEquals(LabMark.GOOD, version.mark)
             assertEquals("Plain.", version.note)
             assertEquals(release.shown, version.shown)
+        }
+
+    @Test
+    fun aRequestWithCompletedSearchesIsComparedWithThePagesItFoundAndTheLogKeepsThem() =
+        runTest {
+            val searched =
+                request.copy(
+                    exchanges =
+                        listOf(
+                            ToolExchange(
+                                ToolTurn(listOf(ToolCall("c1", "web_search", "{\"query\": \"Sundown\"}")), ""),
+                                listOf(ToolResult("c1", "[S1] (web, song) Sundown was recorded in 1973.")),
+                            ),
+                        ),
+                )
+            val run =
+                Comparing.start(
+                    subject,
+                    PromptLab.Sent(searched, provider, Secret("k"), Instant.parse("2026-11-17T19:00:00Z")),
+                    LabSettings(),
+                    this,
+                    failure = { it.name },
+                    stopped = "stopped",
+                )
+            advanceUntilIdle()
+
+            assertTrue(sent.all { it.exchanges == searched.exchanges && !it.toolsAllowed })
+            val evidence = run.logged("0.8.0-debug").evidence
+            assertTrue(evidence, evidence.startsWith(searched.prompt))
+            assertTrue(evidence, "[S1] (web, song) Sundown was recorded in 1973." in evidence)
         }
 
     @Test

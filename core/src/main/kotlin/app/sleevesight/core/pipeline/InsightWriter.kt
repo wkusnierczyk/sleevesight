@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
@@ -13,6 +14,7 @@ import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.InsightReply
+import app.sleevesight.core.synthesis.PromptChoices
 import app.sleevesight.core.synthesis.SelfRevision
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -263,7 +265,7 @@ internal class InsightWriter(
         val sent = prompted()
         val effort = settings.effort(ai.provider.id)
         val prompt = userMessage(sent.evidence)
-        val request = CompletionRequest(model, prompt, CompletionRequest.maxTokensFor(effort), effort, system = system)
+        val request = request(model, prompt, effort, card)
         val text = StringBuilder()
         var frozen = false
         var end: CompletionEvent? = null
@@ -500,6 +502,23 @@ internal class InsightWriter(
             model = model,
             modelKnowledge = allowModel,
             effort = settings.effort(provider),
+        ).let { key -> (parts.ai?.choices ?: PromptChoices.NONE).keyed(key) { styleHash(parts.hasher, it) } }
+
+    // The request of [card], with [prompt] and the system prompt, to [model] at [effort]; named by its
+    // card for the prompt lab (#1003, `CardKey.card`).
+    private fun request(
+        model: String,
+        prompt: String,
+        effort: ReasoningEffort?,
+        card: CardKey,
+    ): CompletionRequest =
+        CompletionRequest(
+            model,
+            prompt,
+            CompletionRequest.maxTokensFor(effort),
+            effort,
+            system = system,
+            card = card.card,
         )
 
     // Shows [insight], and returns it.

@@ -99,11 +99,11 @@ class LabPromptsTest {
 
     @Test
     fun `a card's kind is the lab's where the lab varies its prompt`() {
-        assertEquals(PromptKind.KEY, LabPrompts.kindOfCard(CardKind.INSIGHT, null))
-        assertEquals(PromptKind.GENRE_REASONS, LabPrompts.kindOfCard(CardKind.GENRE, "Jazz"))
-        assertEquals(PromptKind.EXPLAIN, LabPrompts.kindOfCard(CardKind.SEARCH, SearchKind.EXPLAIN.key))
-        assertNull(LabPrompts.kindOfCard(CardKind.SEARCH, SearchKind.GENRES.key))
-        assertNull(LabPrompts.kindOfCard(CardKind.VOCALS, null))
+        assertEquals(PromptKind.KEY, PromptKind.ofCard(CardKind.INSIGHT, null))
+        assertEquals(PromptKind.GENRE_REASONS, PromptKind.ofCard(CardKind.GENRE, "Jazz"))
+        assertEquals(PromptKind.EXPLAIN, PromptKind.ofCard(CardKind.SEARCH, SearchKind.EXPLAIN.key))
+        assertNull(PromptKind.ofCard(CardKind.SEARCH, SearchKind.GENRES.key))
+        assertNull(PromptKind.ofCard(CardKind.VOCALS, null))
     }
 
     @Test

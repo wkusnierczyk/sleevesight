@@ -11,13 +11,11 @@ import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.ui.lab.LabCompareUnder
-import app.sleevesight.app.ui.lab.LabText
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.core.synthesis.PromptKind
 
 // The footer of the song's, the artist's and the album's written insights (#522), with what the key
@@ -49,7 +47,7 @@ internal fun WrittenFooter(
         Modifier.testTag(INSIGHT_BY_TAG),
         after = afterCredit(shown, context),
         readAloud = readAloud?.let { { ReadAloudButton(it, itemReadAloudTag(item)) } },
-        lab = if (BuildConfig.DEBUG) itemLab(item)?.let { LabText(it, state.grounded.text) } else null,
+        variant = state.writtenBy?.variant,
     )
     GroundingLine(state.grounded, details = false)
     TranslatedLine(state.grounded, shown.evidence.evidence, label = label)
@@ -125,4 +123,4 @@ internal fun RewriteButton(
 }
 
 // The prompt lab's kind of [item]'s insight (#1003): the song's, the artist's or the album's.
-private fun itemLab(item: InsightItem): PromptKind? = LabPrompts.kindOfCard(item.kind, null)
+private fun itemLab(item: InsightItem): PromptKind? = PromptKind.ofCard(item.kind, null)

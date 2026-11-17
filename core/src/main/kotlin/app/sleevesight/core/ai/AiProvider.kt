@@ -51,6 +51,9 @@ interface AiProvider {
  * same prompt and tools with that turn and the tools' answers after it ([exchanges]), as many as
  * there have been. [toolsAllowed] false keeps the tools (a conversation that has used them must
  * still declare them) but has the model answer without calling one: the last turn of a loop.
+ *
+ * [card], in the debug build's prompt lab only (#1003), names the card the request writes
+ * (`CardKey.card`), so a comparison starts from exactly this request; never sent, null otherwise.
  */
 data class CompletionRequest(
     val model: String,
@@ -61,6 +64,7 @@ data class CompletionRequest(
     val exchanges: List<ToolExchange> = emptyList(),
     val toolsAllowed: Boolean = true,
     val system: String? = null,
+    val card: String? = null,
 ) {
     init {
         require(maxTokens > 0) { "maxTokens must be positive, was $maxTokens" }

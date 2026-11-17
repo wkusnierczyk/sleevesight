@@ -79,6 +79,8 @@ sealed interface AiSearch {
         val way: SearchWay = SearchWay(),
         val keptAt: Instant? = null,
         val effort: ReasoningEffort? = null,
+        val variant: String? = null,
+        val card: String? = null,
     ) : AiSearch
 
     /**
@@ -360,6 +362,7 @@ class AppAiSearches(
                             modelName(key.model),
                             keptAt(entry, track, play),
                             Settings.creditedEffort(key.provider, key.effort),
+                            key,
                         ).also { if (serving) serve(key, kind, genre, track, entry) }
                 }
             }
@@ -813,16 +816,27 @@ internal class Entry(
 )
 
 // [state] as the panel shows it, by the model named [model] at [effort] (null at the default),
-// kept from before when [keptAt] says when.
+// kept from before when [keptAt] says when. The prompt lab's variant and card identity (#1003) are
+// [key]'s, null outside the lab.
 private fun shownAs(
     state: SearchState,
     model: String,
     keptAt: Instant?,
     effort: ReasoningEffort?,
+    key: CardKey,
 ): AiSearch =
     when (state) {
         is SearchState.Searching -> AiSearch.Searching(state.web)
-        is SearchState.Answered -> AiSearch.Answered(state.answer, model, state.way, keptAt, effort)
+        is SearchState.Answered ->
+            AiSearch.Answered(
+                state.answer,
+                model,
+                state.way,
+                keptAt,
+                effort,
+                key.variant,
+                key.card,
+            )
         is SearchState.NothingFound -> AiSearch.NothingFound(model, state.way, keptAt)
         is SearchState.Failed -> AiSearch.Failed(state.reason)
     }

@@ -21,7 +21,6 @@ import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.ui.lab.LabCompareUnder
-import app.sleevesight.app.ui.lab.LabText
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -239,7 +238,7 @@ private fun Footer(
             Modifier.testTag(INSIGHT_BY_TAG),
             after = afterCredit(context),
             readAloud = readAloud?.let { { ReadAloudButton(it, READ_ALOUD_TAG) } },
-            lab = if (BuildConfig.DEBUG) LabText(PromptKind.KEY, insight.grounded.text) else null,
+            variant = insight.writtenBy?.variant,
         )
         if (readAloud?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
         lookingAgainLine(context)?.let {
