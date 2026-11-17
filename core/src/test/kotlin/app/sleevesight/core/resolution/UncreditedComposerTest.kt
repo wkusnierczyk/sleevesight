@@ -79,4 +79,40 @@ class UncreditedComposerTest {
             assertEquals(listOf(puccini), roles?.composers)
             assertEquals(listOf("Franco Alfano"), roles?.uncredited)
         }
+
+    @Test
+    fun `a credit that may name the composer, unresolved, keeps them from being named twice`() =
+        runTest {
+            // No composer lead in the title: "Puccini" is not MusicBrainz's "Giacomo Puccini" by name, nor
+            // resolved to his id, but its words are all his.
+            assertEquals(emptyList(), rolesOf("Puccini, $pavarotti", work("Aria", puccini))?.uncredited)
+            assertEquals(emptyList(), rolesOf("PUCCÌNI, $pavarotti", work("Aria", puccini))?.uncredited)
+            // Words of another's: still uncredited.
+            assertEquals(listOf(puccini), rolesOf("Giacomo Rossi, $pavarotti", work("Aria", puccini))?.uncredited)
+        }
+
+    @Test
+    fun `a composer among the artists of the joint credit the track was accepted under is credited`() =
+        runTest {
+            // The player's "G. Puccini & Luciano Pavarotti" is MusicBrainz's two artists joined: no one id is
+            // the pair's, and its words are not all Puccini's; the joint credit's ids hold his.
+            val joint =
+                tenor.copy(
+                    credits =
+                        listOf(
+                            MbCredit("G. Puccini", "mbid-$puccini", puccini, " & "),
+                            credit(pavarotti),
+                        ),
+                )
+            val musicBrainz =
+                FakeMusicBrainz(
+                    Lookup.Found(listOf(joint)),
+                    mapOf("tenor" to detail(joint)),
+                    mapOf("w" to work("Aria", puccini)),
+                )
+            val resolution = resolve(musicBrainz, track("Nessun Dorma", "G. Puccini & $pavarotti"), 180)
+            assertEquals("tenor", resolution.recordingMbid)
+            assertEquals(listOf("mbid-$puccini", "mbid-$pavarotti"), resolution.jointArtists.map { it.mbid })
+            assertEquals(emptyList(), resolution.roles?.uncredited)
+        }
 }

@@ -30,7 +30,11 @@ import app.sleevesight.core.sources.ResolvedArtist
  * Whether the work is of a classical form is kept with them ([ArtistRoles.classical], #1199), and on
  * such a work the composers it names whom the track does not credit ([ArtistRoles.uncredited], #1298:
  * Spotify credits *Nessun Dorma* to Pavarotti alone), unless a credited composer is one the work does not
- * name by name (a title's lead spelt otherwise), who may be one of them.
+ * name by name (a title's lead spelt otherwise), who may be one of them. A composer is credited when a
+ * credited artist is them by name, by the id it resolved to, or by an id of the joint credit it was
+ * accepted under ([resolved] holds those after the track's own, `Resolution.jointArtists`), or when a
+ * credit plausibly names them, its words all theirs or theirs all its ("Puccini", or "Giacomo Puccini &
+ * Luciano Pavarotti" unresolved): someone named twice is worse than someone left out.
  * Null when the work names no composer: the title's lead then decides ([ArtistRoles.of]).
  */
 internal fun NameMatcher.rolesOf(
@@ -96,9 +100,20 @@ private fun NameMatcher.uncredited(
         .filter { relation ->
             !relation.artistName.startsWith("[") &&
                 relation.artistMbid !in ids &&
-                track.artists.none { sameName(relation.artistName, it) }
+                track.artists.none { sameName(relation.artistName, it) || mayName(it, relation.artistName) }
         }.map { it.artistName }
         .distinct()
+}
+
+// Whether [credit] may name [composer] (#1298): folded, its words all among theirs ("Puccini" for
+// "Giacomo Puccini"), or theirs all among its (a joint credit, "Giacomo Puccini & Luciano Pavarotti").
+private fun NameMatcher.mayName(
+    credit: String,
+    composer: String,
+): Boolean {
+    val words = key(credit).split(' ').filter(String::isNotEmpty).toSet()
+    val theirs = key(composer).split(' ').filter(String::isNotEmpty).toSet()
+    return words.isNotEmpty() && theirs.isNotEmpty() && (theirs.containsAll(words) || words.containsAll(theirs))
 }
 
 // [track]'s performers: its credited artists but those who [wrote] the work and an artist the title names

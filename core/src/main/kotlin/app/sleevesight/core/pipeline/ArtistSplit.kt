@@ -26,7 +26,8 @@ import app.sleevesight.core.sources.WorkLyrics
  *   ([ArtistRoles.classical], or a title leading with its composer); never with *Author*.
  * @property uncredited the [authors] the track does not credit (#1298): a classical work's composers
  *   ([ArtistRoles.uncredited]) and who wrote its words, as MusicBrainz names them; the line under the
- *   title marks them as MusicBrainz's. Empty when the track credits every author.
+ *   title marks them as MusicBrainz's. Empty when the track credits every author, and on a work that is
+ *   not a classical one ([classical] false), whose authors stay unmarked.
  */
 data class ArtistSplit(
     val composers: List<String>,
@@ -82,12 +83,20 @@ data class ArtistSplit(
                 }
             // A Composer row always comes with Music, an Author row never (#1331).
             val classical = name == AuthorsName.COMPOSER || (name == AuthorsName.AUTHORS && classicalWork)
-            val uncredited =
-                (composers + words).filter { author ->
-                    author in roles.uncredited || track.artists.none { same(it, author) }
-                }
+            // Marked only on a classical work (#1298), by the test that calls the song's row Music.
+            val uncredited = if (classical) uncreditedOf(track, roles, composers + words, same) else emptyList()
             return ArtistSplit(composers, words, lead, performers - lead, name, classical, uncredited)
         }
+
+        // Of [authors], those [track] does not credit: [roles]' uncredited composers, and anyone no credited
+        // artist is by name ([same]).
+        private fun uncreditedOf(
+            track: NormalizedTrack,
+            roles: ArtistRoles,
+            authors: List<String>,
+            same: (String, String) -> Boolean,
+        ): List<String> =
+            authors.filter { author -> author in roles.uncredited || track.artists.none { same(it, author) } }
     }
 }
 

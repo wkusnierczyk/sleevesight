@@ -172,6 +172,17 @@ class ArtistSplitTest {
         assertEquals(emptyList(), ArtistSplit.of(nessun, roles, null)?.uncredited)
     }
 
+    @Test
+    fun `a work not classical keeps its authors unmarked, whoever credits them`() {
+        // A song's lyricist from MusicBrainz beside its credited composer: an Authors line, no mark.
+        val roles = ArtistRoles(listOf(PUCCINI), listOf(PAVAROTTI), classical = false)
+        val split = checkNotNull(ArtistSplit.of(nessun, roles, WorkLyrics(lyricists = listOf(ADAMI))))
+        assertEquals(AuthorsName.AUTHORS, split.name)
+        assertEquals(false, split.classical)
+        assertEquals(listOf(PUCCINI, ADAMI), split.authors)
+        assertEquals(emptyList(), split.uncredited)
+    }
+
     private companion object {
         const val MOZART = "Wolfgang Amadeus Mozart"
         const val KHATIA = "Khatia Buniatishvili"
