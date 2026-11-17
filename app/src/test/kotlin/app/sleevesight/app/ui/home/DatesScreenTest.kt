@@ -320,7 +320,8 @@ class DatesScreenTest {
 
     private fun state(
         track: TrackState,
-        settings: Settings = Settings(),
+        // A panel each (*One panel for Dates, Genres and Lyrics* off, #1128); the one panel: `OnePanelScreenTest`.
+        settings: Settings = Settings(onePanel = false),
     ) = NowPlayingState(
         PipelineView(track, aiReady = true),
         track.nowPlaying,

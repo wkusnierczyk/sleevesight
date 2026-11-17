@@ -111,7 +111,8 @@ class ClearedTrackScreenTest {
                             PipelineView(track = null, aiReady = true, cleared = held),
                             playing,
                             PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PAUSED),
-                            settings = Settings(),
+                            // Every panel open at once: a panel each (#1128).
+                            settings = Settings(onePanel = false),
                             unavailable = unavailable,
                         )
                     if (emitted) {

@@ -105,7 +105,8 @@ class GenresButtonScreenTest {
 
     private fun state(
         track: TrackState = labelled(),
-        settings: Settings = Settings(),
+        // A panel each (*One panel for Dates, Genres and Lyrics* off, #1128); the one panel: `OnePanelScreenTest`.
+        settings: Settings = Settings(onePanel = false),
         view: (TrackState) -> PipelineView = { PipelineView(it, aiReady = true) },
     ) = NowPlayingState(
         view(track),

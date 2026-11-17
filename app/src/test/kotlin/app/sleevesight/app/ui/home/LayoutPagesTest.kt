@@ -102,7 +102,8 @@ class LayoutPagesTest {
         vararg args: Any,
     ) = app.getString(id, *args)
 
-    private val pages = Settings(layout = Layout.SEPARATE_PAGES)
+    // *Genres* opens its page only with a panel each (#1128): the one panel opens it in place.
+    private val pages = Settings(layout = Layout.SEPARATE_PAGES, onePanel = false)
     private val boxes = Settings(layout = Layout.EXPANDABLE_BOXES)
 
     private val rock = label("rock", GenreLevel.ARTIST, "Gordon Lightfoot")
