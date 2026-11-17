@@ -143,12 +143,18 @@ internal fun modelUnavailable(
     modelName: (String) -> String,
 ): String? = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) }
 
-/** [provider]'s reasoning efforts to choose from, its own scale's and its default; null without a scale. */
+/**
+ * [provider]'s reasoning efforts to choose from, its own scale's and the service's own; null without a
+ * scale. The scale's default is marked so, as the model row's default is (#1375): it is the level a
+ * text's credit leaves unnamed ([Settings.creditedEffort]).
+ */
 @Composable
 internal fun efforts(provider: ProviderId): List<Pair<ReasoningEffort?, String>>? {
     val scale = Settings.EFFORT_SCALES[provider] ?: return null
-    return scale.levels.map<ReasoningEffort, Pair<ReasoningEffort?, String>> { it to effortLabel(it) } +
-        (null to stringResource(R.string.settings_effort_provider_default))
+    return scale.levels.map<ReasoningEffort, Pair<ReasoningEffort?, String>> { level ->
+        val label = effortLabel(level)
+        level to if (level == scale.default) stringResource(R.string.settings_ai_model_default, label) else label
+    } + (null to stringResource(R.string.settings_effort_provider_default))
 }
 
 /** [provider]'s reasoning effort, from its own scale, or the provider's default; none without a scale. */
