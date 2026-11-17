@@ -78,7 +78,7 @@ private fun ProviderRows(
         note = keyId?.let { keyNote(it, secrets, linked = true) },
         checked = on,
         leading = { ServiceBadge(providerBadge(name)) },
-        // OpenRouter also says when it refused its key since (#1157).
+        // OpenRouter also says when it has refused its saved key (#1157).
         below =
             if (provider == ProviderId.OPENROUTER) {
                 { OpenRouterKeyRows(key) }
