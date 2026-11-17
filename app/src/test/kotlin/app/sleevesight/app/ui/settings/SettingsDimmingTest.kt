@@ -147,7 +147,7 @@ class SettingsDimmingTest {
             val ask = R.string.settings_search_with_ai
             val saver = R.string.settings_pause_auto_write
             assertWholeSwitchRows(saver, ask, R.string.settings_artist_facts_once) {
-                InsightsSection(insightsOff, {}, {})
+                InsightsSection(insightsOff, {})
             }
             // Insights on, but nothing written automatically.
             assertWholeSwitchRows(saver) { SaverRows(Settings(writeAutomatically = WriteAutomatically.NEVER)) {} }

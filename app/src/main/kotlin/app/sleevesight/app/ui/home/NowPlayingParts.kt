@@ -278,13 +278,18 @@ private fun Progress(
 }
 
 /**
- * The song's title, large and bold, then each artist, then the album in italics (#438), followed by
- * the year of the release being played when it is known (#556, [HeaderYears]). The title is as
+ * The song's title, large and bold, then each artist, then the album in italics (#438), alone on its
+ * line, and under it, quieter, the record label of the release being played and the album's year
+ * (#729, [ReleaseAbout]): "Parlophone · 1965", of [labels] and [years] ([HeaderYears], #556), either
+ * alone when only it is known, no line when neither is. The title is as
  * normalized, with the source work and the variant it named under it; the artists are the credited
- * ones, featured artists included. The album and its year are one text, so a screen reader reads
- * them as one line; with no album reported, the line says so. No year when the album's name gives its
+ * ones, featured artists included. A screen reader reads the album and the line under it as one, a
+ * sentence: "Rubber Soul, released by Parlophone in 1965."; with no album reported, the line says so.
+ * No year when the album's name gives its
  * edition's ([albumLineYear], #1116: "Material Girl (2024 Remaster)"). When the recording first came out is
- * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place.
+ * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place. While
+ * [labelHeld], the labels still looked up on MusicBrainz, an empty line under the album, its height
+ * kept, rather than the year alone and the label after it.
  *
  * With [split], the roles telling the composer apart (#1199), the performers on one line (an arranger
  * the title names is in the title), then the composer, or every author, on a line of its own, after a quieter label
@@ -299,7 +304,7 @@ private fun Progress(
  * player's.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Suppress("LongParameterList") // The track, its years, its people, and where the authors' mark goes.
+@Suppress("LongParameterList") // The track, its years and labels, its people, and where the authors' mark goes.
 @Composable
 internal fun KeyData(
     normalized: NormalizedTrack,
@@ -309,6 +314,8 @@ internal fun KeyData(
     held: Boolean = false,
     notes: PanelNotes = PanelNotes(),
     foundAs: FoundAs? = null,
+    labels: AlbumLabels = AlbumLabels.Known(),
+    labelHeld: Boolean = false,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
@@ -353,20 +360,12 @@ internal fun KeyData(
         if (album == null) {
             Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
         } else {
-            // Read once per album and year, not at every recomposition (#1147).
-            val year = remember(album, years.album) { albumLineYear(album, years.album) }
-            Text(albumLine(album, year), style = MaterialTheme.typography.bodyLarge)
+            // Read once per album, year and labels, not at every recomposition (#1147).
+            val line = remember(album, years.album, labels) { releaseLine(album, years.album, labels) }
+            ReleaseAbout(album, line.takeUnless { labelHeld }, labelHeld)
         }
     }
 }
-
-/** The album in italics, and its year after it when known. */
-@Composable
-private fun albumLine(
-    album: String,
-    year: String?,
-): AnnotatedString =
-    withAlbum(if (year != null) stringResource(R.string.home_album_year, ALBUM_MARK, year) else ALBUM_MARK, album)
 
 /**
  * [line], a format given [ALBUM_MARK] in the album's place, with [album] there in italics: the mark
@@ -407,6 +406,12 @@ private fun Small(
 
 /** The test tag of the line under the title naming the spelling the track was found as (#1293). */
 const val FOUND_AS_TAG: String = "found-as"
+
+/** The test tag of the line under the album: the release's labels and the album's year (#729). */
+const val RELEASE_LINE_TAG: String = "release-line"
+
+/** The test tag of the line under the album while the release's labels are held back (#729). */
+const val RELEASE_HELD_TAG: String = "release-held"
 
 /** The test tag of the line under the title while its artists are held back (#1355). */
 const val ARTISTS_HELD_TAG: String = "artists-held"

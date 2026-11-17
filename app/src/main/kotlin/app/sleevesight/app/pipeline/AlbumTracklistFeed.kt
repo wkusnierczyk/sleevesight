@@ -4,6 +4,7 @@ import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbTracklist
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,9 +57,10 @@ sealed interface TracklistState {
 /**
  * The albums' tracklists Home's cover shows on its back (#984), by [TracklistKey], the album's release
  * group (`ReleaseDate.group`) with the playing recording, whose release is shown:
- * [states], and the asks. A tracklist is looked up on the first flip of the cover ([look]), not ahead:
- * most covers are never turned, and every request waits its turn under MusicBrainz's one request a
- * second, behind the pipeline's own.
+ * [states], and the asks. A tracklist is looked up ([look]) as soon as Home knows the track's release,
+ * for the record label under the album (#729), which the release gives; the first flip of the cover
+ * then finds it. One lookup per release, each request waiting its turn under MusicBrainz's one request
+ * a second, behind the pipeline's own.
  */
 interface TracklistFeed {
     /** Each album asked for, by its key, and where its tracklist is. */
@@ -69,6 +71,21 @@ interface TracklistFeed {
 
     /** Looks up [key]'s tracklist again after it failed (*Retry*). */
     fun retry(key: TracklistKey)
+
+    /**
+     * Whether a tracklist asked for may be found: false for one that never looks any up, so what waits
+     * for one (the record label under Home's album, #729) does not.
+     */
+    val looksUp: Boolean get() = true
+
+    /**
+     * Looks up [key]'s tracklist ahead of a flip (#729: the record label under Home's album), as [look]
+     * does, and again after it failed; and gives up every other lookup ahead still asked, superseded
+     * (a skipped track's), unless a [look] wants it (the cover turned to it): its request is
+     * cancelled, queued or under way, and its key forgotten, so a later ask asks again. What
+     * MusicBrainz answered before then stays remembered.
+     */
+    fun lookAhead(key: TracklistKey) = look(key)
 
     /** The albums of one name asked for (#1080), by their key, and where their tracklists are. */
     val albums: StateFlow<Map<AlbumsKey, AlbumsState>> get() = NO_ALBUMS
@@ -95,6 +112,8 @@ interface TracklistFeed {
     object None : TracklistFeed {
         override val states: StateFlow<Map<TracklistKey, TracklistState>> = MutableStateFlow(emptyMap())
 
+        override val looksUp: Boolean = false
+
         override fun look(key: TracklistKey) = Unit
 
         override fun retry(key: TracklistKey) = Unit
@@ -117,7 +136,7 @@ private val NO_CHOICES: StateFlow<Map<String, AlbumChoice>> = MutableStateFlow(e
  * on *See the {n} albums* or *Change*, never ahead; and the album the listener chose among them is kept
  * in [choiceStore], read once at the start, until changed or *Clear history* forgets it.
  */
-@Suppress("LongParameterList") // The two lookups, the choices kept, and when each may ask.
+@Suppress("LongParameterList", "TooManyFunctions") // Two lookups, the choices, when to ask; each ask.
 class AlbumTracklistFeed(
     private val lookup: suspend (TracklistKey) -> Lookup<MbTracklist>?,
     private val scope: CoroutineScope,
@@ -144,13 +163,36 @@ class AlbumTracklistFeed(
         }
     }
 
-    override fun look(key: TracklistKey) = askTracklist(key, again = false)
+    // The lookups [lookAhead] started that no [look] wants yet, by key, which the next [lookAhead] cancels.
+    private val ahead = mutableMapOf<TracklistKey, Job>()
 
-    override fun retry(key: TracklistKey) = askTracklist(key, again = true)
+    override fun look(key: TracklistKey) {
+        synchronized(ahead) { ahead.remove(key) }
+        askTracklist(key, again = false)
+    }
 
-    override fun lookAlbums(key: AlbumsKey) = askAlbums(key, again = false)
+    override fun lookAhead(key: TracklistKey) {
+        val superseded = synchronized(ahead) { (ahead - key).also { ahead.keys.retainAll(setOf(key)) } }
+        superseded.values.forEach(Job::cancel)
+        shown.update { states ->
+            states.filterNot { (other, state) -> other in superseded && state == TracklistState.Looking }
+        }
+        val job = askTracklist(key, again = true) ?: return
+        synchronized(ahead) { ahead[key] = job }
+        job.invokeOnCompletion { synchronized(ahead) { if (ahead[key] === job) ahead.remove(key) } }
+    }
 
-    override fun retryAlbums(key: AlbumsKey) = askAlbums(key, again = true)
+    override fun retry(key: TracklistKey) {
+        askTracklist(key, again = true)
+    }
+
+    override fun lookAlbums(key: AlbumsKey) {
+        askAlbums(key, again = false)
+    }
+
+    override fun retryAlbums(key: AlbumsKey) {
+        askAlbums(key, again = true)
+    }
 
     override fun choose(
         name: String,
@@ -165,6 +207,7 @@ class AlbumTracklistFeed(
      * the next flip asks again, and Sleevesight decides among albums of one name again.
      */
     fun forget() {
+        synchronized(ahead) { ahead.clear() }
         shown.value = emptyMap()
         named.value = emptyMap()
         chosen.value = emptyMap()
@@ -197,6 +240,7 @@ class AlbumTracklistFeed(
     // Asks [answer] for [key] into [flow], marked [looking] meanwhile: when [key] has no state, or,
     // [again], when it [failed]. Once lookups are allowed, and only while MusicBrainz is on, read as
     // the request would go: off, nothing is asked and nothing kept.
+    // The job asking, or null when nothing new is asked.
     private fun <K, S> ask(
         flow: MutableStateFlow<Map<K, S>>,
         key: K,
@@ -204,15 +248,15 @@ class AlbumTracklistFeed(
         looking: S,
         failed: S,
         answer: suspend () -> S,
-    ) {
+    ): Job? {
         var asking = false
         flow.update { states ->
             val now = states[key]
             asking = now == null || (again && now == failed)
             if (asking) with(states - key, key, looking) else states
         }
-        if (!asking) return
-        scope.launch(epoch.mark()) {
+        if (!asking) return null
+        return scope.launch(epoch.mark()) {
             allowed.first { it }
             val state = if (musicBrainzOn()) answer() else null
             epoch.ifCurrent(currentCoroutineContext()) {

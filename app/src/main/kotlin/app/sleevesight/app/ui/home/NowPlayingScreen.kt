@@ -304,6 +304,7 @@ internal class NowPlayingActions(
  * *Separate pages*. The insight shows in full on Home either way. The rows and the artists under the
  * title are held back until the track's people are named ([peopleShown], #1355), so they are named once.
  */
+@Suppress("LongMethod") // Home's parts in their order, each memory above the return that ends it.
 @Composable
 internal fun NowPlayingContent(
     state: NowPlayingState,
@@ -314,11 +315,12 @@ internal fun NowPlayingContent(
     // the insight and track it was opened on, whatever plays meanwhile.
     var reporting by remember { mutableStateOf<Reported?>(null) }
     reporting?.let { ReportOpen(it, actions.mail) { reporting = null } }
-    // Above the return, so the fold, the panels open under the album and the rows' naming (#1355)
-    // outlive a while with nothing playing or an ad.
+    // Above the return, so the fold, the panels open under the album, the rows' naming (#1355) and
+    // the wait for the album's label (#729) outlive a while with nothing playing or an ad.
     val foldMemory = rememberFoldMemory()
     val itemMemory = rememberItemFoldMemory()
     val naming = rememberNamingMemory()
+    val labelNaming = rememberNamingMemory()
     val inPlace = rememberInPlaceMemory()
     if (playing == null || state.ad != null) {
         NoTrackHome(state, actions)
@@ -357,7 +359,8 @@ internal fun NowPlayingContent(
                 PlayerAndCover(state, playing, header, coverTurn(shown, header, settings, actions, back), actions)
                 val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
-                TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions, people.named)
+                val under = UnderAlbumLine(inPlace, settings, notes, genresPage, labelNaming)
+                TrackHeader(shown, header, under, actions, people.named)
                 InsightCard(
                     keyInsight(actions.itemNotes, track, shown.view.nothingToNarrate) ?: NOT_YET,
                     insightContext(shown.view, track, settings, shown.modelAllowed, state.unavailable, retries),

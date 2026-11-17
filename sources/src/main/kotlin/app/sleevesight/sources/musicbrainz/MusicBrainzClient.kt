@@ -298,6 +298,8 @@ class MusicBrainzClient(
                     json
                         .array("label-info")
                         .mapNotNull { it.obj("label")?.string("name")?.ifEmpty { null } }
+                        // MusicBrainz's special "[no label]" (self-released, #729) names none.
+                        .filter { it != NO_LABEL }
                         .distinct(),
                 group =
                     json.obj("release-group")?.let {
@@ -450,6 +452,9 @@ class MusicBrainzClient(
          * and release group (#1080), which tell albums of one name apart. Core data only.
          */
         const val TRACKLIST_INC: String = "recordings+labels+release-groups"
+
+        // MusicBrainz's special label for a release on no label (self-released): no label (#729).
+        private const val NO_LABEL = "[no label]"
 
         private val WIKIDATA = Regex("^https?://www\\.wikidata\\.org/wiki/(Q[0-9]+)$")
 

@@ -634,7 +634,8 @@ class AppGraph internal constructor(
         )
 
     /**
-     * The albums' tracklists on the back of Home's cover (#984), looked up on a flip through the
+     * The albums' tracklists on the back of Home's cover (#984), whose release also gives the record
+     * label under Home's album (#729), looked up once the track's release is known through the
      * wiring's remembered MusicBrainz answers, in the pipeline's scope, while lookups are allowed and
      * MusicBrainz is on, marked with [clearEpoch]; with the albums of one name and the listener's
      * choice among them, kept on the phone (#1080).

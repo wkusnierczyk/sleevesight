@@ -40,6 +40,12 @@ import kotlinx.coroutines.async
 // *Secrets* (#234, #444): *Load keys* (#268), *Purge keys*, and each key's row, with its button
 // that removes it; and their dialogs and screens (#446).
 
+/** The test tag of *Load keys*' button (#1365). */
+internal const val LOAD_KEYS_BUTTON_TAG = "settings-load-keys-button"
+
+/** The test tag of *Purge keys*' button (#1365). */
+internal const val PURGE_KEYS_BUTTON_TAG = "settings-purge-keys-button"
+
 /** The keys' rows under *Secrets*, in the order shown: the AI services', then the sources'. */
 internal val SHOWN_KEYS =
     listOf(SecretId.OPENROUTER, SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE, SecretId.LASTFM, SecretId.EXA)
@@ -80,8 +86,9 @@ internal fun KeyRow(
  * *Secrets*: *Load keys*, which saves several keys from one QR code, a setup code (#268), on a
  * screen of its own ([LoadKeysScreen]), with, under it, where the code is made and the guide to it
  * (#541); *Purge keys*, while any key is stored, readable or not, or after a failure
- * ([KeysShown.offerReset]), when it says why (what was *Reset saved keys*, which did the same), on a
- * screen of its own ([PurgeKeysScreen]); each key's row, the AI services' and the sources' alike;
+ * ([KeysShown.offerReset]), when it says why in a note under its description, in full (what was
+ * *Reset saved keys*, which did the same), on a screen of its own ([PurgeKeysScreen]); each key's
+ * row, the AI services' and the sources' alike;
  * and *Share phone's name with Type on a computer* (#433, #544), for the key dialogs' *Type on a
  * computer*, which its summary explains, with a link to the page the computer opens.
  */
@@ -92,19 +99,26 @@ internal fun SecretsSection(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    ValueRow(
+    // Actions, so rows with a button at their right (#1365, as #1126 has them), each labelled with
+    // a short verb, as *Clear history*'s *Clear*, and read by the row's name; *Purge keys* deletes,
+    // so its button is in the error colour.
+    ButtonRow(
         title = stringResource(R.string.settings_scan_keys),
-        value = stringResource(R.string.settings_scan_keys_value),
-        onClick = { open(SettingsDialog.LoadKeys) },
-    )
+        summary = stringResource(R.string.settings_scan_keys_value),
+        label = stringResource(R.string.settings_scan_keys_button),
+        tag = LOAD_KEYS_BUTTON_TAG,
+    ) { open(SettingsDialog.LoadKeys) }
     LoadKeysMore()
     if (keys.anyStored || keys.offerReset) {
-        val why = if (keys.offerReset) R.string.settings_reset_keys_value else R.string.settings_remove_all_keys_value
-        ValueRow(
+        ButtonRow(
             title = stringResource(R.string.settings_remove_all_keys),
-            value = stringResource(why),
-            onClick = { open(SettingsDialog.PurgeKeys) },
-        )
+            summary = stringResource(R.string.settings_remove_all_keys_value),
+            label = stringResource(R.string.settings_remove_all_keys_button),
+            tag = PURGE_KEYS_BUTTON_TAG,
+            destructive = true,
+            // After a failure, why to use it, in full: a state, not a description to fold (#847).
+            note = if (keys.offerReset) stringResource(R.string.settings_reset_keys_value) else null,
+        ) { open(SettingsDialog.PurgeKeys) }
     }
     for (id in SHOWN_KEYS) KeyRow(stringResource(keyName(id)), id, keys.states, indent = false, open)
     // Its trade-off, that anyone nearby can see the phone's name during a session, is said in the

@@ -361,9 +361,11 @@ private fun StopsTrack(
 
 /**
  * The [labels] under the stops, each centred under its stop as far as the row's edges and its
- * neighbours allow: none overlaps another, or leaves the row, at any font size. Each takes one line
- * while all fit side by side; where they do not, the widest wrap between their words, one at a time,
- * until they fit ([labelWidths]), and the labels then move off their stops only as far as they must
+ * neighbours allow: none overlaps another, or leaves the row, at any font size. A blank label (the
+ * stops between the ends of [endsOnly]) takes no room: only the labels shown are measured and
+ * spaced, each still under its own stop (#1365). Each takes one line while all fit side by side;
+ * where they do not, the widest wrap between their words, one at a time, until they fit
+ * ([labelWidths]), and the labels then move off their stops only as far as they must
  * ([labelPositions]). Read with the slider, not on their own.
  */
 @Composable
@@ -376,9 +378,11 @@ private fun StopLabels(
     // Each label's longest word, measured as drawn: the intrinsic width's own line breaker may break
     // inside one (after an apostrophe, as the JVM's does).
     val measurer = rememberTextMeasurer()
+    // The labels shown, by the index of their stop.
+    val shown = labels.withIndex().filter { it.value.isNotBlank() }
     Layout(
         content = {
-            labels.forEachIndexed { i, label ->
+            shown.forEach { (i, label) ->
                 val align =
                     when (i) {
                         0 -> TextAlign.Start
@@ -397,17 +401,18 @@ private fun StopLabels(
         modifier = Modifier.fillMaxWidth().testTag(tag),
     ) { measurables, constraints ->
         val width = constraints.maxWidth
+        if (measurables.isEmpty()) return@Layout layout(width, 0) {}
         val inset = THUMB.toPx() / 2
         val gap = LABEL_GAP.roundToPx()
-        val last = measurables.lastIndex
+        val last = labels.lastIndex.coerceAtLeast(1)
         val widths =
             labelWidths(
                 measurables.map { it.maxIntrinsicWidth(Constraints.Infinity) },
-                labels.map { label -> label.split(' ').maxOf { measurer.measure(it, style).size.width } + 1 },
-                width - gap * last,
+                shown.map { (_, label) -> label.split(' ').maxOf { measurer.measure(it, style).size.width } + 1 },
+                width - gap * measurables.lastIndex,
             )
         val placeables = measurables.zip(widths) { m, w -> m.measure(Constraints(maxWidth = w.coerceIn(0, width))) }
-        val stops = List(placeables.size) { i -> inset + (width - 2 * inset) * i / last }
+        val stops = shown.map { (i, _) -> inset + (width - 2 * inset) * i / last }
         val lefts = labelPositions(stops, placeables.map { it.width }, width, gap)
         layout(width, placeables.maxOf { it.height }) {
             placeables.forEachIndexed { i, p -> p.place(lefts[i], 0) }

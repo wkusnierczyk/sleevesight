@@ -2,9 +2,11 @@ package app.sleevesight.core.resolution
 
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.sources.FreshLookups
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeMark
@@ -147,13 +149,39 @@ class RememberedMusicBrainz(
         // Insertion-ordered; an entry is moved to the end when used, so the first is the least recent.
         private val kept = LinkedHashMap<K, Kept>()
 
+        // A lock per question being asked, with how many wait on it (#729): a second ask of the same
+        // question waits for the first's answer and takes it from [kept] rather than ask again.
+        private inner class Asking {
+            val lock = Mutex()
+            var waiting = 0
+        }
+
+        private val asking = HashMap<K, Asking>()
+
         // [keeps]: whether a found answer is kept; one that is not, as one not obtained, is asked again.
+        // The same question asked at once is asked once: the later waits for the earlier's answer, and
+        // asks itself only when that is not kept (failed, or the earlier given up).
         suspend fun answer(
             key: K,
             keeps: (T) -> Boolean = { true },
             ask: suspend () -> Lookup<T>,
         ): Lookup<T> {
-            if (!FreshLookups.active()) kept(key)?.let { return it }
+            if (FreshLookups.active()) return asked(key, keeps, ask)
+            val one = mutex.withLock { asking.getOrPut(key) { Asking() }.also { it.waiting++ } }
+            try {
+                return one.lock.withLock { kept(key) ?: asked(key, keeps, ask) }
+            } finally {
+                withContext(NonCancellable) {
+                    mutex.withLock { if (--one.waiting == 0) asking.remove(key) }
+                }
+            }
+        }
+
+        private suspend fun asked(
+            key: K,
+            keeps: (T) -> Boolean,
+            ask: suspend () -> Lookup<T>,
+        ): Lookup<T> {
             val answer = ask()
             if (answer !is Lookup.Failed && (answer !is Lookup.Found || keeps(answer.value))) keep(key, answer)
             return answer
