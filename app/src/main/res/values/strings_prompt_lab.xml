@@ -6,6 +6,7 @@
     <string name="lab_mark_tag">Debug build</string>
 
     <string name="lab_title">Prompt lab</string>
+    <string name="lab_switch_summary">Writes each kind of insight with the prompt chosen for it below, and offers Compare under insights.</string>
     <string name="lab_summary">Prompt variants for each kind of AI text, to compare on this phone with real tracks and mark. Only in the debug build.</string>
     <string name="lab_twice">The Play app reacts to the same tracks: with insights written in both, each track is paid for twice. While testing, set the Play app\'s writing mode to On demand.</string>
 

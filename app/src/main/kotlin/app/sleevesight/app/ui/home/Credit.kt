@@ -21,6 +21,7 @@ import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.ui.lab.labCreditText
+import app.sleevesight.app.ui.lab.labOnNow
 import app.sleevesight.app.ui.settings.effortName
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.ai.ReasoningEffort
@@ -150,7 +151,9 @@ internal fun CreditRow(
 ) {
     // The credit naming the variant that wrote the text, if one did; none outside the debug build.
     val resources = LocalResources.current
-    val named = variant?.takeIf { BuildConfig.DEBUG && it != LabPrompts.RELEASE }
+    // Only while the lab is on (#1388): switched off, the text is about to go, and is not credited to it.
+    val labOn = labOnNow()
+    val named = variant?.takeIf { BuildConfig.DEBUG && labOn && it != LabPrompts.RELEASE }
     val labbed = if (credit != null && named != null) labCreditText(credit, named, resources) else null
     val credited = labbed ?: credit
     val said = credited != null || after.isNotEmpty()

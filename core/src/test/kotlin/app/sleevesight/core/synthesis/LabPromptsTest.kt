@@ -177,5 +177,17 @@ class LabPromptsTest {
         assertEquals(emptyList(), LabJson.readLog("[{\"kind\": \"nothing\"}]"))
     }
 
+    @Test
+    fun `the lab's switch is off until turned on, kept as set, and settings kept before it read as off`() {
+        assertEquals(false, LabSettings().enabled)
+        val on = LabSettings().use(PromptKind.SONG, "B").withEnabled(true)
+        assertEquals(true, LabJson.readSettings(LabJson.settings(on)).enabled)
+        // Off again, the choice per kind is kept.
+        val off = LabJson.readSettings(LabJson.settings(on.withEnabled(false)))
+        assertEquals(false, off.enabled)
+        assertEquals("B", off.inUse(PromptKind.SONG))
+        assertEquals(false, LabJson.readSettings("{\"in_use\": {\"song\": \"B\"}}").enabled)
+    }
+
     private fun firstLine(text: String): String = text.substringBefore('\n')
 }

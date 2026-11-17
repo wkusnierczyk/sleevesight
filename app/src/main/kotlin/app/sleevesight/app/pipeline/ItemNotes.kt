@@ -632,19 +632,20 @@ class AppItemNotes(
     ) {
         val play = track.nowPlaying.play ?: return
         val own = shown as? ItemShown.Shown
-        if (own?.state is InsightState.Written && own.rewriteWith == null) seen[key.subject()] = play
+        if (own?.state is InsightState.Written && own.rewriteWith == null) seen[key.heldSubject()] = play
     }
 
     // Whether an automatic write of [key]'s insight on [track] is held back (#911): none of its own,
-    // and on this play its row showed one another model wrote, before the model changed. It stays,
-    // with *Rewrite insight*, as the key insight does after a settings change; nothing writes it unasked.
+    // and on this play its row showed one another model (or prompt lab variant, #1388) wrote, before
+    // the model (or the lab) changed. It stays, with *Rewrite insight*, as the key insight does after
+    // a settings change; nothing writes it unasked.
     private fun held(
         key: CardKey,
         track: TrackState,
     ): Boolean {
         val play = track.nowPlaying.play ?: return false
         val own = shown.value[key]
-        return seen[key.subject()] == play && (own == null || stale(own, play))
+        return seen[key.heldSubject()] == play && (own == null || stale(own, play))
     }
 
     override fun write(
@@ -1851,6 +1852,13 @@ class AppItemNotes(
 
     // What [this] key's card is about and from, whatever service, model and effort write it (#911).
     private fun CardKey.subject(): CardKey = copy(provider = ProviderId.ANTHROPIC, model = "", effort = null)
+
+    // What [this] key's card is about, whatever prompt lab variant writes it too (#1388), for the
+    // hold on an automatic write ([held]): switching the lab changes the key's style and variant, and
+    // an insight shown on this play stays held whichever prompt wrote it. Not for the insight shown
+    // in its place ([earlierFor]), so a variant's text is never shown under the release prompt's key,
+    // nor the release prompt's under a variant's.
+    private fun CardKey.heldSubject(): CardKey = subject().copy(styleHash = "", variant = null)
 
     // [this] with [entry] for [key], last, the oldest dropped past [KEPT], and no longer counted as looked for.
     private fun Map<CardKey, Entry>.with(

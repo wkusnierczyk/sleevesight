@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -21,11 +22,15 @@ import kotlin.time.Instant
  * release prompt unless set), the variants a comparison writes ([compared], from
  * [LabPrompts.FEWEST_COMPARED] to [LabPrompts.MOST_COMPARED]), and the *Custom* instructions
  * ([custom], [LabPrompts.ROLE] until edited). An id the kind does not have reads as unset.
+ *
+ * The lab's switch ([enabled], #1388), off until turned on: off, every kind is written with the
+ * release prompt and no comparison is offered, the choices per kind kept for when it is turned on.
  */
 data class LabSettings(
     val inUse: Map<PromptKind, String> = emptyMap(),
     val compared: Map<PromptKind, List<String>> = emptyMap(),
     val custom: Map<PromptKind, String> = emptyMap(),
+    val enabled: Boolean = false,
 ) {
     /** The variant [kind] is written with: its id, [LabPrompts.RELEASE] unless set. */
     fun inUse(kind: PromptKind): String = inUse[kind]?.takeIf { it in ids(kind) } ?: LabPrompts.RELEASE
@@ -74,6 +79,9 @@ data class LabSettings(
             }
         return copy(compared = compared + (kind to next))
     }
+
+    /** These settings with the lab switched on or off ([on]), the choices per kind kept either way. */
+    fun withEnabled(on: Boolean): LabSettings = copy(enabled = on)
 
     /** These settings with [kind]'s *Custom* instructions [text]. */
     fun withCustom(
@@ -148,6 +156,7 @@ object LabJson {
                 put("in_use", byKind(settings.inUse) { JsonPrimitive(it) })
                 put("compared", byKind(settings.compared) { ids -> JsonArray(ids.map(::JsonPrimitive)) })
                 put("custom", byKind(settings.custom) { JsonPrimitive(it) })
+                put("enabled", settings.enabled)
             },
         )
 
@@ -161,6 +170,8 @@ object LabJson {
                     (element as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
                 },
             custom = readByKind(root["custom"]) { (it as? JsonPrimitive)?.contentOrNull },
+            // Off unless kept on: settings kept before the switch (#1388) read as off.
+            enabled = (root["enabled"] as? JsonPrimitive)?.booleanOrNull ?: false,
         )
     }
 

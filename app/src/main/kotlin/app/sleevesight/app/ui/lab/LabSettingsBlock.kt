@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -41,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.lab.PromptLab
+import app.sleevesight.app.ui.settings.DISABLED_ALPHA
+import app.sleevesight.app.ui.settings.SwitchRow
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.synthesis.LabPrompts
@@ -56,28 +59,44 @@ import kotlin.time.toJavaInstant
 /**
  * The prompt lab's block in *Settings → Developer* (#1003), after *Mark developer items*, only in the
  * debug build and only while [lab] is given: in the developer mark with the tag *Debug build*, its
- * title, what it is, and the warning about the Play app; then one row per prompt kind, each opening in
- * place, several at once, saying in short what is in use and what is compared ([KindRow]); then the
+ * switch, *Prompt lab* (#1388, off until turned on, the switch of every other setting), then what it
+ * is, and the warning about the Play app; then one row per prompt kind, each opening in place,
+ * several at once, saying in short what is in use and what is compared ([KindRow]); then the
  * comparisons logged, with *Export the log* (a JSON file, through the system's file picker) and
  * *Clear the log*, which asks first.
+ *
+ * With the switch off the kinds' rows do not apply: as any setting that does not apply, they dim, the
+ * whole of each, and cannot be changed or opened (an open one shown closed until the switch is on
+ * again), their choices kept. The log stays as it is: what was compared before can still be exported
+ * or cleared.
  */
 @Composable
 internal fun PromptLabBlock(lab: PromptLab) {
     if (!BuildConfig.DEBUG) return
     val settings by lab.settings.collectAsState()
     val open = remember { mutableStateMapOf<PromptKind, Boolean>() }
+    val enabled = settings.enabled
     DeveloperMark(Modifier.testTag(LAB_BLOCK_TAG), spacing = 8.dp, tag = stringResource(R.string.lab_mark_tag)) {
-        Text(stringResource(R.string.lab_title), style = MaterialTheme.typography.titleMedium)
+        SwitchRow(
+            title = stringResource(R.string.lab_title),
+            summary = stringResource(R.string.lab_switch_summary),
+            checked = enabled,
+        ) { on -> lab.update { it.withEnabled(on) } }
         Quiet(stringResource(R.string.lab_summary))
         Quiet(stringResource(R.string.lab_twice))
-        for (kind in PromptKind.entries) {
-            KindRow(kind, settings, open[kind] == true, { open[kind] = it }) { change -> lab.update(change) }
+        Column(Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA)) {
+            for (kind in PromptKind.entries) {
+                KindRow(kind, settings, enabled && open[kind] == true, { open[kind] = it }) { change ->
+                    lab.update(change)
+                }
+            }
         }
         Logged(lab)
     }
 }
 
-// One kind's row: its name and what is in use and compared; open, its variants.
+// One kind's row: its name and what is in use and compared; open, its variants. It cannot be opened
+// while the lab's switch is off.
 @Composable
 private fun KindRow(
     kind: PromptKind,
@@ -102,7 +121,7 @@ private fun KindRow(
         Column(
             Modifier
                 .fillMaxWidth()
-                .toggleable(value = open, role = Role.Button, onValueChange = onOpen)
+                .toggleable(value = open, enabled = settings.enabled, role = Role.Button, onValueChange = onOpen)
                 .testTag(labKindTag(kind))
                 .padding(vertical = 6.dp),
         ) {

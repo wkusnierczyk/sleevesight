@@ -17,6 +17,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -109,6 +110,12 @@ class PromptLabScreenTest {
         scope.cancel()
     }
 
+    // Developer mode and the lab's switch on (#1388).
+    private fun switchOn() {
+        lab.developerMode(true)
+        lab.update { it.withEnabled(true) }
+    }
+
     private fun text(id: Int) = app.getString(id)
 
     private fun count(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size
@@ -137,11 +144,15 @@ class PromptLabScreenTest {
     }
 
     @Test
-    fun compareIsOfferedOnlyInDeveloperMode() {
+    fun compareIsOfferedOnlyInDeveloperModeWithTheLabsSwitchOn() {
         show {
             compose.waitForIdle()
             assertEquals(0, compose.onAllNodesWithTag(LAB_COMPARE_ACTION_TAG).fetchSemanticsNodes().size)
             lab.developerMode(true)
+            compose.waitForIdle()
+            // Developer mode alone: the lab's switch is off until turned on (#1388).
+            assertEquals(0, compose.onAllNodesWithTag(LAB_COMPARE_ACTION_TAG).fetchSemanticsNodes().size)
+            lab.update { it.withEnabled(true) }
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithTag(LAB_COMPARE_ACTION_TAG).fetchSemanticsNodes().isNotEmpty()
             }
@@ -152,7 +163,7 @@ class PromptLabScreenTest {
 
     @Test
     fun theVersionsAreMarkedAndLoggedOnceThePromptsAreShown() {
-        lab.developerMode(true)
+        switchOn()
         written()
         show {
             compose.onNodeWithTag(LAB_COMPARE_ACTION_TAG).performScrollTo().performClick()
@@ -179,7 +190,7 @@ class PromptLabScreenTest {
 
     @Test
     fun aComparisonIsRefusedForACardNoRequestWroteSinceTheAppStarted() {
-        lab.developerMode(true)
+        switchOn()
         written()
         show(card = "a card read from the cache") {
             compose.onNodeWithTag(LAB_COMPARE_ACTION_TAG).performScrollTo().performClick()
@@ -190,7 +201,7 @@ class PromptLabScreenTest {
 
     @Test
     fun theCreditNamesTheVariantThatWroteTheTextInsideTheMarkWhateverTheLabIsSetToNow() {
-        lab.developerMode(true)
+        switchOn()
         show(variant = "B") {
             compose.waitUntil(WAIT_MS) { count("Written by Claude Haiku 5.5 · prompt B.") == 1 }
             val marked =
@@ -210,7 +221,7 @@ class PromptLabScreenTest {
 
     @Test
     fun aTextTheReleasePromptWroteHasThePlayBuildsCreditWhileAVariantIsInUse() {
-        lab.developerMode(true)
+        switchOn()
         lab.update { it.use(PromptKind.SONG, "B") }
         show(variant = LabPrompts.RELEASE) {
             compose.waitForIdle()
@@ -221,7 +232,7 @@ class PromptLabScreenTest {
 
     @Test
     fun theLabsSettingsChooseTheVariantAKindIsWrittenWith() {
-        lab.developerMode(true)
+        switchOn()
         show {
             compose.onNodeWithTag(LAB_BLOCK_TAG).performScrollTo()
             compose.onNodeWithTag(labKindTag(PromptKind.SONG)).performScrollTo().performClick()
@@ -235,7 +246,7 @@ class PromptLabScreenTest {
 
     @Test
     fun aVariantsInstructionsOpenAndCloseOnTheirPillAndCustomsResetPutsTheRoleBack() {
-        lab.developerMode(true)
+        switchOn()
         lab.update { it.withCustom(PromptKind.SONG, "Write a haiku.") }
         show {
             compose.onNodeWithTag(LAB_BLOCK_TAG).performScrollTo()
@@ -259,6 +270,37 @@ class PromptLabScreenTest {
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithTag(labCustomTag(PromptKind.SONG)).fetchSemanticsNodes().isEmpty()
             }
+        }
+    }
+
+    @Test
+    fun theLabsSwitchTurnsTheLabOnAndOffAndWhileOffTheKindsRowsDimAndCannotBeOpened() {
+        lab.developerMode(true)
+        lab.update { it.use(PromptKind.SONG, "C") }
+        show {
+            compose.onNodeWithTag(LAB_BLOCK_TAG).performScrollTo()
+            assertEquals(1, count(text(R.string.lab_switch_summary)))
+            compose.onNodeWithTag(labKindTag(PromptKind.SONG)).performScrollTo().assertIsNotEnabled()
+            compose.onNodeWithText(text(R.string.lab_title)).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) { lab.on.value }
+            assertTrue(lab.settings.value.enabled)
+            compose.waitUntil(WAIT_MS) {
+                compose.onAllNodesWithTag(LAB_COMPARE_ACTION_TAG).fetchSemanticsNodes().isNotEmpty()
+            }
+            val song = compose.onNodeWithTag(labKindTag(PromptKind.SONG))
+            song.performScrollTo()
+            song.assertIsEnabled()
+            song.performClick()
+            compose.onNodeWithTag(labUseTag(PromptKind.SONG, "C")).assertExists()
+
+            compose.onNodeWithText(text(R.string.lab_title)).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) { !lab.on.value }
+            compose.waitUntil(WAIT_MS) {
+                compose.onAllNodesWithTag(LAB_COMPARE_ACTION_TAG).fetchSemanticsNodes().isEmpty()
+            }
+            // The open kind shown closed, its choice kept.
+            compose.onNodeWithTag(labUseTag(PromptKind.SONG, "C")).assertDoesNotExist()
+            assertEquals("C", lab.settings.value.inUse(PromptKind.SONG))
         }
     }
 
