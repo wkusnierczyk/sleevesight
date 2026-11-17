@@ -27,7 +27,7 @@ Checked on 17 November 2026, on the code of release 0.8.0.
 - **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app; none of them changed since 0.7.2.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing, in the app or in the modules beside it.
-- **Security review:** no way found to reach your keys or your data in the new code. The OpenRouter sign-in gives its key only to the sign-in that started it: the app keeps a one-time secret (PKCE) and a random state, and both must match. The new spelling check is one more paid web search and AI request, and only for a track MusicBrainz cannot find; the privacy policy names it. Two slowdowns on unusual text are left: one when showing an unusual AI reply, one on an unusual artist name. One minor nuisance is left: another app can cancel a sign-in while it is under way. None of these reaches keys or data.
+- **Security review:** no way found to reach your keys or your data in the new code. The new spelling check is one more paid web search and AI request, and only for a track MusicBrainz cannot find; the privacy policy names it. Two slowdowns on unusual text are left: one when showing an unusual AI reply, one on an unusual artist name. None of these reaches keys or data.
 
 ## What is checked
 
