@@ -48,7 +48,8 @@ internal class ItemRow(
 /**
  * The rows of [header], the track shown, as [normalized] reads it: the song by its title as under the
  * cover (the normalized title, the version suffix dropped, #1160; the player's whole title when that
- * leaves nothing), with the [ItemRow.version] dropped; the artist by the primary artist (as the
+ * leaves nothing), with the [ItemRow.version] dropped, and without the title's composer lead when
+ * the Composer or Authors row names that composer (#1356, [songRow]); the artist by the primary artist (as the
  * normalizer reads the artists); the album by the player's album name; no row for one with no name
  * (an album the player does not name, a blank title).
  *
