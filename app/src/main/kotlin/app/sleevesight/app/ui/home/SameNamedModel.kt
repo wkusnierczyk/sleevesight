@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.AlbumsKey
 import app.sleevesight.app.pipeline.NamedAlbum
 import app.sleevesight.app.pipeline.TracklistKey
@@ -8,6 +9,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.MbMedium
+import app.sleevesight.core.resolution.MbReleaseGroup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.sources.ReleaseDate
 
@@ -64,13 +66,15 @@ internal data class AlbumRow(
 
 /**
  * The albums the name [header] gives names, when it names several (#1080), as [albumPick] reads the
- * track's releases: each release group once, in their order; with the one the listener chose, of
- * [choices], when it is among them. Null with no album, or fewer than two groups named.
+ * track's releases: each release group once, in their order. With a choice kept for the name, of
+ * [choices], the albums it was made among, the one chosen, whatever this song's releases name: it is
+ * kept by the album's name and artist, and another song of the album may name fewer or others. Null
+ * with no album, or with no choice and fewer than two groups named.
  */
 internal fun sameName(
     track: TrackState?,
     header: NowPlaying,
-    choices: Map<String, String> = emptyMap(),
+    choices: Map<String, AlbumChoice> = emptyMap(),
 ): SameName? {
     val album = header.album?.trim()?.takeIf(String::isNotEmpty) ?: return null
     val dates = track?.resolution?.releaseDates?.ifEmpty { null } ?: keptResult(track)?.releaseDates.orEmpty()
@@ -80,8 +84,10 @@ internal fun sameName(
             .map { it.group }
             .distinct()
     val name = choiceName(album, track?.normalized?.primary?.ifEmpty { null } ?: header.artists)
-    return SameName(name, album, groups, playingRecording(track), choices[name]?.takeIf { it in groups })
-        .takeIf { groups.size > 1 }
+    val choice = choices[name]
+    val among = choice?.let { (it.among.ifEmpty { groups } + it.group).distinct() } ?: groups
+    return SameName(name, album, among, playingRecording(track), choice?.group)
+        .takeIf { choice != null || groups.size > 1 }
 }
 
 /**
@@ -125,7 +131,7 @@ private fun albumRow(
     return AlbumRow(
         group = album.group,
         date = tracklist.date,
-        type = tracklist.group?.primaryType,
+        type = typeOf(tracklist.group),
         tracks = back.discs.sumOf { it.tracks.size },
         labels = tracklist.labels,
         country = tracklist.country,
@@ -134,6 +140,14 @@ private fun albumRow(
         back = back,
     )
 }
+
+// The group's types as MusicBrainz writes them together: "Album + Compilation", the primary first.
+private fun typeOf(group: MbReleaseGroup?): String? =
+    group
+        ?.let { listOfNotNull(it.primaryType) + it.secondaryTypes }
+        ?.distinct()
+        ?.joinToString(" + ")
+        ?.ifEmpty { null }
 
 // The media's [formats] as one: "CD" for one, "2×CD" for several alike, else each kind once, joined.
 private fun formatOf(formats: List<String>): String? =
@@ -160,7 +174,7 @@ internal fun pickedBack(
     track: TrackState?,
     header: NowPlaying,
     states: Map<TracklistKey, TracklistState>,
-    choices: Map<String, String>,
+    choices: Map<String, AlbumChoice>,
 ): CoverBack {
     val same = sameName(track, header, choices)
     val recording = playingRecording(track)

@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.AlbumsKey
 import app.sleevesight.app.pipeline.NamedAlbum
 import app.sleevesight.app.pipeline.TracklistKey
@@ -62,11 +63,9 @@ class SameNamedAlbumsModelTest {
     @Test
     fun theAlbumsTheNameNamesEachOnceWithTheChoiceWhenItIsOneOfThem() {
         assertEquals(SameName(name, "Greatest Hits", groups, "rec-eyes"), sameName(idolTrack, idol))
-        assertEquals("g-2006", sameName(idolTrack, idol, mapOf(name to "g-2006"))?.chosen)
-        // A choice of a group the name no longer names is not one.
-        assertNull(sameName(idolTrack, idol, mapOf(name to "g-gone"))?.chosen)
+        assertEquals("g-2006", sameName(idolTrack, idol, mapOf(name to AlbumChoice("g-2006", groups)))?.chosen)
         // Another artist's choice of the name is theirs.
-        val other = mapOf(choiceName("Greatest Hits", "Queen") to "g-2006")
+        val other = mapOf(choiceName("Greatest Hits", "Queen") to AlbumChoice("g-2006", groups))
         assertNull(sameName(idolTrack, idol, other)?.chosen)
         assertEquals(AlbumsKey(groups, "rec-eyes"), sameName(idolTrack, idol)?.key)
         // One album of the name: nothing to choose among.
@@ -77,7 +76,7 @@ class SameNamedAlbumsModelTest {
 
     @Test
     fun theAlbumChosenIsAskedForAndShownSaidToBeTheListeners() {
-        val choices = mapOf(name to "g-2006")
+        val choices = mapOf(name to AlbumChoice("g-2006", groups))
         val key = TracklistKey("g-2006", "rec-eyes")
         assertEquals(key, tracklistKey(idolTrack, idol, choices))
         val states =
@@ -95,7 +94,52 @@ class SameNamedAlbumsModelTest {
                 ReleaseDate("Greatest Hits", "2001", "g-a", "Album"),
                 ReleaseDate("Greatest Hits", "2001", "g-b", "Album"),
             )
-        assertEquals(TracklistKey("g-b", null), tracklistKey(tied, idol, mapOf(name to "g-b")))
+        assertEquals(
+            TracklistKey("g-b", null),
+            tracklistKey(
+                tied,
+                idol,
+                mapOf(
+                    name to AlbumChoice("g-b", listOf("g-a", "g-b")),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun theChoiceHoldsForAnotherSongOfTheAlbumWhateverItsReleasesName() {
+        // The choice was made among three; the next song is on the 2006 album only, then on the 2001 and
+        // the undated ones only: each still shows the choice, among the three, with Change.
+        val choices = mapOf(name to AlbumChoice("g-2006", groups))
+        val whiteWedding = idol.copy(title = "White Wedding")
+        val onlyChosen =
+            track(whiteWedding).copy(
+                resolution =
+                    Resolution(
+                        outcome = Outcome.SongArticle,
+                        recordingMbid = "rec-wedding",
+                        releaseDates = listOf(ReleaseDate("Greatest Hits", "2006-03", "g-2006", "Album")),
+                    ),
+            )
+        val others =
+            onlyChosen.copy(
+                resolution =
+                    onlyChosen.resolution?.copy(
+                        releaseDates =
+                            listOf(
+                                ReleaseDate("Greatest Hits", "2001-04-24", "g-2001", "Album"),
+                                ReleaseDate("Greatest Hits", null, "g-undated", "Album"),
+                            ),
+                    ),
+            )
+        for (song in listOf(onlyChosen, others)) {
+            val key = TracklistKey("g-2006", "rec-wedding")
+            assertEquals(key, tracklistKey(song, whiteWedding, choices))
+            val states = mapOf(key to TracklistState.Found(tracklist("r-2006", "g-2006", "White Wedding")))
+            val back = coverBack(song, whiteWedding, true, states, choices) as CoverBack.Found
+            assertEquals(PickedBy.LISTENER, back.pickedBy)
+            assertEquals(groups, back.albums?.groups)
+        }
     }
 
     @Test
@@ -150,6 +194,12 @@ class SameNamedAlbumsModelTest {
         val row = albumRows(listOf(NamedAlbum("g", two)), idolTrack, idol).single()
         assertEquals("Compilation", row.type)
         assertEquals(3, row.tracks)
+        // The group's secondary types after its primary one, as MusicBrainz writes them.
+        val live = two.copy(group = MbReleaseGroup("g", "Greatest Hits", "Album", listOf("Compilation", "Live")))
+        assertEquals(
+            "Album + Compilation + Live",
+            albumRows(listOf(NamedAlbum("g", live)), idolTrack, idol).single().type,
+        )
         assertEquals(listOf("Capitol", "EMI"), row.labels)
         assertEquals("United States", row.country)
         assertEquals("2×CD", row.format)

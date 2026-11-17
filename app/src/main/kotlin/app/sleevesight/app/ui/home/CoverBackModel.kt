@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.pipeline.TracklistState
 import app.sleevesight.core.model.NowPlaying
@@ -113,7 +114,7 @@ internal fun albumIdentity(header: NowPlaying): String? =
 internal fun tracklistKey(
     track: TrackState?,
     header: NowPlaying,
-    choices: Map<String, String> = emptyMap(),
+    choices: Map<String, AlbumChoice> = emptyMap(),
 ): TracklistKey? {
     val chosen = sameName(track, header, choices)?.chosen
     return when {
@@ -143,7 +144,7 @@ internal fun coverBack(
     header: NowPlaying,
     musicBrainzOn: Boolean,
     states: Map<TracklistKey, TracklistState>,
-    choices: Map<String, String> = emptyMap(),
+    choices: Map<String, AlbumChoice> = emptyMap(),
 ): CoverBack {
     if (!musicBrainzOn) return CoverBack.Off
     return when (NoDates.of(track)) {

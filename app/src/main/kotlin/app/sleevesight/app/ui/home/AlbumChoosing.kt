@@ -20,6 +20,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -36,6 +42,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.AlbumsKey
 import app.sleevesight.app.pipeline.AlbumsState
 import app.sleevesight.app.pipeline.NamedAlbum
@@ -54,7 +61,7 @@ internal class AlbumChoosing(
     val states: Map<AlbumsKey, AlbumsState> = emptyMap(),
     val look: (AlbumsKey) -> Unit = {},
     val retry: (AlbumsKey) -> Unit = {},
-    val choose: (String, String?) -> Unit = { _, _ -> },
+    val choose: (String, AlbumChoice?) -> Unit = { _, _ -> },
     val rows: (List<NamedAlbum>) -> List<AlbumRow> = { emptyList() },
     val song: String = "",
 )
@@ -109,11 +116,12 @@ internal fun PickedLine(
 }
 
 /**
- * The albums of one name, [albums], on the back (#1080): looked up when shown ([AlbumChoosing.look]),
- * then the list of them ([opened] null), or the one [opened], with *All albums* back to the list
- * ([open] null) and *Select*, which keeps it as the listener's choice and closes the albums ([done]);
- * under the list, after a choice, *Let Sleevesight decide*, which forgets it. While they are looked up,
- * failed or none found, why there is no list, as the back says it ([why]).
+ * The albums of one name, [albums], on the back (#1080), as looked up when the listener opened them
+ * (never here, so a song changing meanwhile asks nothing): the list of them ([opened] null), or the
+ * one [opened], with *All albums* back to the list ([open] null) and *Select*, which keeps it as the
+ * listener's choice and closes the albums ([done]); under the list, after a choice, *Let Sleevesight
+ * decide*, which forgets it. While they are looked up, failed or none found, why there is no list, as
+ * the back says it ([why]).
  */
 @Suppress("LongParameterList") // The albums, the choosing, what is open, and the ways out.
 @Composable
@@ -126,7 +134,6 @@ internal fun SameNamedAlbums(
     why: @Composable (NoDates?, (() -> Unit)?) -> Unit,
 ) {
     val key = albums.key
-    LaunchedEffect(key) { choosing.look(key) }
     when (val state = choosing.states[key]) {
         null, AlbumsState.Looking -> why(NoDates.LOOKING, null)
         AlbumsState.Failed -> why(NoDates.UNREACHABLE) { choosing.retry(key) }
@@ -138,7 +145,7 @@ internal fun SameNamedAlbums(
                 AlbumList(albums, rows, choosing, open, done)
             } else {
                 OpenedAlbum(row, back = { open(null) }) {
-                    choosing.choose(albums.name, row.group)
+                    choosing.choose(albums.name, AlbumChoice(row.group, albums.groups))
                     done()
                 }
             }
@@ -332,6 +339,73 @@ internal fun FoundBack(
         }
     }
 }
+
+/**
+ * The albums of one name the listener opened on the back (#1080): [albums], as they were when opened
+ * (null while none are), and the one [opened] among them; [open] opens them and looks them up, then
+ * and only then, [openAlbum] opens one (null: back to the list), and [close] closes them.
+ */
+internal class Browsing(
+    val albums: SameName?,
+    val opened: String?,
+    val open: (SameName) -> Unit,
+    val openAlbum: (String?) -> Unit,
+    val close: () -> Unit,
+)
+
+/**
+ * The albums opened on the back of the [album] (#1080), kept with the screen for it ([BrowsedAlbums]),
+ * looked up through [choosing] on the tap that opens them; a list restored with the screen, whose
+ * albums are no longer kept, asks once.
+ */
+@Composable
+internal fun rememberBrowsing(
+    album: String?,
+    choosing: AlbumChoosing,
+): Browsing {
+    var browsing by rememberSaveable(album, stateSaver = BrowsedAlbums) { mutableStateOf<SameName?>(null) }
+    var opened by rememberSaveable(album) { mutableStateOf<String?>(null) }
+    var asked by remember(album) { mutableStateOf(false) }
+    LaunchedEffect(browsing?.key) {
+        browsing?.key?.takeIf { !asked && it !in choosing.states }?.let(choosing.look)
+        asked = true
+    }
+    return Browsing(
+        albums = browsing,
+        opened = opened,
+        open = {
+            browsing = it
+            asked = true
+            choosing.look(it.key)
+        },
+        openAlbum = { opened = it },
+        close = {
+            browsing = null
+            opened = null
+        },
+    )
+}
+
+// The albums of one name opened (#1080), saved with the screen as their name, album, playing recording
+// and chosen group (empty for none), then the groups.
+private val BrowsedAlbums: Saver<SameName?, Any> =
+    Saver(
+        save = { it?.let { s -> arrayListOf(s.name, s.album, s.recording.orEmpty(), s.chosen.orEmpty()) + s.groups } },
+        restore = { saved ->
+            @Suppress("UNCHECKED_CAST")
+            val fields = saved as List<String>
+            SameName(
+                name = fields[0],
+                album = fields[1],
+                groups = fields.drop(SAVED_FIELDS),
+                recording = fields[2].ifEmpty { null },
+                chosen = fields[SAVED_FIELDS - 1].ifEmpty { null },
+            )
+        },
+    )
+
+// The fields [BrowsedAlbums] saves before the groups.
+private const val SAVED_FIELDS = 4
 
 /** The test tag of an album's row in the list of several of one name (#1080). */
 internal fun albumRowTag(group: String): String = "album_row_$group"

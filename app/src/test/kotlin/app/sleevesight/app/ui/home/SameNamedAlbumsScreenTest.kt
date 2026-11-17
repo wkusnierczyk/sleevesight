@@ -17,6 +17,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.AlbumsKey
 import app.sleevesight.app.pipeline.AlbumsState
 import app.sleevesight.app.pipeline.NamedAlbum
@@ -77,7 +78,7 @@ class SameNamedAlbumsScreenTest {
         )
 
     private val looked = mutableListOf<AlbumsKey>()
-    private val chosen = mutableListOf<Pair<String, String?>>()
+    private val chosen = mutableListOf<Pair<String, AlbumChoice?>>()
     private var back by mutableStateOf<CoverBack>(CoverBack.Ambiguous(same))
     private var states by mutableStateOf<Map<AlbumsKey, AlbumsState>>(emptyMap())
 
@@ -150,6 +151,11 @@ class SameNamedAlbumsScreenTest {
             compose.onNodeWithTag(ALBUMS_DECIDE_TAG).assertDoesNotExist()
             // The back stays: the list's taps are its own.
             compose.onNodeWithTag(COVER_BACK_TAG).assertExists()
+            // Another song playing while the albums are open: nothing more is asked, the list stays.
+            back = CoverBack.Ambiguous(same.copy(recording = "rec-rebel"))
+            compose.waitForIdle()
+            assertEquals(listOf(same.key), looked)
+            compose.onNodeWithText("3 albums named Greatest Hits").assertExists()
         }
 
     @Test
@@ -168,7 +174,7 @@ class SameNamedAlbumsScreenTest {
                 .onNodeWithContentDescription("2, Eyes Without a Face, 4 minutes, playing")
                 .assertExists()
             compose.onNodeWithText(text(R.string.home_albums_select)).performClick()
-            assertEquals(listOf(same.name to "g-2001"), chosen)
+            assertEquals(listOf(same.name to AlbumChoice("g-2001", same.groups)), chosen)
             // The albums close; the back shows what it shows.
             compose.onNodeWithTag(ALBUMS_OPENED_TAG).assertDoesNotExist()
             compose.onNodeWithText(text(R.string.home_tracklist_ambiguous)).assertExists()

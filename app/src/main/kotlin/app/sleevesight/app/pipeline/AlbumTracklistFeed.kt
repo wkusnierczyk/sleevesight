@@ -83,12 +83,12 @@ interface TracklistFeed {
      * The album the listener chose among several of one name (#1080), by the name's key: its release
      * group.
      */
-    val choices: StateFlow<Map<String, String>> get() = NO_CHOICES
+    val choices: StateFlow<Map<String, AlbumChoice>> get() = NO_CHOICES
 
-    /** Keeps [group] as the album chosen for the name [name], or, null, lets Sleevesight decide again. */
+    /** Keeps [choice] as the album chosen for the name [name], or, null, lets Sleevesight decide again. */
     fun choose(
         name: String,
-        group: String?,
+        choice: AlbumChoice?,
     ) = Unit
 
     /** No tracklists: a preview's, or a test's that shows none. */
@@ -102,7 +102,7 @@ interface TracklistFeed {
 }
 
 private val NO_ALBUMS: StateFlow<Map<AlbumsKey, AlbumsState>> = MutableStateFlow(emptyMap())
-private val NO_CHOICES: StateFlow<Map<String, String>> = MutableStateFlow(emptyMap())
+private val NO_CHOICES: StateFlow<Map<String, AlbumChoice>> = MutableStateFlow(emptyMap())
 
 /**
  * The app's [TracklistFeed]: each tracklist asked through [lookup] (`AlbumTracklists`, over the
@@ -133,8 +133,8 @@ class AlbumTracklistFeed(
     private val named = MutableStateFlow<Map<AlbumsKey, AlbumsState>>(emptyMap())
     override val albums: StateFlow<Map<AlbumsKey, AlbumsState>> = named.asStateFlow()
 
-    private val chosen = MutableStateFlow<Map<String, String>>(emptyMap())
-    override val choices: StateFlow<Map<String, String>> = chosen.asStateFlow()
+    private val chosen = MutableStateFlow<Map<String, AlbumChoice>>(emptyMap())
+    override val choices: StateFlow<Map<String, AlbumChoice>> = chosen.asStateFlow()
 
     init {
         scope.launch(epoch.mark()) {
@@ -154,10 +154,10 @@ class AlbumTracklistFeed(
 
     override fun choose(
         name: String,
-        group: String?,
+        choice: AlbumChoice?,
     ) {
-        chosen.update { if (group == null) it - name else it + (name to group) }
-        choiceStore.keep(name, group)
+        chosen.update { if (choice == null) it - name else it + (name to choice) }
+        choiceStore.keep(name, choice)
     }
 
     /**

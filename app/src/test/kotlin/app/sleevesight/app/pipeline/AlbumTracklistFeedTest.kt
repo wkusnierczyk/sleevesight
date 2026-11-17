@@ -27,7 +27,7 @@ class AlbumTracklistFeedTest {
 
     private val albumsAsked = mutableListOf<AlbumsKey>()
     private var albumsAnswer: Lookup<List<NamedAlbum>> = Lookup.Found(listOf(NamedAlbum("g-a", tracklist)))
-    private val store = AlbumChoiceStore.InMemory(mapOf("kept" to "g-kept"))
+    private val store = AlbumChoiceStore.InMemory(mapOf("kept" to AlbumChoice("g-kept", listOf("g-kept", "g-other"))))
 
     private fun TestScope.feed(
         epoch: ClearEpoch = ClearEpoch(),
@@ -77,20 +77,21 @@ class AlbumTracklistFeedTest {
             val feed = feed()
             runCurrent()
             // Those kept before are read at the start.
-            assertEquals(mapOf("kept" to "g-kept"), feed.choices.value)
-            feed.choose("greatest hits", "g-2006")
-            assertEquals("g-2006", feed.choices.value["greatest hits"])
-            assertEquals("g-2006", store.kept["greatest hits"])
+            assertEquals(mapOf("kept" to AlbumChoice("g-kept", listOf("g-kept", "g-other"))), feed.choices.value)
+            val choice = AlbumChoice("g-2006", listOf("g-2001", "g-2006"))
+            feed.choose("greatest hits", choice)
+            assertEquals(choice, feed.choices.value["greatest hits"])
+            assertEquals(choice, store.kept["greatest hits"])
             // *Let Sleevesight decide*.
             feed.choose("greatest hits", null)
             assertNull(feed.choices.value["greatest hits"])
             assertNull(store.kept["greatest hits"])
-            feed.choose("greatest hits", "g-2001")
+            feed.choose("greatest hits", choice.copy(group = "g-2001"))
             feed.lookAlbums(AlbumsKey(listOf("g-a", "g-b"), null))
             runCurrent()
             feed.forget()
-            assertEquals(emptyMap<String, String>(), feed.choices.value)
-            assertEquals(emptyMap<String, String>(), store.kept)
+            assertEquals(emptyMap<String, AlbumChoice>(), feed.choices.value)
+            assertEquals(emptyMap<String, AlbumChoice>(), store.kept)
             assertEquals(emptyMap<AlbumsKey, AlbumsState>(), feed.albums.value)
         }
 

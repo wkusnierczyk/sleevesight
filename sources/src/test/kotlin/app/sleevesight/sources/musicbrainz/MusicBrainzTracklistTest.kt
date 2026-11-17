@@ -58,7 +58,7 @@ class MusicBrainzTracklistTest {
             assertEquals("1959-08-17", tracklist.date)
             assertEquals("United States", tracklist.country)
             assertEquals(listOf("Columbia"), tracklist.labels)
-            assertEquals(MbReleaseGroup("g1", "Kind of Blue", "Album"), tracklist.group)
+            assertEquals(MbReleaseGroup("g1", "Kind of Blue", "Album", listOf("Compilation", "Live")), tracklist.group)
             assertEquals(listOf("12\" Vinyl", null), tracklist.media.map { it.format })
             // With no release event, the country's code; with none of these, none.
             val bare =
@@ -141,7 +141,7 @@ class MusicBrainzTracklistTest {
              "release-events":[{"date":"1959-08-17","area":{"id":"a1","name":"United States"}}],
              "label-info":[{"catalog-number":"CL 1355","label":{"id":"l1","name":"Columbia"}},
                            {"catalog-number":"CS 8163","label":{"id":"l1","name":"Columbia"}}],
-             "release-group":{"id":"g1","title":"Kind of Blue","primary-type":"Album"},
+             "release-group":{"id":"g1","title":"Kind of Blue","primary-type":"Album","secondary-types":["Compilation","Live"]},
              "media":[
               {"position":1,"format":"12\" Vinyl","tracks":[
                 {"position":1,"title":"So What","length":562000,"recording":{"id":"rec1","title":"So What"}},

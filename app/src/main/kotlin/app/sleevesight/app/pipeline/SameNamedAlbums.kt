@@ -41,18 +41,27 @@ sealed interface AlbumsState {
 }
 
 /**
+ * The listener's choice among several albums of one name (#1080): the release [group] chosen, and the
+ * groups it was chosen [among], which *Change* shows again whatever another song of the album names.
+ */
+data class AlbumChoice(
+    val group: String,
+    val among: List<String>,
+)
+
+/**
  * The albums the listener chose among several of one name (#1080), by the name's key (the album's name
- * and its artist, as Home keys them): the release group chosen. Kept on this phone until changed, and
- * forgotten by *Clear history*; never sent anywhere.
+ * and its artist, as Home keys them). Kept on this phone until changed, and forgotten by *Clear
+ * history*; never sent anywhere.
  */
 interface AlbumChoiceStore {
     /** Every choice kept. */
-    suspend fun load(): Map<String, String>
+    suspend fun load(): Map<String, AlbumChoice>
 
-    /** Keeps [group] as the choice for [name], or forgets it when null. */
+    /** Keeps [choice] for [name], or forgets it when null. */
     fun keep(
         name: String,
-        group: String?,
+        choice: AlbumChoice?,
     )
 
     /** Forgets every choice, for *Clear history*. */
@@ -60,17 +69,17 @@ interface AlbumChoiceStore {
 
     /** Choices held in memory only: a preview's, or a test's. */
     class InMemory(
-        initial: Map<String, String> = emptyMap(),
+        initial: Map<String, AlbumChoice> = emptyMap(),
     ) : AlbumChoiceStore {
         val kept = initial.toMutableMap()
 
-        override suspend fun load(): Map<String, String> = kept.toMap()
+        override suspend fun load(): Map<String, AlbumChoice> = kept.toMap()
 
         override fun keep(
             name: String,
-            group: String?,
+            choice: AlbumChoice?,
         ) {
-            if (group == null) kept -= name else kept[name] = group
+            if (choice == null) kept -= name else kept[name] = choice
         }
 
         override fun clear() = kept.clear()
@@ -79,22 +88,29 @@ interface AlbumChoiceStore {
 
 /**
  * The listener's choices of album, kept in `SharedPreferences` (#1080): by the name's key, the release
- * group chosen. Like the settings, not backed up.
+ * group chosen, then the groups it was chosen among, separated by spaces (ids have none). Like the
+ * settings, not backed up.
  */
 class KeptAlbumChoices(
     context: Context,
 ) : AlbumChoiceStore {
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    override suspend fun load(): Map<String, String> =
+    override suspend fun load(): Map<String, AlbumChoice> =
         withContext(Dispatchers.IO) {
-            prefs.all.mapNotNull { (name, group) -> (group as? String)?.let { name to it } }.toMap()
+            prefs.all
+                .mapNotNull { (name, kept) ->
+                    val ids = (kept as? String)?.split(' ')?.filter(String::isNotEmpty).orEmpty()
+                    ids.firstOrNull()?.let { name to AlbumChoice(it, ids.drop(1)) }
+                }.toMap()
         }
 
     override fun keep(
         name: String,
-        group: String?,
-    ) = prefs.edit { if (group == null) remove(name) else putString(name, group) }
+        choice: AlbumChoice?,
+    ) = prefs.edit {
+        if (choice == null) remove(name) else putString(name, (listOf(choice.group) + choice.among).joinToString(" "))
+    }
 
     override fun clear() = prefs.edit { clear() }
 

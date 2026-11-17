@@ -295,7 +295,14 @@ class MusicBrainzClient(
                         .distinct(),
                 group =
                     json.obj("release-group")?.let {
-                        MbReleaseGroup(it.required("id"), it.string("title").orEmpty(), it.string("primary-type"))
+                        MbReleaseGroup(
+                            it.required("id"),
+                            it.string("title").orEmpty(),
+                            it.string("primary-type")?.ifEmpty { null },
+                            it.array("secondary-types").mapNotNull { type ->
+                                (type as? JsonPrimitive)?.content?.ifEmpty { null }
+                            },
+                        )
                     },
                 media =
                     json.array("media").mapIndexed { i, medium ->

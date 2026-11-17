@@ -269,28 +269,26 @@ private fun lookUpOnTurn(
  * Of several albums of one name (#1080): the note's *See the {n} albums*, and the line above a
  * tracklist picked among them with its *Change*, open the albums ([SameNamedAlbums]) in place of the
  * back's content, until one is selected or Sleevesight left to decide; kept with the screen for the
- * album shown.
+ * album shown. The albums are those of the name when the listener opened them, looked up then, and
+ * only then ([rememberBrowsing]): another song playing meanwhile asks nothing more.
  */
 @Composable
 private fun CoverBackFace(turn: CoverTurn) {
     val colors = MaterialTheme.colorScheme
     val back = turn.back
     val same = (back as? CoverBack.Ambiguous)?.albums ?: (back as? CoverBack.Found)?.albums
-    var listing by rememberSaveable(turn.album) { mutableStateOf(false) }
-    var opened by rememberSaveable(turn.album) { mutableStateOf<String?>(null) }
-    val list = { listing = true }
+    val browsing = rememberBrowsing(turn.album, turn.albums)
+    val list = { same?.let(browsing.open) ?: Unit }
     Box(Modifier.fillMaxSize().background(colors.surfaceContainerHigh).testTag(COVER_BACK_TAG)) {
         CompositionLocalProvider(LocalContentColor provides colors.onSurface, LocalTrackCleared provides false) {
-            if (listing && same != null) {
+            val browsed = browsing.albums
+            if (browsed != null) {
                 SameNamedAlbums(
-                    same,
+                    browsed,
                     turn.albums,
-                    opened,
-                    open = { opened = it },
-                    done = {
-                        listing = false
-                        opened = null
-                    },
+                    browsing.opened,
+                    open = browsing.openAlbum,
+                    done = browsing.close,
                 ) { none, retry ->
                     Why {
                         if (none == null) {

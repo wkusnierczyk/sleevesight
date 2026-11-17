@@ -177,11 +177,16 @@ data class MbCredit(
     val names: List<String> get() = listOf(name, artistName) + aliases
 }
 
-/** A release group, the release's album, single or EP across its editions. */
+/**
+ * A release group, the release's album, single or EP across its editions: its [primaryType] (`Album`,
+ * `Single`, `EP`) and its [secondaryTypes] (`Compilation`, `Live`, `Soundtrack`), as MusicBrainz gives
+ * them (#1080: only a release's lookup reads the secondary ones).
+ */
 data class MbReleaseGroup(
     val mbid: String,
     val title: String,
     val primaryType: String?,
+    val secondaryTypes: List<String> = emptyList(),
 )
 
 /**
