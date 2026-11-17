@@ -52,6 +52,8 @@ import kotlin.time.Duration
  * In the debug build, the prompt lab's [choices] (#1003) are taken once per build: the AI access
  * carries them, so the pipeline keys its cards with them, and its client sends each request with them
  * ([labThrough]); none elsewhere.
+ * Each try is heard by [refusals] too (#1157), which marks a key the service refused: on the
+ * service's own client, under the lab's ([labThrough]), so it hears the service's own errors.
  */
 @Suppress("LongParameterList") // The wiring, the shared parts, and what the app sets apart from the tests.
 class AppPipelineParts(
@@ -64,6 +66,7 @@ class AppPipelineParts(
     private val aiTried: (PipelineEvent) -> Unit = {},
     private val choices: () -> PromptChoices = { PromptChoices.NONE },
     private val labThrough: (AiProvider, PromptChoices) -> AiProvider = { provider, _ -> provider },
+    private val refusals: KeyRefusals? = null,
     private val cache: () -> PipelineCache,
 ) : (PipelineKeys, Settings) -> PipelineParts {
     override fun invoke(
@@ -82,6 +85,8 @@ class AppPipelineParts(
                 settings.aiProvider
                     ?.takeUnless { blocked }
                     ?.let { wiring.aiProviders[it] }
+                    // Each try heard, a key refused marked (#1157): under the retries, as the model check.
+                    ?.let { p -> refusals?.watching(p) ?: p }
                     ?.let { p ->
                         keys.ai?.let {
                             val sent = labThrough(p, chosen)

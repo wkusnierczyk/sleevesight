@@ -9,6 +9,7 @@ import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
@@ -57,6 +58,8 @@ internal class InsightContext(
     val cardShown: Boolean = false,
     val rewriteFailed: String? = null,
     val unanswered: Unanswered? = null,
+    // The AI service switched on, for OpenRouter's own lines of a write that failed (#1157).
+    val provider: ProviderId? = null,
 )
 
 /**
@@ -100,6 +103,8 @@ internal class InsightActions(
     val onSettings: () -> Unit = {},
     val onLookAgain: () -> Unit = {},
     val onLookUpAgain: () -> Unit = {},
+    // OpenRouter's key refused (#1157): *AI services*, to sign in again.
+    val onAiServices: () -> Unit = {},
     val onReport: (TrackState, InsightState.Written) -> Unit,
 )
 

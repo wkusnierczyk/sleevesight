@@ -42,7 +42,7 @@ import kotlinx.coroutines.async
 
 /** The keys' rows under *Secrets*, in the order shown: the AI services', then the sources'. */
 internal val SHOWN_KEYS =
-    listOf(SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE, SecretId.LASTFM, SecretId.EXA)
+    listOf(SecretId.OPENROUTER, SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE, SecretId.LASTFM, SecretId.EXA)
 
 /**
  * The key [id]'s row: its state, which opens the key's dialog, and, while a key is stored, readable
@@ -260,6 +260,14 @@ internal fun KeyDialogs(
                 onApply = { choices -> saves.async { applyChoices(choices) }.await() },
                 onOpen = onOpen,
                 onDismiss = onDismiss,
+            )
+        }
+
+        SettingsDialog.SignOut -> {
+            ConfirmDialog(
+                signOutConfirmation(),
+                onConfirm = { saves.async { store.clear(SecretId.OPENROUTER) }.await() },
+                onDismiss,
             )
         }
 

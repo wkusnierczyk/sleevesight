@@ -53,8 +53,14 @@ class KeysTest {
     }
 
     private fun Keys.byCode(): Map<String, String> =
-        mapOf("anthropic" to anthropic, "openai" to openAi, "google" to google, "exa" to exa, "lastfm" to lastFm)
-            .mapNotNull { (code, key) -> key?.let { code to it.reveal() } }
+        mapOf(
+            "openrouter" to openRouter,
+            "anthropic" to anthropic,
+            "openai" to openAi,
+            "google" to google,
+            "exa" to exa,
+            "lastfm" to lastFm,
+        ).mapNotNull { (code, key) -> key?.let { code to it.reveal() } }
             .toMap()
 
     @Test

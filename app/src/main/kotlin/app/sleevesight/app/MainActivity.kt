@@ -37,6 +37,7 @@ import app.sleevesight.app.ui.logo.endsOnKeys
 import app.sleevesight.app.ui.logo.followedAnimatorDurationScale
 import app.sleevesight.app.ui.report.TesterReportFeed
 import app.sleevesight.app.ui.settings.InstalledPlayers
+import app.sleevesight.app.ui.settings.OpenRouterAccess
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.isAppInDarkTheme
@@ -135,8 +136,9 @@ class MainActivity : ComponentActivity() {
         ThemeButtonFeed(graph.latestSettings, graph.settings.themeChooser(graph.settingsSaves))
     }
 
-    // One spread, of the prompt lab's local, which only the debug build provides (#1003).
-    @Suppress("SpreadOperator")
+    // One spread, of the prompt lab's local, which only the debug build provides (#1003); and one
+    // content, every screen's arguments in it, which the prompt lab and OpenRouter (#1157) each add to.
+    @Suppress("SpreadOperator", "LongMethod")
     override fun onCreate(savedInstanceState: Bundle?) {
         // The window light or dark as *Theme* (#444) last read, from its first frame: the starting
         // window before this follows the system below Android 12, where the theme cannot reach it.
@@ -185,6 +187,7 @@ class MainActivity : ComponentActivity() {
                                         landOn = links.landOn,
                                         // Reactive's choice (#625): an automatic mode is the first action.
                                         chooseWritingMode = graph.chooseWritingMode,
+                                        openRouter = OpenRouterAccess(graph.openRouterLogin, graph.keyRefusals),
                                         playerLabel = graph::playerLabel,
                                     )
                                 },

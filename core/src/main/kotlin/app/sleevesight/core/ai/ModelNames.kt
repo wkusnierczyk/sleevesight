@@ -13,6 +13,8 @@ object ModelNames {
             // Anthropic's and Google's defaults.
             "claude-haiku-5-5" to "Claude Haiku 5.5",
             "gemini-3.5-flash-lite" to "Gemini 3.5 Flash-Lite",
+            // OpenRouter's default (#1157), as its own listing names it, without the company.
+            "anthropic/claude-haiku-5.5" to "Claude Haiku 5.5",
             // OpenAI.
             "gpt-6.1-sol" to "GPT-6.1 Sol",
             "gpt-6.1" to "GPT-6.1",

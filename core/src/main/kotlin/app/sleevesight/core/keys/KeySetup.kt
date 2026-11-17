@@ -9,6 +9,7 @@ import app.sleevesight.core.Secret
 enum class KeyName(
     val code: String,
 ) {
+    OPENROUTER("openrouter"),
     ANTHROPIC("anthropic"),
     OPENAI("openai"),
     GOOGLE("google"),
@@ -31,7 +32,8 @@ enum class KeyProblem {
     BAD_CHARACTERS,
 
     /**
-     * Not the service's shape: Anthropic's starts `sk-ant-`, OpenAI's `sk-` (and not `sk-ant-`),
+     * Not the service's shape: OpenRouter's starts `sk-or-`, Anthropic's `sk-ant-`, OpenAI's `sk-`
+     * (and neither of those),
      * Google's `AIza` or `AQ.`, Last.fm's is 32 hexadecimal digits, Exa's 16 to 200 characters.
      */
     WRONG_SHAPE,
@@ -46,9 +48,9 @@ enum class KeyProblem {
  * characters and a plausible length, so a key of a form Exa adopts later still passes. OpenAI's
  * keys start `sk-` whatever their kind (a project's `sk-proj-`, a service account's `sk-svcacct-`),
  * so only that and a plausible length are checked; a key that starts `sk-ant-` is Anthropic's,
- * and refused as OpenAI's. Google's start `AIza`, or `AQ.` for the newer authentication keys AI
- * Studio makes, which hold a dot; only that and a plausible length are checked, so a later key of
- * either kind still passes.
+ * and one that starts `sk-or-` OpenRouter's (`sk-or-v1-`, #1157), and each is refused as OpenAI's.
+ * Google's start `AIza`, or `AQ.` for the newer authentication keys AI Studio makes, which hold a
+ * dot; only that and a plausible length are checked, so a later key of either kind still passes.
  */
 object KeyShape {
     private val TOKEN = Regex("[A-Za-z0-9_-]+")
@@ -57,6 +59,9 @@ object KeyShape {
     private const val ANTHROPIC_PREFIX = "sk-ant-"
     private const val ANTHROPIC_SHORTEST = 40
     private const val ANTHROPIC_LONGEST = 400
+    private const val OPENROUTER_PREFIX = "sk-or-"
+    private const val OPENROUTER_SHORTEST = 40
+    private const val OPENROUTER_LONGEST = 400
     private const val OPENAI_PREFIX = "sk-"
     private const val OPENAI_SHORTEST = 40
     private const val OPENAI_LONGEST = 400
@@ -81,23 +86,32 @@ object KeyShape {
             }
 
             else -> {
-                val shaped =
-                    when (name) {
-                        KeyName.ANTHROPIC ->
-                            value.startsWith(ANTHROPIC_PREFIX) &&
-                                value.length in ANTHROPIC_SHORTEST..ANTHROPIC_LONGEST
-                        KeyName.OPENAI ->
-                            value.startsWith(OPENAI_PREFIX) &&
-                                !value.startsWith(ANTHROPIC_PREFIX) &&
-                                value.length in OPENAI_SHORTEST..OPENAI_LONGEST
-                        KeyName.GOOGLE ->
-                            GOOGLE_PREFIXES.any { value.startsWith(it) } &&
-                                value.length in GOOGLE_SHORTEST..GOOGLE_LONGEST
-                        KeyName.EXA -> value.length in EXA_SHORTEST..EXA_LONGEST
-                        KeyName.LASTFM -> HEX_32.matches(value)
-                    }
-                KeyProblem.WRONG_SHAPE.takeUnless { shaped }
+                KeyProblem.WRONG_SHAPE.takeUnless { shaped(name, value) }
             }
+        }
+
+    // Whether [value], of the key's characters, has [name]'s key's prefix and length.
+    private fun shaped(
+        name: KeyName,
+        value: String,
+    ): Boolean =
+        when (name) {
+            KeyName.OPENROUTER ->
+                value.startsWith(OPENROUTER_PREFIX) &&
+                    value.length in OPENROUTER_SHORTEST..OPENROUTER_LONGEST
+            KeyName.ANTHROPIC ->
+                value.startsWith(ANTHROPIC_PREFIX) &&
+                    value.length in ANTHROPIC_SHORTEST..ANTHROPIC_LONGEST
+            KeyName.OPENAI ->
+                value.startsWith(OPENAI_PREFIX) &&
+                    !value.startsWith(ANTHROPIC_PREFIX) &&
+                    !value.startsWith(OPENROUTER_PREFIX) &&
+                    value.length in OPENAI_SHORTEST..OPENAI_LONGEST
+            KeyName.GOOGLE ->
+                GOOGLE_PREFIXES.any { value.startsWith(it) } &&
+                    value.length in GOOGLE_SHORTEST..GOOGLE_LONGEST
+            KeyName.EXA -> value.length in EXA_SHORTEST..EXA_LONGEST
+            KeyName.LASTFM -> HEX_32.matches(value)
         }
 }
 

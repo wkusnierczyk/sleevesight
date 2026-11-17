@@ -3,9 +3,12 @@ package app.sleevesight.wiring
 import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
+import app.sleevesight.ai.openrouter.OpenRouterProvider
+import app.sleevesight.ai.openrouter.OpenRouterSignIn
 import app.sleevesight.core.ResourceReader
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
+import app.sleevesight.core.ai.KeySignIn
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LastFmLabels
@@ -18,6 +21,8 @@ import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.TrackResolver
+import app.sleevesight.core.platform.JvmHasher
+import app.sleevesight.core.platform.JvmKeyCrypto
 import app.sleevesight.core.resolution.AlbumTracklists
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.Lookup
@@ -282,7 +287,11 @@ class PipelineWiring internal constructor(
             ProviderId.ANTHROPIC to AnthropicProvider(net),
             ProviderId.OPENAI to OpenAiProvider(net),
             ProviderId.GOOGLE to GoogleProvider(net),
+            ProviderId.OPENROUTER to OpenRouterProvider(net),
         ).mapValues { aiThrough(it.value) }
+
+    /** Signing in with OpenRouter (#1157), for its key: the app's *AI services*. */
+    val openRouterSignIn: KeySignIn = OpenRouterSignIn(net, JvmHasher, JvmKeyCrypto::random)
 
     /**
      * The adapters for `PipelineParts.adapters`: MusicBrainz and Wikipedia (with Wikidata), which

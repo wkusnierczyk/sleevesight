@@ -74,6 +74,11 @@ class NetConfig(
  * which in the body. Its 429 is then passed on as a response, body and headers, for the caller to
  * read, and is not retried; without the flag a 429 is retried and then [NetError.RateLimited].
  *
+ * [passOn403] is for a host whose 403 does not always mean a key refused: OpenRouter answers 403
+ * when a model's moderation flags the prompt (#1157), and says so in the body. Its 403 is then passed
+ * on as a response, for the caller to read; without the flag it is [NetError.Unauthorized]. A 401
+ * stays [NetError.Unauthorized] either way.
+ *
  * [contact] replaces [NetConfig.CONTACT] in the User-Agent sent to the host, for one that asks for a
  * homepage (LRCLIB, #997). [retryJitter] adds a random wait of up to it to the wait before retrying a
  * 429 (its `Retry-After`, or the backoff), for a host that asks clients for jitter (LRCLIB), so
@@ -90,6 +95,7 @@ data class HostPolicy(
     val minInterval: Duration,
     val rateLimitedOn503: Boolean = false,
     val passOn429: Boolean = false,
+    val passOn403: Boolean = false,
     val contact: String? = null,
     val retryJitter: Duration = Duration.ZERO,
     val busyWait: (suspend () -> BusyWait)? = null,

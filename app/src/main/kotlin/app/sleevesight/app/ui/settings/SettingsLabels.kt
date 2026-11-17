@@ -47,6 +47,7 @@ internal fun providerName(provider: ProviderId): Int =
         ProviderId.ANTHROPIC -> R.string.settings_ai_provider_anthropic
         ProviderId.OPENAI -> R.string.settings_ai_provider_openai
         ProviderId.GOOGLE -> R.string.settings_ai_provider_google
+        ProviderId.OPENROUTER -> R.string.settings_ai_provider_openrouter
         ProviderId.OLLAMA -> error("$provider is not offered yet")
     }
 
@@ -67,6 +68,7 @@ internal fun effortName(effort: ReasoningEffort): Int =
 @StringRes
 internal fun keyName(id: SecretId): Int =
     when (id) {
+        SecretId.OPENROUTER -> R.string.settings_key_name_openrouter
         SecretId.ANTHROPIC -> R.string.settings_key_name_anthropic
         SecretId.OPENAI -> R.string.settings_key_name_openai
         SecretId.GOOGLE -> R.string.settings_key_name_google
@@ -78,6 +80,7 @@ internal fun keyName(id: SecretId): Int =
 @StringRes
 internal fun keyService(id: SecretId): Int =
     when (id) {
+        SecretId.OPENROUTER -> R.string.settings_ai_provider_openrouter
         SecretId.ANTHROPIC -> R.string.settings_ai_provider_anthropic
         SecretId.OPENAI -> R.string.settings_ai_provider_openai
         SecretId.GOOGLE -> R.string.key_service_google
@@ -89,6 +92,7 @@ internal fun keyService(id: SecretId): Int =
 @StringRes
 internal fun keyRecipient(id: SecretId): Int =
     when (id) {
+        SecretId.OPENROUTER -> R.string.settings_ai_provider_openrouter
         SecretId.ANTHROPIC -> R.string.settings_ai_provider_anthropic
         SecretId.OPENAI -> R.string.settings_ai_provider_openai
         SecretId.GOOGLE -> R.string.settings_ai_provider_google

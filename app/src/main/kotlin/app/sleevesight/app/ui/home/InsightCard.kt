@@ -161,6 +161,11 @@ private fun InsightBody(
         // Write offered again after a call that failed or was stopped: a new paid call, on a tap
         // only, from the split button, which the line says in the same breath.
         is InsightState.Failed -> {
+            // OpenRouter refusing the key, or out of credit (#1157): what to do, with a link.
+            if (saidByOpenRouter(context.provider, insight.reason)) {
+                OpenRouterFailure(insight.reason, actions.onAiServices)
+                return
+            }
             val reason = failedReason(insight.reason, groundingDetails)
             val line = if (context.offers.retry) R.string.home_insight_failed_retry else R.string.home_insight_failed
             Quiet(stringResource(line, reason))

@@ -12,6 +12,7 @@ export const VERSION = 'v1';
  * value wins. The CLI reads the same names (`Keys.FILE_NAMES`), checked through the vectors.
  */
 export const SERVICES = [
+  { code: 'openrouter', label: 'OpenRouter', variables: ['SLEEVESIGHT_OPENROUTER_API_KEY', 'OPENROUTER_API_KEY'] },
   { code: 'anthropic', label: 'Anthropic', variables: ['SLEEVESIGHT_ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'] },
   { code: 'openai', label: 'OpenAI', variables: ['SLEEVESIGHT_OPENAI_API_KEY', 'OPENAI_API_KEY'] },
   { code: 'google', label: 'Google', variables: ['SLEEVESIGHT_GOOGLE_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY'] },
@@ -47,11 +48,14 @@ export function check(code, value) {
   if (!(code === 'google' ? GOOGLE_TOKEN : TOKEN).test(value)) return BAD_CHARACTERS;
   let shaped;
   switch (code) {
+    case 'openrouter':
+      shaped = value.startsWith('sk-or-') && within(value, 40, 400);
+      break;
     case 'anthropic':
       shaped = value.startsWith('sk-ant-') && within(value, 40, 400);
       break;
     case 'openai':
-      shaped = value.startsWith('sk-') && !value.startsWith('sk-ant-') && within(value, 40, 400);
+      shaped = value.startsWith('sk-') && !value.startsWith('sk-ant-') && !value.startsWith('sk-or-') && within(value, 40, 400);
       break;
     case 'google':
       shaped = (value.startsWith('AIza') || value.startsWith('AQ.')) && within(value, 30, 400);

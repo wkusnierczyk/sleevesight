@@ -169,7 +169,7 @@ class KeysQrTest {
         assertEquals(Cli.EXIT_USAGE, run.status)
         assertEquals("", run.out)
         assertTrue("OpenAI key does not look like one" in run.err)
-        assertTrue("OpenAI's sk- (not sk-ant-)" in run.err)
+        assertTrue("OpenAI's sk- (neither of those)" in run.err)
     }
 
     @Test

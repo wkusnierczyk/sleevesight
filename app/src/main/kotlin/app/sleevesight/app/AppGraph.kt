@@ -31,6 +31,7 @@ import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.AskAiWired
 import app.sleevesight.app.pipeline.AutoSearches
 import app.sleevesight.app.pipeline.KeptAlbumChoices
+import app.sleevesight.app.pipeline.KeyRefusals
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.NamedAlbum
 import app.sleevesight.app.pipeline.NetDump
@@ -48,9 +49,11 @@ import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.pipeline.vocalsWanted
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.KeyGate
+import app.sleevesight.app.secrets.OpenRouterLogin
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.saveAndSwitchOn
 import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
@@ -362,8 +365,28 @@ class AppGraph internal constructor(
         wiring.close()
     }
 
+    /**
+     * The AI services whose saved key was refused (#1157), heard on every call and model list
+     * through [aiProviders]; *AI services* says so under OpenRouter.
+     */
+    val keyRefusals = KeyRefusals()
+
     /** The AI services' clients, for the settings screen's model list and the pipeline. */
-    val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders
+    val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders.mapValues { keyRefusals.watching(it.value) }
+
+    /**
+     * Signing in with OpenRouter (#1157): its key saved as any other, and OpenRouter switched on at
+     * once, the service on before switched off, as its switch does; finished only once both are
+     * saved ([saveAndSwitchOn]).
+     */
+    val openRouterLogin =
+        OpenRouterLogin(
+            wiring.openRouterSignIn,
+            save = { key ->
+                saveAndSwitchOn(secrets, key) { settings.update { it.copy(aiProvider = ProviderId.OPENROUTER) } }
+            },
+            scope = mainScope,
+        )
 
     /**
      * Whether each AI service's selected model can be used (#540): checked against the service's
@@ -587,6 +610,8 @@ class AppGraph internal constructor(
                     labThrough = { provider, chosen ->
                         if (BuildConfig.DEBUG) promptLab?.through(provider, chosen) ?: provider else provider
                     },
+                    // A key the service refused, said under *AI services* (#1157).
+                    refusals = keyRefusals,
                 ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
@@ -824,6 +849,12 @@ class AppGraph internal constructor(
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
         // Each player the session layer sees appears under *Players*, switched off.
         mainScope.launch { seenPlayersRecorder.run() }
+        // A key refused (#1157) is no longer said to be once another is saved, or it is removed.
+        mainScope.launch {
+            secrets.changes.collect {
+                keyRefusals.keysChanged { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } }
+            }
+        }
         // The guide to Home, hidden once, is back for the next time nothing plays (#627).
         mainScope.launch { guideHiding.clearOnPlay(sessions.nowPlaying) }
         // A reading aloud stops with its track, and a new insight is read with *Read new insights aloud* (#325).

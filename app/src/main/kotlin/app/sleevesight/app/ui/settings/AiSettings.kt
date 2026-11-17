@@ -13,13 +13,15 @@ import app.sleevesight.core.settings.Settings
 // under *Secrets*.
 
 /**
- * The providers offered, in the order shown: those with a client in `:ai`, Anthropic, OpenAI
- * (#228) and Google (#229). Another provider joins with its client, and needs nothing more here
+ * The providers offered, in the order shown: those with a client in `:ai`, OpenRouter first
+ * (#1157: the quickest way in, a sign-in, [OpenRouterSignInRows]), then Anthropic, OpenAI (#228)
+ * and Google (#229). Another provider joins with its client, and needs nothing more here
  * than its entry, its key ([SecretId.forProvider]) and its names ([providerName], [keyName],
  * [keyRecipient]): its rows, model and effort come from `Settings` ([Settings.DEFAULT_MODELS],
  * [Settings.EFFORT_SCALES]).
  */
-internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, ProviderId.OPENAI, ProviderId.GOOGLE)
+internal val OFFERED_PROVIDERS: List<ProviderId> =
+    listOf(ProviderId.OPENROUTER, ProviderId.ANTHROPIC, ProviderId.OPENAI, ProviderId.GOOGLE)
 
 /**
  * The AI services: per provider offered, a switch with its badge ([ServiceBadge]), and under it
@@ -76,7 +78,13 @@ private fun ProviderRows(
         note = keyId?.let { keyNote(it, secrets, linked = true) },
         checked = on,
         leading = { ServiceBadge(providerBadge(name)) },
-        below = keyId?.let { { KeyLink(it, key) } },
+        // OpenRouter offers its sign-in in place of the link to its key, which goes under it (#1157).
+        below =
+            if (provider == ProviderId.OPENROUTER) {
+                { OpenRouterSignInRows(key, open) }
+            } else {
+                keyId?.let { { KeyLink(it, key) } }
+            },
         onChange =
             { switchedOn: Boolean ->
                 update {

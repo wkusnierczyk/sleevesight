@@ -3,6 +3,7 @@ package app.sleevesight.wiring
 import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
+import app.sleevesight.ai.openrouter.OpenRouterProvider
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.net.NetConfig
@@ -33,7 +34,8 @@ class HostPoliciesTest {
             (LrclibClient.HOST to LrclibClient.HOST_POLICY) +
             (AnthropicProvider.HOST to AnthropicProvider.HOST_POLICY) +
             (OpenAiProvider.HOST to OpenAiProvider.HOST_POLICY) +
-            (GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
+            (GoogleProvider.HOST to GoogleProvider.HOST_POLICY) +
+            (OpenRouterProvider.HOST to OpenRouterProvider.HOST_POLICY)
 
     @Test
     fun `the configuration for any version carries every listed host policy and the version`() {

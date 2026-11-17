@@ -175,7 +175,11 @@ class AiSettingsTest {
         show(providers = mapOf(ProviderId.ANTHROPIC to provider)) {
             // A provider's model can be chosen while it is switched off.
             assertEquals(null, current().aiProvider)
-            compose.onNodeWithText(anthropicDefault()).performScrollTo().assertIsDisplayed()
+            // Anthropic's row: OpenRouter's default is Claude Haiku 5.5 too (#1157).
+            compose
+                .onNode(hasText(anthropic(R.string.settings_ai_model_of)) and hasText(anthropicDefault()))
+                .performScrollTo()
+                .assertIsDisplayed()
 
             // Without a key, only the default. The dialog says so once it has looked for the key.
             compose.onNodeWithText(anthropic(R.string.settings_ai_model_of)).performScrollTo().performClick()
@@ -239,8 +243,9 @@ class AiSettingsTest {
             // The dialog shows *Loading* until it has looked for a key, on the key store's thread.
             waitForText(text(R.string.settings_model_unavailable))
             compose.onNodeWithText(text(R.string.settings_model_unavailable)).assertIsDisplayed()
-            // In the row and as the dialog's one option.
-            compose.onAllNodesWithText(anthropicDefault()).assertCountEquals(2)
+            // In the row and as the dialog's one option; and in OpenRouter's row, whose default is the
+            // same model (#1157).
+            compose.onAllNodesWithText(anthropicDefault()).assertCountEquals(3)
         }
 
     @Test

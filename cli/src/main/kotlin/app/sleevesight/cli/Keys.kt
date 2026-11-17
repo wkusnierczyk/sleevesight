@@ -18,6 +18,7 @@ class Keys(
     val lastFm: Secret?,
     val openAi: Secret? = null,
     val google: Secret? = null,
+    val openRouter: Secret? = null,
 ) {
     /** The key of the AI service [provider], or null for one without a key here. */
     fun forProvider(provider: ProviderId): Secret? =
@@ -25,10 +26,12 @@ class Keys(
             ProviderId.ANTHROPIC -> anthropic
             ProviderId.OPENAI -> openAi
             ProviderId.GOOGLE -> google
+            ProviderId.OPENROUTER -> openRouter
             ProviderId.OLLAMA -> null
         }
 
     companion object {
+        const val OPENROUTER = "SLEEVESIGHT_OPENROUTER_API_KEY"
         const val ANTHROPIC = "SLEEVESIGHT_ANTHROPIC_API_KEY"
         const val OPENAI = "SLEEVESIGHT_OPENAI_API_KEY"
         const val GOOGLE = "SLEEVESIGHT_GOOGLE_API_KEY"
@@ -43,6 +46,7 @@ class Keys(
          */
         val FILE_NAMES: Map<String, List<String>> =
             linkedMapOf(
+                "openrouter" to listOf(OPENROUTER, "OPENROUTER_API_KEY"),
                 "anthropic" to listOf(ANTHROPIC, "ANTHROPIC_API_KEY"),
                 "openai" to listOf(OPENAI, "OPENAI_API_KEY"),
                 "google" to listOf(GOOGLE, "GEMINI_API_KEY", "GOOGLE_API_KEY"),
@@ -61,6 +65,7 @@ class Keys(
                 ProviderId.ANTHROPIC -> ANTHROPIC
                 ProviderId.OPENAI -> OPENAI
                 ProviderId.GOOGLE -> GOOGLE
+                ProviderId.OPENROUTER -> OPENROUTER
                 ProviderId.OLLAMA -> null
             }
 
@@ -78,7 +83,14 @@ class Keys(
                 val inEnvironment = environment[names.first()]?.trim()?.takeIf { it.isNotEmpty() }
                 return (inEnvironment ?: inFile)?.let(::Secret)
             }
-            return Keys(key("anthropic"), key("exa"), key("lastfm"), openAi = key("openai"), google = key("google"))
+            return Keys(
+                key("anthropic"),
+                key("exa"),
+                key("lastfm"),
+                openAi = key("openai"),
+                google = key("google"),
+                openRouter = key("openrouter"),
+            )
         }
 
         /**

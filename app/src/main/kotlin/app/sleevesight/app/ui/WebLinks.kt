@@ -1,6 +1,9 @@
 package app.sleevesight.app.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalUriHandler
@@ -28,6 +31,25 @@ internal fun openWebLink(
     } catch (_: IllegalArgumentException) {
         // Compose's handler reports no app that opens web pages this way.
         false
+    } catch (_: ActivityNotFoundException) {
+        false
+    }
+}
+
+/**
+ * Opens [url], a web address ([WebLinks.of]), in the browser in a task of its own
+ * (`FLAG_ACTIVITY_NEW_TASK`), for a sign-in whose answer comes back to the app's own activity
+ * (#1157): never in the app's task, where the answer would open a second activity above the
+ * browser. Says whether it did; nothing opens with no browser, or another scheme.
+ */
+internal fun openInOwnTask(
+    context: Context,
+    url: String?,
+): Boolean {
+    val address = WebLinks.of(url) ?: return false
+    return try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(address)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
     } catch (_: ActivityNotFoundException) {
         false
     }

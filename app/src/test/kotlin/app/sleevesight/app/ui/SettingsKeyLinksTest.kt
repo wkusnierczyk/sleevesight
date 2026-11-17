@@ -103,6 +103,7 @@ class SettingsKeyLinksTest {
     private fun keyName(id: SecretId): String =
         text(
             when (id) {
+                SecretId.OPENROUTER -> R.string.settings_key_name_openrouter
                 SecretId.ANTHROPIC -> R.string.settings_key_name_anthropic
                 SecretId.OPENAI -> R.string.settings_key_name_openai
                 SecretId.GOOGLE -> R.string.settings_key_name_google

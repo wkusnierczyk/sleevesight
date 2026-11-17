@@ -442,12 +442,15 @@ data class Settings(
          *   pages on 2026-10-21 that is not deprecated. Gemini 3.1 Flash-Lite costs less, but is
          *   deprecated, to shut down on 2027-05-07, with 3.5 Flash-Lite its replacement; the cheaper
          *   2.5 models are open only to projects that used them before.
+         * - OpenRouter (#1157): Claude Haiku 5.5 through it (`anthropic/claude-haiku-5.5`, in its model
+         *   list on 2026-11-17), as Anthropic's default: the model the prompts are checked on most.
          */
         val DEFAULT_MODELS: Map<ProviderId, String> =
             mapOf(
                 ProviderId.ANTHROPIC to "claude-haiku-5-5",
                 ProviderId.OPENAI to "gpt-6-luna",
                 ProviderId.GOOGLE to "gemini-3.5-flash-lite",
+                ProviderId.OPENROUTER to "anthropic/claude-haiku-5.5",
             )
 
         /**
@@ -475,6 +478,10 @@ data class Settings(
          * refuse minimal), so the default means the same whichever model is chosen, and it matches
          * Anthropic's and OpenAI's, so cards from the services are compared at one effort. A user
          * who wants the fastest cards chooses minimal.
+         *
+         * OpenRouter (#1157): low, medium and high (its unified `reasoning.effort`, which it passes on
+         * as each model's own control, and drops for a model that does not reason), low by default,
+         * for the same reasons as the others.
          */
         val EFFORT_SCALES: Map<ProviderId, EffortScale> =
             mapOf(
@@ -497,6 +504,11 @@ data class Settings(
                                 ReasoningEffort.MEDIUM,
                                 ReasoningEffort.HIGH,
                             ),
+                        default = ReasoningEffort.LOW,
+                    ),
+                ProviderId.OPENROUTER to
+                    EffortScale(
+                        levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
                         default = ReasoningEffort.LOW,
                     ),
             )

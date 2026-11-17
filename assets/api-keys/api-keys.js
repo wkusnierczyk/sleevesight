@@ -22,8 +22,9 @@ const MODULE_PX = 5;
 const SHOWN_UNKNOWN = 10;
 
 const FORMS = {
+  openrouter: 'An OpenRouter key starts sk-or- and is 40 to 400 characters long.',
   anthropic: 'An Anthropic key starts sk-ant- and is 40 to 400 characters long.',
-  openai: 'An OpenAI key starts sk- (not sk-ant-, which is Anthropic’s) and is 40 to 400 characters long.',
+  openai: 'An OpenAI key starts sk- (not sk-ant- or sk-or-, which are Anthropic’s and OpenRouter’s) and is 40 to 400 characters long.',
   google: 'A Google key starts AIza or AQ. and is 30 to 400 characters long.',
   exa: 'An Exa key is 16 to 200 characters long.',
   lastfm: 'A Last.fm key is 32 hexadecimal digits.',

@@ -159,6 +159,7 @@ internal fun insightActions(
         },
         onLookAgain = { view.lookAgainKey?.let { actions.lookAgain(it, playing) } },
         onLookUpAgain = { actions.lookUpAgain(playing) },
+        onAiServices = { actions.openSettingsAt(SettingsTarget.aiServices) },
         onReport = onReport,
     )
 }
