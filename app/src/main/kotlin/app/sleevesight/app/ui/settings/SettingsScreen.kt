@@ -132,6 +132,12 @@ fun SettingsScreen(
     val failed = { failed: Boolean -> changeFailures = if (failed) changeFailures + 1 else 0 }
     val save = scope.saver(settingsStore, saves, failed)
     val update: Update = { transform -> save { settingsStore.update(transform) } }
+    // *Keep history for* (#1126), its last choice kept with the store, as its save is.
+    val historyLifetime =
+        remember(settingsStore, save, saves) {
+            val asked = settingsStore.historyLifetimeAsked
+            HistoryLifetimeWriter(asked::held) { lifetime -> asked.save(lifetime, save, saves) }
+        }
     // *Dismiss* and its *Undo* (#759: *Players*' note), and *Restore dismissed messages*, saved as
     // any change is, a failure announced as any change's is.
     val dismissals =
@@ -170,8 +176,10 @@ fun SettingsScreen(
                             dismissals,
                             restoreDismissed,
                         )
-                    SettingsContent(current, keys, navigation, unavailable, landOn, jump, { jump = null }, update) {
-                        dialog = it
+                    CompositionLocalProvider(LocalHistoryLifetime provides historyLifetime) {
+                        SettingsContent(current, keys, navigation, unavailable, landOn, jump, { jump = null }, update) {
+                            dialog = it
+                        }
                     }
                 }
             }

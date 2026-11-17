@@ -100,3 +100,15 @@ internal fun lifetimeStops(): Stops<Duration> {
     val labels = values.map { daysLabel(it) }
     return Stops(values, labels, labels)
 }
+
+/** *Keep history for* as last asked for through [writer], else [stored]; null is *Forever*. */
+internal fun held(
+    writer: HistoryLifetimeWriter?,
+    stored: Duration?,
+): Duration? = if (writer != null) writer.held(stored) else stored
+
+/** Whether history kept for [lifetime] is kept shorter than for [than]; null is *Forever*. */
+internal fun shorter(
+    lifetime: Duration?,
+    than: Duration?,
+): Boolean = lifetime != null && (than == null || lifetime < than)

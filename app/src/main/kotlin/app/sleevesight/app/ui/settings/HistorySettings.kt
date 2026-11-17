@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -89,6 +90,20 @@ internal fun HistorySection(
 }
 
 /**
+ * How *Keep history for* is saved (#1126): [held] is its value as last asked for, saved yet or not,
+ * given the one stored, which a shorter time is judged against; [choose] saves one. The settings
+ * screen keeps the last choice with the settings' store ([LocalHistoryLifetime]), so a row, a
+ * screen or an activity made again while a save waits its turn still knows it.
+ */
+internal class HistoryLifetimeWriter(
+    val held: (stored: Duration?) -> Duration?,
+    val choose: (Duration?) -> Unit,
+)
+
+/** The settings screen's [HistoryLifetimeWriter]; null where *History* is shown on its own. */
+internal val LocalHistoryLifetime = staticCompositionLocalOf<HistoryLifetimeWriter?> { null }
+
+/**
  * *Keep history for* (#1126): a stepped slider, every stop labelled, *Forever* the last. A shorter
  * time deletes what is older at once and cannot be undone, so a move is stored only once the thumb
  * is let go, and a shorter time asks first ([ShortenHistoryDialog]); a longer one is stored at once.
@@ -100,6 +115,8 @@ private fun KeepHistoryRow(
 ) {
     val title = stringResource(R.string.settings_keep_history)
     if (!shownInSearch(title)) return
+    val writer = LocalHistoryLifetime.current
+    val stored = settings.historyLifetime
     SteppedRow(
         title = title,
         summary = { _, _ -> stringResource(R.string.settings_keep_history_summary) },
@@ -108,18 +125,11 @@ private fun KeepHistoryRow(
         applies = true,
         tags = SteppedTags(KEEP_HISTORY_SLIDER_TAG, KEEP_HISTORY_STOPS_TAG, KEEP_HISTORY_VALUE_TAG),
         look = SteppedLook(start = 0.dp),
-        askBeforeLower =
-            AskBeforeLower(settings.historyLifetime, ::shorter) { spoken, confirm, cancel ->
-                ShortenHistoryDialog(spoken, confirm, cancel)
-            },
-    ) { chosen -> update { it.copy(historyLifetime = chosen) } }
+        askBeforeLower = AskBeforeLower({ held(writer, stored) }, ::shorter, ::ShortenHistoryDialog),
+    ) { chosen ->
+        if (writer != null) writer.choose(chosen) else update { it.copy(historyLifetime = chosen) }
+    }
 }
-
-/** Whether history kept for [lifetime] is kept shorter than for [than]; null is *Forever*. */
-private fun shorter(
-    lifetime: Duration?,
-    than: Duration?,
-): Boolean = lifetime != null && (than == null || lifetime < than)
 
 /**
  * Asks before *Keep history for* is shortened to [time] (#1126), in words (*30 days*): [onShorten]

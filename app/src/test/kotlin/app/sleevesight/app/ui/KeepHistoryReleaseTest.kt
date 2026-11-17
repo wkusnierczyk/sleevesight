@@ -74,18 +74,45 @@ class KeepHistoryReleaseTest {
 
     private fun shows(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
 
-    private fun showHistory(block: () -> Unit) {
+    private fun showHistory(block: (ActivityScenario<MainActivity>) -> Unit) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setContent {
-                    SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
-                }
-            }
-            compose.openSection(SettingsSection.HISTORY)
-            compose.waitUntil(WAIT_MS) { shows(app.getString(R.string.settings_keep_history)) }
-            block()
+            showOn(scenario)
+            block(scenario)
         }
     }
+
+    /** Shows the settings screen in [scenario]'s activity, *History* opened unless [open] already. */
+    private fun showOn(
+        scenario: ActivityScenario<MainActivity>,
+        open: Boolean = false,
+    ) {
+        scenario.onActivity { activity ->
+            activity.setContent {
+                SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+            }
+        }
+        if (!open) compose.openSection(SettingsSection.HISTORY)
+        compose.waitUntil(WAIT_MS) { shows(app.getString(R.string.settings_keep_history)) }
+    }
+
+    /**
+     * With the writes held at 90 days: Forever is chosen and queued; then [between] makes the row
+     * anew; then 1 year asks, being shorter than Forever, though the store still says 90 days.
+     */
+    private fun foreverThenOneYearAsks(between: (ActivityScenario<MainActivity>) -> Unit) =
+        showHistory { scenario ->
+            settingsData.writeGate = held
+            moveTo(4)
+            between(scenario)
+            assertEquals("the store still at 90 days", 90.days, settings.now().historyLifetime)
+            moveTo(3)
+            assertTrue("1 year after Forever asks", shows("Keep history for 1 year?"))
+            compose.onNodeWithText(app.getString(R.string.settings_cancel)).performClick()
+            held.complete(Unit)
+            compose.waitUntil(WAIT_MS) { settings.now().historyLifetime == null }
+            compose.waitForIdle()
+            assertEquals("Forever kept", null, settings.now().historyLifetime)
+        }
 
     private fun slider() = compose.onNodeWithTag(KEEP_HISTORY_SLIDER_TAG).performScrollTo()
 
@@ -120,7 +147,7 @@ class KeepHistoryReleaseTest {
     // without asking, and the history shortened from Forever to 1 year.
     @Test
     fun aReleaseWhileAWriteIsQueuedComparesWithTheValueChosenLast() =
-        showHistory {
+        showHistory { _ ->
             settingsData.writeGate = held
             moveTo(4)
             assertTrue("Forever is longer: no question", !shows("Keep history for Forever?"))
@@ -136,10 +163,29 @@ class KeepHistoryReleaseTest {
             assertEquals("Forever kept", null, settings.now().historyLifetime)
         }
 
+    // The choice queued is kept with the store, not the row: History closed and opened again makes
+    // the row anew.
+    @Test
+    fun aQueuedChoiceOutlivesHistoryClosedAndOpenedAgain() =
+        foreverThenOneYearAsks {
+            compose.onNodeWithTag(SettingsSection.HISTORY.panelTag + ":close").performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.openSection(SettingsSection.HISTORY)
+        }
+
+    // ... and the activity made again, as on a rotation.
+    @Test
+    fun aQueuedChoiceOutlivesTheActivityMadeAgain() =
+        foreverThenOneYearAsks { scenario ->
+            scenario.recreate()
+            // *History* stays open through it, as each section does.
+            showOn(scenario, open = true)
+        }
+
     @Test
     fun aStoredValueBetweenTheStopsAsksWhenTheThumbComesBackToItsStop() {
         storeHistory(100)
-        showHistory {
+        showHistory { _ ->
             assertEquals("shown at the nearest stop", "90 days", spoken())
             dragAwayAndBack(2, 3)
             assertTrue("90 days is shorter than 100", shows("Keep history for 90 days?"))
@@ -156,7 +202,7 @@ class KeepHistoryReleaseTest {
     @Test
     fun aStoredValueBetweenTheStopsGoesLongerAtOnce() {
         storeHistory(100)
-        showHistory {
+        showHistory { _ ->
             moveTo(3)
             compose.waitUntil(WAIT_MS) { settings.now().historyLifetime == 365.days }
             assertTrue("no question for a longer time", !shows("Keep history for 1 year?"))
@@ -166,7 +212,7 @@ class KeepHistoryReleaseTest {
     @Test
     fun aStoredValueBetweenTheStopsStaysWhenTheThumbIsNotMoved() {
         storeHistory(100)
-        showHistory {
+        showHistory { _ ->
             slider().performTouchInput {
                 val inset = 12.dp.toPx()
                 val stop = Offset(inset + (width - 2 * inset) * 2 / 4, centerY)

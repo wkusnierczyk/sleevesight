@@ -75,6 +75,9 @@ class SettingsStore(
     /** Every writer of the settings, one after another, in the order asked for (#1146; [saving]). */
     internal val saveOrder = SaveOrder()
 
+    /** *Keep history for* as last asked for, while its save may still wait its turn (#1126). */
+    val historyLifetimeAsked = HistoryLifetimeAsked(this)
+
     /** The current settings, and each change to them; nothing while the file cannot be read. */
     val settings: Flow<Settings> = stored.retryReads {}.distinctUntilChanged()
 
