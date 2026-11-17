@@ -111,6 +111,28 @@ class UncreditedAuthorsTest {
     }
 
     @Test
+    fun theCitedLineNamesTheAuthorWholeAndIsAlwaysACreditLine() {
+        val split = split(alone, aloneRoles, libretto)
+        val music = "The music of “Nessun dorma” was composed by $PUCCINI and X."
+        val lyrics = "The lyrics of “Nessun dorma” were written by $PUCCINI Jr."
+        // A line on the work that credits no one, then one naming a name that holds Puccini's, then his.
+        val work = "$MB/work/w"
+        val tricky =
+            EvidenceSet.of(
+                listOf(
+                    draft(SourceId.MUSICBRAINZ, "“Nessun dorma” is a traditional song.", work),
+                    draft(SourceId.MUSICBRAINZ, lyrics, work),
+                    draft(SourceId.MUSICBRAINZ, music, work),
+                ),
+                JvmHasher,
+            )
+        assertEquals("MB3", authorsCite(split, tricky))
+        // None names an uncredited author: the first credit line, never the one that credits no one.
+        val none = EvidenceSet.of(tricky.lines.take(2).map { draft(it.source, it.text, it.url) }, JvmHasher)
+        assertEquals("MB2", authorsCite(split, none))
+    }
+
+    @Test
     fun theLineEndsWithOneChipReadAsItsSourceWhoseTapOpensSourcesThere() {
         val split = checkNotNull(split(alone, aloneRoles, libretto))
         val cited = mutableListOf<String>()

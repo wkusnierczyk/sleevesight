@@ -124,4 +124,25 @@ class UncreditedComposerTest {
             assertEquals(emptyList(), rolesOf("Puccini & Adami, $pavarotti", work("Aria", puccini))?.uncredited)
             assertEquals(emptyList(), rolesOf("Adami / Puccini, $pavarotti", work("Aria", puccini))?.uncredited)
         }
+
+    @Test
+    fun `librettists the player credits jointly write the work's words and perform nothing`() =
+        runTest {
+            // Spotify credits Nessun dorma's librettists as one artist, "Giuseppe Adami & Renato Simoni".
+            val libretto =
+                work("Aria", puccini).copy(
+                    artistRelations =
+                        listOf(
+                            MbArtistRelation("composer", "mbid-$puccini", puccini, emptyList()),
+                            MbArtistRelation("librettist", "mbid-adami", "Giuseppe Adami", emptyList()),
+                            MbArtistRelation("librettist", "mbid-simoni", "Renato Simoni", emptyList()),
+                        ),
+                )
+            val roles = rolesOf("$puccini, Giuseppe Adami & Renato Simoni, $pavarotti", libretto)
+            assertEquals(listOf(puccini), roles?.composers)
+            assertEquals(listOf(pavarotti), roles?.performers)
+            // A member who is no librettist keeps the credit a performer's.
+            val mixed = rolesOf("$puccini, Giuseppe Adami & Someone Else, $pavarotti", libretto)
+            assertEquals(listOf(pavarotti, "Giuseppe Adami & Someone Else"), mixed?.performers)
+        }
 }

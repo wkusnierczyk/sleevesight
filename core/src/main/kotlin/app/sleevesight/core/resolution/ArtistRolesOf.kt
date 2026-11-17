@@ -72,7 +72,7 @@ internal fun NameMatcher.rolesOf(
             .filter { it in byWork || it == lead }
             .filterNot { if (strict(it)) it in performing else it in onRecording }
             .distinct()
-    val wrote = wordsOnly(track, work, if (classical) performing else onRecording)
+    val wrote = wordsOnly(track, work, if (classical) performing else onRecording, relations)
     // On a classical work, its composers the track does not credit, when every credited one is one it names.
     val uncredited = if (classical) uncredited(track, resolved, composers, composed - byWork.toSet()) else emptyList()
     return ArtistRoles(
@@ -153,16 +153,22 @@ private fun performersOf(
         .sortedBy { classical && it !in onRecording }
 }
 
-// The credited artists of [track] whom [work] names its lyricist or librettist (#1289), but those of [playing].
+// The credited artists of [track] whom [work] names its lyricist or librettist (#1289), but those of [playing];
+// a joint credit when every member is one (#1298: "Giuseppe Adami & Renato Simoni", [creditMembers]) and
+// none of them plays on the recording (its performer [relations], by name).
 private fun NameMatcher.wordsOnly(
     track: NormalizedTrack,
     work: MbWork,
     playing: Set<String>,
+    relations: List<Credit>,
 ): Set<String> {
     val writers = work.artistRelations.filter { it.type in WORDS }
     return track.artists
         .filter { artist ->
-            artist !in playing && writers.any { sameName(it.artistName, artist) }
+            val members = creditMembers(artist)
+            artist !in playing &&
+                members.ifEmpty { listOf(artist) }.all { member -> writers.any { sameName(it.artistName, member) } } &&
+                members.none { member -> relations.any { sameName(it.name, member) } }
         }.toSet()
 }
 

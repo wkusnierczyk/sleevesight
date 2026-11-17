@@ -278,9 +278,9 @@ internal fun AuthorsLine(
 
 /**
  * The line of [lines], those *Sources* lists, that [split]'s line under the title cites (#1298): none
- * while it names only authors the track credits; else MusicBrainz's line on the work naming one it
- * does not ([MusicBrainzEvidence.creditedNames]), else its first on the work; none while *Sources* has
- * no such line.
+ * while it names only authors the track credits; else MusicBrainz's credit line on the work
+ * ([MusicBrainzEvidence.creditedNames]) naming one it does not, else its first credit line on the work;
+ * none while *Sources* has no such line. Names are compared whole, as the line lists them ("A, B and C").
  */
 internal fun authorsCite(
     split: ArtistSplit?,
@@ -288,18 +288,18 @@ internal fun authorsCite(
 ): String? {
     val uncredited = split?.uncredited.orEmpty()
     if (uncredited.isEmpty()) return null
-    val work =
+    val credits =
         lines
             ?.lines
             .orEmpty()
             .filter { it.source == SourceId.MUSICBRAINZ && it.url?.contains(WORK_PAGE) == true }
-    val naming =
-        work.firstOrNull { line ->
-            val names = MusicBrainzEvidence.creditedNames(line.text).orEmpty()
-            uncredited.any { it in names }
-        }
-    return (naming ?: work.firstOrNull())?.id
+            .mapNotNull { line -> MusicBrainzEvidence.creditedNames(line.text)?.let { line.id to it.split(LISTED) } }
+    val naming = credits.firstOrNull { (_, names) -> uncredited.any { it in names } }
+    return (naming ?: credits.firstOrNull())?.first
 }
+
+// What separates the names a MusicBrainz line lists (`EvidenceText.list`: "A, B and C").
+private val LISTED = Regex(", | and ")
 
 // The path of a MusicBrainz work's page, which its lines on the work link.
 private const val WORK_PAGE = "musicbrainz.org/work/"
