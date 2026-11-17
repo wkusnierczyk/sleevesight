@@ -32,6 +32,7 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.settings.pastKeepHistory
+import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -988,10 +989,19 @@ class PipelineHost(
             val before = if (fresh) view.value else PipelineView()
             val lifetime = now.historyLifetime
             expire(own ?: before.track, owner, lifetime)
-            val shown = shownOf(own, before, owner, failedKey, lifetime)
+            // Texts a prompt lab variant wrote shown only while the live pipeline writes with the lab's
+            // choices (#1388): not with the lab switched off, nor outside developer mode.
+            val labOn =
+                current
+                    ?.parts
+                    ?.ai
+                    ?.choices
+                    ?.on == true
+            val shown = shownOf(own, before, owner, failedKey, Hiding(lifetime, labOn))
             val insight = shown.track?.insight
-            // The card paid for past *Keep history for* (#643) is not shown, so nothing is offered for it.
-            val cardPast = cardPast(shown, owner, lifetime)
+            // The card paid for past *Keep history for* (#643), or written by a lab variant while the
+            // lab is off (#1388), is not shown, so nothing is offered for it.
+            val cardPast = cardPast(shown, owner, Hiding(lifetime, labOn))
             val rewrite = owner.rewrites() && insight is InsightState.Written
             PipelineView(
                 track = shown.track,
@@ -1043,14 +1053,14 @@ class PipelineHost(
         track: TrackState,
         owner: CoordinatorState,
         failedKey: RunKey?,
-        lifetime: Duration?,
+        hiding: Hiding,
     ): Shown {
-        val own = unlessPast(failing(offering(track, owner), failedKey), lifetime)
+        val own = unlessHidden(failing(offering(track, owner), failedKey), hiding)
         // A look again that found nothing new (#617) shows the card paid for, not the one its run
         // found in the cache under the settings as they are now.
         val card =
             cardFor(owner, own)
-                ?.takeUnless { past(it.insight, lifetime) }
+                ?.takeUnless { hidden(it.insight, hiding) }
                 ?.takeIf { lacksInsight(own) || owner.foundNothingNew }
         val failure =
             when (val insight = own.insight) {
@@ -1090,22 +1100,51 @@ class PipelineHost(
         before: PipelineView,
         owner: CoordinatorState,
         failedKey: RunKey?,
-        lifetime: Duration?,
+        hiding: Hiding,
     ): Shown =
-        own?.let { shownTrack(it, owner, failedKey, lifetime) }
+        own?.let { shownTrack(it, owner, failedKey, hiding) }
             ?: before.track
-                ?.let { shownTrack(it, owner, failedKey, lifetime) }
+                ?.let { shownTrack(it, owner, failedKey, hiding) }
                 ?.let { Shown(it.track, before.rewriteFailed, before.cardShown && it.writtenShown) }
             ?: Shown(null, null)
 
-    // Whether the card paid for, for the track [shown], is past *Keep history for* ([lifetime]; #643).
+    // Whether the card paid for, for the track [shown], is not shown ([hidden]): past *Keep history
+    // for* (#643), or a lab variant's while the lab is off (#1388).
     private fun cardPast(
         shown: Shown,
         owner: CoordinatorState,
-        lifetime: Duration?,
+        hiding: Hiding,
     ): Boolean {
         val card = shown.track?.let { cardFor(owner, it) } ?: return false
-        return past(card.insight, lifetime)
+        return hidden(card.insight, hiding)
+    }
+
+    // What keeps a written insight from the view: *Keep history for* ([lifetime], #643), and the
+    // prompt lab off ([labOn] false, #1388) for one a lab variant wrote.
+    private class Hiding(
+        val lifetime: Duration?,
+        val labOn: Boolean,
+    )
+
+    // Whether [insight] is kept from the view ([Hiding]). A text a lab variant wrote stays in the cache
+    // and in the ledger, to be shown again once the lab is on; meanwhile Write is offered for it, as
+    // when no card is kept, the run's own release card shown if the cache has one.
+    private fun hidden(
+        insight: Written,
+        hiding: Hiding,
+    ): Boolean = past(insight, hiding.lifetime) || (!hiding.labOn && byLabVariant(insight))
+
+    // Whether a prompt lab variant wrote [insight] (#1003), not the release prompt.
+    private fun byLabVariant(insight: Written): Boolean =
+        insight.writtenBy?.variant?.let { it != LabPrompts.RELEASE } == true
+
+    // [track] with its insight not shown when [hidden].
+    private fun unlessHidden(
+        track: TrackState,
+        hiding: Hiding,
+    ): TrackState {
+        val insight = track.insight as? Written ?: return track
+        return if (hidden(insight, hiding)) track.copy(insight = InsightState.Idle(canWrite = false)) else track
     }
 
     // Whether [insight] was written longer ago than *Keep history for* ([lifetime]; #643).
@@ -1113,15 +1152,6 @@ class PipelineHost(
         insight: Written,
         lifetime: Duration?,
     ): Boolean = pastKeepHistory(insight.writtenAt, lifetime, clock.now())
-
-    // [track] with its insight not shown when it is past *Keep history for* ([lifetime]; #643).
-    private fun unlessPast(
-        track: TrackState,
-        lifetime: Duration?,
-    ): TrackState {
-        val insight = track.insight as? Written ?: return track
-        return if (past(insight, lifetime)) track.copy(insight = InsightState.Idle(canWrite = false)) else track
-    }
 
     // [track]'s insight and the card paid for for it, those past [lifetime] (#643): each, by its
     // track and when it was written, once told to the coordinator, whose ledger forgets the card,

@@ -17,6 +17,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.synthesis.PromptChoices
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -121,6 +122,9 @@ internal abstract class PipelineHostFixture {
     /** What the AI services' clients are wrapped in, as the app's are (`AiRetry`, #1164): none by default. */
     protected var aiThrough: (AiProvider) -> AiProvider = { it }
 
+    /** The prompt lab's choices each build takes (#1003), as the app's debug build: none by default. */
+    protected var labChoices: PromptChoices = PromptChoices.NONE
+
     /** The stages on the fakes: MusicBrainz, Last.fm with its key, the resolver, the AI services, the cache. */
     protected fun fakeParts(
         keys: PipelineKeys,
@@ -135,7 +139,7 @@ internal abstract class PipelineHostFixture {
                     resolutions.removeFirstOrNull() ?: Resolution(Outcome.SongArticle, recordingMbid = "rec")
                 },
             hasher = JvmHasher,
-            ai = keys.ai?.let { AiAccess(aiThrough(providers[built.aiProvider] ?: provider), it) },
+            ai = keys.ai?.let { AiAccess(aiThrough(providers[built.aiProvider] ?: provider), it, labChoices) },
             cache = cache,
         )
 
