@@ -86,8 +86,9 @@ internal fun KeyRow(
  * *Secrets*: *Load keys*, which saves several keys from one QR code, a setup code (#268), on a
  * screen of its own ([LoadKeysScreen]), with, under it, where the code is made and the guide to it
  * (#541); *Purge keys*, while any key is stored, readable or not, or after a failure
- * ([KeysShown.offerReset]), when it says why (what was *Reset saved keys*, which did the same), on a
- * screen of its own ([PurgeKeysScreen]); each key's row, the AI services' and the sources' alike;
+ * ([KeysShown.offerReset]), when it says why in a note under its description, in full (what was
+ * *Reset saved keys*, which did the same), on a screen of its own ([PurgeKeysScreen]); each key's
+ * row, the AI services' and the sources' alike;
  * and *Share phone's name with Type on a computer* (#433, #544), for the key dialogs' *Type on a
  * computer*, which its summary explains, with a link to the page the computer opens.
  */
@@ -109,13 +110,14 @@ internal fun SecretsSection(
     ) { open(SettingsDialog.LoadKeys) }
     LoadKeysMore()
     if (keys.anyStored || keys.offerReset) {
-        val why = if (keys.offerReset) R.string.settings_reset_keys_value else R.string.settings_remove_all_keys_value
         ButtonRow(
             title = stringResource(R.string.settings_remove_all_keys),
-            summary = stringResource(why),
+            summary = stringResource(R.string.settings_remove_all_keys_value),
             label = stringResource(R.string.settings_remove_all_keys_button),
             tag = PURGE_KEYS_BUTTON_TAG,
             destructive = true,
+            // After a failure, why to use it, in full: a state, not a description to fold (#847).
+            note = if (keys.offerReset) stringResource(R.string.settings_reset_keys_value) else null,
         ) { open(SettingsDialog.PurgeKeys) }
     }
     for (id in SHOWN_KEYS) KeyRow(stringResource(keyName(id)), id, keys.states, indent = false, open)

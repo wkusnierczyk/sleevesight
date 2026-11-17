@@ -216,7 +216,8 @@ internal fun SwitchRow(
  * first line as a switch is; [onClick] runs on a tap on it, and a null [onClick] disables it. Only
  * the button is a control: a screen reader reads it by the row's name, and says when it is
  * disabled. A [destructive] action, one that deletes (*Clear history*, #1126), has its button in the
- * theme's error colour, its outline too.
+ * theme's error colour, its outline too. A [note], what the action is needed for now (*Purge keys*
+ * after a failure, #1365), is shown in full under the description, never folded with it (#847).
  */
 @Suppress("LongParameterList") // What the row shows, and what a tap does.
 @Composable
@@ -226,6 +227,7 @@ internal fun ButtonRow(
     label: String,
     tag: String,
     destructive: Boolean = false,
+    note: String? = null,
     onClick: (() -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
@@ -260,7 +262,16 @@ internal fun ButtonRow(
             ) { Text(label) }
         },
     ) {
-        Description(title, summary, color = color, reach = TAP_BELOW)
+        // Its tap reaches into the row's padding where no note comes under it (#874).
+        Description(title, summary, color = color, reach = if (note == null) TAP_BELOW else 0.dp)
+        note?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = color,
+                modifier = Modifier.testTag(ROW_NOTE_TAG),
+            )
+        }
     }
 }
 
@@ -355,7 +366,7 @@ internal fun ValueRow(
     }
 }
 
-/** The test tag of a [ValueRow]'s [note][ValueRow] (#847). */
+/** The test tag of a [ValueRow]'s or a [ButtonRow]'s note (#847, #1365). */
 internal const val ROW_NOTE_TAG = "settings_row_note"
 
 /**
