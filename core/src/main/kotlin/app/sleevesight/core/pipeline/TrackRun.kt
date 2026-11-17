@@ -43,6 +43,7 @@ internal class RunInput(
     val lookAgain: LookAgain? = null,
     val before: LabelsBefore = LabelsBefore(),
     val items: ItemLines = ItemLines(),
+    val foundAs: FoundAs? = null,
 )
 
 /**
@@ -108,7 +109,7 @@ internal class TrackRun(
     // A resolution an earlier run of the track made, used again rather than asked for (#192); not
     // one a failed lookup left provisional, when MusicBrainz is asked again (a *Retry*, #728).
     private val resolvedBefore =
-        input.again?.let { again ->
+        input.foundAs?.resolution?.takeIf { settings.isEnabled(SourceId.MUSICBRAINZ) } ?: input.again?.let { again ->
             again.resolution?.takeIf {
                 it.outcome != Outcome.Unreachable &&
                     !(it.provisional && SourceId.MUSICBRAINZ in again.asked) &&
@@ -129,6 +130,7 @@ internal class TrackRun(
                 // A run that asks again shows the genres the run before it had (#772), until its own
                 // are assembled, which replace them.
                 genres = input.before.genres,
+                foundAs = input.foundAs,
             ),
         )
 

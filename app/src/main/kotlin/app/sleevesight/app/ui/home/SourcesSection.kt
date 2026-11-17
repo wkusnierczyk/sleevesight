@@ -84,7 +84,8 @@ import app.sleevesight.core.pipeline.TrackState
  * a rewrite failed, or neither), the lines are those it cites, found when it was written, beside
  * the sources' states now.
  * While the phone is offline and a source is unreachable ([SourcesShown.offline], #192), it says
- * so: those sources are asked again once it is back online.
+ * so: those sources are asked again once it is back online. Asked in another spelling (#1293,
+ * `TrackState.foundAs`), it says which and who found it, under the table.
  *
  * This is the section as a box (*Layout*'s *Expandable boxes*, #447): its chip, [width] wide as the
  * chips above it on Home (#1286), or its panel with [SourcesBody] in it, which a page of its own
@@ -192,6 +193,16 @@ internal fun SourcesBody(
         SourceTable(tableRows(chips, shownLines.evidence, details), details, lines, focus, fold, unverified)
         Notes(sourceNotes(chips, shown.offline), openSettings, shown.retry, afterRetry)
         if (shown.offline) Small(stringResource(R.string.home_sources_offline))
+        // Asked in another spelling (#1293): which, and who found it; its pages are no lines.
+        track?.foundAs?.let { found ->
+            val line = foundAsLine(found, track.nowPlaying)
+            Text(
+                stringResource(R.string.sources_spelling_note, line, found.model, track.nowPlaying.title),
+                Modifier.testTag(SOURCES_FOUND_AS_TAG),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (lines.isEmpty()) {
             // Still looking, with the turning record before it (#785); nothing found, without, the
             // same node; nothing asked for a track the last clear holds (#1112), without too.
@@ -478,6 +489,9 @@ const val LINE_PREFIX: String = "line:"
 
 /** The test tag of a line's tag drawn as a dim outline (#1036), before the line's id. */
 const val UNSUPPORTED_TAG_PREFIX: String = "unsupported:"
+
+/** The test tag of the note naming the spelling the sources were asked with (#1293). */
+const val SOURCES_FOUND_AS_TAG: String = "sources:found-as"
 
 /** The test tags of *Sources*' panel on Home, its heading and its *Close* (#623), as [Panel] makes them. */
 const val SOURCES_PANEL_TAG: String = "sources-panel"

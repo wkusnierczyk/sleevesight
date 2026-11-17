@@ -33,6 +33,17 @@ enum class SearchKind(
      * about it ([ExplainPrompt]), every sentence cited, so asked only with *AI web search* on.
      */
     EXPLAIN("explain"),
+
+    /**
+     * How the track's title and artists are spelled where the work is known (#1293), when
+     * MusicBrainz finds nothing for them as the player gives them: asked only from the web
+     * ([SpellingPrompt]), its answer another spelling for the sources to be asked again with.
+     */
+    SPELLING("spelling"),
+    ;
+
+    /** Whether it is asked only from the web (#908, #1293): not offered while *AI web search* is off. */
+    val webOnly: Boolean get() = this == EXPLAIN || this == SPELLING
 }
 
 /**
@@ -129,6 +140,7 @@ object AiSearchPrompt {
         when {
             kind == SearchKind.DEFINITION -> DEFINITION_VERSION
             kind == SearchKind.EXPLAIN -> EXPLAIN_VERSION
+            kind == SearchKind.SPELLING -> SpellingPrompt.VERSION
             web -> WEB_VERSION
             else -> VERSION
         }
@@ -219,6 +231,7 @@ object AiSearchPrompt {
             SearchKind.LYRICS -> "{\"lyrics_urls\": [\"https://…\"]}"
             SearchKind.DEFINITION -> "{\"definition\": \"…\"}"
             SearchKind.EXPLAIN -> ExplainPrompt.SHAPE
+            SearchKind.SPELLING -> SpellingPrompt.SHAPE
         }
 
     /**
@@ -279,6 +292,7 @@ object AiSearchPrompt {
                     "- About the genre in general: say nothing about any track, recording, artist or listener.",
                 )
             SearchKind.EXPLAIN -> ExplainPrompt.rules(dates)
+            SearchKind.SPELLING -> SpellingPrompt.RULES
         }
 
     /**
@@ -324,6 +338,7 @@ object AiSearchPrompt {
             SearchKind.LYRICS -> "Where are this song's lyrics pages?"
             SearchKind.DEFINITION -> DefinitionPrompt.QUESTION
             SearchKind.EXPLAIN -> ExplainPrompt.QUESTION
+            SearchKind.SPELLING -> SpellingPrompt.QUESTION
         }
 }
 
@@ -441,6 +456,7 @@ object WebPrompt {
             SearchKind.LYRICS -> "$title$by lyrics"
             SearchKind.DEFINITION -> InsightPrompt.oneLine(facts.genre.orEmpty()) + " music genre"
             SearchKind.EXPLAIN -> ExplainPrompt.query(facts)
+            SearchKind.SPELLING -> SpellingPrompt.query(facts)
         }
     }
 
@@ -521,7 +537,7 @@ object WebPrompt {
                     "\"source\": \"https://…\"}}"
             SearchKind.GENRES -> "{\"genres\": [\"…\", \"…\"], \"sources\": [\"https://…\"]}"
             SearchKind.LYRICS -> "{\"lyrics_urls\": [\"https://…\"]}"
-            SearchKind.DEFINITION, SearchKind.EXPLAIN -> AiSearchPrompt.shape(kind)
+            SearchKind.DEFINITION, SearchKind.EXPLAIN, SearchKind.SPELLING -> AiSearchPrompt.shape(kind)
         }
 
     /**

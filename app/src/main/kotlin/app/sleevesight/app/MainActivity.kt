@@ -91,8 +91,8 @@ class MainActivity : ComponentActivity() {
             genreNotes = graph.genreNotes,
             // *Read aloud* beside *Key insights* and under a genre's reason (#325, #725).
             readAloud = graph.readAloud,
-            // *Search with AI* under the empty Dates, Genres and Lyrics (#773).
-            aiSearches = graph.aiSearches,
+            // *Search with AI* under the empty Dates, Genres and Lyrics (#773), and the spelling check (#1293).
+            aiSearches = graph.aiFeed,
             // The song's, the artist's and the album's insights under Key insights (#522).
             itemNotes = graph.itemNotes,
             // The album's tracklist on the back of the cover (#984).

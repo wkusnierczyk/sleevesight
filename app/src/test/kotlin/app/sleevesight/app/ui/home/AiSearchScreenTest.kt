@@ -116,7 +116,11 @@ class AiSearchScreenTest {
     // Each kind's search as the test sets it, and the asks and stops that reached it.
     private val feed =
         object : AiSearchFeed {
-            val states = SearchKind.entries.associateWith { MutableStateFlow<AiSearch>(AiSearch.Offered) }
+            // The spelling check not offered (#1293: as with *AI web search* off), so *Ask AI* shows.
+            val states =
+                SearchKind.entries.associateWith {
+                    MutableStateFlow(if (it == SearchKind.SPELLING) AiSearch.None else AiSearch.Offered)
+                }
             val asked = mutableListOf<Pair<SearchKind, SearchFacts>>()
             val stopped = mutableListOf<SearchKind>()
 

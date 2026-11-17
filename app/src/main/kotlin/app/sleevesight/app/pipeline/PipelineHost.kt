@@ -8,6 +8,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.InsightState.Written
@@ -304,6 +305,10 @@ class PipelineHost(
     // The track whose run failed during its insight, shown as failed until another run starts.
     private val failed = MutableStateFlow<RunKey?>(null)
 
+    // The spellings the spelling check found and MusicBrainz confirmed (#1293), by the key of the
+    // track as the player reports it: each run of it asks its sources with them. Forgotten by a clear.
+    private val spellings = ConcurrentHashMap<RunKey, FoundAs>()
+
     // The pipelines built, until the coordinator swaps one in. A build superseded before it was
     // swapped in stays here until the next swap, which clears them all.
     private val built = ConcurrentHashMap<Long, Pair<Pipeline, PipelineParts>>()
@@ -454,6 +459,21 @@ class PipelineHost(
     }
 
     /**
+     * The spelling check (#1293, `SpellingChecks`) found [shown] as [found], which MusicBrainz
+     * confirmed: every run of it from now on asks its sources with that spelling, and the track is
+     * looked up again with it if the session layer still shows it, by a rebuild, as an insight past
+     * *Keep history for* is (#643): its run then starts again, once a model call under way has ended.
+     */
+    fun spellingFound(
+        shown: NowPlaying,
+        found: FoundAs,
+    ) {
+        spellings[RunKey.of(normalizer, shown)] = found
+        val latest = latestPlaying() ?: return
+        if (sameInsightTrack(shown, latest)) queue.trySend(CoordinatorEvent.RebuildRequested)
+    }
+
+    /**
      * The user tapped *Retry* beside an item's own lookups not reached (#1187: the album's), beside
      * [shown], before they are gathered again: the run of that track then writes nothing unasked
      * ([CoordinatorEvent.ItemRetryTapped]); dropped for a track the session layer no longer shows.
@@ -509,6 +529,7 @@ class PipelineHost(
         forgetting.add(taken)
         // Queued without suspending, so that a clear queued always reaches the finally below.
         queue.trySend(CoordinatorEvent.Cleared(lookUp))
+        spellings.clear()
         try {
             taken.await()
             return wipe()
@@ -688,7 +709,15 @@ class PipelineHost(
         handle.job =
             current.scope.launch(epoch.mark()) {
                 try {
-                    current.pipeline.run(effect.nowPlaying, handle, effect.again, effect.lookAgain, effect.items)
+                    val spelling = spellings[RunKey.of(normalizer, effect.nowPlaying)]
+                    current.pipeline.run(
+                        effect.nowPlaying,
+                        handle,
+                        effect.again,
+                        effect.lookAgain,
+                        effect.items,
+                        spelling,
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (
@@ -1073,7 +1102,7 @@ class PipelineHost(
         lifetime: Duration?,
     ) {
         if (track == null) return
-        val key = RunKey.of(track.normalized, track.nowPlaying)
+        val key = RunKey.of(track.played, track.nowPlaying)
         val past =
             listOfNotNull(track.insight as? Written, cardFor(owner, track)?.insight)
                 .filter { past(it, lifetime) }
@@ -1108,7 +1137,7 @@ class PipelineHost(
         track: TrackState,
         failedKey: RunKey?,
     ): TrackState {
-        val stuck = track.insight is InsightState.Writing && failedKey == RunKey.of(track.normalized, track.nowPlaying)
+        val stuck = track.insight is InsightState.Writing && failedKey == RunKey.of(track.played, track.nowPlaying)
         return if (stuck) track.copy(insight = InsightState.Failed(FAILED)) else track
     }
 
@@ -1119,7 +1148,7 @@ class PipelineHost(
     ): TrackState {
         val withdrawn =
             (track.insight as? InsightState.Idle)?.canWrite == true &&
-                !owner.offersWrite(RunKey.of(track.normalized, track.nowPlaying))
+                !owner.offersWrite(RunKey.of(track.played, track.nowPlaying))
         return if (withdrawn) track.copy(insight = InsightState.Idle(canWrite = false)) else track
     }
 

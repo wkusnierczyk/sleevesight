@@ -125,6 +125,15 @@ interface AiSearchFeed {
     ): Flow<AiSearch> = search(track, kind)
 
     /**
+     * What MusicBrainz answered for [spelling], the spelling check's answer for [track] (#1293,
+     * `SpellingChecks`); null before it is asked. By default, never asked.
+     */
+    fun spelled(
+        track: TrackState,
+        spelling: SearchAnswer.Spelling,
+    ): Flow<SpellingOutcome?> = flowOf(null)
+
+    /**
      * A tap on *Search with AI* or *Retry*, or, [automatic], the search starting by itself (*Search
      * with AI*, the setting, [AutoSearches]): [track]'s search of [kind] asks about [facts], unless it
      * is under way, answered or kept, or, [automatic], once stopped (*Stop* is the user's "no" to it).
@@ -426,6 +435,20 @@ class AppAiSearches(
             asking.remove(key, job)
             shown.removeSearching(key)
         }
+    }
+
+    /**
+     * [track]'s search of [kind] as it stands now (#1293, `SpellingChecks.concluded`): its state shown;
+     * [SearchState.NothingFound] for one that cannot be asked (no AI service ready, or not asked from
+     * what the settings say) or that was stopped; null for one not asked yet.
+     */
+    internal fun ran(
+        track: TrackState,
+        kind: SearchKind,
+    ): SearchState? {
+        val key = keyOf(track, kind, null)?.second ?: return SearchState.NothingFound()
+        val stopped = synchronized(lock) { Declined.of(key) in declined }
+        return shown.entries.value[key]?.state ?: if (stopped) SearchState.NothingFound() else null
     }
 
     /**

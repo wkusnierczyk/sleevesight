@@ -4,9 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.R
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.settings.Settings
 
 // The track's header on Home: its key data, and under the album the line of buttons that open in
@@ -28,7 +31,15 @@ internal fun TrackHeader(
 ) {
     val normalized = remember(header) { actions.normalize(header) }
     val split = remember(shown.track, normalized) { splitOf(shown.track, normalized) }
-    KeyData(normalized, header, headerYears(shown.track, header), split, held = !named, notes = line.notes)
+    KeyData(
+        normalized,
+        header,
+        headerYears(shown.track, header),
+        split,
+        held = !named,
+        notes = line.notes,
+        foundAs = shown.track?.foundAs,
+    )
     UnderAlbum(shown, header, line, actions)
 }
 
@@ -92,3 +103,18 @@ internal fun UnderAlbum(
     val genres = genresItem(track, line.settings, line.notes, retries, actions.openSettingsAt, page, search)
     InPlaceLine(listOfNotNull(dates, genres, lyrics), line.memory, playing, onePanel)
 }
+
+/**
+ * The spelling the sources were asked with in place of [header]'s (#1293): "Found as “{title}”", and
+ * " by {artists}" when the artists were spelled otherwise too.
+ */
+@Composable
+internal fun foundAsLine(
+    found: FoundAs,
+    header: NowPlaying,
+): String =
+    if (found.artists == header.artists) {
+        stringResource(R.string.home_spelling_found, found.title)
+    } else {
+        stringResource(R.string.home_spelling_found_by, found.title, found.artists)
+    }

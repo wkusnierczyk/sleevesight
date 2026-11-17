@@ -141,14 +141,21 @@ class AiSearches(
         val model = access?.let { settings.model(it.provider.id) }
         val aboutGenre = kind == SearchKind.DEFINITION
         val fromWeb = used(kind, settings) != AiWebSearch.OFF
-        // A definition with no genre, or what the song is about with no web search (#908): no question.
-        val unasked = (aboutGenre && genre == null) || (kind == SearchKind.EXPLAIN && !fromWeb)
+        // A definition with no genre, or what the song is about or its spelling (#1293) with no web
+        // search (#908): no question.
+        val unasked = (aboutGenre && genre == null) || (kind.webOnly && !fromWeb)
         if (access == null || model == null || unasked) return null
         return CardKey(
             kind = CardKind.SEARCH,
             entity =
                 CardEntity.Track(
-                    track = if (aboutGenre) GENRE_ENTITY else track.normalized,
+                    // The spelling's by the track as the player names it (#1293), whatever it was found as.
+                    track =
+                        when {
+                            aboutGenre -> GENRE_ENTITY
+                            kind == SearchKind.SPELLING -> track.played
+                            else -> track.normalized
+                        },
                     duration = if (aboutGenre) null else track.nowPlaying.duration,
                     subject = subject(track, kind, genre),
                 ),
@@ -172,7 +179,7 @@ class AiSearches(
     fun offered(
         kind: SearchKind,
         settings: Settings,
-    ): Boolean = kind != SearchKind.EXPLAIN || (web != null && settings.aiWebSearchUsed != AiWebSearch.OFF)
+    ): Boolean = !kind.webOnly || (web != null && settings.aiWebSearchUsed != AiWebSearch.OFF)
 
     /**
      * How a question of [kind] searches the web under [settings] (#801): *AI web search* as used
@@ -230,6 +237,8 @@ class AiSearches(
             if (kept.pages != null && kept.reply.isEmpty()) {
                 // A search that found no page: nothing found, no call made.
                 SearchReading.NothingUsable
+            } else if (kind == SearchKind.SPELLING) {
+                spelled(answers.read(kind, kept.reply, track.played.artists, kept.pages), track, albums)
             } else {
                 answers.read(kind, kept.reply, track.normalized.artists, kept.pages, kept.sources)
             }
@@ -410,7 +419,7 @@ class AiSearches(
         ): String =
             when (kind) {
                 SearchKind.DATES -> kind.key + "\n" + albums.albumKey(track.nowPlaying.album.orEmpty())
-                SearchKind.GENRES, SearchKind.LYRICS, SearchKind.EXPLAIN -> kind.key
+                SearchKind.GENRES, SearchKind.LYRICS, SearchKind.EXPLAIN, SearchKind.SPELLING -> kind.key
                 SearchKind.DEFINITION -> kind.key + "\n" + genre.orEmpty()
             }
 
@@ -461,4 +470,23 @@ class AiSearches(
                         ?: if (reading == null) ReplyFailures.INCOMPLETE else MALFORMED
             }
     }
+}
+
+// The spelling [reading] names (#1293), as nothing usable when it is the player's own for [track], as
+// [names] read them: its title the player's (as reported, or as cleaned for the sources), its artists
+// none or theirs.
+private fun spelled(
+    reading: SearchReading,
+    track: TrackState,
+    names: NameMatcher,
+): SearchReading {
+    val spelling = (reading as? SearchReading.Found)?.answer as? SearchAnswer.Spelling ?: return reading
+    val played = track.played
+    val sameTitle =
+        listOf(track.nowPlaying.title, played.title, played.searchTitle).any {
+            names.key(it) == names.key(spelling.title)
+        }
+    val sameArtists =
+        spelling.artists.isEmpty() || spelling.artists.map(names::key) == played.artists.map(names::key)
+    return if (sameTitle && sameArtists) SearchReading.NothingUsable else reading
 }

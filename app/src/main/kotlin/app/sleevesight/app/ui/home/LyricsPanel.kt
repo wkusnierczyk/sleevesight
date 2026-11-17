@@ -80,7 +80,8 @@ internal fun homeLyrics(
  * results (#801), those, each noted so, in the search's place. With no page at all (not while
  * MusicBrainz is asked, nor for an instrumental), *Find the lyrics* after the search or the line
  * saying it is off ([search], #773; *Ask AI* until #908), whose pages show as MusicBrainz's do
- * ([AiLyrics]). Last, for every track with lyrics, a page found or not, *Explain the song* (#908,
+ * ([AiLyrics]); MusicBrainz having found nothing, the spelling check in its place until it has run
+ * ([SpellingCheckBlock], #1293). Last, for every track with lyrics, a page found or not, *Explain the song* (#908,
  * [SearchKind.EXPLAIN]), its answer cited as an insight is ([AiExplanation]); the two buttons one
  * column, as wide as the wider with its mark, the marks lined up ([chipColumnWidth], #1343).
  */
@@ -98,7 +99,14 @@ internal fun LyricsPanel(
     val style = MaterialTheme.typography.bodyLarge
     val width =
         chipColumnWidth(
-            listOf(stringResource(R.string.home_lyrics_find), stringResource(R.string.home_lyrics_explain)),
+            listOfNotNull(
+                stringResource(R.string.home_lyrics_find),
+                stringResource(R.string.home_lyrics_explain),
+                // The spelling check's button in the column too, where it may show (#1293).
+                stringResource(R.string.home_spelling_check).takeIf {
+                    (links as? LyricsLinks.NoLink)?.reason == NoLinkReason.NotFound
+                },
+            ),
             mark = true,
         )
     when (links) {
@@ -137,9 +145,13 @@ internal fun LyricsPanel(
                         PageLink(genius, search = true)
                         Browser()
                     }
-                    AiSearchBlock(search, SearchKind.LYRICS, width = width) { answer, _ ->
-                        if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
+                    val find: @Composable () -> Unit = {
+                        AiSearchBlock(search, SearchKind.LYRICS, width = width) { answer, _ ->
+                            if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
+                        }
                     }
+                    // Not found: the spelling check first, in its place until it has run (#1293).
+                    if (links.reason == NoLinkReason.NotFound) SpellingCheckBlock(search, width, find) else find()
                 }
             }
             Explain(search, width, cites)

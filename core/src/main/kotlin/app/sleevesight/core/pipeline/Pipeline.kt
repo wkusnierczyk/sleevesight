@@ -223,16 +223,23 @@ class Pipeline(
      * every source up afresh, past the caches, keeping what the run before found of a source it
      * cannot reach now ([LookAgain]). With [items], the lines the song's, the artist's and the
      * album's evidence holds beyond the track's own (#1131, [ItemLines]), its evidence takes them
-     * after its own.
+     * after its own. With [spelling] (#1293), the sources are asked with that spelling of the title
+     * and artists in place of the player's ([FoundAs]), its resolution used rather than asked for;
+     * the state keeps the player's report, and the spelling with it ([TrackState.foundAs]).
      */
+    @Suppress("LongParameterList") // The track, its control, and each way it may be asked again.
     suspend fun run(
         nowPlaying: NowPlaying,
         control: RunControl,
         again: Gathered? = null,
         lookAgain: LookAgain? = null,
         items: ItemLines = ItemLines(),
-    ): TrackState =
-        start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control, again, lookAgain, items).run()
+        spelling: FoundAs? = null,
+    ): TrackState {
+        val asked = spelling?.let { nowPlaying.copy(title = it.title, artists = it.artists) } ?: nowPlaying
+        val track = parts.normalizer.normalize(asked)
+        return start(nowPlaying, track, settings(), control, again, lookAgain, items, spelling).run()
+    }
 
     /**
      * Prepares [next], the next item in the player's queue, ahead of its play (D13, *Evidence*):
@@ -272,6 +279,7 @@ class Pipeline(
         again: Gathered? = null,
         lookAgain: LookAgain? = null,
         items: ItemLines = ItemLines(),
+        spelling: FoundAs? = null,
     ): TrackRun {
         val token = runs.updateAndGetValue()
         val since = shown.forgets
@@ -299,6 +307,7 @@ class Pipeline(
                     lookAgain,
                     LabelsBefore(genresBefore, laterKept),
                     items,
+                    spelling,
                 ),
             control = control,
             onEvent = { if (shown.forgets == since) eventFlow.tryEmit(it) },

@@ -30,7 +30,8 @@ import app.sleevesight.core.text.DateWhen
  * ([NoDates], [none]): with MusicBrainz off, a link to *Settings → Sources* ([openSources]), and
  * when it could not be reached, *Retry* ([retry], [RetryLine]), which hands the focus to the panel's
  * *Close* as it goes. Under why, but while MusicBrainz is still asked, *Search with AI* ([search],
- * #773), which says what it found as the panel says MusicBrainz's dates ([aiDates]). Open, it
+ * #773), which says what it found as the panel says MusicBrainz's dates ([aiDates]); MusicBrainz having
+ * found nothing, the spelling check in its place until it has run ([SpellingCheckBlock], #1293). Open, it
  * asks [look], which looks up the album's release group's first release (#1099) and may make its
  * album sentence an edition's; null when there is none to ask, asked again when it changes.
  */
@@ -55,10 +56,14 @@ internal fun datesItem(
         if (sentences.isEmpty()) {
             NoDatesText(none, retry, openSources, toClose)
             if (none != NoDates.LOOKING) {
-                AiSearchBlock(search, SearchKind.DATES) { answer, _ ->
-                    val header = search.header ?: search.track?.nowPlaying
-                    if (answer is SearchAnswer.Dates && header != null) AiDatesPanel(aiDatesCited(answer, header))
+                val ask: @Composable () -> Unit = {
+                    AiSearchBlock(search, SearchKind.DATES) { answer, _ ->
+                        val header = search.header ?: search.track?.nowPlaying
+                        if (answer is SearchAnswer.Dates && header != null) AiDatesPanel(aiDatesCited(answer, header))
+                    }
                 }
+                // Not found: the spelling check first, in *Ask AI*'s place until it has run (#1293).
+                if (none == NoDates.NOT_FOUND) SpellingCheckBlock(search, then = ask) else ask()
             }
         } else {
             DatesPanel(sentences)

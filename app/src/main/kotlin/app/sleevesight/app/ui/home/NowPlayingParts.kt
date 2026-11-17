@@ -71,6 +71,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ArtistSplit
+import app.sleevesight.core.pipeline.FoundAs
 import kotlinx.coroutines.delay
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -292,6 +293,10 @@ private fun Progress(
  * citation chip at its end ([authorsCite]), a tap on which goes where [notes]' citations go.
  *
  * While [held] (#1355, [peopleNamed]), neither: an empty line in the artists' place, its height kept.
+ *
+ * With the sources asked in another spelling ([foundAs], #1293), a quiet line under the title says
+ * it ("Found as “Nessun dorma”", [foundAsLine]), read after the title as shown; the title stays the
+ * player's.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Suppress("LongParameterList") // The track, its years, its people, and where the authors' mark goes.
@@ -303,6 +308,7 @@ internal fun KeyData(
     split: ArtistSplit? = null,
     held: Boolean = false,
     notes: PanelNotes = PanelNotes(),
+    foundAs: FoundAs? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
@@ -310,6 +316,15 @@ internal fun KeyData(
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
         )
+        foundAs?.let {
+            Text(
+                foundAsLine(it, header),
+                Modifier.testTag(FOUND_AS_TAG),
+                style = MaterialTheme.typography.bodySmall,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         val about =
             listOfNotNull(normalized.from?.let { stringResource(R.string.home_title_from, it) }, normalized.variant)
         if (about.isNotEmpty()) Small(about.joinToString(" · "))
@@ -389,6 +404,9 @@ private fun Small(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
+
+/** The test tag of the line under the title naming the spelling the track was found as (#1293). */
+const val FOUND_AS_TAG: String = "found-as"
 
 /** The test tag of the line under the title while its artists are held back (#1355). */
 const val ARTISTS_HELD_TAG: String = "artists-held"

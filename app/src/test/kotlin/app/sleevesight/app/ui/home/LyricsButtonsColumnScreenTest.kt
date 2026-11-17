@@ -90,7 +90,11 @@ class LyricsButtonsColumnScreenTest {
 
     private val feed =
         object : AiSearchFeed {
-            val states = SearchKind.entries.associateWith { MutableStateFlow<AiSearch>(AiSearch.Offered) }
+            // The spelling check not offered (#1293: as with *AI web search* off), so *Ask AI* shows.
+            val states =
+                SearchKind.entries.associateWith {
+                    MutableStateFlow(if (it == SearchKind.SPELLING) AiSearch.None else AiSearch.Offered)
+                }
 
             override fun search(
                 track: TrackState,
