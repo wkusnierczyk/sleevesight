@@ -29,8 +29,8 @@ import kotlin.io.encoding.Base64
  * vouch for the app (`assetlinks.json`), and a page of its own. A code sent to another app that
  * claimed the scheme is no use without the verifier, which never leaves the phone but to OpenRouter.
  *
- * OpenRouter answers a code it refuses, or one past its ten minutes, with 403, which `:net` reports
- * without the body: both are [KeyExchange.Refused]; the app tells them apart by the time taken.
+ * OpenRouter answers a code it refuses, or one past its ten minutes, with 403: both are
+ * [KeyExchange.Refused]; the app tells them apart by the time taken.
  *
  * @param net the process's one `NetClient`.
  * @param hasher SHA-256, for the challenge.

@@ -581,6 +581,8 @@ class AppGraph internal constructor(
                     aiRetry = { latestSettings.value?.aiRetry ?: Settings.DEFAULT_AI_RETRY },
                     // Each try that failed, in the diagnostics' events (#1164).
                     aiTried = { diagnostics.log.record(it) },
+                    // A key the service refused, said under *AI services* (#1157).
+                    refusals = keyRefusals,
                 ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.

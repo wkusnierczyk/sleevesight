@@ -85,6 +85,20 @@ class KeyRefusalsTest {
         }
 
     @Test
+    fun aLateRefusalOfTheOldKeyDoesNotMarkItsReplacement() =
+        runTest {
+            val refusals = KeyRefusals()
+            refusals.keysChanged { Secret("old") }
+            // A call made with the old key, answered only after the new one was saved.
+            refusals.keysChanged { Secret("new") }
+            refusals.watching(Answering(refused)).stream(request, Secret("old")).toList()
+            assertEquals(emptySet<ProviderId>(), refusals.refused.first())
+            // The new key refused marks it.
+            refusals.watching(Answering(refused)).stream(request, Secret("new")).toList()
+            assertEquals(setOf(ProviderId.OPENROUTER), refusals.refused.first())
+        }
+
+    @Test
     fun aCallThatSucceedsWithAnotherKeyDoesNotLiftTheMarkOfTheKeyRefused() =
         runTest {
             val refusals = KeyRefusals()

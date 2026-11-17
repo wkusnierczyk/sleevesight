@@ -190,6 +190,38 @@ class OpenRouterProviderTest {
         }
 
     @Test
+    fun `a 403 answer for moderation ends as a refusal, and never as a key refused`() =
+        runTest {
+            val flagged =
+                """{"error":{"code":403,"message":"Your chosen model requires moderation and """ +
+                    """your input was flagged"}}"""
+            val (events, _) = events { response(403, flagged) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL)), events)
+        }
+
+    @Test
+    fun `a 403 answer about the key is a key refused`() =
+        runTest {
+            val disabled = """{"error":{"code":403,"message":"This API key is disabled"}}"""
+            val (events, _) = events { response(403, disabled) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.UNAUTHORIZED)), events)
+        }
+
+    @Test
+    fun `a 403 to the model list is a key refused`() =
+        runTest {
+            val forbidden = """{"error":{"code":403,"message":"Forbidden"}}"""
+            val listed = provider(ReplayNetClient { response(403, forbidden) })
+            assertEquals(ModelList.Failed(AiErrorKind.UNAUTHORIZED), listed.models(key))
+        }
+
+    @Test
+    fun `OpenRouter's host policy passes its 403 and 429 on, for their bodies`() {
+        assertTrue(OpenRouterProvider.HOST_POLICY.passOn403)
+        assertTrue(OpenRouterProvider.HOST_POLICY.passOn429)
+    }
+
+    @Test
     fun `a stream that ends without a finish reason broke off`() =
         runTest {
             val (events, _) = events { ok(sse("""{"choices":[{"delta":{"content":"Hel"}}]}""")) }

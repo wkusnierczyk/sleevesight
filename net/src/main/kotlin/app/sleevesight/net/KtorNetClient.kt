@@ -277,7 +277,7 @@ internal class KtorNetClient(
         // A host whose 429 may mean something no retry mends has it read as a response.
         val tooMany = status == HttpStatusCode.TooManyRequests && policy?.passOn429 != true
         return when {
-            status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden -> {
+            refusesKey(status, policy) -> {
                 Attempt.Failed(NetError.Unauthorized(status.value))
             }
 
@@ -467,3 +467,10 @@ private fun withinAllowance(
  */
 private fun HostPolicy?.lastTurn(retry: RetryPolicy): Duration =
     this?.takeIf { it.minInterval.isPositive() }?.let { it.minInterval + it.retryJitter } ?: retry.initialDelay
+
+// Whether [status] is a key refused: a 401, or a 403 but from a host whose 403 may be about the
+// request, not the key, which has it read as a response (#1157).
+private fun refusesKey(
+    status: HttpStatusCode,
+    policy: HostPolicy?,
+): Boolean = status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden && policy?.passOn403 != true

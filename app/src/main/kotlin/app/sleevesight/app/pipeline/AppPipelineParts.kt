@@ -47,6 +47,7 @@ import kotlin.time.Duration
  * next one. Each call through the client is asked again when it fails for a while only, for up to
  * [aiRetry] (*Retry when the AI fails*, #1164, [AiRetry]; none unless given: the app gives the
  * setting, as last read), and each try that failed is told to [aiTried], for the diagnostics.
+ * Each try is heard by [refusals] too (#1157), which marks a key the service refused.
  */
 @Suppress("LongParameterList") // The wiring, the shared parts, and what the app sets apart from the tests.
 class AppPipelineParts(
@@ -57,6 +58,7 @@ class AppPipelineParts(
     private val phone: () -> Locale = Locale::getDefault,
     private val aiRetry: () -> Duration = { Duration.ZERO },
     private val aiTried: (PipelineEvent) -> Unit = {},
+    private val refusals: KeyRefusals? = null,
     private val cache: () -> PipelineCache,
 ) : (PipelineKeys, Settings) -> PipelineParts {
     override fun invoke(
@@ -74,6 +76,8 @@ class AppPipelineParts(
                 settings.aiProvider
                     ?.takeUnless { blocked }
                     ?.let { wiring.aiProviders[it] }
+                    // Each try heard, a key refused marked (#1157): under the retries, as the model check.
+                    ?.let { p -> refusals?.watching(p) ?: p }
                     ?.let { p ->
                         keys.ai?.let { AiAccess(AiRetry(models?.watching(p) ?: p, aiRetry, ended = aiTried), it) }
                     },

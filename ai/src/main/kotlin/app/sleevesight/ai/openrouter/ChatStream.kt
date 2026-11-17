@@ -20,8 +20,9 @@ import kotlin.time.Clock
  * `reasoning`, the model's thinking, is skipped, but counts as generated), its `finish_reason` is
  * the stop reason, and a `usage` replaces the counts before it (OpenRouter sends it in the last
  * chunk). `[DONE]` ends the stream; so does the transport, after a finish reason. An `error` in a
- * chunk (a provider failing mid-reply, with `finish_reason` `error`) ends it with its kind, as does a
- * moderation refusal (403), which ends as a refusal does. After the one terminal event, nothing more
+ * chunk (a provider failing mid-reply, with `finish_reason` `error`) ends it with its kind; a
+ * moderation refusal (a 403 not about the key, [moderated]), in a chunk or as the answer, ends as a
+ * refusal does. After the one terminal event, nothing more
  * is emitted.
  */
 internal class ChatStream(
@@ -92,16 +93,25 @@ internal class ChatStream(
                 ended -> null
                 reason != null -> CompletionEvent.Done(Usage(inputTokens, outputTokens), reason)
                 result is NetResult.Failure -> failure(result.error)
-                result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
+                result is NetResult.Success && !result.value.isSuccess -> refusedOr(result.value)
                 else -> brokeOff(null, Usage(inputTokens, outputTokens))
             }
         return event?.let(::end)
     }
 
+    // An error answer: a moderation refusal (a 403 not about the key, `moderated`) ends as a refusal
+    // does, so the key is never taken for refused; any other with its kind.
+    private fun refusedOr(response: NetResponse): CompletionEvent =
+        if (moderated(response.status, decode<WireErrorBody>(response.body)?.error?.message)) {
+            CompletionEvent.Done(Usage(inputTokens, outputTokens), StopReason.REFUSAL)
+        } else {
+            errorOf(response, clock.now())
+        }
+
     // A moderation refusal ends as a refusal does; any other error with its kind.
     private fun streamError(error: WireError): CompletionEvent {
         val status = error.code?.content?.toIntOrNull()
-        return if (status == FORBIDDEN) {
+        return if (moderated(status, error.message)) {
             CompletionEvent.Done(Usage(inputTokens, outputTokens), StopReason.REFUSAL)
         } else {
             CompletionEvent.Error(kindOf(status, error.message), detail = codeDetail(error.code?.content))
@@ -135,6 +145,5 @@ internal class ChatStream(
 
     private companion object {
         const val DONE = "[DONE]"
-        const val FORBIDDEN = 403
     }
 }

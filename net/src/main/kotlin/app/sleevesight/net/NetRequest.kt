@@ -84,8 +84,9 @@ class NetSecrets internal constructor(
 }
 
 /**
- * A response that is not an error (see [NetError]): any status other than 401, 403, 429 and 5xx,
- * and a 3xx only when it was not followed (see [NetClient.send]). A 404 is a response, not an
+ * A response that is not an error (see [NetError]): any status other than 401, 403, 429 and 5xx
+ * (a 403 or 429 too from a host whose policy passes it on, [HostPolicy.passOn403],
+ * [HostPolicy.passOn429]), and a 3xx only when it was not followed (see [NetClient.send]). A 404 is a response, not an
  * error, since what it means depends on the source.
  *
  * [bytes] is the body as received, for images; [body] is it decoded as UTF-8, which every source and

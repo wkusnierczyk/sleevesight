@@ -57,7 +57,10 @@ import kotlin.time.Instant
  * Errors ([kindOf]): 402 is an account out of credit, or a key past its spending limit
  * ([AiErrorKind.BILLING]); a 429 for a free model's daily allowance ([FREE_DAILY]) is
  * [AiErrorKind.QUOTA_EXHAUSTED], any other a rate limit, with the wait its `Retry-After` asks; 401
- * and 403 (`:net`'s `NetError.Unauthorized`) a key refused, such as one deleted on OpenRouter; a 400
+ * (`:net`'s `NetError.Unauthorized`) a key refused, such as one deleted on OpenRouter. A 403 comes
+ * with its body ([HOST_POLICY]): OpenRouter answers it when a model's moderation flags the prompt,
+ * which ends a reply as a refusal does ([moderated]); only one whose message names the key is a key
+ * refused, and so is any 403 to the model list, where no prompt is sent; a 400
  * or 404 naming the model, [AiErrorKind.MODEL_NOT_FOUND]. The request is a `POST`, so `:net` never
  * repeats it once it may have been acted on: a paid call is never sent twice.
  *
@@ -161,7 +164,7 @@ class OpenRouterProvider(
          * reached), and its 429 passed on, so the body can say whether a free model's daily
          * allowance is used up ([HostPolicy.passOn429]).
          */
-        val HOST_POLICY: HostPolicy = HostPolicy(minInterval = Duration.ZERO, passOn429 = true)
+        val HOST_POLICY: HostPolicy = HostPolicy(minInterval = Duration.ZERO, passOn429 = true, passOn403 = true)
 
         /**
          * A whole stream, reasoning included, may take this long; `:net`'s socket timeout still
@@ -292,6 +295,21 @@ internal fun kindOf(
         null -> AiErrorKind.UNEXPECTED_RESPONSE
         else -> if (status >= SERVER_ERRORS) AiErrorKind.SERVER else AiErrorKind.UNEXPECTED_RESPONSE
     }
+
+/**
+ * Whether an error with [status] and [message] is a moderation refusal (#1157): a 403 whose message
+ * does not name the key. OpenRouter answers 403 when the model's moderation flags the prompt; that is
+ * the prompt declined, not the key refused, so the key is never marked refused for it.
+ */
+internal fun moderated(
+    status: Int?,
+    message: String?,
+): Boolean = status == FORBIDDEN && !namesKey(message)
+
+// Whether [message] is about the API key (a word "key", not "keyword").
+private fun namesKey(message: String?): Boolean = message != null && KEY_WORD.containsMatchIn(message)
+
+private val KEY_WORD = Regex("\\bkey\\b", RegexOption.IGNORE_CASE)
 
 // "… is not a valid model ID", as OpenRouter words a 400 for a model it does not know.
 private fun namesModel(message: String?): Boolean = message?.contains("valid model", ignoreCase = true) == true

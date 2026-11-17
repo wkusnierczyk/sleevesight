@@ -408,6 +408,27 @@ class KtorNetClientTest {
         }
 
     @Test
+    fun `a 403 from a host whose policy passes it on is the response, elsewhere and a 401 Unauthorized`() =
+        runTest {
+            val config =
+                NetConfig(
+                    appVersion = "test",
+                    hosts = mapOf("example.org" to HostPolicy(Duration.ZERO, passOn403 = true)),
+                )
+            val body = """{"error":{"code":403,"message":"Your input was flagged"}}"""
+            val passed = withClient(config, handler = { respond(body, HttpStatusCode.Forbidden) }) { it.send(post) }
+            val response = assertIs<NetResult.Success<NetResponse>>(passed).value
+            assertEquals(403, response.status)
+            assertEquals(body, response.body)
+
+            val unauthorized =
+                withClient(config, handler = { respond("", HttpStatusCode.Unauthorized) }) { it.send(post) }
+            assertEquals(NetResult.Failure(NetError.Unauthorized(401)), unauthorized)
+            val elsewhere = withClient(handler = { respond(body, HttpStatusCode.Forbidden) }) { it.send(post) }
+            assertEquals(NetResult.Failure(NetError.Unauthorized(403)), elsewhere)
+        }
+
+    @Test
     fun `a body longer than maxBytes is TooLarge, declared or not`() =
         runTest {
             val small = NetRequest("https://example.org/a", maxBytes = 5)
