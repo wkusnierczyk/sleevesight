@@ -52,15 +52,17 @@ internal fun providerName(provider: ProviderId): Int =
 
 /** The name of a reasoning-effort level, as the settings offer it. */
 @Composable
-internal fun effortLabel(effort: ReasoningEffort): String =
-    stringResource(
-        when (effort) {
-            ReasoningEffort.MINIMAL -> R.string.settings_effort_minimal
-            ReasoningEffort.LOW -> R.string.settings_effort_low
-            ReasoningEffort.MEDIUM -> R.string.settings_effort_medium
-            ReasoningEffort.HIGH -> R.string.settings_effort_high
-        },
-    )
+internal fun effortLabel(effort: ReasoningEffort): String = stringResource(effortName(effort))
+
+/** The string of [effort]'s name, as the settings offer it ([effortLabel]). */
+@StringRes
+internal fun effortName(effort: ReasoningEffort): Int =
+    when (effort) {
+        ReasoningEffort.MINIMAL -> R.string.settings_effort_minimal
+        ReasoningEffort.LOW -> R.string.settings_effort_low
+        ReasoningEffort.MEDIUM -> R.string.settings_effort_medium
+        ReasoningEffort.HIGH -> R.string.settings_effort_high
+    }
 
 @StringRes
 internal fun keyName(id: SecretId): Int =

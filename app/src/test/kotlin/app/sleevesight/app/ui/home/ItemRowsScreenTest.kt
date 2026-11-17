@@ -159,7 +159,7 @@ class ItemRowsScreenTest {
             )
         show(state(onDemand)) {
             row(InsightItem.ARTIST).performScrollTo().performClick()
-            compose.onNodeWithText("by Claude Haiku 4.5").assertExists()
+            compose.onNodeWithText("Written by Claude Haiku 4.5.").assertExists()
             compose.onNodeWithText("a Canadian singer", substring = true).assertExists()
             // The key insight has none written here: the one is the artist's.
             compose.onAllNodesWithTag(REPORT_TAG).assertCountEquals(1)

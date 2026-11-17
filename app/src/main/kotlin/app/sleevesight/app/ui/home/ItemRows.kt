@@ -115,7 +115,8 @@ internal fun ItemRows(
             // Keyed by the item, not its place: a row opened keeps the others' state where they are.
             key(item) {
                 if (item in open) {
-                    // Followed once, for *Read aloud* in the heading and the content under it.
+                    // Followed once, for the content under the heading; its *Read aloud* at the end of
+                    // its credit's row, under the text (#959, #1162).
                     val shown = itemShown(item, context)
                     ItemPanel(
                         kinds[index],
@@ -126,7 +127,6 @@ internal fun ItemRows(
                             folds.toggle(item)
                             handoff.moveTo(buttonOf(item))
                         },
-                        actions = { centred -> ItemReadAloud(item, context, shown, centred) },
                     ) {
                         // *Retry* beside sources not reached goes once tapped: the focus to *Close* (#1163).
                         ItemContent(
@@ -134,8 +134,7 @@ internal fun ItemRows(
                             context,
                             folds.tapped(item),
                             shown,
-                            readAloud = false,
-                            folds.opening(item),
+                            opening = folds.opening(item),
                         ) { handoff.moveTo(closeOf(item)) }
                     }
                 } else {
@@ -162,9 +161,9 @@ internal fun ItemRows(
 }
 
 // [row]'s panel, open in its place: [kind] as its title, the name under it, then the version the
-// player names, if any ("Version: 2024 Remaster", #1160), [actions] (*Read aloud*)
-// beside *Close*; told whether the input focus is in it ([focused]); its *Close*, under
-// [closeModifier] (a focus requester), [close]s it.
+// player names, if any ("Version: 2024 Remaster", #1160), *Close* at the heading's end (its *Read
+// aloud* is on the credit's row under the text, #959); told whether the input focus is in it
+// ([focused]); its *Close*, under [closeModifier] (a focus requester), [close]s it.
 @Suppress("LongParameterList") // What the panel shows, and its focus and close.
 @Composable
 private fun ItemPanel(
@@ -173,7 +172,6 @@ private fun ItemPanel(
     closeModifier: Modifier,
     focused: (Boolean) -> Unit,
     close: () -> Unit,
-    actions: @Composable (Modifier) -> Unit,
     content: @Composable () -> Unit,
 ) {
     Box(Modifier.padding(vertical = PANEL_GAP).onFocusChanged { focused(it.hasFocus) }) {
@@ -184,7 +182,6 @@ private fun ItemPanel(
             closeModifier = closeModifier,
             subtitle = row.name,
             note = row.version?.let { stringResource(R.string.home_item_version, it) },
-            actions = actions,
         ) { content() }
     }
 }

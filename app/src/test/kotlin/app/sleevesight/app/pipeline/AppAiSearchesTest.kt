@@ -3,6 +3,7 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.app.ui.home.HomeFixtures
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
@@ -88,6 +89,20 @@ class AppAiSearchesTest {
             assertEquals(1, provider.requests)
             // Each panel its own search.
             assertEquals(AiSearch.Offered, searches.now(SearchKind.DATES))
+        }
+
+    // #1162: the effort asked at, for the credit; none at the scale's default (low), which is not said.
+    @Test
+    fun `an answer carries the effort it was asked at for its credit, none at the default`() =
+        runTest {
+            val cases = listOf(ReasoningEffort.MEDIUM to ReasoningEffort.MEDIUM, ReasoningEffort.LOW to null)
+            for ((asked, credited) in cases) {
+                settings.value = Settings(aiProvider = ProviderId.ANTHROPIC).withEffort(ProviderId.ANTHROPIC, asked)
+                val searches = searches()
+                searches.ask(track, SearchKind.GENRES, facts)
+                advanceUntilIdle()
+                assertEquals("asked at $asked", credited, (searches.now() as AiSearch.Answered).effort)
+            }
         }
 
     @Test

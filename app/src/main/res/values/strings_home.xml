@@ -330,10 +330,24 @@
     <string name="home_ai_stop">Stop</string>
     <!-- Stop's action, as a screen reader names it ("Double-tap to stop the call"). -->
     <string name="home_ai_stop_action">stop the call</string>
-    <!-- Under what the question found, on its own line, in italics; %1$s is the model ("by Claude Haiku
-         5.5"), whether it was asked by a tap or automatically (#801's revised pick). Also the byline
-         under the Key insights heading, naming the model that wrote the insight (#811). -->
-    <string name="home_ai_by">by %1$s</string>
+    <!-- The credit of a text an AI model wrote (#1162), in italics, under the text, first in the notes
+         under it (#959): the key insight, the song's, artist's and album's insights, a genre's reason,
+         what Ask AI found, the song's explanation. %1$s is the model as AI services lists it ("Claude
+         Haiku 5.5"). "Rewritten by" for a text a rewrite wrote (Rewrite insight, #854, or an automatic
+         write in place of another model's, #972). With %2$s, what else it was written with (the "with"
+         list): the effort when not the service's default (home_credit_effort), web search for a
+         genre's reason from web pages (home_credit_web_search), and a rewrite's other reasons
+         (home_rewrite_part_*), joined with ", " and a last home_rewrite_and. On a kept insight, what
+         follows goes after it on the same line: a rewrite that failed or was stopped, what Look again
+         found, Rewrite insight offered (home_rewrite_offer). -->
+    <string name="home_credit_written">Written by %1$s.</string>
+    <string name="home_credit_rewritten">Rewritten by %1$s.</string>
+    <string name="home_credit_written_with">Written by %1$s with %2$s.</string>
+    <string name="home_credit_rewritten_with">Rewritten by %1$s with %2$s.</string>
+    <!-- In the credit's "with" list: %1$s the effort level as Settings names it, in lower case ("medium effort"). -->
+    <string name="home_credit_effort">%1$s effort</string>
+    <!-- In the credit's "with" list, for a genre's reason from web pages (#695) and the check of the track's vocals. -->
+    <string name="home_credit_web_search">web search</string>
     <!-- Under an AI answer kept from before (#851), after its credit lines: the time it was written, today. -->
     <string name="home_ai_kept_today">Kept from before: written today at %1$s.</string>
     <!-- The same, written on an earlier day: its date ("31 October", with the year when not this year). -->
@@ -588,47 +602,33 @@
          retell it. Shown again whenever the insight is shown from before. -->
     <string name="home_insight_nothing_beyond">We could not find more source information for the insight.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
-    <!-- The first line of a written insight's footer (#671), for an insight not written in this run but
-         earlier: on an earlier play of the track, or before a Look again, a settings change or a
-         rewrite that failed. What follows from it goes on the same line, after it: a rewrite that
-         failed or was stopped, what Look again found, and Rewrite insight offered
-         (home_rewrite_offer). Nothing for an insight just written. For an insight written by Rewrite
-         insight, or by an automatic write in place of another model's (#972), home_rewritten_with
-         in its place (#854), never both. -->
-    <string name="home_written_before">As written previously.</string>
-    <!-- In place of "As written previously." (#854), for an insight written by Rewrite insight, or
-         by an automatic write in place of another model's (#972), on the play it was rewritten and
-         every later one while it is the one kept; what follows goes after it as after "As written
-         previously.". %1$s: what the rewrite used that the insight it replaced did not, its parts
+    <!-- After the credit (home_credit_*), on its line, with Rewrite insight offered (#615, #625, #671,
+         #854, #1162). %1$s: what a rewrite would use now that the insight shown did not, its parts
          (home_rewrite_part_*, home_rewrite_model_effort) joined with ", " and a last
-         home_rewrite_and. -->
-    <string name="home_rewritten_with">Rewritten with %1$s.</string>
-    <!-- After "As written previously." or home_rewritten_with, with Rewrite insight offered (#615,
-         #625, #671, #854). %1$s: what a rewrite would use now that the insight shown did not, built as
-         in home_rewritten_with. No cost is said: the button carries the AI mark. -->
+         home_rewrite_and. No cost is said: the button carries the AI mark. -->
     <string name="home_rewrite_offer">Tap Rewrite insight to have AI rewrite the insight with %1$s.</string>
-    <!-- The parts of home_rewritten_with and home_rewrite_offer (#854), in this order: what Look
+    <!-- The parts of home_rewrite_offer and of a rewrite's credit (#854, #1162), in this order: what Look
          again found new; the evidence changed otherwise (a source's key, a source or the web search
          switched on or off, or a source answering otherwise); the AI service, model or effort (home_rewrite_model_effort: %1$s the
          model as AI services lists it, %2$s the effort level as Settings names it, in lower case; the
-         model alone with the service's default effort); AI service knowledge; the prompt's version,
-         after an app update. -->
+         model alone with the service's default effort; not in the credit, which names the model and
+         its effort itself); AI service knowledge; the prompt's version, after an app update. -->
     <string name="home_rewrite_part_new_findings">new findings from sources</string>
     <string name="home_rewrite_part_updated_sources">updated sources</string>
     <string name="home_rewrite_model_effort">%1$s %2$s effort</string>
     <string name="home_rewrite_part_knowledge_on">AI service knowledge switched on</string>
     <string name="home_rewrite_part_knowledge_off">AI service knowledge switched off</string>
     <string name="home_rewrite_part_instructions">the updated app’s instructions</string>
-    <!-- The last two parts of home_rewritten_with and home_rewrite_offer: %1$s the parts before the
+    <!-- The last two parts of the credit's "with" list and of home_rewrite_offer: %1$s the parts before the
          last, joined with ", ", %2$s the last. -->
     <string name="home_rewrite_and">%1$s and %2$s</string>
-    <!-- After "As written previously.", which says the insight shown is the one written earlier (#671). -->
+    <!-- After the credit of the insight shown, the one written earlier (#671, #1162). -->
     <string name="home_rewrite_failed">Rewriting failed: %1$s.</string>
     <string name="home_rewrite_stopped">Rewriting stopped.</string>
     <!-- Look again (#617): the first item of the menu beside Write insight, on a written insight; it
          makes no AI call, so it has no AI mark. Then what is said while it looks the sources up (with
-         Exa web search on, or not), on a line of its own (#785), and after "As written previously."
-         (#671) once it found nothing new. Once it found something new, home_rewrite_offer says so
+         Exa web search on, or not), on a line of its own (#785), and after the credit
+         (#671, #1162) once it found nothing new. Once it found something new, home_rewrite_offer says so
          (#854). -->
     <string name="home_look_again">Look again</string>
     <string name="home_look_again_looking_web">Looking every source up again, the web search included: a paid search on your Exa key.</string>
@@ -641,8 +641,8 @@
     <!-- The note under an insight and under a genre's reason (#437): only for sentences the sources do
          not back, which are dimmed (uncited, or citing missing evidence; #819), naming the mark
          (#664); one text for any number of them (#854). A genre's reason kept from before says so in
-         a line of its own (home_ai_kept_today, #851), an insight in its footer ("As written
-         previously.", #671). -->
+         a line of its own (home_ai_kept_today, #851), an insight not at all: its credit says who wrote
+         it (#1162). -->
     <string name="home_note_unbacked">Dimmed text is not backed by the sources.</string>
     <!-- Under an insight, a song's, an artist's or an album's insight and a genre's reason that cite lines
          found in the track's language (#902), after the note above: one line per language. %1$s is the

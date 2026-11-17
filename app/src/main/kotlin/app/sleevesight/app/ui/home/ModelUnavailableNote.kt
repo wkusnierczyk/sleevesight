@@ -27,7 +27,7 @@ internal fun withoutInsight(insight: InsightState): Boolean =
     }
 
 /**
- * Why a rewrite ended without an insight ([reason]), as a footer says it after *As written previously.*
+ * Why a rewrite ended without an insight ([reason]), as a footer says it after the credit (#1162)
  * (`rewriteFailure`), unless the service refused the model (`model_not_found`, `model_refused`) while
  * it is found unavailable ([unavailable], #969): the note under the insight ([ModelUnavailable]) says
  * that then, and points to *AI services*, where the reason alone read as though the app made the

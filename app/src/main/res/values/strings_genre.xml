@@ -35,11 +35,6 @@
          only MusicBrainz gives, then the reason; or the reason alone), after the small turning
          record, in the panel's quiet note style. -->
     <string name="genre_why_looking">Looking for an explanation…</string>
-    <!-- Under every reason, in italics (#762): %1$s is the model's name ("Claude Haiku 5.5"). -->
-    <string name="genre_why_by">by %1$s</string>
-    <!-- In its place under a reason from web pages (#695): asked again with web search, and citing a
-         page or a source. %1$s is the model's name. -->
-    <string name="genre_why_by_web">by %1$s, with web search</string>
     <!-- Under the question, above a reason none of whose sentences cites a source or a web page, only
          the model's own knowledge (#695), in the panel's quiet note style. -->
     <string name="genre_why_from_model">The sources don’t explain this genre. This is from the AI model’s own knowledge, not verified.</string>
@@ -132,7 +127,7 @@
          small turning record, in the panel's quiet note style. -->
     <string name="genre_vocals_checking">Checking whether this track has vocals…</string>
     <!-- Under Instrumental's definition once the check of the track's vocals (#998) found a page that
-         describes it as instrumental, the page's citation after it; then genre_why_by_web. -->
+         describes it as instrumental, the page's citation after it; then the credit, with web search (home_credit_written_with, #1162). -->
     <string name="genre_vocals_instrumental">Web search found this track described as instrumental.</string>
     <!-- The same once it found vocals, after a tap on Why is this instrumental?: the chip stays weak
          until the genres are built again. %1$s is the genre, in italics, as its chip names it. -->
