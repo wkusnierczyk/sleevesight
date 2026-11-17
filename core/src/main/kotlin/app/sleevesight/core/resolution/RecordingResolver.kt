@@ -409,7 +409,9 @@ class RecordingResolver(
         val relations = withRecording.credits.filter { it.role == CreditRole.PERFORMER }
         val earliest =
             !cover && original != null && ourFirstSession != null && isEarlier(ourFirstSession, original.date)
-        val roles = names.rolesOf(track, withRecording.artists, credited, relations, work)
+        // The joint credit's artists after the track's own (#1298): a composer among them is credited.
+        val resolved = withRecording.artists + withRecording.jointArtists
+        val roles = names.rolesOf(track, resolved, credited, relations, work)
         val composers = roles?.composers.orEmpty()
         // The ids the resolution has for the credited composers, by which their dates are found where the
         // player spells a name otherwise (#1132).
