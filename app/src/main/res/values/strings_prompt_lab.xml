@@ -32,6 +32,9 @@
     <string name="lab_compare">Compare</string>
     <string name="lab_show_instructions">Show the instructions</string>
     <string name="lab_hide_instructions">Hide the instructions</string>
+    <!-- What a screen reader reads for the two above; %1$s is the variant's name (lab_variant_named). -->
+    <string name="lab_show_instructions_named">Show the instructions for %1$s</string>
+    <string name="lab_hide_instructions_named">Hide the instructions for %1$s</string>
     <string name="lab_custom_label">Custom instructions</string>
     <string name="lab_custom_reset">Reset</string>
     <!-- Under the Custom field: what {role} stands for. -->

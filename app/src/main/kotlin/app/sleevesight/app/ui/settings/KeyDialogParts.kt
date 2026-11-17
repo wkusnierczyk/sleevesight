@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.ui.theme.PillButton
 
 // The key dialog's terms text and buttons (#543).
 
@@ -137,13 +137,13 @@ internal fun KeyEntryButtons(
     }
 }
 
-/** *Save*, the key dialog's main action: Material's filled button. */
+/** *Save*, the key dialog's main action: the pill every button in Settings is (#1387). */
 @Composable
 internal fun SaveKeyButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    Button(onClick = onClick, enabled = enabled) { Text(stringResource(R.string.settings_save)) }
+    PillButton(stringResource(R.string.settings_save), onClick = onClick.takeIf { enabled })
 }
 
 /**

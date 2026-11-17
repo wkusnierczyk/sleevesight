@@ -4,7 +4,6 @@ package app.sleevesight.app.ui.lab
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,10 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -45,6 +42,7 @@ import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.lab.PromptLab
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.core.synthesis.LabSettings
 import app.sleevesight.core.synthesis.PromptKind
@@ -164,13 +162,18 @@ private fun Variants(
                     Text(variantName(id, variant?.name), style = MaterialTheme.typography.bodyMedium)
                     Quiet(variantDescription(id, variant?.description))
                     val showing = shown[id] == true
-                    Text(
+                    // Read with the variant's name, as there is one for each variant (#1387).
+                    val name = variantName(id, variant?.name)
+                    PillButton(
                         stringResource(if (showing) R.string.lab_hide_instructions else R.string.lab_show_instructions),
-                        Modifier
-                            .clickable(role = Role.Button) { shown[id] = !showing }
-                            .padding(vertical = 4.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        onClick = { shown[id] = !showing },
+                        modifier = Modifier.padding(top = 4.dp).testTag(labInstructionsTag(kind, id)),
+                        named =
+                            if (showing) {
+                                stringResource(R.string.lab_hide_instructions_named, name)
+                            } else {
+                                stringResource(R.string.lab_show_instructions_named, name)
+                            },
                     )
                     if (showing) Instructions(kind, id, settings, update)
                 }
@@ -211,12 +214,14 @@ private fun Instructions(
         textStyle = MaterialTheme.typography.bodySmall,
     )
     Quiet(stringResource(R.string.lab_custom_role))
-    TextButton(onClick = {
-        update { it.withCustom(kind, LabPrompts.ROLE) }
-        lab?.applyCustom(kind)
-    }) {
-        Text(stringResource(R.string.lab_custom_reset))
-    }
+    PillButton(
+        stringResource(R.string.lab_custom_reset),
+        onClick = {
+            update { it.withCustom(kind, LabPrompts.ROLE) }
+            lab?.applyCustom(kind)
+        },
+        modifier = Modifier.testTag(labResetTag(kind)),
+    )
 }
 
 // The comparisons logged, and the log's export and clearing.
@@ -227,7 +232,7 @@ private fun Logged(lab: PromptLab) {
     val scope = rememberCoroutineScope()
     var asking by rememberSaveable { mutableStateOf(false) }
     var exported by remember { mutableStateOf<Boolean?>(null) }
-    val export =
+    val exporter =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(EXPORT_TYPE)) { uri ->
             // `wt`: a provider may otherwise leave the end of a longer file it replaces.
             if (uri != null) {
@@ -241,17 +246,21 @@ private fun Logged(lab: PromptLab) {
                 pluralStringResource(R.plurals.lab_logged_count, log.size, log.size, day(first.time))
             } ?: stringResource(R.string.lab_logged_none),
         )
+        // The settings' pills (#1387), each only while there is a log to export or clear.
         Row {
-            Button(
-                onClick = { export.launch(exportName(Clock.System.now())) },
+            PillButton(
+                label = stringResource(R.string.lab_export),
+                onClick = if (log.isNotEmpty()) ({ exporter.launch(exportName(Clock.System.now())) }) else null,
                 modifier = Modifier.testTag(LAB_EXPORT_TAG),
-            ) { Text(stringResource(R.string.lab_export)) }
+            )
             Spacer(Modifier.width(8.dp))
-            OutlinedButton(
-                onClick = { asking = true },
-                enabled = log.isNotEmpty(),
+            PillButton(
+                label = stringResource(R.string.lab_clear),
+                onClick = if (log.isNotEmpty()) ({ asking = true }) else null,
                 modifier = Modifier.testTag(LAB_CLEAR_TAG),
-            ) { Text(stringResource(R.string.lab_clear)) }
+                // It deletes the comparisons logged.
+                destructive = true,
+            )
         }
         exported?.let { Quiet(stringResource(if (it) R.string.lab_exported else R.string.lab_export_failed)) }
     }
@@ -363,3 +372,12 @@ fun labCompareTag(
 
 /** The test tag of [kind]'s *Custom* field. */
 fun labCustomTag(kind: PromptKind): String = "lab-custom-${kind.key}"
+
+/** The test tag of *Show the instructions* (or *Hide*) of [kind]'s variant [id]. */
+fun labInstructionsTag(
+    kind: PromptKind,
+    id: String,
+): String = "lab-instructions-${kind.key}-$id"
+
+/** The test tag of *Custom*'s *Reset* for [kind]. */
+fun labResetTag(kind: PromptKind): String = "lab-reset-${kind.key}"

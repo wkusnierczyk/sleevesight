@@ -6,19 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -30,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -50,6 +44,7 @@ import app.sleevesight.app.ui.home.Credit
 import app.sleevesight.app.ui.home.creditText
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.DeveloperMark
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
@@ -103,25 +98,20 @@ internal fun LabCompare(subject: LabSubject) {
     DeveloperMark(Modifier.fillMaxWidth().testTag(LAB_COMPARE_TAG), tag = stringResource(R.string.lab_mark_tag)) {
         val current = run
         if (current == null) {
-            val padding = ButtonDefaults.TextButtonContentPadding
-            TextButton(
-                onClick = {
-                    run =
-                        Comparing.start(
-                            subject,
-                            lab.sent(subject.card),
-                            settings,
-                            scope,
-                            failure = { failureText(it, resources) },
-                            stopped = resources.getString(R.string.lab_stopped),
-                        )
-                },
-                enabled = count >= LabPrompts.FEWEST_COMPARED,
-                modifier =
-                    Modifier
-                        .offset(x = -padding.calculateStartPadding(LocalLayoutDirection.current))
-                        .testTag(LAB_COMPARE_ACTION_TAG),
-                contentPadding = padding,
+            val start = {
+                run =
+                    Comparing.start(
+                        subject,
+                        lab.sent(subject.card),
+                        settings,
+                        scope,
+                        failure = { failureText(it, resources) },
+                        stopped = resources.getString(R.string.lab_stopped),
+                    )
+            }
+            PillButton(
+                onClick = start.takeIf { count >= LabPrompts.FEWEST_COMPARED },
+                modifier = Modifier.testTag(LAB_COMPARE_ACTION_TAG),
             ) {
                 AiLabel(pluralStringResource(R.plurals.lab_compare_action, count, count))
             }
@@ -158,9 +148,11 @@ private fun ComparePanel(
                 Modifier.weight(1f).semantics { heading() },
                 style = MaterialTheme.typography.titleSmall,
             )
-            TextButton(onClick = onClose, modifier = Modifier.testTag(LAB_CLOSE_TAG)) {
-                Text(stringResource(R.string.lab_compare_close))
-            }
+            PillButton(
+                stringResource(R.string.lab_compare_close),
+                onClick = onClose,
+                modifier = Modifier.testTag(LAB_CLOSE_TAG),
+            )
         }
         if (run.sent == null) {
             Note(stringResource(R.string.lab_compare_unsent))
@@ -174,18 +166,23 @@ private fun ComparePanel(
         HorizontalDivider()
         when {
             run.revealed -> Note(stringResource(R.string.lab_logged))
-            run.writing ->
-                OutlinedButton(onClick = run::stop, modifier = Modifier.testTag(LAB_STOP_TAG)) {
-                    Text(stringResource(R.string.lab_stop))
-                }
-            else ->
-                Button(
+            run.writing -> {
+                PillButton(
+                    stringResource(R.string.lab_stop),
+                    onClick = run::stop,
+                    modifier = Modifier.testTag(LAB_STOP_TAG),
+                )
+            }
+            else -> {
+                PillButton(
+                    stringResource(R.string.lab_show),
                     onClick = {
                         run.revealed = true
                         onShow()
                     },
                     modifier = Modifier.testTag(LAB_SHOW_TAG),
-                ) { Text(stringResource(R.string.lab_show)) }
+                )
+            }
         }
     }
 }
@@ -230,7 +227,7 @@ private fun VersionCard(
                     color = MaterialTheme.colorScheme.error,
                 )
                 if (!run.revealed) {
-                    TextButton(
+                    PillButton(
                         onClick = { run.retry(version) },
                         modifier = Modifier.testTag(labRetryTag(version.shown)),
                     ) {
@@ -279,9 +276,11 @@ private fun Marks(
         MarkChip(version, LabMark.GOOD, R.string.lab_good, open)
         MarkChip(version, LabMark.BAD, R.string.lab_bad, open)
         if (!version.noting && version.note.isEmpty() && open) {
-            TextButton(onClick = { version.noting = true }, modifier = Modifier.testTag(labNoteTag(version.shown))) {
-                Text(stringResource(R.string.lab_add_note))
-            }
+            PillButton(
+                stringResource(R.string.lab_add_note),
+                onClick = { version.noting = true },
+                modifier = Modifier.testTag(labNoteTag(version.shown)),
+            )
         }
     }
     if (version.noting || version.note.isNotEmpty()) {
@@ -304,7 +303,15 @@ private fun MarkChip(
     open: Boolean,
 ) {
     val on = version.mark == mark
+    // Plain, as the switches (#1387): chosen, filled in the text's colour, its text in the surface's.
+    val colors = MaterialTheme.colorScheme
     FilterChip(
+        colors =
+            FilterChipDefaults.filterChipColors(
+                labelColor = colors.onSurface,
+                selectedContainerColor = colors.onSurface,
+                selectedLabelColor = colors.surface,
+            ),
         selected = on,
         onClick = { version.mark = if (on) null else mark },
         label = { Text((if (on) "✓ " else "") + stringResource(label)) },

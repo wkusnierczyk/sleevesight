@@ -3,7 +3,6 @@
 package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,9 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -34,13 +31,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.ChoiceButtonGroup
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
 import kotlin.math.roundToInt
@@ -240,26 +237,13 @@ internal fun ButtonRow(
         leading = null,
         trailing = {
             Spacer(Modifier.width(16.dp))
-            val error = MaterialTheme.colorScheme.error
-            OutlinedButton(
-                onClick = { onClick?.invoke() },
-                enabled = onClick != null,
-                modifier = Modifier.alignBy(::middle).testTag(tag).semantics { contentDescription = title },
-                colors =
-                    if (destructive) {
-                        ButtonDefaults.outlinedButtonColors(contentColor = error)
-                    } else {
-                        ButtonDefaults.outlinedButtonColors()
-                    },
-                border =
-                    if (destructive) {
-                        BorderStroke(1.dp, error)
-                    } else {
-                        ButtonDefaults.outlinedButtonBorder(
-                            onClick != null,
-                        )
-                    },
-            ) { Text(label) }
+            PillButton(
+                label = label,
+                named = title,
+                onClick = onClick,
+                modifier = Modifier.alignBy(::middle).testTag(tag),
+                destructive = destructive,
+            )
         },
     ) {
         // Its tap reaches into the row's padding where no note comes under it (#874).

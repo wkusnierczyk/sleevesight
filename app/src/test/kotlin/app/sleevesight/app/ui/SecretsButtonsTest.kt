@@ -132,6 +132,8 @@ class SecretsButtonsTest {
             assertEquals(Triple(Role.Button, "Load keys", "Load"), button(LOAD_KEYS_BUTTON_TAG))
             val color = ink(LOAD_KEYS_BUTTON_TAG)
             assertTrue("not red: $color", !red(color))
+            // In the controls' black, as every pill not in the error colour (#1387).
+            assertTrue("black: $color", maxOf(color.red, color.green, color.blue) < RED)
             // No key stored: nothing to purge.
             assertTrue(compose.onAllNodesWithTag(PURGE_KEYS_BUTTON_TAG).fetchSemanticsNodes().isEmpty())
         }

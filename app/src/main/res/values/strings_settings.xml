@@ -105,7 +105,9 @@
     <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
     <!-- AI services → OpenRouter (#1157): its sign-in, in place of the link to its key. -->
-    <string name="settings_openrouter_sign_in">Sign in with OpenRouter</string>
+    <string name="settings_openrouter_sign_in">Sign in</string>
+    <!-- What a screen reader reads for the Sign in button. -->
+    <string name="settings_openrouter_sign_in_named">Sign in with OpenRouter</string>
     <string name="settings_openrouter_sign_in_line">Opens OpenRouter in your browser: sign in or create an account, and approve Sleevesight. OpenRouter then gives this phone a key of your own, billed to your OpenRouter account. Through it, you can use Claude, GPT and Gemini models.</string>
     <!-- The bold part as the key dialogs' terms (settings_terms_*). -->
     <string name="settings_openrouter_terms"><b>Signing in means agreeing to OpenRouter’s Terms of Service.</b> They require you to be 18 or older.</string>

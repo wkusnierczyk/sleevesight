@@ -6,6 +6,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -158,6 +162,9 @@ class PromptLabScreenTest {
             compose.onNodeWithTag(labMarkTag(2, LabMark.GOOD)).performScrollTo().performClick()
             compose.onNodeWithTag(labMarkTag(3, LabMark.BAD)).performScrollTo().performClick()
             assertTrue(lab.log.value.isEmpty())
+            // Nothing logged yet: nothing to export or clear (#1387).
+            compose.onNodeWithTag(LAB_EXPORT_TAG).performScrollTo().assertIsNotEnabled()
+            compose.onNodeWithTag(LAB_CLEAR_TAG).assertIsNotEnabled()
 
             compose.onNodeWithTag(LAB_SHOW_TAG).performScrollTo().performClick()
             compose.waitUntil(WAIT_MS) { lab.log.value.size == 1 }
@@ -165,6 +172,8 @@ class PromptLabScreenTest {
             assertEquals(PromptKind.SONG, logged.kind)
             assertEquals(listOf(null, LabMark.GOOD, LabMark.BAD), logged.versions.sortedBy { it.shown }.map { it.mark })
             compose.waitUntil(WAIT_MS) { count(text(R.string.lab_logged)) == 1 }
+            compose.onNodeWithTag(LAB_EXPORT_TAG).performScrollTo().assertIsEnabled()
+            compose.onNodeWithTag(LAB_CLEAR_TAG).assertIsEnabled()
         }
     }
 
@@ -221,6 +230,35 @@ class PromptLabScreenTest {
             compose.onNodeWithTag(labCompareTag(PromptKind.SONG, LabPrompts.CUSTOM)).performScrollTo().performClick()
             compose.waitUntil(WAIT_MS) { LabPrompts.CUSTOM in lab.settings.value.compared(PromptKind.SONG) }
             compose.waitUntil(WAIT_MS) { count("Compare 4 prompts · 4 paid calls") == 1 }
+        }
+    }
+
+    @Test
+    fun aVariantsInstructionsOpenAndCloseOnTheirPillAndCustomsResetPutsTheRoleBack() {
+        lab.developerMode(true)
+        lab.update { it.withCustom(PromptKind.SONG, "Write a haiku.") }
+        show {
+            compose.onNodeWithTag(LAB_BLOCK_TAG).performScrollTo()
+            compose.onNodeWithTag(labKindTag(PromptKind.SONG)).performScrollTo().performClick()
+            val instructions = labInstructionsTag(PromptKind.SONG, LabPrompts.CUSTOM)
+            compose.onNodeWithTag(instructions).performScrollTo().assertHasClickAction()
+            // Read with its variant's name, as each variant has one.
+            val named =
+                compose
+                    .onNodeWithTag(instructions)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.ContentDescription]
+                    .single()
+            assertTrue(named, named.startsWith("Show the instructions for ") && named.contains("Custom"))
+            assertEquals(0, compose.onAllNodesWithTag(labCustomTag(PromptKind.SONG)).fetchSemanticsNodes().size)
+            compose.onNodeWithTag(instructions).performClick()
+            compose.onNodeWithTag(labCustomTag(PromptKind.SONG)).assertExists()
+            compose.onNodeWithTag(labResetTag(PromptKind.SONG)).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) { lab.settings.value.custom(PromptKind.SONG) == LabPrompts.ROLE }
+            compose.onNodeWithTag(instructions).performScrollTo().performClick()
+            compose.waitUntil(WAIT_MS) {
+                compose.onAllNodesWithTag(labCustomTag(PromptKind.SONG)).fetchSemanticsNodes().isEmpty()
+            }
         }
     }
 
