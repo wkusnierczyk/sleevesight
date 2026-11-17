@@ -115,7 +115,8 @@ data class TrackState(
  * joins them, one string) the AI service found on the web ([model], as the AI settings name it,
  * which *Sources* names), in place of the track as the player names it, cleaned for the sources
  * ([played]); MusicBrainz then found a recording that agrees with the player's ([resolution], which
- * the run uses rather than asking MusicBrainz again).
+ * the run uses rather than asking MusicBrainz again). [writtenAt] is when the check's answer was
+ * written: past *Keep history for* after it, the spelling is no longer used (`PipelineHost`).
  */
 data class FoundAs(
     val title: String,
@@ -123,6 +124,7 @@ data class FoundAs(
     val played: NormalizedTrack,
     val model: String,
     val resolution: Resolution? = null,
+    val writtenAt: Instant? = null,
 )
 
 /**

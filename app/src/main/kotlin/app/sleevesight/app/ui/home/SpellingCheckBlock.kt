@@ -14,7 +14,6 @@ import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.SpellingOutcome
-import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
@@ -34,10 +33,10 @@ import app.sleevesight.core.synthesis.SearchKind
  * - offered: *Check the spelling*, with the AI mark, which a screen reader reads as its label and
  *   names "check the spelling on the web with your AI service, a paid call";
  * - under way: the turning record and "Checking the spelling on the web…", with *Stop*;
- * - another spelling found ([Spelled]): the same line, without *Stop*, while MusicBrainz is asked with
+ * - another spelling found ([Spelled]): the same line, with *Stop*, while MusicBrainz is asked with
  *   it; confirmed, the track is looked up again with it (`SpellingChecks`), the panel then showing
- *   what MusicBrainz found; not found, a rule, "MusicBrainz didn’t find it as “{title}” either.", then
- *   [then];
+ *   what MusicBrainz found, *Stop* until then cancelling it; not found, a rule, "MusicBrainz didn’t
+ *   find it as “{title}” either.", then [then]; stopped, [then];
  * - no other spelling: a rule, "{model} found no other spelling on the web.", then [then]; each line
  *   after "Asked automatically: " for a check that ran by itself;
  * - failed: as *Ask AI*'s failure, with *Retry*, then [then].
@@ -74,7 +73,8 @@ internal fun SpellingCheckBlock(
                 feed.stop(track, kind)
                 handoff.moveTo(button)
             }
-        is AiSearch.Answered -> Spelled(feed, track, shown, texts, then)
+        is AiSearch.Answered ->
+            Spelled(feed, track, shown, texts, Modifier.handoffTarget(handoff, stop), then)
         is AiSearch.NothingFound -> {
             NothingFound(texts, shown)
             then()
@@ -94,34 +94,34 @@ internal fun SpellingCheckBlock(
     }
 }
 
-// Another spelling found ([shown]): "Checking the spelling on the web…" while MusicBrainz is asked with
-// it, or once confirmed, until the track is looked up again; not found, a rule and that MusicBrainz did
-// not find it either, then [then].
+// Another spelling found ([shown]): "Checking the spelling on the web…" with *Stop* (under
+// [stopModifier]) while MusicBrainz is asked with it, or once confirmed, until the track is looked up
+// again, *Stop* then cancelling the question or the spelling's use; not found, a rule and that
+// MusicBrainz did not find it either, then [then]; stopped, [then].
+@Suppress("LongParameterList") // The search, its answer, its texts, where *Stop* sits, and what follows.
 @Composable
 private fun Spelled(
     feed: AiSearchFeed,
     track: TrackState,
     shown: AiSearch.Answered,
     texts: SearchTexts,
+    stopModifier: Modifier,
     then: @Composable () -> Unit,
 ) {
     val spelling = shown.answer as? SearchAnswer.Spelling ?: return then()
     val outcome by remember(feed, track.played, spelling) { feed.spelled(track, spelling) }.collectAsState(null)
-    if (outcome == SpellingOutcome.NotFound) {
-        PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
-        val line = stringResource(R.string.home_spelling_not_found, spelling.title)
-        QuietLine(
-            if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, line) else line,
-            Modifier.testTag(texts.tag(AI_SEARCH_NOTHING_TAG)),
-        )
-        then()
-    } else {
-        Busy(
-            stringResource(texts.searching),
-            MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textModifier = Modifier.testTag(texts.tag(AI_SEARCHING_TAG)),
-        )
+    when (outcome) {
+        SpellingOutcome.NotFound -> {
+            PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
+            val line = stringResource(R.string.home_spelling_not_found, spelling.title)
+            QuietLine(
+                if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, line) else line,
+                Modifier.testTag(texts.tag(AI_SEARCH_NOTHING_TAG)),
+            )
+            then()
+        }
+        SpellingOutcome.Stopped -> then()
+        else -> SearchingLine(texts, web = true, stopModifier) { feed.stopSpelling(track, spelling) }
     }
 }
 

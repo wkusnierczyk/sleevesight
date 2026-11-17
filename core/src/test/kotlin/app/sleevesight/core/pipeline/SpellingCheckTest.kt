@@ -10,7 +10,12 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.FakeMusicBrainz
+import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.resolution.MbRecording
 import app.sleevesight.core.resolution.NameMatcher
+import app.sleevesight.core.resolution.RecordingResolver
+import app.sleevesight.core.resolution.credit
 import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
@@ -110,6 +115,58 @@ class SpellingCheckTest {
                 val check = SpellingCheck(Recording(resolution), normalizer, names)
                 assertNull(check.confirm(playing, played, spelling(), "m"))
             }
+        }
+
+    @Test
+    fun `another song of the same performer is never asked of MusicBrainz`() =
+        runTest {
+            val resolver = Recording(accepted)
+            val check = SpellingCheck(resolver, normalizer, names)
+            assertNull(check.confirm(playing, played, spelling("Vesti la giubba"), "m"))
+            assertTrue(resolver.asked.isEmpty())
+            // The player's extra wording may go; a letter respelled is a respelling.
+            assertTrue(check.respelledTitle("Nessun dorma", playing.title, played))
+            assertTrue(check.respelledTitle("Turandot", playing.title, played))
+        }
+
+    @Test
+    fun `an artist MusicBrainz names without its id, not credited by the recording, does not count`() {
+        val check = SpellingCheck(Recording(accepted), normalizer, names)
+        val unconfirmed = accepted.copy(artists = played.artists.map { ResolvedArtist(it, null) })
+        assertEquals(false, check.agrees(unconfirmed, played, played))
+    }
+
+    // MusicBrainz as the resolver asks it, holding [recordings] for any search.
+    private fun real(vararg recordings: MbRecording): TrackResolver {
+        val resolver = RecordingResolver(FakeMusicBrainz(Lookup.Found(recordings.toList())), names)
+        return TrackResolver { track, duration -> resolver.resolve(track, duration) }
+    }
+
+    private fun mbRecording(credits: List<String>) =
+        MbRecording(
+            mbid = "4cf239b6",
+            title = "Nessun dorma",
+            lengthMs = 171_000,
+            credits = credits.map { credit(it) },
+            firstReleaseDate = "1990",
+            releases = emptyList(),
+            score = 100,
+        )
+
+    @Test
+    fun `with MusicBrainz's resolver, a recording crediting the performer is kept`() =
+        runTest {
+            val check = SpellingCheck(real(mbRecording(listOf("Luciano Pavarotti"))), normalizer, names)
+            val found = check.confirm(playing, played, spelling(), "m")
+            assertEquals("4cf239b6", found?.resolution?.recordingMbid)
+        }
+
+    @Test
+    fun `with MusicBrainz's resolver, a featured performer in the spelled title is not taken in`() =
+        runTest {
+            val recording = mbRecording(listOf("Luciano Pavarotti", "Plácido Domingo"))
+            val check = SpellingCheck(real(recording), normalizer, names)
+            assertNull(check.confirm(playing, played, spelling("Nessun dorma (feat. Plácido Domingo)"), "m"))
         }
 
     @Test

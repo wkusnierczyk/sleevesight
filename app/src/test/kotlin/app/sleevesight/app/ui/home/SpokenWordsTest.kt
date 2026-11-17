@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.home
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
@@ -100,5 +101,18 @@ class SpokenWordsTest {
     fun theTrackLineNamesTheTitleAndArtistsAsCleanedUp() {
         val remaster = sundown.copy(title = "Sundown - 2006 Remaster", artists = "Gordon Lightfoot")
         assertEquals("Sundown, by Gordon Lightfoot.", spokenTrackLine(track(remaster), words))
+    }
+
+    @Test
+    fun foundInAnotherSpellingTheTrackLineStillNamesThePlayersTitle() {
+        // #1293: the sources asked as "Sundown", the player's "Sundwon" still read.
+        val played = sundown.copy(title = "Sundwon")
+        val shown = track(played)
+        val found =
+            shown.copy(
+                normalized = HomeFixtures.normalizer.normalize(sundown),
+                foundAs = FoundAs("Sundown", played.artists, shown.normalized, "Claude Haiku 5.5"),
+            )
+        assertEquals("Sundwon, by Gordon Lightfoot.", spokenTrackLine(found, words))
     }
 }

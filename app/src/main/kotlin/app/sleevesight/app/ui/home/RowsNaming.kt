@@ -47,7 +47,7 @@ internal fun rolesKnown(
     normalized.composer != null ||
         (
             track != null &&
-                track.normalized == normalized &&
+                track.played == normalized &&
                 (track.resolution != null || track.sources[SourceId.MUSICBRAINZ] !is SourceState.Pending)
         )
 

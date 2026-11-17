@@ -74,6 +74,15 @@ class SpellingCheckScreenTest {
             val states = SearchKind.entries.associateWith { MutableStateFlow<AiSearch>(AiSearch.Offered) }
             val outcome = MutableStateFlow<SpellingOutcome?>(null)
             val asked = mutableListOf<Pair<SearchKind, SearchFacts>>()
+            val stoppedSpelling = mutableListOf<SearchAnswer.Spelling>()
+
+            override fun stopSpelling(
+                track: TrackState,
+                spelling: SearchAnswer.Spelling,
+            ) {
+                stoppedSpelling += spelling
+                outcome.value = SpellingOutcome.Stopped
+            }
 
             override fun search(
                 track: TrackState,
@@ -206,6 +215,22 @@ class SpellingCheckScreenTest {
                 .onNodeWithTag(spellingTag(AI_SEARCH_NOTHING_TAG))
                 .assertTextEquals("MusicBrainz didn’t find it as “Sundown” either.")
             assertEquals(1, count(AI_SEARCH_TAG))
+        }
+
+    @Test
+    fun stopStaysWhileMusicBrainzIsAskedAndCancelsIt() =
+        show {
+            tap(DATES_CHIP_TAG)
+            val spelling = SearchAnswer.Spelling("Sundown", emptyList(), "https://en.wikipedia.org/wiki/Sundown")
+            set(SearchKind.SPELLING, AiSearch.Answered(spelling, model, SearchWay(web = true)))
+            feed.outcome.value = SpellingOutcome.Asking
+            compose.waitForIdle()
+            assertEquals(1, count(spellingTag(AI_SEARCH_STOP_TAG)))
+            tap(spellingTag(AI_SEARCH_STOP_TAG))
+            assertEquals(listOf(spelling), feed.stoppedSpelling)
+            // Stopped: *Ask AI* back, no line.
+            assertEquals(1, count(AI_SEARCH_TAG))
+            assertEquals(0, count(spellingTag(AI_SEARCH_STOP_TAG)))
         }
 
     @Test

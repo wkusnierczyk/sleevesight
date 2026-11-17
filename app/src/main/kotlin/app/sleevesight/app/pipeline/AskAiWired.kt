@@ -2,10 +2,8 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.emptyPanels
 import app.sleevesight.app.ui.home.panelFacts
-import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.ClearEpoch
-import app.sleevesight.core.pipeline.FoundAs
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackState
@@ -37,13 +35,13 @@ import kotlin.time.Clock
 @Suppress("LongParameterList") // What the searches are made with, and where their answers and events go.
 class AskAiWired(
     parts: StateFlow<PipelineParts?>,
-    settings: StateFlow<Settings?>,
+    private val settings: StateFlow<Settings?>,
     answers: AiSearchAnswers,
     scope: CoroutineScope,
     settledNoDefinition: (TrackState, String) -> Boolean,
     epoch: ClearEpoch = ClearEpoch(),
     modelName: (String) -> String = { it },
-    clock: Clock = Clock.System,
+    private val clock: Clock = Clock.System,
     events: (PipelineEvent) -> Unit = {},
     plays: StateFlow<Play?>,
 ) {
@@ -100,19 +98,28 @@ class AskAiWired(
                 track: TrackState,
                 spelling: SearchAnswer.Spelling,
             ): Flow<SpellingOutcome?> = spellings?.outcome(track, spelling) ?: flowOf(null)
+
+            override fun stopSpelling(
+                track: TrackState,
+                spelling: SearchAnswer.Spelling,
+            ) {
+                spellings?.stop(track, spelling)
+            }
         }
 
     /**
      * The spelling check's answers asked of MusicBrainz with the live pipeline's [parts] in [scope]
-     * (#1293), each confirmed one handed to [found]: the check comes first among the panels' searches
+     * (#1293), each confirmed one handed to [targets]: the check comes first among the panels' searches
      * of *Ask AI automatically*, which wait until it has run ([SpellingChecks.concluded]).
      */
     fun checkSpellings(
         parts: StateFlow<PipelineParts?>,
         scope: CoroutineScope,
-        found: (NowPlaying, FoundAs) -> Unit,
+        targets: SpellingTargets,
     ): SpellingChecks =
-        SpellingChecks(searches, parts, NameMatcher(JvmAccentFolder), scope, found).also { spellings = it }
+        SpellingChecks(searches, parts, NameMatcher(JvmAccentFolder), scope, targets, settings, clock).also {
+            spellings = it
+        }
 
     init {
         val albums = NameMatcher(JvmAccentFolder)

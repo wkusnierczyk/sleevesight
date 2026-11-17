@@ -76,7 +76,7 @@ internal fun itemRow(
 internal fun rowKind(
     item: InsightItem,
     track: TrackState?,
-): Int? = track?.let { itemRow(item, it.nowPlaying, it.normalized, it)?.kind }
+): Int? = track?.let { itemRow(item, it.nowPlaying, it.played, it)?.kind }
 
 /** The test tag of an item's page's first line, its name. */
 const val ITEM_PAGE_NAME_TAG: String = "item-page:name"

@@ -41,6 +41,7 @@ import app.sleevesight.app.pipeline.Plays
 import app.sleevesight.app.pipeline.PromptDump
 import app.sleevesight.app.pipeline.ReleaseGroupFeed
 import app.sleevesight.app.pipeline.SpellingChecks
+import app.sleevesight.app.pipeline.SpellingTargets
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
@@ -785,7 +786,11 @@ class AppGraph internal constructor(
      * track looked up again with it ([PipelineHost.spellingFound]).
      */
     private val spellingChecks: SpellingChecks by lazy {
-        askAi.checkSpellings(pipeline.liveParts, pipelineScope, pipeline::spellingFound)
+        askAi.checkSpellings(
+            pipeline.liveParts,
+            pipelineScope,
+            SpellingTargets(pipeline::spellingFound, pipeline::spellingDropped, pipeline::forgetSpellings),
+        )
     }
 
     private val autoDefinitions: AutoSearches<String> get() = askAi.definitions
