@@ -86,6 +86,10 @@ class CreditTextTest {
             "Written by Claude Haiku 5.5 with low effort and web search.",
             said(Credit(HAIKU, ReasoningEffort.LOW, web = true)),
         )
+        assertEquals(
+            "Written by Claude Haiku 5.5 with medium effort and web search.",
+            said(Credit(HAIKU, ReasoningEffort.MEDIUM, web = true)),
+        )
     }
 
     private companion object {

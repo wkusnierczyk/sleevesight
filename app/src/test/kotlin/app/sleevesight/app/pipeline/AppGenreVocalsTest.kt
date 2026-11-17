@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.ui.home.VocalsFixtures
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.genres.GenreArticles
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
@@ -312,6 +313,22 @@ class AppGenreVocalsTest {
             assertTrue(shown?.tapped == true)
             assertEquals(AiQuestion.Vocals, events.filterIsInstance<PipelineEvent.AiAsked>().first().question)
             assertFalse(events.filterIsInstance<PipelineEvent.AiAsked>().first().automatic)
+        }
+
+    // #1162: the effort asked at, for the credit; none at the scale's default (low), which is not said.
+    @Test
+    fun `the check carries the effort it was asked at for its credit, none at the default`() =
+        runTest {
+            said = "instrumental"
+            settings.value =
+                settings.value
+                    ?.copy(searchWithAi = false)
+                    ?.withEffort(ProviderId.ANTHROPIC, ReasoningEffort.MEDIUM)
+            notes()
+            notes.genresShown(track, settled = true)
+            notes.explain(track, TrackGenres.INSTRUMENTAL)
+            advanceUntilIdle()
+            assertEquals(ReasoningEffort.MEDIUM, notes.vocals(track).first { it != null }?.effort)
         }
 
     @Test

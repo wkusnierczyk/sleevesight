@@ -40,7 +40,7 @@ internal fun WrittenFooter(
     readAloud: ReadAloudControl? = null,
 ) {
     CreditRow(
-        insightCredit(state, shown.model ?: state.writtenBy?.model),
+        insightCredit(state, state.writtenBy?.model ?: shown.model),
         Modifier.testTag(INSIGHT_BY_TAG),
         after = afterCredit(shown, context),
         readAloud = readAloud?.let { { ReadAloudButton(it, itemReadAloudTag(item)) } },
