@@ -359,6 +359,17 @@ and closes on its own, several at once, under both layouts (the panel's and the 
 the same). The screen reader's focus goes to the panel's *Close* on opening and back to the chip on
 closing.
 
+The rows are named once (#1355, the mock-up's pick, 2026-11-17). Before MusicBrainz answers, only a
+title leading with its composer tells one, so a classical title without that lead would read *Song*
+and *Artist* first, then *Music*, *Composer* and *Performer*. Home therefore holds back the rows
+under *Key insights* and the artists' line under the title (its height kept, so the album's line
+does not move) until the track's roles are known (`rolesKnown` in `RowsNaming.kt`): the title leads
+with its composer, or the run has MusicBrainz's answer (its resolution, or its source landed: kept
+from a track played before, off, failed, unreachable). With no answer within 10 seconds
+(`NAMING_WAIT`) they are named by the title; an answer after that renames them once. Once named, a
+track's rows are not held again (a *Retry* asking MusicBrainz again). The hold applies to every
+track, since nothing tells a pop track from a classical one before the answer.
+
 ## 4. Classical regression tracks
 
 As Spotify reports them (Spotify search, 2026-11-10); MusicBrainz recordings from free searches the
