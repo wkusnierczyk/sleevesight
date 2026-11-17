@@ -88,8 +88,10 @@ import app.sleevesight.core.pipeline.TrackState
  *
  * This is the section as a box (*Layout*'s *Expandable boxes*, #447): its chip, [width] wide as the
  * chips above it on Home (#1286), or its panel with [SourcesBody] in it, which a page of its own
- * mounts under *Separate pages*.
+ * mounts under *Separate pages*. [fromRows] goes on its chip, or on its panel's *Close* while it is
+ * open: where the focus goes from a row's panel a new track closed with no row to go back to (#1355).
  */
+@Suppress("LongParameterList") // What the section shows, and the focus handed to it from the rows.
 @Composable
 internal fun SourcesSection(
     shown: SourcesShown,
@@ -97,6 +99,7 @@ internal fun SourcesSection(
     fold: SourcesFold,
     openSettings: () -> Unit = {},
     width: Dp? = null,
+    fromRows: Modifier = Modifier,
 ) {
     val handoff = rememberFocusHandoff()
     val chip = remember { FocusRequester() }
@@ -113,7 +116,7 @@ internal fun SourcesSection(
         if (handBack) handoff.moveTo(chip)
     }
     if (folded) {
-        SourcesChip(opensPage = false, modifier = Modifier.handoffTarget(handoff, chip), width = width) {
+        SourcesChip(opensPage = false, modifier = Modifier.handoffTarget(handoff, chip).then(fromRows), width = width) {
             // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
             if (entriesOf(shown.track, shown.lines.evidence, focus.hidden, shown.details).isEmpty()) focus.showAll()
             fold.set(Fold.Pages(1))
@@ -128,7 +131,7 @@ internal fun SourcesSection(
                     fold.set(Fold.Folded)
                     handoff.moveTo(chip)
                 },
-                closeModifier = Modifier.handoffTarget(handoff, close),
+                closeModifier = Modifier.handoffTarget(handoff, close).then(fromRows),
             ) {
                 SourcesBody(shown, focus, fold, openSettings) { handoff.moveTo(close) }
             }
