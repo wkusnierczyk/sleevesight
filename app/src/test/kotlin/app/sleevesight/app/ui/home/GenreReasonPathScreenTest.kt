@@ -276,7 +276,7 @@ class GenreReasonPathScreenTest {
         val grounded = (GroundingCheck.check(REASON, HomeFixtures.evidence, false) as InsightReply.Written).grounded
         show(Notes(GenreReason.Shown(InsightState.Written(grounded, false), MODEL))) {
             compose.onNodeWithTag(GENRE_REASON_TAG).performScrollTo()
-            compose.onNodeWithText("by $MODEL").assertExists()
+            compose.onNodeWithText("Written by $MODEL.").assertExists()
         }
     }
 

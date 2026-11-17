@@ -344,7 +344,7 @@ class LyricsAiScreenTest {
             assertTrue(placed(prose).top >= bounds(explainTag(AI_SEARCH_RULE_TAG)).bottom)
             // *Pages cited* is gone; *Read more* is last, after the credit.
             assertFalse(shows("Pages cited"))
-            compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("by Claude Haiku 5.5")
+            compose.onNodeWithTag(explainTag(AI_SEARCH_BY_TAG)).assertTextEquals("Written by Claude Haiku 5.5.")
             assertTrue(bounds(explainTag(AI_SEARCH_BY_TAG)).top >= placed(prose).bottom)
             assertTrue(bounds(LYRICS_READ_MORE_TAG).top >= bounds(explainTag(AI_SEARCH_BY_TAG)).bottom)
             compose

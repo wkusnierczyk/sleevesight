@@ -2,12 +2,10 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -153,8 +151,9 @@ internal class ReasonActions(
 
 // The reason asked for ([shown]), under the [question] (#523, #762): while the AI service is asked
 // and nothing is written yet, "Looking for an explanation…" in the button's place; written, its text,
-// then "by {model}" ("by {model}, with web search" for one from web pages, #695), the grounding note
-// and, kept from before, when it was written (#851), with *Read aloud* at the end of those rows; one
+// then its credit, "Written by {model}." ("… with web search." for one from web pages, #695; #1162),
+// the grounding note and, kept from before, when it was written (#851), with *Read aloud* at the end
+// of the credit's row (#959); one
 // that cites no source, only the model's own knowledge, says so first, under the question (#695);
 // the AI could not explain it, the button disabled with why under it, and what to switch on that
 // could ([GenreReason.Shown.couldHelp]); a failed call, why, in the error colour, with *Retry*.
@@ -200,10 +199,7 @@ internal fun ReasonShown(
                         label = shownAs,
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ReasonCredits(shown, state, evidence, shownAs, Modifier.weight(1f))
-                    actions.readAloud?.let { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) }
-                }
+                ReasonCredits(shown, state, evidence, shownAs, actions.readAloud)
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
             }
 
@@ -234,22 +230,25 @@ internal fun ReasonShown(
     }
 }
 
-// Under a written reason ([state]): "by {model}", the grounding note, which of its citations of
-// [evidence] it translated from the track's language (#902), named as its chips are ([shownAs],
-// #1205), and, kept from before, when it was written (#851).
+// Under a written reason ([state]): its credit (#1162), with *Read aloud* ([readAloud]) at the end of
+// its row, the grounding note, which of its citations of [evidence] it translated from the track's
+// language (#902), named as its chips are ([shownAs], #1205), and, kept from before, when it was
+// written (#851).
 @Composable
 private fun ReasonCredits(
     shown: GenreReason.Shown,
     state: InsightState.Written,
     evidence: EvidenceSet?,
     shownAs: (String) -> String,
-    modifier: Modifier,
+    readAloud: ReadAloudControl?,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         // "with web search" for a reason from web pages (#695): asked again with them, and citing one.
         val fromWeb = state.searched != null && state.grounded.citesSource
-        val by = if (fromWeb) R.string.genre_why_by_web else R.string.genre_why_by
-        shown.model?.let { SearchCredit(stringResource(by, it)) }
+        CreditRow(
+            shown.model?.let { creditString(Credit(it, shown.effort, web = fromWeb)) },
+            readAloud = readAloud?.let { { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) } },
+        )
         GroundingLine(state.grounded, details = false)
         TranslatedLine(state.grounded, evidence, label = shownAs)
         shown.keptAt?.let { KeptLine(it) }

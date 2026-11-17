@@ -48,7 +48,7 @@ import org.robolectric.annotation.Config
  * The turning record on the insight card (#785), as picked in the mock-up: *Writing…* with it for
  * the whole write, before the first words and under the words written so far, with what *Stop
  * writing* costs under it while Stop can end the call; and *Look again*'s sentence on a line of its
- * own under *As written previously.*, with it, while it looks, the rest of the footer's first line
+ * own under the insight's credit (#1162), with it, while it looks, the rest of the footer's first line
  * joined as before, and no record once it is done.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -64,7 +64,7 @@ class InsightRecordScreenTest {
         vararg args: Any,
     ) = app.getString(id, *args)
 
-    private val kept = track(insight = written("It is a song [MB1]."))
+    private val kept = track(insight = written("It is a song [MB1].").copy(writtenBy = HomeFixtures.haiku))
 
     private fun show(
         view: PipelineView,
@@ -142,14 +142,14 @@ class InsightRecordScreenTest {
     @Test
     fun whileItLooksAgainItsSentenceIsOnItsOwnLineWithTheRecord() {
         show(PipelineView(kept, aiReady = true, cardShown = true, lookingAgain = true)) {
-            val before = bounds(text(R.string.home_written_before))
+            val before = bounds(HomeFixtures.HAIKU_CREDIT)
             val looking = bounds(text(R.string.home_look_again_looking))
             assertTrue(looking.top >= before.bottom)
             assertEquals(1, recordsBefore(looking).size)
             assertEquals(0, recordsBefore(before).size)
             assertEquals(
-                listOf(text(R.string.home_written_before), text(R.string.home_look_again_looking)),
-                readOrder(text(R.string.home_written_before), text(R.string.home_look_again_looking)),
+                listOf(HomeFixtures.HAIKU_CREDIT, text(R.string.home_look_again_looking)),
+                readOrder(HomeFixtures.HAIKU_CREDIT, text(R.string.home_look_again_looking)),
             )
         }
     }
@@ -172,7 +172,7 @@ class InsightRecordScreenTest {
             )
         show(view) {
             val offer = text(R.string.home_rewrite_offer, text(R.string.home_rewrite_part_updated_sources))
-            val joined = text(R.string.home_written_before) + " " + offer
+            val joined = HomeFixtures.HAIKU_CREDIT + " " + offer
             val line = bounds(joined)
             val looking = bounds(text(R.string.home_look_again_looking))
             assertTrue(looking.top >= line.bottom)
@@ -187,7 +187,7 @@ class InsightRecordScreenTest {
     @Test
     fun onceItIsDoneLookAgainHasNoRecordAndStaysInTheJoinedLine() {
         show(PipelineView(kept, aiReady = true, cardShown = true, nothingNew = true)) {
-            val joined = text(R.string.home_written_before) + " " + text(R.string.home_look_again_nothing_new)
+            val joined = HomeFixtures.HAIKU_CREDIT + " " + text(R.string.home_look_again_nothing_new)
             compose.onNodeWithText(joined).assertExists()
             compose.onNodeWithText(text(R.string.home_look_again_looking)).assertDoesNotExist()
             assertEquals(emptyList<Rect>(), records())

@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.ai.ModelNames
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.AiOutcome
@@ -68,15 +69,16 @@ sealed interface AiSearch {
     ) : AiSearch
 
     /**
-     * Answered by [model], as checked, asked as [way] says (#801, #802); kept from before when
-     * [keptAt] says when it was written (#851): before this play of the track, served from what was
-     * kept; null for one written on this play.
+     * Answered by [model] at [effort] (null at the default, `Settings.creditedEffort`, #1162), as checked, asked as [way]
+     * says (#801, #802); kept from before when [keptAt] says when it was written (#851): before this
+     * play of the track, served from what was kept; null for one written on this play.
      */
     data class Answered(
         val answer: SearchAnswer,
         val model: String,
         val way: SearchWay = SearchWay(),
         val keptAt: Instant? = null,
+        val effort: ReasoningEffort? = null,
     ) : AiSearch
 
     /**
@@ -353,8 +355,12 @@ class AppAiSearches(
                     entry == null -> AiSearch.Offered
                     expired(entry.writtenAt, lifetime) -> AiSearch.Offered.also { drop(key) }
                     else ->
-                        shownAs(entry.state, modelName(key.model), keptAt(entry, track, play))
-                            .also { if (serving) serve(key, kind, genre, track, entry) }
+                        shownAs(
+                            entry.state,
+                            modelName(key.model),
+                            keptAt(entry, track, play),
+                            Settings.creditedEffort(key.provider, key.effort),
+                        ).also { if (serving) serve(key, kind, genre, track, entry) }
                 }
             }
     }
@@ -806,15 +812,17 @@ internal class Entry(
     val writtenFor: NowPlaying? = null,
 )
 
-// [state] as the panel shows it, by the model named [model], kept from before when [keptAt] says when.
+// [state] as the panel shows it, by the model named [model] at [effort] (null at the default),
+// kept from before when [keptAt] says when.
 private fun shownAs(
     state: SearchState,
     model: String,
     keptAt: Instant?,
+    effort: ReasoningEffort?,
 ): AiSearch =
     when (state) {
         is SearchState.Searching -> AiSearch.Searching(state.web)
-        is SearchState.Answered -> AiSearch.Answered(state.answer, model, state.way, keptAt)
+        is SearchState.Answered -> AiSearch.Answered(state.answer, model, state.way, keptAt, effort)
         is SearchState.NothingFound -> AiSearch.NothingFound(model, state.way, keptAt)
         is SearchState.Failed -> AiSearch.Failed(state.reason)
     }

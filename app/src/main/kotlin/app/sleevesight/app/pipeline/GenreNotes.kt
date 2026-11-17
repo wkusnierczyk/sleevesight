@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.ai.ModelNames
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreVocabulary
@@ -79,7 +80,8 @@ sealed interface GenreReason {
      * Asked for, or kept from before: [state] is [InsightState.Writing] (with no text yet, while the
      * AI's genre list or the reason is looked for), [InsightState.Written], [InsightState.NoEvidence],
      * or [InsightState.Failed] (the list's call, or the reason's), beside which it is offered again.
-     * [model] is the name of the model that writes it, for the credit under it. A reason written
+     * [model] is the name of the model that writes it, and [effort] the reasoning effort asked of it,
+     * null at the default (`Settings.creditedEffort`), for the credit under it (#1162). A reason written
      * before this play of the track, served from what was kept, has [keptAt], when it was written
      * (#851); null for one written on this play. [couldHelp] is what is switched off in the settings
      * and could explain it (#695: *AI service knowledge*, *AI web search* as *Settings* shows it, *Off*
@@ -92,6 +94,7 @@ sealed interface GenreReason {
         val model: String? = null,
         val keptAt: Instant? = null,
         val couldHelp: List<GenreListMode> = emptyList(),
+        val effort: ReasoningEffort? = null,
     ) : GenreReason
 }
 
@@ -168,12 +171,14 @@ fun vocalsWanted(
  * [model] (its name, as the AI settings show it); [tapped] when a tap on *Why is this instrumental?*
  * asked it on this play of the track, so an answer of vocals leaves the chip weak with its line until
  * the genres are built again (the next play), where one asked by itself, or kept from before, drops
- * Instrumental at once.
+ * Instrumental at once. [effort] is the reasoning effort asked of the model, null at the default
+ * (`Settings.creditedEffort`), for its credit (#1162).
  */
 data class VocalsShown(
     val state: VocalsState,
     val model: String,
     val tapped: Boolean = false,
+    val effort: ReasoningEffort? = null,
 )
 
 /** [this] with [list]'s genres in its track's row (`TrackGenres.withAi`); itself for none. */
@@ -671,6 +676,7 @@ class AppGenreNotes private constructor(
                             entry.state,
                             modelName(asked.model),
                             tapped = waiting != null || tappedIn[asked] == Played(track.nowPlaying.play),
+                            effort = Settings.creditedEffort(asked.provider, asked.effort),
                         )
                     }
                 }
@@ -942,6 +948,7 @@ class AppGenreNotes private constructor(
                             modelName(path.key.model),
                             keptAt(entry, track, now.play),
                             couldHelp(now.settings).takeIf { entry.state == InsightState.NoEvidence }.orEmpty(),
+                            Settings.creditedEffort(path.key.provider, path.key.effort),
                         )
                 }
             }

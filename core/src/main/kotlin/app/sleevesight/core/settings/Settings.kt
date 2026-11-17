@@ -383,6 +383,16 @@ data class Settings(
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
 
+        /**
+         * [effort] as a text's credit names it (#1162): null at [provider]'s default, its scale's
+         * ([EFFORT_SCALES], what *Settings* chooses until another level is set) or the provider's own
+         * (null), so the credit says the effort only when another was chosen.
+         */
+        fun creditedEffort(
+            provider: ProviderId,
+            effort: ReasoningEffort?,
+        ): ReasoningEffort? = effort?.takeIf { it != EFFORT_SCALES[provider]?.default }
+
         /** The most descriptions kept as left unfolded ([unfoldedDescriptions], #847). */
         const val UNFOLDED_DESCRIPTIONS_LIMIT: Int = 200
 

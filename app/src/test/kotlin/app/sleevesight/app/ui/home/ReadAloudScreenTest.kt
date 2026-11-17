@@ -61,8 +61,8 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 /**
- * *Read aloud* on Home (#325, #725): with a written insight, at the end of the *Key insights*
- * heading's row, above the insight, a 48 dp icon button named *Read aloud*, with no **AI** mark; a
+ * *Read aloud* on Home (#325, #725): with a written insight, at the end of the credit's row under the
+ * insight (#959), a 48 dp icon button named *Read aloud*, with no **AI** mark; a
  * tap reads the insight, and the button becomes *Stop reading aloud*, which stops it. None with an
  * insight not written, where the heading is as tall as the button would be. At twice the font size on
  * a narrow phone it keeps its place and size, and the heading stays clear of it.
@@ -145,14 +145,24 @@ class ReadAloudScreenTest {
     private val density get() = compose.density.density
 
     @Test
-    fun aWrittenInsightHasReadAloudAtTheEndOfTheHeadingsRowWithNoAiMark() =
-        home(insight) {
+    fun aWrittenInsightHasReadAloudAtTheEndOfTheCreditsRowWithNoAiMark() =
+        home(insight.copy(writtenBy = HomeFixtures.haiku)) {
             val button = compose.onNodeWithTag(READ_ALOUD_TAG)
             button.assertContentDescriptionEquals("Read aloud")
             val read = target(READ_ALOUD_TAG)
-            val title = heading()
-            assertTrue("after the heading", read.left >= title.right)
-            assertEquals("on the heading's row", title.center.y, read.center.y, density)
+            // Under the text, at the end of the credit's row (#959), not in the heading's.
+            val text =
+                compose
+                    .onNodeWithText(
+                        "Sundown was recorded",
+                        substring = true,
+                    ).fetchSemanticsNode()
+                    .boundsInRoot
+            val credit = bounds(INSIGHT_BY_TAG)
+            assertTrue("under the heading", read.top >= heading().bottom)
+            assertTrue("under the text", read.top >= text.bottom - 1f)
+            assertTrue("after the credit", read.left >= credit.right - 1f)
+            assertEquals("on the credit's row", credit.center.y, read.center.y, credit.height / 2)
             assertTrue("above the split button", read.bottom <= bounds(WRITE_HALVES_TAG).top)
             assertTrue("a 48 dp target", read.width / density >= 47.5f && read.height / density >= 47.5f)
             val marks =
