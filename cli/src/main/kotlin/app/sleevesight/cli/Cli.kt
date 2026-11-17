@@ -354,7 +354,12 @@ class Cli(
 
         /** The AI services' names, for the report. */
         private val AI_NAMES =
-            mapOf(ProviderId.ANTHROPIC to "Anthropic", ProviderId.OPENAI to "OpenAI", ProviderId.GOOGLE to "Google")
+            mapOf(
+                ProviderId.ANTHROPIC to "Anthropic",
+                ProviderId.OPENAI to "OpenAI",
+                ProviderId.GOOGLE to "Google",
+                ProviderId.OPENROUTER to "OpenRouter",
+            )
         private const val SECONDS_PER_MINUTE = 60
 
         /**

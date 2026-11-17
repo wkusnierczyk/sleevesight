@@ -110,7 +110,12 @@ data class Options(
          * also the directory under `fixtures/http/` of those whose replies are recorded.
          */
         val PROVIDERS: Map<String, ProviderId> =
-            mapOf("anthropic" to ProviderId.ANTHROPIC, "openai" to ProviderId.OPENAI, "google" to ProviderId.GOOGLE)
+            mapOf(
+                "anthropic" to ProviderId.ANTHROPIC,
+                "openai" to ProviderId.OPENAI,
+                "google" to ProviderId.GOOGLE,
+                "openrouter" to ProviderId.OPENROUTER,
+            )
 
         /** The AI services whose replies are recorded and replayed: those with a host in [FixtureStore.SOURCES]. */
         val RECORDED_AI: Set<String> = PROVIDERS.keys.filter { it in FixtureStore.SOURCES.values }.toSet()

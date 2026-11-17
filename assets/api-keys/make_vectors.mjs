@@ -24,6 +24,7 @@ const hex = (text) => Buffer.from(text, 'utf8').toString('hex');
 const made = (prefix, length, alphabet = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-') =>
   prefix + Array.from({ length: length - prefix.length }, (_, i) => alphabet[(i * 7 + 3) % alphabet.length]).join('');
 
+const openrouter = made('sk-or-v1-', 73, '0123456789abcdef');
 const anthropic = made('sk-ant-api03-', 108);
 const openai = made('sk-proj-', 164);
 const google = made('AIza', 39);
@@ -37,6 +38,7 @@ const setups = [
   new Map([['anthropic', anthropic]]),
   new Map([['anthropic', anthropic], ['exa', exa]]),
   new Map([['anthropic', anthropic], ['openai', openai], ['google', google], ['exa', exa], ['lastfm', lastfm]]),
+  new Map([['openrouter', openrouter], ['exa', exa]]),
   new Map([
     ['anthropic', made('sk-ant-', 400)],
     ['openai', made('sk-', 400)],
@@ -58,8 +60,10 @@ const shapes = [
   ['exa', 'abc.defghijklmnopq'],
   ['lastfm', lastfm], ['lastfm', lastfm.toUpperCase()], ['lastfm', lastfm.slice(1)], ['lastfm', `${lastfm.slice(1)}g`],
   ['lastfm', `${lastfm}0`],
+  ['openrouter', openrouter], ['openrouter', openai], ['openai', openrouter], ['openrouter', made('sk-or-', 39)],
   // Each length bound, either side: n - 1 refused, n taken, the longest taken, one more refused.
   ...[
+    ['openrouter', 'sk-or-', 40, 400],
     ['anthropic', 'sk-ant-', 40, 400],
     ['openai', 'sk-', 40, 400],
     ['google', 'AIza', 30, 400],

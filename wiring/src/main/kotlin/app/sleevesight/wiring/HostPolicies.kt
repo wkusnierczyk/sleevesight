@@ -3,6 +3,7 @@ package app.sleevesight.wiring
 import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
+import app.sleevesight.ai.openrouter.OpenRouterProvider
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.BusyWaits
 import app.sleevesight.net.BusyWait
@@ -19,8 +20,9 @@ import kotlin.time.Duration
  * adapter or provider with a stated limit adds its policy here, and both processes get it through
  * [netConfig]. `:net`'s defaults hold MusicBrainz's; Exa's is the web search adapter's; LRCLIB's
  * (#997) its own User-Agent contact and a 429's jitter besides its interval; Anthropic's,
- * OpenAI's and Google's have no interval, only their 429 passed on (`AnthropicProvider.HOST_POLICY`,
- * `OpenAiProvider.HOST_POLICY`, `GoogleProvider.HOST_POLICY`). The other hosts state no figure for a client
+ * OpenAI's, Google's and OpenRouter's have no interval, only their 429 passed on
+ * (`AnthropicProvider.HOST_POLICY`, `OpenAiProvider.HOST_POLICY`, `GoogleProvider.HOST_POLICY`,
+ * `OpenRouterProvider.HOST_POLICY`). The other hosts state no figure for a client
  * ([NetConfig.DEFAULT_HOSTS] says why).
  *
  * Nothing finds a new adapter's policy for this list: there is no registry of them to check it
@@ -37,7 +39,8 @@ object HostPolicies {
             (LrclibClient.HOST to LrclibClient.HOST_POLICY) +
             (AnthropicProvider.HOST to AnthropicProvider.HOST_POLICY) +
             (OpenAiProvider.HOST to OpenAiProvider.HOST_POLICY) +
-            (GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
+            (GoogleProvider.HOST to GoogleProvider.HOST_POLICY) +
+            (OpenRouterProvider.HOST to OpenRouterProvider.HOST_POLICY)
 
     /**
      * The retries of the process's client. The AI services' clients retry nothing themselves: the

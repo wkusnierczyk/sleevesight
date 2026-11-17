@@ -78,8 +78,8 @@ class KeysQr(
                 }
 
                 keys.isEmpty() -> {
-                    "No keys found: set ${Keys.ANTHROPIC}, ${Keys.OPENAI}, ${Keys.GOOGLE}, ${Keys.EXA} " +
-                        "or ${Keys.LASTFM} (in a keys file, also the providers' usual names, " +
+                    "No keys found: set ${Keys.OPENROUTER}, ${Keys.ANTHROPIC}, ${Keys.OPENAI}, ${Keys.GOOGLE}, " +
+                        "${Keys.EXA} or ${Keys.LASTFM} (in a keys file, also the providers' usual names, " +
                         "such as ANTHROPIC_API_KEY), or give --<name>-from."
                 }
 
@@ -201,8 +201,9 @@ class KeysQr(
 
         val USAGE: String =
             """
-            Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--openai-from <file|->]
-                                           [--google-from <file|->] [--exa-from <file|->] [--lastfm-from <file|->]
+            Usage: sleevesight-cli keys-qr [--keys <file>] [--openrouter-from <file|->] [--anthropic-from <file|->]
+                                           [--openai-from <file|->] [--google-from <file|->] [--exa-from <file|->]
+                                           [--lastfm-from <file|->]
                                            [--words-from <file|->] [--unsealed]
 
               Draws a setup code for the app's Settings, Secrets, Load keys: the keys from the
@@ -266,7 +267,7 @@ class KeysQr(
             }
 
         private const val SHAPES =
-            "Anthropic's start sk-ant-, OpenAI's sk- (not sk-ant-), Google's AIza or AQ., " +
+            "OpenRouter's start sk-or-, Anthropic's sk-ant-, OpenAI's sk- (neither of those), Google's AIza or AQ., " +
                 "Last.fm's are 32 hexadecimal digits, Exa's 16 to 200 characters"
         private const val COLOURS = "\u001b[30;107m"
         private const val RESET = "\u001b[0m"
@@ -277,6 +278,7 @@ class KeysQr(
             name: KeyName,
         ): Secret? =
             when (name) {
+                KeyName.OPENROUTER -> loaded.openRouter
                 KeyName.ANTHROPIC -> loaded.anthropic
                 KeyName.OPENAI -> loaded.openAi
                 KeyName.GOOGLE -> loaded.google
@@ -286,6 +288,7 @@ class KeysQr(
 
         private fun label(name: KeyName): String =
             when (name) {
+                KeyName.OPENROUTER -> "OpenRouter"
                 KeyName.ANTHROPIC -> "Anthropic"
                 KeyName.OPENAI -> "OpenAI"
                 KeyName.GOOGLE -> "Google"

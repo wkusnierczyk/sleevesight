@@ -6,4 +6,10 @@ enum class ProviderId {
     OPENAI,
     GOOGLE,
     OLLAMA,
+
+    /**
+     * OpenRouter (#1157): one key, from a sign-in or pasted, that reaches other companies' models
+     * (Claude, GPT, Gemini, and free ones), billed to the user's OpenRouter account.
+     */
+    OPENROUTER,
 }
