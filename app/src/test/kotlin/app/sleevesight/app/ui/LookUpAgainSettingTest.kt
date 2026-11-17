@@ -2,8 +2,12 @@ package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -18,6 +22,7 @@ import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.CLEAR_HISTORY_BUTTON_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.settings.LookUpAfterClear
@@ -86,8 +91,8 @@ class LookUpAgainSettingTest {
             .positionInRoot.y
 
     private fun clearHistory() {
-        compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
-        compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+        compose.onNodeWithTag(CLEAR_HISTORY_BUTTON_TAG).performScrollTo().performClick()
+        compose.onNode(hasText(text(R.string.settings_clear)) and hasAnyAncestor(isDialog())).performClick()
     }
 
     @Test

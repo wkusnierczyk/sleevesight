@@ -39,9 +39,8 @@ internal fun AiRetryRow(
     SteppedRow(
         title = title,
         summary = { shown, label -> aiRetrySummary(shown, label) },
-        stops = Settings.AI_RETRIES,
-        value = settings.aiRetry,
-        none = none,
+        stops = durationStops(Settings.AI_RETRIES, none),
+        stored = nearestStop(Settings.AI_RETRIES, settings.aiRetry),
         applies = !noAiServiceOn(settings, secrets),
         tags = SteppedTags(AI_RETRY_SLIDER_TAG, AI_RETRY_STOPS_TAG, AI_RETRY_VALUE_TAG),
         choose = { retry -> update { it.copy(aiRetry = retry) } },
