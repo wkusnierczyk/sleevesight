@@ -37,8 +37,8 @@ import kotlin.time.Instant
 /**
  * The prompt lab (#1003), made only in the debug build (`AppGraph`, `BuildConfig.DEBUG`): prompt
  * variants for each kind of AI text ([PromptKind], [LabPrompts]), written with in place of the
- * release prompt while developer mode is on ([on]), or compared with it from the same evidence, and
- * each comparison logged on the phone for a tally.
+ * release prompt while the lab is on ([on]: developer mode, and the lab's switch, #1388), or compared
+ * with it from the same evidence, and each comparison logged on the phone for a tally.
  *
  * - **Its settings** ([settings]) and **its log** ([log]) are kept in [dir], read once at start, each
  *   change written at once, on [io].
@@ -52,7 +52,9 @@ import kotlin.time.Instant
  *   the release prompt's opening line in place, with the tools' answers so far, in memory only, with the
  *   client and key it went through, for a comparison from exactly that request.
  *
- * Developer mode off, nothing is varied, and the lab's place in Settings is hidden with the rest.
+ * Developer mode off, nothing is varied, and the lab's place in Settings is hidden with the rest. The
+ * lab's switch off ([LabSettings.enabled], off until turned on), nothing is varied either and no
+ * comparison is offered, the choices per kind kept for when it is turned on again.
  */
 @Suppress("TooManyFunctions") // Its settings, its log, and the client and cache it wraps.
 class PromptLab(
@@ -60,6 +62,7 @@ class PromptLab(
     private val scope: CoroutineScope,
     private val io: CoroutineDispatcher,
 ) {
+    private val developerState = MutableStateFlow(false)
     private val onState = MutableStateFlow(false)
     private val settingsState = MutableStateFlow(LabSettings())
     private val logState = MutableStateFlow<List<LabComparison>>(emptyList())
@@ -67,7 +70,7 @@ class PromptLab(
     private val sentByCard = LinkedHashMap<String, Sent>()
     private val files = Mutex()
 
-    /** Whether the lab is on: developer mode, as last read. */
+    /** Whether the lab is on: developer mode, as last read, and the lab's switch ([LabSettings.enabled]). */
     val on: StateFlow<Boolean> = onState.asStateFlow()
 
     /** The lab's settings. */
@@ -83,6 +86,7 @@ class PromptLab(
                     val read = LabJson.readSettings(text)
                     settingsState.value = read
                     appliedCustom.value = read.custom
+                    refreshOn()
                 }
                 read(LOG)?.let { logState.value = LabJson.readLog(it) }
             }
@@ -91,13 +95,20 @@ class PromptLab(
 
     /** Developer mode, as read: the lab varies nothing while it is off. */
     fun developerMode(on: Boolean) {
-        onState.value = on
+        developerState.value = on
+        refreshOn()
     }
 
     /** Changes the settings, and keeps them. */
     fun update(change: (LabSettings) -> LabSettings) {
         settingsState.update(change)
+        refreshOn()
         save(SETTINGS)
+    }
+
+    // Whether the lab is on, after developer mode or the lab's switch changed.
+    private fun refreshOn() {
+        onState.value = developerState.value && settingsState.value.enabled
     }
 
     /**
@@ -112,7 +123,7 @@ class PromptLab(
     /**
      * The lab's choices as set now (#1003): the variant each kind is written with and its instructions
      * (*Custom*'s as last applied, [applyCustom]), for a pipeline built now; [PromptChoices.NONE] while
-     * the lab is off.
+     * the lab is off ([on]), so the release prompts are written with, under the release cache keys.
      */
     fun choices(): PromptChoices {
         if (!onState.value) return PromptChoices.NONE
@@ -137,7 +148,8 @@ class PromptLab(
 
     /**
      * When a pipeline is to be built again for the lab's choices: each change of them after the
-     * first (developer mode, a variant used, *Custom* applied), changes close together taken as one.
+     * first (developer mode, the lab's switch, a variant used, *Custom* applied), changes close
+     * together taken as one.
      */
     @OptIn(FlowPreview::class)
     val rebuilds: Flow<Unit>

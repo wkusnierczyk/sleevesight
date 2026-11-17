@@ -33,7 +33,8 @@ import app.sleevesight.core.settings.Settings
  *   section among it, outlined in teal with a small *Developer* tag ([Settings.markDeveloperItems],
  *   `DeveloperMark`).
  * - *Prompt lab* (#1003), in the debug build only ([PromptLabBlock]): prompt variants for each kind
- *   of AI text, to write with or compare, in the mark tagged *Debug build*.
+ *   of AI text, to write with or compare, in the mark tagged *Debug build*, under its own switch
+ *   (#1388), off until turned on.
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */

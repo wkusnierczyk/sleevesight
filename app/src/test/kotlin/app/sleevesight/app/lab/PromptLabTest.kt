@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -75,6 +76,12 @@ class PromptLabTest {
             card = card,
         )
 
+    // Developer mode and the lab's switch on (#1388): the lab varies what it is set to.
+    private fun PromptLab.switchOn() {
+        developerMode(true)
+        update { it.withEnabled(true) }
+    }
+
     private fun TestScope.lab(): PromptLab =
         // The test's own scope: `advanceUntilIdle` leaves the background scope's work unrun.
         PromptLab(folder.root, this, StandardTestDispatcher(testScheduler))
@@ -94,7 +101,7 @@ class PromptLabTest {
         runTest {
             val lab = lab()
             advanceUntilIdle()
-            lab.developerMode(true)
+            lab.switchOn()
             lab.update { it.use(PromptKind.KEY, "B") }
             val chosen = lab.choices()
             val b = LabPrompts.variant(PromptKind.KEY, "B")!!.instructions
@@ -118,7 +125,7 @@ class PromptLabTest {
     fun eachCardsRequestIsRememberedByTheCardAsLastSentWithItsToolsAnswers() =
         runTest {
             val lab = lab()
-            lab.developerMode(true)
+            lab.switchOn()
             val varied = lab.through(provider, lab.choices())
             val first = keyRequest()
             val answered =
@@ -143,7 +150,7 @@ class PromptLabTest {
     fun twoCardsWithTheSameRequestAndReplyAreRememberedApart() =
         runTest {
             val lab = lab()
-            lab.developerMode(true)
+            lab.switchOn()
             lab.update { it.use(PromptKind.KEY, "A") }
             val withA = lab.through(provider, lab.choices())
             lab.update { it.use(PromptKind.KEY, "B") }
@@ -167,7 +174,7 @@ class PromptLabTest {
             val asked = mutableListOf<Unit>()
             val watching = launch { lab.rebuilds.collect { asked += it } }
             advanceUntilIdle()
-            lab.developerMode(true)
+            lab.switchOn()
             advanceUntilIdle()
             lab.update { it.use(PromptKind.SONG, "A") }
             advanceUntilIdle()
@@ -183,7 +190,7 @@ class PromptLabTest {
         runTest {
             val lab = lab()
             advanceUntilIdle()
-            lab.developerMode(true)
+            lab.switchOn()
             lab.update { it.use(PromptKind.SONG, LabPrompts.CUSTOM) }
             lab.applyCustom(PromptKind.SONG)
             advanceUntilIdle()
@@ -203,6 +210,64 @@ class PromptLabTest {
             watching.cancel()
             assertEquals(1, asked.size)
             assertEquals("Write the sound first.", lab.choices()[PromptKind.SONG]?.instructions)
+        }
+
+    @Test
+    fun withTheLabsSwitchOffTheReleasePromptsAreWrittenWithAndTheChoicesAreKept() =
+        runTest {
+            val lab = lab()
+            advanceUntilIdle()
+            lab.developerMode(true)
+            lab.update { it.use(PromptKind.KEY, "B") }
+            // Developer mode on, the switch off until turned on: nothing varied.
+            assertFalse(lab.on.value)
+            assertSame(PromptChoices.NONE, lab.choices())
+            assertSame(provider, lab.through(provider, lab.choices()))
+
+            lab.update { it.withEnabled(true) }
+            assertTrue(lab.on.value)
+            assertEquals("B", lab.choices()[PromptKind.KEY]?.id)
+
+            lab.update { it.withEnabled(false) }
+            assertFalse(lab.on.value)
+            assertSame(PromptChoices.NONE, lab.choices())
+            // On again, the choice made before is back.
+            lab.update { it.withEnabled(true) }
+            assertEquals("B", lab.choices()[PromptKind.KEY]?.id)
+        }
+
+    @Test
+    fun turningTheLabsSwitchOnOrOffAsksForARebuild() =
+        runTest {
+            val lab = lab()
+            advanceUntilIdle()
+            lab.developerMode(true)
+            lab.update { it.use(PromptKind.SONG, "A") }
+            advanceUntilIdle()
+            val asked = mutableListOf<Unit>()
+            val watching = launch { lab.rebuilds.collect { asked += it } }
+            advanceUntilIdle()
+            lab.update { it.withEnabled(true) }
+            advanceUntilIdle()
+            lab.update { it.withEnabled(false) }
+            advanceUntilIdle()
+            watching.cancel()
+            assertEquals(2, asked.size)
+        }
+
+    @Test
+    fun theLabsSwitchOutlastsTheProcess() =
+        runTest {
+            val first = lab()
+            advanceUntilIdle()
+            first.update { it.use(PromptKind.SONG, "C").withEnabled(true) }
+            advanceUntilIdle()
+
+            val second = lab()
+            advanceUntilIdle()
+            second.developerMode(true)
+            assertTrue(second.on.value)
+            assertEquals("C", second.choices()[PromptKind.SONG]?.id)
         }
 
     @Test
