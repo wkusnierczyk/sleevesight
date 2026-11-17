@@ -81,8 +81,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * ([openSources]), and the app's own [colors], since the back takes nothing from the art. For a
  * track *Clear history* holds under *On request* (#1112), [lookUp] asks for it to be looked up again,
  * as *Look up again* does: a turn of the cover over asks, and the back fills once the sources answer;
- * null otherwise. [memory], the back as it was left ([rememberCoverMemory]), when it is kept above
- * the cover (#1097); null for the cover's own.
+ * null otherwise. [memory], the back as it was left ([rememberCoverMemory]), kept above where the
+ * cover is drawn (#1097).
  */
 @Suppress("LongParameterList") // What the back shows, what it asks, and where its buttons go.
 internal class CoverTurn(
@@ -93,8 +93,8 @@ internal class CoverTurn(
     val retry: (() -> Unit)?,
     val openSources: () -> Unit,
     val colors: ColorScheme,
+    val memory: CoverMemory,
     val lookUp: (() -> Unit)? = null,
-    val memory: CoverMemory? = null,
 )
 
 /**
@@ -110,7 +110,7 @@ internal fun coverTurn(
     header: NowPlaying,
     settings: Settings?,
     actions: NowPlayingActions,
-    memory: CoverMemory? = null,
+    memory: CoverMemory,
 ): CoverTurn {
     val colors = LocalAppColors.current ?: MaterialTheme.colorScheme
     val states by actions.tracklists.states.collectAsState()
@@ -162,10 +162,10 @@ internal fun FlippingCover(
     front: @Composable () -> Unit,
 ) {
     // The album whose back shows, saved with it, so a back restored after another album has come
-    // (the process gone meanwhile) is not shown on it; null for the cover. Home's own, when it gives
-    // one ([CoverTurn.memory]), else this cover's ([coverMemoryOf]), with where its tracklist was left.
+    // (the process gone meanwhile) is not shown on it; null for the cover. Kept by whoever draws the
+    // cover ([CoverTurn.memory]), with where its tracklist was left.
     val album = turn.album.orEmpty()
-    val memory = coverMemoryOf(turn)
+    val memory = turn.memory
     var backOf by memory.backOf
     // Of this album, whichever face shows: another album played meanwhile, with the cover on its front,
     // empties it too, so coming back to the first opens its tracklist afresh.

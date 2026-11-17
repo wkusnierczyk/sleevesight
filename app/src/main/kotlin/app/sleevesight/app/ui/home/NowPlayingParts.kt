@@ -267,8 +267,8 @@ private fun Progress(
         // position when they do not fit beside each other (a large font, a narrow cover, #1097).
         Layout(
             content = {
-                Small(clock(position))
-                Small(clock(duration))
+                Small(clock(position), tabular = true)
+                Small(clock(duration), tabular = true)
             },
             modifier = Modifier.fillMaxWidth(),
             measurePolicy = TimesPolicy,
@@ -375,9 +375,19 @@ internal fun withAlbum(
     }
 }
 
+// With [tabular], digits of one width: for the times under the art, so the position takes no more room
+// than the length as it plays (#1097).
 @Composable
-private fun Small(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Small(
+    text: String,
+    tabular: Boolean = false,
+) {
+    val small = MaterialTheme.typography.bodySmall
+    Text(
+        text,
+        style = if (tabular) small.copy(fontFeatureSettings = TABULAR) else small,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 /** The test tag of the line under the title while its artists are held back (#1355). */
@@ -392,10 +402,16 @@ private val ART_WIDTH = 360.dp
 private val ART_GAP = 8.dp
 private val TICK = 1.seconds
 
+/** Digits of one width (OpenType `tnum`), for times that change as they play. */
+private const val TABULAR = "tnum"
+
 /**
  * The playback position's two times, the position at the start and the length at the end: on one
- * line when they fit beside each other, else the length on a line under the position. Its intrinsic
- * height says which, for the width asked, so the cover's side can size the cover to what is left.
+ * line when two lengths would fit beside each other, else the length on a line under the position.
+ * Decided by the length, not the position, so it holds for the whole track: in digits of one width
+ * ([TABULAR]), the position is never wider than the length, and a line is not taken or given back as
+ * it plays (9:59 to 10:00). Its intrinsic height says which, for the width asked, so the cover's side
+ * can size the cover to what is left.
  */
 private object TimesPolicy : MeasurePolicy {
     override fun MeasureScope.measure(
@@ -404,8 +420,8 @@ private object TimesPolicy : MeasurePolicy {
     ): MeasureResult {
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val (start, end) = measurables.map { it.measure(loose) }
-        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else start.width + end.width
-        val beside = start.width + end.width <= width
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else 2 * end.width
+        val beside = 2 * end.width <= width
         val height = if (beside) maxOf(start.height, end.height) else start.height + end.height
         return layout(width, height) {
             start.placeRelative(0, 0)
@@ -418,8 +434,7 @@ private object TimesPolicy : MeasurePolicy {
         width: Int,
     ): Int {
         val (start, end) = measurables
-        val beside =
-            start.maxIntrinsicWidth(Constraints.Infinity) + end.maxIntrinsicWidth(Constraints.Infinity) <= width
+        val beside = 2 * end.maxIntrinsicWidth(Constraints.Infinity) <= width
         val (a, b) = start.maxIntrinsicHeight(width) to end.maxIntrinsicHeight(width)
         return if (beside) maxOf(a, b) else a + b
     }
@@ -432,7 +447,7 @@ private object TimesPolicy : MeasurePolicy {
     override fun IntrinsicMeasureScope.maxIntrinsicWidth(
         measurables: List<IntrinsicMeasurable>,
         height: Int,
-    ): Int = measurables.sumOf { it.maxIntrinsicWidth(height) }
+    ): Int = 2 * measurables.last().maxIntrinsicWidth(height)
 
     override fun IntrinsicMeasureScope.minIntrinsicWidth(
         measurables: List<IntrinsicMeasurable>,

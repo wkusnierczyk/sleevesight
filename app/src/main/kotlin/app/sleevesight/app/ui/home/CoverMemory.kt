@@ -110,10 +110,3 @@ internal fun rememberCoverMemory(): CoverMemory {
     val tracklist = rememberSaveable(saver = TracklistMemory.Saver) { TracklistMemory() }
     return remember(backOf, tracklist) { CoverMemory(backOf, tracklist) }
 }
-
-/** The memory of [turn]'s cover: Home's ([CoverTurn.memory]), else the cover's own. */
-@Composable
-internal fun coverMemoryOf(turn: CoverTurn): CoverMemory {
-    val own = rememberCoverMemory()
-    return turn.memory ?: own
-}
