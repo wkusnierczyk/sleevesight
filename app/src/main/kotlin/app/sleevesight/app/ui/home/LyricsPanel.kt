@@ -45,12 +45,14 @@ import app.sleevesight.core.synthesis.SearchKind
  * focus to the panel's *Close* as it goes. With no page, *Find the lyrics* under the rest ([search],
  * #773, #908); for every track with lyrics, *Explain the song* last (#908).
  */
+@Suppress("LongParameterList") // What the panel shows, and each of its ways out.
 @Composable
 internal fun lyricsItem(
     links: LyricsLinks,
     retry: (() -> Unit)?,
     openSources: () -> Unit,
     search: PanelSearch = PanelSearch(),
+    cites: PanelNotes = PanelNotes(),
     openAppearance: () -> Unit,
 ): InPlaceItem =
     InPlaceItem(
@@ -59,7 +61,7 @@ internal fun lyricsItem(
         action = stringResource(R.string.home_lyrics_show),
         tag = LYRICS_CHIP_TAG,
         panelTag = LYRICS_PANEL_TAG,
-    ) { toClose -> LyricsPanel(links, retry, openSources, openAppearance, toClose, search) }
+    ) { toClose -> LyricsPanel(links, retry, openSources, openAppearance, toClose, search, cites) }
 
 /**
  * What the *Lyrics* panel holds for [track] ([lyricsLinks], #728), MusicBrainz's state read from it;
@@ -91,6 +93,7 @@ internal fun LyricsPanel(
     openAppearance: () -> Unit,
     afterRetry: () -> Unit = {},
     search: PanelSearch = PanelSearch(),
+    cites: PanelNotes = PanelNotes(),
 ) {
     val style = MaterialTheme.typography.bodyLarge
     val width =
@@ -110,7 +113,7 @@ internal fun LyricsPanel(
         is LyricsLinks.Links -> {
             for (link in links.links) PageLink(link, search = false)
             Browser()
-            Explain(search, width)
+            Explain(search, width, cites)
         }
         is LyricsLinks.NoLink -> {
             NoLinkText(links.reason, retry, openSources, afterRetry)
@@ -134,12 +137,12 @@ internal fun LyricsPanel(
                         PageLink(genius, search = true)
                         Browser()
                     }
-                    AiSearchBlock(search, SearchKind.LYRICS, width = width) { answer, _, _ ->
+                    AiSearchBlock(search, SearchKind.LYRICS, width = width) { answer, _ ->
                         if (answer is SearchAnswer.Lyrics) AiLyrics(answer.links)
                     }
                 }
             }
-            Explain(search, width)
+            Explain(search, width, cites)
         }
     }
 }
@@ -147,15 +150,22 @@ internal fun LyricsPanel(
 /**
  * *Explain the song* (#908), last in the panel, [width] wide, one column with *Find the lyrics*
  * ([chipColumnWidth], #1343): what the song is about, asked on a tap only, its answer cited
- * ([AiExplanation]).
+ * ([AiExplanation]), each citation opening *Sources* at its page's line ([cites]: *Sources*' lines and
+ * the way to them, #1067); last, after its notes, *Read more* ([ReadMore]).
  */
 @Composable
 private fun Explain(
     search: PanelSearch,
     width: Dp,
+    cites: PanelNotes,
 ) {
-    AiSearchBlock(search, SearchKind.EXPLAIN, width = width) { answer, _, credit ->
-        if (answer is SearchAnswer.Explanation) AiExplanation(answer, credit)
+    AiSearchBlock(
+        search,
+        SearchKind.EXPLAIN,
+        width = width,
+        last = { answer -> if (answer is SearchAnswer.Explanation) ReadMore(answer) },
+    ) { answer, _ ->
+        if (answer is SearchAnswer.Explanation) AiExplanation(answer, cites.lines, cites.onCite)
     }
 }
 

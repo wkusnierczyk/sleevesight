@@ -73,10 +73,10 @@ import app.sleevesight.core.synthesis.SearchKind
  *   of the line, as *Retry* is beside its line ([LineButton]); the focus handed from the button to
  *   *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
- *   with its page, [FromSite]), then "Written by {model}." (#1162) on a line of its own, in italics
- *   (the song's explanation's above *Pages cited*, #959), however it was asked, then from the
- *   model's knowledge "From the AI model's own knowledge, not verified", and, kept from before, when
- *   it was written ([KeptLine], #851);
+ *   with its page, [FromSite]), then "Written by {model}." (#1162) on a line of its own, in italics,
+ *   however it was asked, then from the model's knowledge "From the AI model's own knowledge, not verified", and,
+ *   kept from before, when it was written ([KeptLine], #851); last, what the answer puts after
+ *   these notes ([last], the explanation's *Read more*, #1067);
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
  *   its own knowledge." in the answer's place, after "Asked automatically: " for one asked by itself;
  * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the
@@ -95,13 +95,15 @@ import app.sleevesight.core.synthesis.SearchKind
  * centred in the room left of it. A marked button is always given [width] (only the *Lyrics* panel's
  * are marked); without it, the mark would follow the label ([AiLabel]), a fallback.
  */
+@Suppress("LongParameterList") // The search, where it shows, and what its answer draws.
 @Composable
 internal fun AiSearchBlock(
     search: PanelSearch,
     kind: SearchKind,
     genre: GenreLabel? = null,
     width: Dp = Dp.Unspecified,
-    answer: @Composable (SearchAnswer, String, @Composable () -> Unit) -> Unit,
+    last: @Composable (SearchAnswer) -> Unit = {},
+    answer: @Composable (SearchAnswer, String) -> Unit,
 ) {
     val texts = SearchTexts.of(kind)
     val track = search.track ?: return
@@ -136,7 +138,7 @@ internal fun AiSearchBlock(
                 feed.stop(track, kind, about)
                 handoff.moveTo(button)
             }
-        is AiSearch.Answered -> Answered(texts, shown, answer)
+        is AiSearch.Answered -> Answered(texts, shown, last, answer)
         is AiSearch.NothingFound -> NothingFound(texts, shown)
         is AiSearch.Failed ->
             RetryLine(
@@ -152,27 +154,25 @@ internal fun AiSearchBlock(
 }
 
 // What [shown] found, under a rule, as the panel shows it ([answer]); then its credit, "Written by
-// {model}." with the effort when not the service's default (#1162), asked by a tap or automatically
-// (#801's revised pick), which an answer that says where it goes draws itself (the song's
-// explanation, above *Pages cited*, #959: [SearchTexts.creditInAnswer]); from the model's knowledge
-// marked so, as an insight's claim from it is (#801); and, kept from before, when it was written (#851).
+// {model}." with the effort when not the default (#1162), asked by a tap or automatically (#801's
+// revised pick); from the model's knowledge marked so, as an insight's claim
+// from it is (#801); kept from before, when it was written (#851); and, last, what the answer puts
+// after its notes ([last]: the explanation's *Read more*, #1067).
 @Composable
 private fun Answered(
     texts: SearchTexts,
     shown: AiSearch.Answered,
-    answer: @Composable (SearchAnswer, String, @Composable () -> Unit) -> Unit,
+    last: @Composable (SearchAnswer) -> Unit,
+    answer: @Composable (SearchAnswer, String) -> Unit,
 ) {
     PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
-    val credit = creditString(Credit(shown.model, shown.effort))
-    val creditLine: @Composable () -> Unit = {
-        SearchCredit(credit, Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG)))
-    }
-    answer(shown.answer, shown.model, if (texts.creditInAnswer) creditLine else NO_CREDIT)
-    if (!texts.creditInAnswer) creditLine()
+    answer(shown.answer, shown.model)
+    SearchCredit(creditString(Credit(shown.model, shown.effort)), Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG)))
     if (!shown.way.web) {
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(texts.tag(AI_SEARCH_KNOWLEDGE_TAG)))
     }
     shown.keptAt?.let { KeptLine(it) }
+    last(shown.answer)
 }
 
 // Nothing found, under a rule: on the web or from the model's knowledge, after "Asked
@@ -225,9 +225,6 @@ private class SearchTexts(
 ) {
     /** The test tag [base] for this search: [explainTag]'s for *Explain the song*, so the panel's two stand apart. */
     fun tag(base: String): String = if (explain) explainTag(base) else base
-
-    /** Whether the answer draws its credit itself (#959): *Explain the song*'s, above *Pages cited*. */
-    val creditInAnswer: Boolean get() = explain
 
     companion object {
         private val ASK =
@@ -465,6 +462,3 @@ private val PADDING = PaddingValues(horizontal = CHIP_PADDING, vertical = 6.dp)
 
 private const val DISABLED = 0.38f
 private const val DISABLED_EDGE = 0.12f
-
-// The credit handed to an answer that does not draw it: [Answered] draws it under the answer.
-private val NO_CREDIT: @Composable () -> Unit = {}

@@ -234,7 +234,7 @@ internal fun GenreDefinitionNote(
             DefinitionState.NotFound ->
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     NoDefinition()
-                    AiSearchBlock(search, SearchKind.DEFINITION, genre) { answer, _, _ ->
+                    AiSearchBlock(search, SearchKind.DEFINITION, genre) { answer, _ ->
                         if (answer is SearchAnswer.Definition) {
                             Text(answer.text, style = MaterialTheme.typography.bodyMedium)
                         }

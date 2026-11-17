@@ -55,7 +55,7 @@ internal fun datesItem(
         if (sentences.isEmpty()) {
             NoDatesText(none, retry, openSources, toClose)
             if (none != NoDates.LOOKING) {
-                AiSearchBlock(search, SearchKind.DATES) { answer, _, _ ->
+                AiSearchBlock(search, SearchKind.DATES) { answer, _ ->
                     val header = search.header ?: search.track?.nowPlaying
                     if (answer is SearchAnswer.Dates && header != null) AiDatesPanel(aiDatesCited(answer, header))
                 }
