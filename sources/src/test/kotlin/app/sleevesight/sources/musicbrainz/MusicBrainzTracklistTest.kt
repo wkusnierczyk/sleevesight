@@ -3,6 +3,7 @@ package app.sleevesight.sources.musicbrainz
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbGroupFirst
 import app.sleevesight.core.resolution.MbRelease
+import app.sleevesight.core.resolution.MbReleaseGroup
 import app.sleevesight.core.resolution.MbTracklist
 import app.sleevesight.sources.web.ReplayNetClient
 import kotlinx.coroutines.test.runTest
@@ -43,7 +44,30 @@ class MusicBrainzTracklistTest {
             assertEquals(listOf(null), tracklist.media[1].tracks.map { it.lengthMs })
             val request = net.sent.single()
             assertEquals("https://musicbrainz.org/ws/2/release/r1", request.url)
-            assertEquals("recordings", request.query["inc"])
+            assertEquals("recordings+labels+release-groups", request.query["inc"])
+        }
+
+    @Test
+    fun `a release's date, country, labels, group and formats tell it from others of its name`() =
+        runTest {
+            // #1080: what each of several albums of one name shows, from the same request.
+            val tracklist =
+                assertIs<Lookup.Found<MbTracklist>>(
+                    MusicBrainzClient(ReplayNetClient.ok(RELEASE)).tracklist("r1"),
+                ).value
+            assertEquals("1959-08-17", tracklist.date)
+            assertEquals("United States", tracklist.country)
+            assertEquals(listOf("Columbia"), tracklist.labels)
+            assertEquals(MbReleaseGroup("g1", "Kind of Blue", "Album"), tracklist.group)
+            assertEquals(listOf("12\" Vinyl", null), tracklist.media.map { it.format })
+            // With no release event, the country's code; with none of these, none.
+            val bare =
+                ReplayNetClient.ok("""{"id":"r2","country":"XE","media":[{"position":1,"tracks":[]}]}""")
+            val plain = assertIs<Lookup.Found<MbTracklist>>(MusicBrainzClient(bare).tracklist("r2")).value
+            assertEquals("XE", plain.country)
+            assertEquals(null, plain.date)
+            assertEquals(emptyList<String>(), plain.labels)
+            assertEquals(null, plain.group)
         }
 
     @Test
@@ -113,8 +137,13 @@ class MusicBrainzTracklistTest {
 
         val RELEASE =
             """
-            {"id":"r1","title":"Kind of Blue","media":[
-              {"position":1,"tracks":[
+            {"id":"r1","title":"Kind of Blue","date":"1959-08-17","country":"US",
+             "release-events":[{"date":"1959-08-17","area":{"id":"a1","name":"United States"}}],
+             "label-info":[{"catalog-number":"CL 1355","label":{"id":"l1","name":"Columbia"}},
+                           {"catalog-number":"CS 8163","label":{"id":"l1","name":"Columbia"}}],
+             "release-group":{"id":"g1","title":"Kind of Blue","primary-type":"Album"},
+             "media":[
+              {"position":1,"format":"12\" Vinyl","tracks":[
                 {"position":1,"title":"So What","length":562000,"recording":{"id":"rec1","title":"So What"}},
                 {"position":2,"title":"Blue in Green","recording":{"id":"rec2","title":"Blue in Green","length":337000}}
               ]},

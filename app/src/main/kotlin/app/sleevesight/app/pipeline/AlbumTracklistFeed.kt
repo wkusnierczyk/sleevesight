@@ -70,6 +70,27 @@ interface TracklistFeed {
     /** Looks up [key]'s tracklist again after it failed (*Retry*). */
     fun retry(key: TracklistKey)
 
+    /** The albums of one name asked for (#1080), by their key, and where their tracklists are. */
+    val albums: StateFlow<Map<AlbumsKey, AlbumsState>> get() = NO_ALBUMS
+
+    /** Looks up the tracklist of each album of [key] (#1080), unless they are found, looked up or failed. */
+    fun lookAlbums(key: AlbumsKey) = Unit
+
+    /** Looks up the albums of [key] again after it failed (*Retry*). */
+    fun retryAlbums(key: AlbumsKey) = Unit
+
+    /**
+     * The album the listener chose among several of one name (#1080), by the name's key: its release
+     * group.
+     */
+    val choices: StateFlow<Map<String, String>> get() = NO_CHOICES
+
+    /** Keeps [group] as the album chosen for the name [name], or, null, lets Sleevesight decide again. */
+    fun choose(
+        name: String,
+        group: String?,
+    ) = Unit
+
     /** No tracklists: a preview's, or a test's that shows none. */
     object None : TracklistFeed {
         override val states: StateFlow<Map<TracklistKey, TracklistState>> = MutableStateFlow(emptyMap())
@@ -80,6 +101,9 @@ interface TracklistFeed {
     }
 }
 
+private val NO_ALBUMS: StateFlow<Map<AlbumsKey, AlbumsState>> = MutableStateFlow(emptyMap())
+private val NO_CHOICES: StateFlow<Map<String, String>> = MutableStateFlow(emptyMap())
+
 /**
  * The app's [TracklistFeed]: each tracklist asked through [lookup] (`AlbumTracklists`, over the
  * remembered MusicBrainz answers; null when it is not clear which album of several, #1078) in
@@ -88,54 +112,113 @@ interface TracklistFeed {
  * read when the request would go: off, nothing is asked and nothing is kept, so the album is asked
  * again once it is back on. At most [CAPACITY] albums are kept, the least recently asked dropped
  * first. *Clear history* ([forget]) drops them all; a lookup started before it keeps nothing ([epoch]).
+ *
+ * The albums of one name (#1080) are asked the same way through [albumsLookup], on the listener's tap
+ * on *See the {n} albums* or *Change*, never ahead; and the album the listener chose among them is kept
+ * in [choiceStore], read once at the start, until changed or *Clear history* forgets it.
  */
+@Suppress("LongParameterList") // The two lookups, the choices kept, and when each may ask.
 class AlbumTracklistFeed(
     private val lookup: suspend (TracklistKey) -> Lookup<MbTracklist>?,
     private val scope: CoroutineScope,
     private val musicBrainzOn: () -> Boolean,
     private val allowed: Flow<Boolean> = flowOf(true),
     private val epoch: ClearEpoch = ClearEpoch(),
+    private val albumsLookup: suspend (AlbumsKey) -> Lookup<List<NamedAlbum>> = { Lookup.NotFound },
+    private val choiceStore: AlbumChoiceStore = AlbumChoiceStore.InMemory(),
 ) : TracklistFeed {
     private val shown = MutableStateFlow<Map<TracklistKey, TracklistState>>(emptyMap())
     override val states: StateFlow<Map<TracklistKey, TracklistState>> = shown.asStateFlow()
 
-    override fun look(key: TracklistKey) = ask(key, again = false)
+    private val named = MutableStateFlow<Map<AlbumsKey, AlbumsState>>(emptyMap())
+    override val albums: StateFlow<Map<AlbumsKey, AlbumsState>> = named.asStateFlow()
 
-    override fun retry(key: TracklistKey) = ask(key, again = true)
+    private val chosen = MutableStateFlow<Map<String, String>>(emptyMap())
+    override val choices: StateFlow<Map<String, String>> = chosen.asStateFlow()
 
-    /** Forgets every tracklist, for *Clear history*: the next flip asks again. */
-    fun forget() {
-        shown.value = emptyMap()
+    init {
+        scope.launch(epoch.mark()) {
+            val kept = choiceStore.load()
+            // A choice made meanwhile stands over the one kept.
+            epoch.ifCurrent(currentCoroutineContext()) { chosen.update { kept + it } }
+        }
     }
 
-    private fun ask(
+    override fun look(key: TracklistKey) = askTracklist(key, again = false)
+
+    override fun retry(key: TracklistKey) = askTracklist(key, again = true)
+
+    override fun lookAlbums(key: AlbumsKey) = askAlbums(key, again = false)
+
+    override fun retryAlbums(key: AlbumsKey) = askAlbums(key, again = true)
+
+    override fun choose(
+        name: String,
+        group: String?,
+    ) {
+        chosen.update { if (group == null) it - name else it + (name to group) }
+        choiceStore.keep(name, group)
+    }
+
+    /**
+     * Forgets every tracklist, the albums of each name, and every album chosen, for *Clear history*:
+     * the next flip asks again, and Sleevesight decides among albums of one name again.
+     */
+    fun forget() {
+        shown.value = emptyMap()
+        named.value = emptyMap()
+        chosen.value = emptyMap()
+        choiceStore.clear()
+    }
+
+    private fun askTracklist(
         key: TracklistKey,
         again: Boolean,
+    ) = ask(shown, key, again, TracklistState.Looking, TracklistState.Failed) {
+        when (val answer = lookup(key)) {
+            is Lookup.Found -> TracklistState.Found(answer.value)
+            Lookup.NotFound -> TracklistState.NotFound
+            is Lookup.Failed -> TracklistState.Failed
+            null -> TracklistState.Unclear
+        }
+    }
+
+    private fun askAlbums(
+        key: AlbumsKey,
+        again: Boolean,
+    ) = ask(named, key, again, AlbumsState.Looking, AlbumsState.Failed) {
+        when (val answer = albumsLookup(key)) {
+            is Lookup.Found -> AlbumsState.Found(answer.value)
+            Lookup.NotFound -> AlbumsState.NotFound
+            is Lookup.Failed -> AlbumsState.Failed
+        }
+    }
+
+    // Asks [answer] for [key] into [flow], marked [looking] meanwhile: when [key] has no state, or,
+    // [again], when it [failed]. Once lookups are allowed, and only while MusicBrainz is on, read as
+    // the request would go: off, nothing is asked and nothing kept.
+    private fun <K, S> ask(
+        flow: MutableStateFlow<Map<K, S>>,
+        key: K,
+        again: Boolean,
+        looking: S,
+        failed: S,
+        answer: suspend () -> S,
     ) {
         var asking = false
-        shown.update { states ->
+        flow.update { states ->
             val now = states[key]
-            asking = now == null || (again && now == TracklistState.Failed)
-            if (asking) with(states - key, key, TracklistState.Looking) else states
+            asking = now == null || (again && now == failed)
+            if (asking) with(states - key, key, looking) else states
         }
         if (!asking) return
         scope.launch(epoch.mark()) {
             allowed.first { it }
-            val state =
-                if (!musicBrainzOn()) {
-                    null
-                } else {
-                    when (val answer = lookup(key)) {
-                        is Lookup.Found -> TracklistState.Found(answer.value)
-                        Lookup.NotFound -> TracklistState.NotFound
-                        is Lookup.Failed -> TracklistState.Failed
-                        null -> TracklistState.Unclear
-                    }
-                }
+            val state = if (musicBrainzOn()) answer() else null
             epoch.ifCurrent(currentCoroutineContext()) {
-                shown.update { states ->
+                flow.update { states ->
                     // Only over its own ask: a *Clear history* since has dropped it.
-                    if (states[key] != TracklistState.Looking) {
+                    if (states[key] != looking) {
                         states
                     } else if (state == null) {
                         states - key
@@ -148,11 +231,11 @@ class AlbumTracklistFeed(
     }
 
     // [states] with [key] last, as [state], the least recent dropped past [CAPACITY].
-    private fun with(
-        states: Map<TracklistKey, TracklistState>,
-        key: TracklistKey,
-        state: TracklistState,
-    ): Map<TracklistKey, TracklistState> =
+    private fun <K, S> with(
+        states: Map<K, S>,
+        key: K,
+        state: S,
+    ): Map<K, S> =
         (states + (key to state))
             .entries
             .toList()

@@ -277,15 +277,31 @@ class MusicBrainzClient(
     }
 
     override suspend fun tracklist(mbid: String): Lookup<MbTracklist> {
-        val request = NetRequest("$BASE/release/$mbid", query = mapOf("inc" to "recordings", "fmt" to "json"))
+        val request = NetRequest("$BASE/release/$mbid", query = mapOf("inc" to TRACKLIST_INC, "fmt" to "json"))
         return net.lookup(request) { response ->
             val json = parseObject(response.body)
             MbTracklist(
                 releaseMbid = json.required("id"),
+                date = json.string("date")?.ifEmpty { null },
+                country =
+                    json
+                        .array("release-events")
+                        .firstNotNullOfOrNull { it.obj("area")?.string("name")?.ifEmpty { null } }
+                        ?: json.string("country")?.ifEmpty { null },
+                labels =
+                    json
+                        .array("label-info")
+                        .mapNotNull { it.obj("label")?.string("name")?.ifEmpty { null } }
+                        .distinct(),
+                group =
+                    json.obj("release-group")?.let {
+                        MbReleaseGroup(it.required("id"), it.string("title").orEmpty(), it.string("primary-type"))
+                    },
                 media =
                     json.array("media").mapIndexed { i, medium ->
                         MbMedium(
                             position = medium.int("position") ?: (i + 1),
+                            format = medium.string("format")?.ifEmpty { null },
                             tracks =
                                 medium.array("tracks").mapIndexed { j, track ->
                                     val recording = track.obj("recording")
@@ -414,6 +430,12 @@ class MusicBrainzClient(
          * comes with the recording whatever it lists.
          */
         const val RELEASES_INC: String = "releases+release-groups"
+
+        /**
+         * What a release's tracklist is asked with (#984): its tracks with their recordings; its labels
+         * and release group (#1080), which tell albums of one name apart. Core data only.
+         */
+        const val TRACKLIST_INC: String = "recordings+labels+release-groups"
 
         private val WIKIDATA = Regex("^https?://www\\.wikidata\\.org/wiki/(Q[0-9]+)$")
 
