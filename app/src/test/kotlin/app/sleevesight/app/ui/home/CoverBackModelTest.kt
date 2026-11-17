@@ -169,13 +169,14 @@ class CoverBackModelTest {
         val tied = TracklistKey(null, "rec-eyes", listOf("g-a", "g-b"))
         assertEquals(tied, tracklistKey(track, idol))
         assertEquals(CoverBack.Looking, coverBack(track, idol, true, emptyMap()))
-        assertEquals(CoverBack.Ambiguous, coverBack(track, idol, true, mapOf(tied to TracklistState.Unclear)))
+        val ab = SameName(choiceName("Greatest Hits", "Billy Idol"), "Greatest Hits", listOf("g-a", "g-b"), "rec-eyes")
+        assertEquals(CoverBack.Ambiguous(ab), coverBack(track, idol, true, mapOf(tied to TracklistState.Unclear)))
         val found = coverBack(track, idol, true, mapOf(tied to tracklist(listOf("Eyes Without a Face"))))
         assertEquals(TrackAt(0, 0), (found as CoverBack.Found).playing)
         // With no recording known, nothing tells them apart, and nothing is asked.
         val unknown = track.copy(resolution = track.resolution?.copy(recordingMbid = null))
         assertNull(tracklistKey(unknown, idol))
-        assertEquals(CoverBack.Ambiguous, coverBack(unknown, idol, true, emptyMap()))
+        assertEquals(CoverBack.Ambiguous(ab.copy(recording = null)), coverBack(unknown, idol, true, emptyMap()))
         // Another song's tracklist of the name is not shown while this one's is looked up: it may be
         // of another of the groups.
         val other = TracklistKey(null, "rec-rebel", listOf("g-a", "g-b"))
@@ -189,7 +190,7 @@ class CoverBackModelTest {
                 ReleaseDate("Greatest Hits", null, "g-b", "Album"),
             )
         assertEquals(tied, tracklistKey(undated, idol))
-        assertEquals(CoverBack.Ambiguous, coverBack(undated, idol, true, mapOf(tied to TracklistState.Unclear)))
+        assertEquals(CoverBack.Ambiguous(ab), coverBack(undated, idol, true, mapOf(tied to TracklistState.Unclear)))
     }
 
     @Test

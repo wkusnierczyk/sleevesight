@@ -29,8 +29,10 @@ import app.sleevesight.app.pipeline.AppItemNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.AskAiWired
 import app.sleevesight.app.pipeline.AutoSearches
+import app.sleevesight.app.pipeline.KeptAlbumChoices
 import app.sleevesight.app.pipeline.KeyRefusals
 import app.sleevesight.app.pipeline.ModelCheck
+import app.sleevesight.app.pipeline.NamedAlbum
 import app.sleevesight.app.pipeline.NetDump
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.Plays
@@ -89,6 +91,7 @@ import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.pipeline.VocalsChecks
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
@@ -595,7 +598,8 @@ class AppGraph internal constructor(
     /**
      * The albums' tracklists on the back of Home's cover (#984), looked up on a flip through the
      * wiring's remembered MusicBrainz answers, in the pipeline's scope, while lookups are allowed and
-     * MusicBrainz is on, marked with [clearEpoch].
+     * MusicBrainz is on, marked with [clearEpoch]; with the albums of one name and the listener's
+     * choice among them, kept on the phone (#1080).
      */
     val tracklists: AlbumTracklistFeed =
         AlbumTracklistFeed(
@@ -611,6 +615,20 @@ class AppGraph internal constructor(
             musicBrainzOn = { latestSettings.value?.isEnabled(SourceId.MUSICBRAINZ) == true },
             allowed = pipeline.lookupsAllowed,
             epoch = clearEpoch,
+            // The albums of one name (#1080), each group's tracklist in turn, on the listener's tap.
+            albumsLookup = { key ->
+                when (val each = wiring.tracklists.each(key.groups, key.recording)) {
+                    is Lookup.Found ->
+                        Lookup.Found(
+                            each.value.map { (group, tracklist) ->
+                                NamedAlbum(group, tracklist)
+                            },
+                        )
+                    Lookup.NotFound -> Lookup.NotFound
+                    is Lookup.Failed -> each
+                }
+            },
+            choiceStore = KeptAlbumChoices(appContext),
         )
 
     /**
@@ -927,7 +945,8 @@ class AppGraph internal constructor(
      * one transaction and in turn with what is written about artists ([ArtistKeeping.clearWith]);
      * MusicBrainz's answers held in memory; the genres' reasons and definitions, and the AI
      * searches shown ([AppGenreNotes.forget], #786 too, [AppAiSearches.forget]); the albums'
-     * tracklists shown ([AlbumTracklistFeed.forget], #984) and their release groups' first releases
+     * tracklists shown and the albums chosen among several of one name ([AlbumTracklistFeed.forget],
+     * #984, #1080) and their release groups' first releases
      * ([ReleaseGroupFeed.forget], #1099); the
      * artist facts the listening session cited; the session layer's last change, which names the
      * track before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.

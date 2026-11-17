@@ -25,6 +25,10 @@ class AlbumTracklistFeedTest {
     private val allowed = MutableStateFlow(true)
     private var on = true
 
+    private val albumsAsked = mutableListOf<AlbumsKey>()
+    private var albumsAnswer: Lookup<List<NamedAlbum>> = Lookup.Found(listOf(NamedAlbum("g-a", tracklist)))
+    private val store = AlbumChoiceStore.InMemory(mapOf("kept" to AlbumChoice("g-kept", listOf("g-kept", "g-other"))))
+
     private fun TestScope.feed(
         epoch: ClearEpoch = ClearEpoch(),
         hold: CompletableDeferred<Unit>? = null,
@@ -38,7 +42,58 @@ class AlbumTracklistFeedTest {
         musicBrainzOn = { on },
         allowed = allowed,
         epoch = epoch,
+        albumsLookup = { key ->
+            albumsAsked += key
+            albumsAnswer
+        },
+        choiceStore = store,
     )
+
+    @Test
+    fun theAlbumsOfOneNameAreAskedOnceAndAgainOnlyOnRetryAfterAFailure() =
+        runTest {
+            // #1080: on the listener's tap, all of them in one lookup.
+            val key = AlbumsKey(listOf("g-a", "g-b"), "rec")
+            albumsAnswer = Lookup.Failed("Offline")
+            val feed = feed()
+            feed.lookAlbums(key)
+            runCurrent()
+            assertEquals(AlbumsState.Failed, feed.albums.value[key])
+            feed.lookAlbums(key)
+            runCurrent()
+            assertEquals(1, albumsAsked.size)
+            albumsAnswer = Lookup.Found(listOf(NamedAlbum("g-a", tracklist)))
+            feed.retryAlbums(key)
+            runCurrent()
+            assertEquals(AlbumsState.Found(listOf(NamedAlbum("g-a", tracklist))), feed.albums.value[key])
+            feed.retryAlbums(key)
+            runCurrent()
+            assertEquals(2, albumsAsked.size)
+        }
+
+    @Test
+    fun aChoiceIsKeptOnThePhoneUntilChangedAndClearHistoryForgetsIt() =
+        runTest {
+            val feed = feed()
+            runCurrent()
+            // Those kept before are read at the start.
+            assertEquals(mapOf("kept" to AlbumChoice("g-kept", listOf("g-kept", "g-other"))), feed.choices.value)
+            val choice = AlbumChoice("g-2006", listOf("g-2001", "g-2006"))
+            feed.choose("greatest hits", choice)
+            assertEquals(choice, feed.choices.value["greatest hits"])
+            assertEquals(choice, store.kept["greatest hits"])
+            // *Let Sleevesight decide*.
+            feed.choose("greatest hits", null)
+            assertNull(feed.choices.value["greatest hits"])
+            assertNull(store.kept["greatest hits"])
+            feed.choose("greatest hits", choice.copy(group = "g-2001"))
+            feed.lookAlbums(AlbumsKey(listOf("g-a", "g-b"), null))
+            runCurrent()
+            feed.forget()
+            assertEquals(emptyMap<String, AlbumChoice>(), feed.choices.value)
+            assertEquals(emptyMap<String, AlbumChoice>(), store.kept)
+            assertEquals(emptyMap<AlbumsKey, AlbumsState>(), feed.albums.value)
+        }
 
     @Test
     fun anAlbumIsAskedOnceAndItsTracklistKept() =
