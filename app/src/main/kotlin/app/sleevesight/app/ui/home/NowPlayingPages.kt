@@ -297,6 +297,9 @@ internal class Showing(
     private val keyedOff: Set<SourceId> =
         settings?.let { now -> PipelineHost.KEYED_SOURCES.filterNot { now.isEnabled(it) }.toSet() }.orEmpty()
 
+    /** Whether MusicBrainz is switched off, as the settings say (#1355); false until they are read. */
+    val musicBrainzOff: Boolean = settings?.isEnabled(SourceId.MUSICBRAINZ) == false
+
     /** *Show grounding details* (#437, #440). */
     val details: Boolean = settings?.showGroundingDetails == true
 

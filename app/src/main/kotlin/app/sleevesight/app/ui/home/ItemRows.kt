@@ -72,7 +72,10 @@ import app.sleevesight.core.settings.Layout as LayoutSetting
  *
  * The focus moves as the line under the album's does ([InPlaceLine]): to a panel's *Close* when its
  * button opens it, back to its button when *Close* closes it, and to its button when a new track
- * closes a panel while the focus is in it, if the new track has that row.
+ * closes a panel while the focus is in it, if the new track has that row; if it has not, to its first
+ * row's (its *Close* while that row is open); and with no rows at all (held back while its people are
+ * named, #1355), to [elsewhere], a control that stays. A row's button that held the focus, under either
+ * layout, and is gone with the new track hands it on the same way.
  */
 @Suppress(
     "LongParameterList", // The rows, how they open, and what each shows.
@@ -85,6 +88,7 @@ internal fun ItemRows(
     folds: ItemFolds,
     context: ItemContext,
     width: Dp = keyInsightsWidth(rows, ai = context.settings.writeInsights),
+    elsewhere: RowsHandBack? = null,
     openPage: (InsightItem) -> Unit,
 ) {
     val handoff = rememberFocusHandoff()
@@ -98,13 +102,18 @@ internal fun ItemRows(
     val before = remember { mutableSetOf<InsightItem>().apply { addAll(open) } }
     // A panel gone by other than *Close* (a new track) while the focus was in it: back to its button,
     // or a keyboard's focus would fall to the top of the screen. Read before the panel goes.
-    val handBack = before.firstOrNull { it !in open && it in inside }
+    // Or a row's button holding the focus, the new track having no such row (its rows held back,
+    // #1355, under either layout): its focus goes on as the panel's would. Read before the button goes.
+    val handBack = before.firstOrNull { it !in open && it in inside } ?: goneButton(buttons, handoff, rows)
     SideEffect {
         before.clear()
         before.addAll(open)
         // No panel, no focus in it: a panel that goes may not be told it lost the focus.
         inside.retainAll(open)
-        if (handBack != null) handoff.moveTo(buttonOf(handBack))
+        handBack?.let { gone ->
+            val to = handBackTo(gone, rows, open, buttonOf, closeOf)
+            if (to != null) handoff.moveTo(to) else elsewhere?.move()
+        }
     }
     val kinds = rows.map { itemKind(it.item, it) }
     // The mark on every button while insights are written (#948): what each opens is AI-written.
@@ -323,6 +332,7 @@ internal fun HomeItems(
     memory: ItemFoldMemory,
     cite: (String) -> Unit,
     actions: NowPlayingActions,
+    elsewhere: RowsHandBack? = null,
     onReport: (TrackState, InsightState.Written, InsightItem) -> Unit,
 ) {
     val settings = state.settings ?: return
@@ -338,7 +348,7 @@ internal fun HomeItems(
             sourcesLines(actions.itemNotes, shown.track, actions.genreNotes, actions.aiSearches).evidence,
             onReport,
         )
-    ItemRows(rows, pages, folds, context, width) { item -> actions.openPage(HomePage.Item(item.name)) }
+    ItemRows(rows, pages, folds, context, width, elsewhere) { item -> actions.openPage(HomePage.Item(item.name)) }
 }
 
 /** The test tag of the rows under *Key insights*. */

@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -258,6 +259,8 @@ private fun Progress(
  * With [split], the roles telling the composer apart (#1199), the performers on one line (an arranger
  * the title names is in the title), then the composer, or every author, on a line of its own, after a quieter label
  * ("Composer: Wolfgang Amadeus Mozart"), as the row before the artist's names them.
+ *
+ * While [held] (#1355, [peopleNamed]), neither: an empty line in the artists' place, its height kept.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -266,6 +269,7 @@ internal fun KeyData(
     header: NowPlaying,
     years: HeaderYears,
     split: ArtistSplit? = null,
+    held: Boolean = false,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
@@ -276,14 +280,24 @@ internal fun KeyData(
         val about =
             listOfNotNull(normalized.from?.let { stringResource(R.string.home_title_from, it) }, normalized.variant)
         if (about.isNotEmpty()) Small(about.joinToString(" · "))
-        val credited = normalized.artists.ifEmpty { listOf(header.artists).filter(String::isNotBlank) }
-        val artists = split?.performers ?: credited
-        FlowRow {
-            artists.forEachIndexed { i, artist ->
-                Text(if (i < artists.lastIndex) "$artist, " else artist, style = MaterialTheme.typography.bodyLarge)
+        if (held) {
+            // Held back until the people are named (#1355): a line's height kept, so the album's
+            // line does not move when it fills; nothing a screen reader stops on.
+            Text(
+                " ",
+                Modifier.testTag(ARTISTS_HELD_TAG).clearAndSetSemantics {},
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        } else {
+            val credited = normalized.artists.ifEmpty { listOf(header.artists).filter(String::isNotBlank) }
+            val artists = split?.performers ?: credited
+            FlowRow {
+                artists.forEachIndexed { i, artist ->
+                    Text(if (i < artists.lastIndex) "$artist, " else artist, style = MaterialTheme.typography.bodyLarge)
+                }
             }
+            split?.let { AuthorsLine(it) }
         }
-        split?.let { AuthorsLine(it) }
         val album = header.album?.takeIf(String::isNotBlank)
         if (album == null) {
             Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
@@ -329,6 +343,9 @@ internal fun withAlbum(
 private fun Small(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+/** The test tag of the line under the title while its artists are held back (#1355). */
+const val ARTISTS_HELD_TAG: String = "artists-held"
 
 /** The test tag of the player row. */
 const val PLAYER_TAG: String = "player"
