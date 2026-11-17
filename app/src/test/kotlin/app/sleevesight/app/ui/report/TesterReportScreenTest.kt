@@ -232,7 +232,7 @@ class TesterReportScreenTest {
         show {
             open()
             compose.onNodeWithTag(REPORT_DIALOG_TAG).assertExists()
-            for (kept in TesterPart.entries - TesterPart.HISTORY) {
+            for (kept in TesterPart.entries.filter { it.includedAtFirst }) {
                 part(kept).assertIsOn()
                 assertTrue(kept.label, preview().contains("## ${kept.label}\n"))
             }

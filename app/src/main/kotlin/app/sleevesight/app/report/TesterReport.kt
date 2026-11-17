@@ -62,7 +62,8 @@ class TesterSnapshot(
 /**
  * The parts of a tester's report, in the order it holds them, each named by its [label]. The
  * tester can edit each and leave each out; [HISTORY] is left out until the tester turns it on
- * ([includedAtFirst]), since it lists every track played in the history kept.
+ * ([includedAtFirst]), since it lists every track played in the history kept; so is [PROMPT_LAB], the
+ * prompt lab's log (#1003), offered in the debug build only, which lists the tracks compared.
  */
 enum class TesterPart(
     val label: String,
@@ -73,6 +74,7 @@ enum class TesterPart(
     NOW_PLAYING("Now playing"),
     DIAGNOSTICS("Diagnostics"),
     HISTORY("Track-change history", includedAtFirst = false),
+    PROMPT_LAB("Prompt lab's log", includedAtFirst = false),
 }
 
 /**
@@ -95,7 +97,10 @@ object TesterReport {
     /** The most track changes the history part holds: the latest, so a mail app can take the report. */
     const val HISTORY_LIMIT: Int = 100
 
-    /** The first text of [part], as [snapshot] has it; null for [TesterPart.HISTORY], read apart ([history]). */
+    /**
+     * The first text of [part], as [snapshot] has it; null for [TesterPart.HISTORY], read apart
+     * ([history]), and for [TesterPart.PROMPT_LAB], the lab's own (`PromptLab.logText`).
+     */
     fun part(
         part: TesterPart,
         snapshot: TesterSnapshot,
@@ -105,7 +110,7 @@ object TesterReport {
             TesterPart.SETTINGS -> settings(snapshot.settings)
             TesterPart.NOW_PLAYING -> nowPlaying(snapshot)
             TesterPart.DIAGNOSTICS -> diagnostics(snapshot)
-            TesterPart.HISTORY -> null
+            TesterPart.HISTORY, TesterPart.PROMPT_LAB -> null
         }
 
     /** When it was reported, with the time zone, and the app's version and build. */

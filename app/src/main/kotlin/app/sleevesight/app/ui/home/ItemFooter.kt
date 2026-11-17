@@ -9,11 +9,14 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemShown
+import app.sleevesight.app.ui.lab.LabCompare
+import app.sleevesight.app.ui.lab.labSubject
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.synthesis.LabPrompts
 
 // The footer of the song's, the artist's and the album's written insights (#522), with what the key
 // insight's says of a rewrite (#911): the insight another model wrote, *Rewrite insight*, and the
@@ -44,11 +47,16 @@ internal fun WrittenFooter(
         Modifier.testTag(INSIGHT_BY_TAG),
         after = afterCredit(shown, context),
         readAloud = readAloud?.let { { ReadAloudButton(it, itemReadAloudTag(item)) } },
+        labKind = LabPrompts.kindOfCard(item.kind, null),
     )
     GroundingLine(state.grounded, details = false)
     TranslatedLine(state.grounded, shown.evidence.evidence, label = label)
     if (!state.complete) ItemQuiet(stringResource(R.string.home_insight_incomplete))
     ReportAction { context.onReport(track.copy(evidence = shown.evidence.evidence), state, item) }
+    // The prompt lab's *Compare* (#1003), in the debug build only, after *Report the insight*.
+    LabPrompts.kindOfCard(item.kind, null)?.let { kind ->
+        LabCompare(labSubject(kind, track, state, shown.evidence.evidence))
+    }
     context.unavailable?.let { ModelUnavailable(it, context.onModelSettings) }
     // A web search due for this insight failed (#958): beside it, as the whole line, with *Retry*.
     if (shown.rewriteWith == null && shown.rewriteFailed == AiSearches.WEB_SEARCH_FAILED) {

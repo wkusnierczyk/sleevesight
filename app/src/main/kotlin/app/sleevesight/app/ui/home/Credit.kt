@@ -6,22 +6,31 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.withStyle
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.settings.ListedModelNames
+import app.sleevesight.app.ui.lab.LocalPromptLab
+import app.sleevesight.app.ui.lab.labCreditText
 import app.sleevesight.app.ui.settings.effortName
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RewritePart
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.LabPrompts
+import app.sleevesight.core.synthesis.PromptKind
 
 // The one credit line of a text an AI model wrote (#1162), under the text, first in its notes (#959).
 
@@ -127,6 +136,10 @@ internal fun creditString(credit: Credit): String = creditText(credit, LocalReso
  * after a space; and at the row's end, *Read aloud* ([readAloud]), when given. One text, so a screen
  * reader reads the credit and what follows as the line shows them, then *Read aloud*. With no credit,
  * what follows alone; with neither, *Read aloud* alone at the row's end; nothing with none.
+ *
+ * In the debug build, with the prompt lab on and [labKind]'s texts written with a variant (#1003),
+ * the credit names it ("Written by Claude Haiku 5.5 · prompt B."), its text in the developer mark
+ * tagged *Debug build*, so a screenshot shows the line is not the Play build's.
  */
 @Composable
 internal fun CreditRow(
@@ -134,25 +147,36 @@ internal fun CreditRow(
     modifier: Modifier = Modifier,
     after: List<String> = emptyList(),
     readAloud: (@Composable () -> Unit)? = null,
+    labKind: PromptKind? = null,
 ) {
-    val said = credit != null || after.isNotEmpty()
+    val variant = if (BuildConfig.DEBUG && labKind != null) labVariant(labKind) else null
+    val resources = LocalResources.current
+    val credited = if (variant != null && credit != null) labCreditText(credit, variant, resources) else credit
+    val said = credited != null || after.isNotEmpty()
     if (!said && readAloud == null) return
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (said) {
             val text =
                 buildAnnotatedString {
-                    credit?.let { withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(it) } }
+                    credited?.let { withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(it) } }
                     after.forEach {
                         if (length > 0) append(' ')
                         append(it)
                     }
                 }
-            Text(
-                text,
-                modifier.weight(1f),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            val line: @Composable (Modifier) -> Unit = { textModifier ->
+                Text(
+                    text,
+                    textModifier,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (variant != null && credit != null) {
+                DeveloperMark(modifier.weight(1f), tag = stringResource(R.string.lab_mark_tag)) { line(Modifier) }
+            } else {
+                line(modifier.weight(1f))
+            }
         } else {
             Spacer(Modifier.weight(1f))
         }
@@ -162,3 +186,16 @@ internal fun CreditRow(
 
 /** The test tag of the credit under an insight, the key insight's and an item's (#811, #1162). */
 const val INSIGHT_BY_TAG: String = "insight-by"
+
+/**
+ * The variant [kind]'s texts are written with while the prompt lab is on and it is not the release
+ * prompt's (#1003); null otherwise, and always outside the debug build. Read as the lab's settings
+ * change, so a credit follows a switch.
+ */
+@Composable
+internal fun labVariant(kind: PromptKind): String? {
+    val lab = LocalPromptLab.current ?: return null
+    val on by lab.on.collectAsState()
+    val settings by lab.settings.collectAsState()
+    return settings.inUse(kind).takeIf { on && it != LabPrompts.RELEASE }
+}

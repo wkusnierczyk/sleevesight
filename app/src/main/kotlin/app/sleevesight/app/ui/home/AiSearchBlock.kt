@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -36,10 +37,15 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.ui.lab.LabCompare
+import app.sleevesight.app.ui.lab.LabSubject
+import app.sleevesight.app.ui.lab.labCreditText
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.CHIP_PADDING
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
@@ -51,6 +57,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.PromptKind
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
@@ -138,7 +145,7 @@ internal fun AiSearchBlock(
                 feed.stop(track, kind, about)
                 handoff.moveTo(button)
             }
-        is AiSearch.Answered -> Answered(texts, shown, last, answer)
+        is AiSearch.Answered -> Answered(texts, shown, last, answer, kind, track)
         is AiSearch.NothingFound -> NothingFound(texts, shown)
         is AiSearch.Failed ->
             RetryLine(
@@ -158,20 +165,42 @@ internal fun AiSearchBlock(
 // revised pick); from the model's knowledge marked so, as an insight's claim
 // from it is (#801); kept from before, when it was written (#851); and, last, what the answer puts
 // after its notes ([last]: the explanation's *Read more*, #1067).
+//
+// For *Explain the song* ([kind]), in the debug build with the prompt lab on (#1003): the credit names
+// the variant in use, in the developer mark tagged *Debug build*, and *Compare* follows, after the
+// credit and what was kept.
+@Suppress("LongParameterList") // The texts, the answer and how it shows, and what the lab needs.
 @Composable
 private fun Answered(
     texts: SearchTexts,
     shown: AiSearch.Answered,
     last: @Composable (SearchAnswer) -> Unit,
     answer: @Composable (SearchAnswer, String) -> Unit,
+    kind: SearchKind,
+    track: TrackState,
 ) {
     PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
     answer(shown.answer, shown.model)
-    SearchCredit(creditString(Credit(shown.model, shown.effort)), Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG)))
+    val credit = creditString(Credit(shown.model, shown.effort))
+    val byTag = Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG))
+    val variant = if (BuildConfig.DEBUG && kind == SearchKind.EXPLAIN) labVariant(PromptKind.EXPLAIN) else null
+    if (variant != null) {
+        val resources = LocalResources.current
+        DeveloperMark(tag = stringResource(R.string.lab_mark_tag)) {
+            SearchCredit(labCreditText(credit, variant, resources), byTag)
+        }
+    } else {
+        SearchCredit(credit, byTag)
+    }
     if (!shown.way.web) {
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(texts.tag(AI_SEARCH_KNOWLEDGE_TAG)))
     }
     shown.keptAt?.let { KeptLine(it) }
+    if (kind == SearchKind.EXPLAIN) {
+        LabCompare(
+            LabSubject(PromptKind.EXPLAIN, track.nowPlaying.title, track.nowPlaying.artists, track.nowPlaying.album),
+        )
+    }
     last(shown.answer)
 }
 

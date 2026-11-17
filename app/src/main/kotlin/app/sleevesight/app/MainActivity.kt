@@ -28,6 +28,7 @@ import app.sleevesight.app.ui.ThemeButtonFeed
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
 import app.sleevesight.app.ui.home.NowPlayingPage
+import app.sleevesight.app.ui.lab.LocalPromptLab
 import app.sleevesight.app.ui.logo.LocalAnimatorDurationScale
 import app.sleevesight.app.ui.logo.LocalLogoIntro
 import app.sleevesight.app.ui.logo.LogoIntro
@@ -154,6 +155,8 @@ class MainActivity : ComponentActivity() {
                     LocalLogoIntro provides intro,
                     // One observer of *Remove animations* for every turning record (#785).
                     LocalAnimatorDurationScale provides followedAnimatorDurationScale(),
+                    // The prompt lab (#1003): the debug build's alone, none in any other.
+                    LocalPromptLab provides graph.promptLab,
                 ) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
                     // accessibility services (Switch Access and the like), as it is of touch.

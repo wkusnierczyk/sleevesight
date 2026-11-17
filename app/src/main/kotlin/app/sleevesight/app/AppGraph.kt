@@ -22,6 +22,7 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
+import app.sleevesight.app.lab.PromptLab
 import app.sleevesight.app.pipeline.AlbumTracklistFeed
 import app.sleevesight.app.pipeline.AppAiSearches
 import app.sleevesight.app.pipeline.AppGenreNotes
@@ -124,6 +125,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
@@ -304,6 +306,14 @@ class AppGraph internal constructor(
     private val artistResults = StoreArtistResults({ caches }, Dispatchers.IO, artistKeeping, clearEpoch)
 
     /**
+     * The prompt lab (#1003), in the debug build only: null in any other, where nothing of it exists
+     * on screen and no request or card passes through it. Its settings and log are kept in the app's
+     * files, apart from the settings and the history; it varies nothing while developer mode is off.
+     */
+    val promptLab: PromptLab? =
+        if (BuildConfig.DEBUG) PromptLab(File(appContext.filesDir, PROMPT_LAB_DIR), mainScope, Dispatchers.IO) else null
+
+    /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
@@ -322,8 +332,9 @@ class AppGraph internal constructor(
             genres = { latestSettings.value?.showGenres != false },
             epoch = clearEpoch,
             musicBrainzThrough = musicBrainzThrough,
-            // Every AI request and its reply in logcat, in debug builds only (#767).
-            aiThrough = PromptDump::watching,
+            // Every AI request and its reply in logcat, in debug builds only (#767); there too, the
+            // prompt lab's variants (#1003).
+            aiThrough = { provider -> PromptDump.watching(provider).let { promptLab?.through(it) ?: it } },
             // What the search in the track's language found about an artist or an album (#939): in
             // [artistResults] while the switch is on, else in memory for the process.
             keepsArtists = { artistKeeping.on },
@@ -380,6 +391,13 @@ class AppGraph internal constructor(
      */
     val latestSettings: StateFlow<Settings?> =
         settings.settings.afterAcknowledged(firstRun.state).stateIn(mainScope, SharingStarted.Eagerly, null)
+
+    init {
+        // The prompt lab varies nothing outside developer mode (#1003).
+        promptLab?.let { lab ->
+            mainScope.launch { latestSettings.collect { lab.developerMode(it?.developerMode == true) } }
+        }
+    }
 
     /**
      * The switched-on service and its selected model, while that model is found unavailable
@@ -549,7 +567,13 @@ class AppGraph internal constructor(
                     aiRetry = { latestSettings.value?.aiRetry ?: Settings.DEFAULT_AI_RETRY },
                     // Each try that failed, in the diagnostics' events (#1164).
                     aiTried = { diagnostics.log.record(it) },
-                ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch) },
+                ) {
+                    // Cards written with a prompt lab's variant kept under keys of their own (#1003).
+                    StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch).let {
+                        promptLab?.cache(it)
+                            ?: it
+                    }
+                },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
@@ -996,6 +1020,9 @@ class AppGraph internal constructor(
         const val SECRETS_FILE = "secrets"
         const val SKIP_DETECTION_FILE = "skip_detection"
         const val HISTORY_DATABASE = "history.db"
+
+        /** The prompt lab's folder in the app's files (#1003), in the debug build only. */
+        const val PROMPT_LAB_DIR = "prompt-lab"
         const val CACHE_DATABASE = "cache.db"
 
         val KNOWN_PLAYERS = mapOf(Settings.SPOTIFY to "Spotify")

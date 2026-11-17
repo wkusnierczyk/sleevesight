@@ -31,6 +31,7 @@ import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.report.TesterReports
 import app.sleevesight.app.report.TesterSnapshot
+import app.sleevesight.app.ui.lab.LocalPromptLab
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
@@ -104,7 +105,11 @@ fun WithTesterReport(
     open?.let { snapshot ->
         val context = LocalContext.current
         val handoff = feed.mail ?: remember(context) { PhoneMail(context) }
-        TesterReportDialog(snapshot, { feed.reports.history(snapshot) }, handoff) { open = null }
+        // The prompt lab's log (#1003), offered in the debug build only.
+        val lab = LocalPromptLab.current
+        TesterReportDialog(snapshot, { feed.reports.history(snapshot) }, handoff, lab?.let { { it.logText() } }) {
+            open = null
+        }
     }
     hidden?.let { saved -> ReportButtonHiddenDialog(saved) { hidden = null } }
 }

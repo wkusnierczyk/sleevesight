@@ -46,7 +46,8 @@ import java.text.NumberFormat
  * part ([TesterPart]) with a switch that keeps it in or leaves it out, and *Edit*, which opens its
  * text for editing; then the whole mail as it will be sent, which only the tester hands to their
  * mail app. The history is left out until the tester turns it on, and only then read
- * ([readHistory]), as of the tap.
+ * ([readHistory]), as of the tap. So is the prompt lab's log (#1003), offered only with [readLab]
+ * (the debug build's lab): its part reads *Add the prompt lab's log*.
  *
  * Everything is as it was at the tap ([snapshot]), whatever happens meanwhile. Held only while the
  * dialog is open, not saved: closed by a rotation, a report starts afresh from a new tap.
@@ -62,8 +63,10 @@ internal fun TesterReportDialog(
     snapshot: TesterSnapshot,
     readHistory: suspend () -> String,
     handoff: MailHandoff,
+    readLab: (suspend () -> String)? = null,
     onDismiss: () -> Unit,
 ) {
+    val offered = remember(readLab) { TesterPart.entries.filter { it != TesterPart.PROMPT_LAB || readLab != null } }
     var note by remember { mutableStateOf("") }
     val drafts =
         remember(snapshot) { TesterPart.entries.associateWith { PartDraft(TesterReport.part(it, snapshot), it) } }
@@ -71,7 +74,7 @@ internal fun TesterReportDialog(
     val mail by remember(snapshot) {
         derivedStateOf {
             val kept =
-                TesterPart.entries.mapNotNull { part ->
+                offered.mapNotNull { part ->
                     drafts
                         .getValue(part)
                         .takeIf { it.included }
@@ -104,7 +107,20 @@ internal fun TesterReportDialog(
         previewHint = stringResource(R.string.tester_report_preview_hint),
         held = held,
     ) {
-        TesterInputs(note, { note = it }, drafts) { draft, on -> include(draft, on, scope, readHistory) }
+        TesterInputs(note, { note = it }, drafts, offered) { draft, on ->
+            include(
+                draft,
+                on,
+                scope,
+                if (draft.part == TesterPart.PROMPT_LAB &&
+                    readLab != null
+                ) {
+                    readLab
+                } else {
+                    readHistory
+                },
+            )
+        }
     }
 }
 
@@ -118,6 +134,7 @@ private fun TesterInputs(
     note: String,
     onNote: (String) -> Unit,
     drafts: Map<TesterPart, PartDraft>,
+    offered: List<TesterPart>,
     onInclude: (PartDraft, Boolean) -> Unit,
 ) {
     DeveloperMark(spacing = 8.dp) {
@@ -130,7 +147,7 @@ private fun TesterInputs(
             modifier = Modifier.fillMaxWidth().testTag(TESTER_NOTE_TAG),
         )
         Text(stringResource(R.string.tester_report_parts), style = MaterialTheme.typography.titleSmall)
-        for (part in TesterPart.entries) {
+        for (part in offered) {
             val draft = drafts.getValue(part)
             PartRow(part, draft) { on -> onInclude(draft, on) }
         }
@@ -138,21 +155,21 @@ private fun TesterInputs(
 }
 
 // Keeps [draft] in the report or leaves it out; kept for the first time with no text (the
-// history), it is read then, once.
+// history, the prompt lab's log), it is read then, once, by [read].
 private fun include(
     draft: PartDraft,
     on: Boolean,
     scope: CoroutineScope,
-    readHistory: suspend () -> String,
+    read: suspend () -> String,
 ) {
     draft.included = on
     if (!on || draft.text != null || draft.reading) return
     draft.reading = true
     scope.launch {
         try {
-            val read = readHistory()
-            draft.editable = read.length <= EDIT_LIMIT
-            draft.text = read
+            val text = read()
+            draft.editable = text.length <= EDIT_LIMIT
+            draft.text = text
         } finally {
             draft.reading = false
         }
@@ -163,7 +180,7 @@ private fun include(
 // history), whether it is kept, whether its text is open for editing, and whether it is being read.
 private class PartDraft(
     text: String?,
-    part: TesterPart,
+    val part: TesterPart,
 ) {
     var text by mutableStateOf(text)
     var editable by mutableStateOf(text == null || text.length <= EDIT_LIMIT)
@@ -255,6 +272,7 @@ private fun summary(part: TesterPart): String =
         TesterPart.NOW_PLAYING -> stringResource(R.string.tester_report_part_now_playing)
         TesterPart.DIAGNOSTICS -> stringResource(R.string.tester_report_part_diagnostics, DiagnosticsLog.CAPACITY)
         TesterPart.HISTORY -> stringResource(R.string.tester_report_part_history, TesterReport.HISTORY_LIMIT)
+        TesterPart.PROMPT_LAB -> stringResource(R.string.lab_report_part)
     }
 
 // A note longer than this is cut, as the insight report's is.

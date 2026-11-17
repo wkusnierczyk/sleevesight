@@ -2,7 +2,10 @@ package app.sleevesight.app.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.lab.LocalPromptLab
+import app.sleevesight.app.ui.lab.PromptLabBlock
 import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
@@ -29,6 +32,8 @@ import app.sleevesight.core.settings.Settings
  * - *Mark developer items* (#536), on by default: everything only developer mode shows, this
  *   section among it, outlined in teal with a small *Developer* tag ([Settings.markDeveloperItems],
  *   `DeveloperMark`).
+ * - *Prompt lab* (#1003), in the debug build only ([PromptLabBlock]): prompt variants for each kind
+ *   of AI text, to write with or compare, in the mark tagged *Debug build*.
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */
@@ -75,6 +80,9 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_mark_developer_summary),
         checked = settings.markDeveloperItems,
     ) { on -> update { it.copy(markDeveloperItems = on) } }
+    if (BuildConfig.DEBUG && shownInSearch(stringResource(R.string.lab_title))) {
+        LocalPromptLab.current?.let { PromptLabBlock(it) }
+    }
     SwitchRow(
         title = stringResource(R.string.settings_developer_mode),
         summary = stringResource(R.string.settings_developer_mode_summary),
