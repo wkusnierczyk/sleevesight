@@ -3,9 +3,7 @@ package app.sleevesight.app.ui.settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,7 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -95,7 +92,7 @@ internal const val OPENROUTER_KEYS = "https://openrouter.ai/settings/keys"
  * - with a key saved and not refused, that it is signed in, *Manage the key on OpenRouter ↗* and
  *   *Sign out* ([SettingsDialog.SignOut]);
  * - otherwise, why a sign-in did not finish, or that the key saved was refused, in the error colour;
- *   *Sign in with OpenRouter*, what it does, its terms with their link, and the link to the key
+ *   *Sign in* (read "Sign in with OpenRouter"), what it does, its terms with their link, and the link to the key
  *   under *Secrets*; and with a key saved, *Sign out*.
  * Nothing before the keys' states are read.
  */
@@ -161,22 +158,25 @@ internal fun failureLine(why: SignInFailure): Int =
         SignInFailure.REFUSED -> R.string.settings_openrouter_refused
     }
 
-// *Sign in with OpenRouter*, what it does, its terms, and the link to the key under *Secrets*.
+// *Sign in*, a pill as the settings' other actions' (#1387), read "Sign in with OpenRouter"; what it
+// does, its terms, and the link to the key under *Secrets*.
 @Composable
 private fun SignInOffer(ui: OpenRouterSignInUi?) {
     val context = LocalContext.current
     val style = MaterialTheme.typography.bodySmall
     val color = MaterialTheme.colorScheme.onSurface
-    Button(
-        onClick = {
+    PillButton(
+        label = stringResource(R.string.settings_openrouter_sign_in),
+        named = stringResource(R.string.settings_openrouter_sign_in_named),
+        onClick =
             ui?.let {
-                it.dismiss()
-                if (!openInOwnTask(context, it.start())) it.notOpened()
-            }
-        },
-        enabled = ui != null,
+                {
+                    it.dismiss()
+                    if (!openInOwnTask(context, it.start())) it.notOpened()
+                }
+            },
         modifier = Modifier.testTag(OPENROUTER_SIGN_IN_TAG),
-    ) { Text(stringResource(R.string.settings_openrouter_sign_in)) }
+    )
     Text(stringResource(R.string.settings_openrouter_sign_in_line), style = style, color = color)
     Text(boldStringResource(R.string.settings_openrouter_terms), style = style, color = color)
     WebLink(OPENROUTER_TERMS)
@@ -208,11 +208,12 @@ private fun SignedIn(open: (SettingsDialog) -> Unit) {
 
 @Composable
 private fun SignOutButton(open: (SettingsDialog) -> Unit) {
-    val named = stringResource(R.string.settings_openrouter_sign_out_named)
-    OutlinedButton(
+    PillButton(
+        label = stringResource(R.string.settings_openrouter_sign_out),
+        named = stringResource(R.string.settings_openrouter_sign_out_named),
         onClick = { open(SettingsDialog.SignOut) },
-        modifier = Modifier.testTag(OPENROUTER_SIGN_OUT_TAG).semantics { contentDescription = named },
-    ) { Text(stringResource(R.string.settings_openrouter_sign_out)) }
+        modifier = Modifier.testTag(OPENROUTER_SIGN_OUT_TAG),
+    )
 }
 
 /** *Sign out of OpenRouter?*: its key deleted from the phone once confirmed. */

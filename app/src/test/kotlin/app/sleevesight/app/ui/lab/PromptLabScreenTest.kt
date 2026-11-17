@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -158,6 +160,9 @@ class PromptLabScreenTest {
             compose.onNodeWithTag(labMarkTag(2, LabMark.GOOD)).performScrollTo().performClick()
             compose.onNodeWithTag(labMarkTag(3, LabMark.BAD)).performScrollTo().performClick()
             assertTrue(lab.log.value.isEmpty())
+            // Nothing logged yet: nothing to export or clear (#1387).
+            compose.onNodeWithTag(LAB_EXPORT_TAG).performScrollTo().assertIsNotEnabled()
+            compose.onNodeWithTag(LAB_CLEAR_TAG).assertIsNotEnabled()
 
             compose.onNodeWithTag(LAB_SHOW_TAG).performScrollTo().performClick()
             compose.waitUntil(WAIT_MS) { lab.log.value.size == 1 }
@@ -165,6 +170,8 @@ class PromptLabScreenTest {
             assertEquals(PromptKind.SONG, logged.kind)
             assertEquals(listOf(null, LabMark.GOOD, LabMark.BAD), logged.versions.sortedBy { it.shown }.map { it.mark })
             compose.waitUntil(WAIT_MS) { count(text(R.string.lab_logged)) == 1 }
+            compose.onNodeWithTag(LAB_EXPORT_TAG).performScrollTo().assertIsEnabled()
+            compose.onNodeWithTag(LAB_CLEAR_TAG).assertIsEnabled()
         }
     }
 

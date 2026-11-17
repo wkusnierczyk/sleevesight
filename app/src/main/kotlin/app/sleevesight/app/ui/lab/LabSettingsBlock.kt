@@ -14,10 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -44,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.lab.PromptLab
+import app.sleevesight.app.ui.settings.PillButton
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.core.synthesis.LabSettings
@@ -227,7 +226,7 @@ private fun Logged(lab: PromptLab) {
     val scope = rememberCoroutineScope()
     var asking by rememberSaveable { mutableStateOf(false) }
     var exported by remember { mutableStateOf<Boolean?>(null) }
-    val export =
+    val exporter =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(EXPORT_TYPE)) { uri ->
             // `wt`: a provider may otherwise leave the end of a longer file it replaces.
             if (uri != null) {
@@ -241,17 +240,23 @@ private fun Logged(lab: PromptLab) {
                 pluralStringResource(R.plurals.lab_logged_count, log.size, log.size, day(first.time))
             } ?: stringResource(R.string.lab_logged_none),
         )
+        // The settings' pills (#1387), each only while there is a log to export or clear.
         Row {
-            Button(
-                onClick = { export.launch(exportName(Clock.System.now())) },
+            val export = stringResource(R.string.lab_export)
+            PillButton(
+                label = export,
+                named = export,
+                onClick = if (log.isNotEmpty()) ({ exporter.launch(exportName(Clock.System.now())) }) else null,
                 modifier = Modifier.testTag(LAB_EXPORT_TAG),
-            ) { Text(stringResource(R.string.lab_export)) }
+            )
             Spacer(Modifier.width(8.dp))
-            OutlinedButton(
-                onClick = { asking = true },
-                enabled = log.isNotEmpty(),
+            val clear = stringResource(R.string.lab_clear)
+            PillButton(
+                label = clear,
+                named = clear,
+                onClick = if (log.isNotEmpty()) ({ asking = true }) else null,
                 modifier = Modifier.testTag(LAB_CLEAR_TAG),
-            ) { Text(stringResource(R.string.lab_clear)) }
+            )
         }
         exported?.let { Quiet(stringResource(if (it) R.string.lab_exported else R.string.lab_export_failed)) }
     }

@@ -240,26 +240,13 @@ internal fun ButtonRow(
         leading = null,
         trailing = {
             Spacer(Modifier.width(16.dp))
-            val error = MaterialTheme.colorScheme.error
-            OutlinedButton(
-                onClick = { onClick?.invoke() },
-                enabled = onClick != null,
-                modifier = Modifier.alignBy(::middle).testTag(tag).semantics { contentDescription = title },
-                colors =
-                    if (destructive) {
-                        ButtonDefaults.outlinedButtonColors(contentColor = error)
-                    } else {
-                        ButtonDefaults.outlinedButtonColors()
-                    },
-                border =
-                    if (destructive) {
-                        BorderStroke(1.dp, error)
-                    } else {
-                        ButtonDefaults.outlinedButtonBorder(
-                            onClick != null,
-                        )
-                    },
-            ) { Text(label) }
+            PillButton(
+                label = label,
+                named = title,
+                onClick = onClick,
+                modifier = Modifier.alignBy(::middle).testTag(tag),
+                destructive = destructive,
+            )
         },
     ) {
         // Its tap reaches into the row's padding where no note comes under it (#874).
@@ -273,6 +260,36 @@ internal fun ButtonRow(
             )
         }
     }
+}
+
+/**
+ * The settings' small outlined button, a pill (#1126, #1365, #1387): [label] on it, read by
+ * [named], so it says what it does out of context; [onClick] runs on a tap, and a null [onClick]
+ * disables it. Its text in the controls' colour, black in light mode and white in dark, as the
+ * switches' ([plainSwitchColors]), with Material's outline; a [destructive] one, which deletes, in
+ * the theme's error colour, its outline too.
+ */
+@Composable
+internal fun PillButton(
+    label: String,
+    named: String,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    destructive: Boolean = false,
+) {
+    val color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+    OutlinedButton(
+        onClick = { onClick?.invoke() },
+        enabled = onClick != null,
+        modifier = modifier.semantics { contentDescription = named },
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
+        border =
+            if (destructive) {
+                BorderStroke(1.dp, color)
+            } else {
+                ButtonDefaults.outlinedButtonBorder(onClick != null)
+            },
+    ) { Text(label) }
 }
 
 /**
