@@ -366,14 +366,14 @@ class AiSettingsTest {
     @Test
     fun anEffortIsChosenFromTheProvidersOwnScale() =
         show {
-            // Low, Anthropic's default, is its row's value.
+            // Low, Anthropic's default, is its row's value, marked as the default (#1375).
             val row = anthropic(R.string.settings_ai_effort_of)
-            compose.onNode(effortRow(row, R.string.settings_effort_low)).assertExists()
+            val low = app.getString(R.string.settings_ai_model_default, text(R.string.settings_effort_low))
+            compose.onNode(hasText(row) and hasText(low)).assertExists()
             compose.onNodeWithText(row).performScrollTo().performClick()
             // Anthropic's levels, without minimal, and the service's own default.
-            val levels =
-                listOf(R.string.settings_effort_low, R.string.settings_effort_medium, R.string.settings_effort_high)
-            for (level in levels) {
+            compose.onNode(hasText(low) and hasAnyAncestor(isDialog())).assertIsDisplayed()
+            for (level in listOf(R.string.settings_effort_medium, R.string.settings_effort_high)) {
                 compose.onNode(inDialog(level)).assertIsDisplayed()
             }
             assertTrue(compose.onAllNodes(inDialog(R.string.settings_effort_minimal)).fetchSemanticsNodes().isEmpty())
