@@ -64,7 +64,7 @@ internal fun keyName(id: SecretId): Int =
         SecretId.EXA -> R.string.settings_key_name_exa
     }
 
-/** A key's service, as the key screens' tables name it ([KeyTable], #542): "Anthropic", "Google Gemini". */
+/** A key's service, as the key screens' tables name it ([KeyTable], #542): "Anthropic", "Google". */
 @StringRes
 internal fun keyService(id: SecretId): Int =
     when (id) {

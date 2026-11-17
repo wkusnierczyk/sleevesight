@@ -78,7 +78,7 @@
     <string name="settings_key_name_openrouter">OpenRouter API key</string>
     <string name="settings_key_name_anthropic">Anthropic API key</string>
     <string name="settings_key_name_openai">OpenAI API key</string>
-    <string name="settings_key_name_google">Google Gemini API key</string>
+    <string name="settings_key_name_google">Google API key</string>
     <string name="settings_key_name_lastfm">Last.fm API key</string>
     <string name="settings_key_name_exa">Exa API key</string>
     <string name="settings_key_recipient_exa">Exa</string>

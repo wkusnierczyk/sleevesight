@@ -137,11 +137,9 @@ class SettingsLinksTest {
     @Test
     fun aLinkIsSetInItsSentence() {
         val link = TextPart.Action("Exa API key", "tag") {}
-        assertEquals(
-            listOf("Set your ", "Exa API key", " here."),
-            sentenceWith("Set your Exa API key here.", link).map { it.text },
-        )
-        assertEquals(link, sentenceWith("Set your Exa API key here.", link)[1])
+        // The whole sentence after its verb is the link, with nothing after it (#1401).
+        assertEquals(listOf("Set ", "Exa API key"), sentenceWith("Set Exa API key", link).map { it.text })
+        assertEquals(link, sentenceWith("Set Exa API key", link)[1])
         // No empty words around a link at either end.
         assertEquals(
             listOf("Exa API key", ": set it here."),
