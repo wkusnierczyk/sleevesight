@@ -179,7 +179,6 @@ internal fun GenreReasonBlock(
                 question,
                 InsightContext(asked, true, true, shown.modelAllowed, InsightOffers()),
                 ReasonActions(shown.onCite, readAloud, explain, afterRetry, shown.openSettingsAt, shown.lines),
-                genre = named.label,
             )
         }
     }

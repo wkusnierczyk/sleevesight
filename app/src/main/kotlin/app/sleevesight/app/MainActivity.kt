@@ -135,6 +135,8 @@ class MainActivity : ComponentActivity() {
         ThemeButtonFeed(graph.latestSettings, graph.settings.themeChooser(graph.settingsSaves))
     }
 
+    // One spread, of the prompt lab's local, which only the debug build provides (#1003).
+    @Suppress("SpreadOperator")
     override fun onCreate(savedInstanceState: Bundle?) {
         // The window light or dark as *Theme* (#444) last read, from its first frame: the starting
         // window before this follows the system below Android 12, where the theme cannot reach it.
@@ -155,8 +157,8 @@ class MainActivity : ComponentActivity() {
                     LocalLogoIntro provides intro,
                     // One observer of *Remove animations* for every turning record (#785).
                     LocalAnimatorDurationScale provides followedAnimatorDurationScale(),
-                    // The prompt lab (#1003): the debug build's alone, none in any other.
-                    LocalPromptLab provides graph.promptLab,
+                    // The prompt lab (#1003): the debug build's alone; in any other, not even its local.
+                    *(if (BuildConfig.DEBUG) arrayOf(LocalPromptLab provides graph.promptLab) else emptyArray()),
                 ) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
                     // accessibility services (Switch Access and the like), as it is of touch.

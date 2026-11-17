@@ -62,8 +62,7 @@ class TesterSnapshot(
 /**
  * The parts of a tester's report, in the order it holds them, each named by its [label]. The
  * tester can edit each and leave each out; [HISTORY] is left out until the tester turns it on
- * ([includedAtFirst]), since it lists every track played in the history kept; so is [PROMPT_LAB], the
- * prompt lab's log (#1003), offered in the debug build only, which lists the tracks compared.
+ * ([includedAtFirst]), since it lists every track played in the history kept.
  */
 enum class TesterPart(
     val label: String,
@@ -74,7 +73,6 @@ enum class TesterPart(
     NOW_PLAYING("Now playing"),
     DIAGNOSTICS("Diagnostics"),
     HISTORY("Track-change history", includedAtFirst = false),
-    PROMPT_LAB("Prompt lab's log", includedAtFirst = false),
 }
 
 /**
@@ -97,10 +95,7 @@ object TesterReport {
     /** The most track changes the history part holds: the latest, so a mail app can take the report. */
     const val HISTORY_LIMIT: Int = 100
 
-    /**
-     * The first text of [part], as [snapshot] has it; null for [TesterPart.HISTORY], read apart
-     * ([history]), and for [TesterPart.PROMPT_LAB], the lab's own (`PromptLab.logText`).
-     */
+    /** The first text of [part], as [snapshot] has it; null for [TesterPart.HISTORY], read apart ([history]). */
     fun part(
         part: TesterPart,
         snapshot: TesterSnapshot,
@@ -110,7 +105,7 @@ object TesterReport {
             TesterPart.SETTINGS -> settings(snapshot.settings)
             TesterPart.NOW_PLAYING -> nowPlaying(snapshot)
             TesterPart.DIAGNOSTICS -> diagnostics(snapshot)
-            TesterPart.HISTORY, TesterPart.PROMPT_LAB -> null
+            TesterPart.HISTORY -> null
         }
 
     /** When it was reported, with the time zone, and the app's version and build. */
@@ -225,12 +220,14 @@ object TesterReport {
 
     /**
      * The report as a mail to [Mail.SUPPORT]: the tester's [note], then each of [parts] the tester
-     * kept, as they left it, under its label. A part left out is not in it at all.
+     * kept, as they left it, under its label, then each of [extra] by its label (the prompt lab's log,
+     * #1003, in the debug build only). A part left out is not in it at all.
      */
     fun mail(
         snapshot: TesterSnapshot,
         note: String,
         parts: List<Pair<TesterPart, String>>,
+        extra: List<Pair<String, String>> = emptyList(),
     ): Mail {
         val body =
             buildString {
@@ -238,9 +235,9 @@ object TesterReport {
                 appendLine()
                 appendLine("## Note")
                 appendLine(note.trim().ifEmpty { NONE })
-                for ((part, text) in parts) {
+                for ((label, text) in parts.map { (part, text) -> part.label to text } + extra) {
                     appendLine()
-                    appendLine("## ${part.label}")
+                    appendLine("## $label")
                     appendLine(text.trim().ifEmpty { NONE })
                 }
             }

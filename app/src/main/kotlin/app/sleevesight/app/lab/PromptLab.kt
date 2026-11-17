@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -27,7 +28,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.OutputStream
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -41,10 +41,12 @@ import kotlin.time.Instant
  *   change written at once, on [io].
  * - **Writing with a variant** ([through]): each AI service's client is wrapped, and a request the lab
  *   varies (told by its opening line, [LabPrompts.kindOf]) is sent with its kind's variant in use, if
- *   not the release prompt's. Every first request of such a kind is remembered, as built, in memory
- *   only, with the client and key it went through ([sent]), for a comparison from the same evidence.
- * - **Kept by variant** ([cache]): a card written with a variant is kept under a key of its own, so a
- *   switch writes anew, and switching back finds the card the release prompt wrote.
+ *   not the release prompt's, taken once for the whole call. Each reply is noted by its text
+ *   ([written]) with the variant that wrote it and the request as built, in memory only, with the
+ *   client and key it went through, for a comparison from exactly that request.
+ * - **Kept by variant** ([cache]): a card is kept under the key of the variant that wrote it, told by
+ *   its text, so a switch while a reply streams does not move it; a switch writes anew, and switching
+ *   back finds the card the release prompt wrote. A card read is noted as the variant in use's.
  *
  * Developer mode off, nothing is varied, and the lab's place in Settings is hidden with the rest.
  */
@@ -57,7 +59,7 @@ class PromptLab(
     private val onState = MutableStateFlow(false)
     private val settingsState = MutableStateFlow(LabSettings())
     private val logState = MutableStateFlow<List<LabComparison>>(emptyList())
-    private val sentByKind = ConcurrentHashMap<PromptKind, List<Sent>>()
+    private val writtenState = MutableStateFlow<Map<PromptKind, List<Written>>>(emptyMap())
     private val files = Mutex()
 
     /** Whether the lab is on: developer mode, as last read. */
@@ -114,23 +116,28 @@ class PromptLab(
         }
 
     /**
-     * The latest first request of [kind] whose text holds each of [needles] (the track's title, a
-     * genre's name, each as its prompt writes it), as built, before any variant; null when none was
-     * sent since the app started.
+     * What wrote [shown], a text of [kind] on screen: the variant, and, when it was written since the
+     * app started, the request it was written from, as built ([Written.sent]); null for a text the lab
+     * has not seen written or read. Told by the text itself ([LabPrompts.sameText]), so a comparison
+     * starts from exactly the request that wrote what is shown, and a credit names the prompt that
+     * wrote it, whatever the lab is set to now.
      */
-    fun sent(
+    fun written(
         kind: PromptKind,
-        needles: Collection<String>,
-    ): Sent? =
-        sentByKind[kind]?.lastOrNull { sent ->
-            val text = (sent.request.system ?: "") + "\n" + sent.request.prompt
-            needles.all { it in text }
-        }
+        shown: String,
+    ): Written? {
+        val key = LabPrompts.textKey(kind, shown)
+        if (key.isEmpty()) return null
+        return writtenState.value[kind]?.lastOrNull { LabPrompts.sameText(it.text, key) }
+    }
 
-    /** [provider], each request the lab varies sent with its kind's variant in use, and remembered ([sent]). */
+    /** What the lab has seen written or read, by kind, the latest last: for a screen to follow it. */
+    val seen: StateFlow<Map<PromptKind, List<Written>>> get() = writtenState
+
+    /** [provider], each request the lab varies sent with its kind's variant in use, and remembered ([written]). */
     fun through(provider: AiProvider): AiProvider = Varied(provider)
 
-    /** [cache], each card the lab varies kept under its variant's own key while one is in use. */
+    /** [cache], each card the lab varies kept under the key of the variant that wrote it. */
     fun cache(cache: PipelineCache): PipelineCache = Kept(cache)
 
     /**
@@ -144,6 +151,25 @@ class PromptLab(
         val at: Instant,
     )
 
+    /**
+     * A text of a kind as the lab saw it written or read ([text], its [LabPrompts.textKey]): by the
+     * [variant] with [instructions] (null for the release prompt's), from [sent] when the lab saw it
+     * written.
+     */
+    class Written(
+        val text: String,
+        val variant: String,
+        val instructions: String?,
+        val sent: Sent?,
+    )
+
+    // The variant [kind] is written with now, and its instructions: one snapshot, taken once per call.
+    private fun snapshot(kind: PromptKind): Pair<String, String?> {
+        val settings = settingsState.value
+        val id = if (onState.value) settings.inUse(kind) else LabPrompts.RELEASE
+        return id to settings.instructions(kind, id)
+    }
+
     private inner class Varied(
         private val provider: AiProvider,
     ) : AiProvider by provider {
@@ -152,59 +178,117 @@ class PromptLab(
             key: Secret,
         ): Flow<CompletionEvent> {
             val kind = LabPrompts.kindOf(request) ?: return provider.stream(request, key)
-            if (request.exchanges.isEmpty()) remember(kind, Sent(request, provider, key, Clock.System.now()))
-            val instructions = settingsState.value.instructions(kind, inUse(kind))
-            return provider.stream(instructions?.let { LabPrompts.withInstructions(request, it) } ?: request, key)
+            // One snapshot for the whole call: a switch while it streams changes neither what is
+            // sent nor the key its reply is kept under (`Kept.keep`, by the reply).
+            val (id, instructions) = snapshot(kind)
+            val sent = Sent(request.copy(exchanges = emptyList()), provider, key, Clock.System.now())
+            val reply = StringBuilder()
+            return provider
+                .stream(instructions?.let { LabPrompts.withInstructions(request, it) } ?: request, key)
+                .onEach { event ->
+                    when (event) {
+                        is CompletionEvent.Delta -> reply.append(event.text)
+                        is CompletionEvent.Done ->
+                            note(kind, Written(LabPrompts.textKey(kind, reply.toString()), id, instructions, sent))
+                        else -> Unit
+                    }
+                }
         }
     }
 
-    private fun remember(
+    // Keeps [written] as the latest of its kind, a sent request it replaces kept with it.
+    private fun note(
         kind: PromptKind,
-        sent: Sent,
+        written: Written,
     ) {
-        sentByKind.compute(kind) { _, before -> (before.orEmpty() + sent).takeLast(REMEMBERED) }
+        if (written.text.isEmpty()) return
+        writtenState.update { all ->
+            val before = all[kind].orEmpty()
+            val same = before.lastOrNull { it.text == written.text && it.variant == written.variant }
+            val kept =
+                if (written.sent == null &&
+                    same?.sent != null
+                ) {
+                    Written(written.text, written.variant, written.instructions, same.sent)
+                } else {
+                    written
+                }
+            all + (kind to (before.filterNot { it.text == written.text } + kept).takeLast(REMEMBERED))
+        }
     }
 
-    // [key] as kept while its kind is written with a variant: its style's hash joined with the
-    // variant's id and its instructions' hash, so the release prompt's card is never read for it.
-    private fun keyed(key: CardKey): CardKey {
-        val kind = LabPrompts.kindOfCard(key.kind, key.subject)
-        val id = kind?.let(::inUse)
-        val instructions = if (kind != null && id != null) settingsState.value.instructions(kind, id) else null
-        return if (instructions == null) {
+    // [key] as a card written by variant [id] with [instructions] is kept: its style's hash joined
+    // with the variant's id and its instructions' hash; the release prompt's key as it is.
+    private fun keyed(
+        key: CardKey,
+        id: String,
+        instructions: String?,
+    ): CardKey =
+        if (instructions == null) {
             key
         } else {
             key.copy(styleHash = key.styleHash + "+lab:" + id + ":" + instructions.hashCode().toUInt().toString(HEX))
         }
-    }
 
     private inner class Kept(
         private val cache: PipelineCache,
     ) : PipelineCache by cache {
-        override suspend fun card(key: CardKey): String? = cache.card(keyed(key))
+        // A card read: under the key of the variant in use now, noted as that variant's.
+        private suspend fun <T> reading(
+            key: CardKey,
+            read: suspend (CardKey) -> T,
+            text: (T) -> String?,
+        ): T {
+            val kind = LabPrompts.kindOfCard(key.kind, key.subject) ?: return read(key)
+            val (id, instructions) = snapshot(kind)
+            val found = read(keyed(key, id, instructions))
+            text(found)?.let { note(kind, Written(LabPrompts.textKey(kind, it), id, instructions, null)) }
+            return found
+        }
 
-        override suspend fun keptCard(key: CardKey): KeptCard? = cache.keptCard(keyed(key))
+        // A card kept: under the key of the variant that wrote it, told by its text; one the lab did
+        // not see written, under the variant in use now.
+        private fun keyFor(
+            key: CardKey,
+            text: String,
+        ): CardKey {
+            val kind = LabPrompts.kindOfCard(key.kind, key.subject) ?: return key
+            val by = written(kind, text)
+            val (id, instructions) = by?.let { it.variant to it.instructions } ?: snapshot(kind)
+            if (by == null) note(kind, Written(LabPrompts.textKey(kind, text), id, instructions, null))
+            return keyed(key, id, instructions)
+        }
 
-        override suspend fun keptByOthers(key: CardKey): List<OtherCard> =
-            cache.keptByOthers(keyed(key)).map { it.copy(key = it.key.copy(styleHash = key.styleHash)) }
+        override suspend fun card(key: CardKey): String? = reading(key, cache::card) { it }
+
+        override suspend fun keptCard(key: CardKey): KeptCard? = reading(key, cache::keptCard) { it?.text }
+
+        override suspend fun keptByOthers(key: CardKey): List<OtherCard> {
+            val kind = LabPrompts.kindOfCard(key.kind, key.subject) ?: return cache.keptByOthers(key)
+            val (id, instructions) = snapshot(kind)
+            return cache.keptByOthers(keyed(key, id, instructions)).map { other ->
+                note(kind, Written(LabPrompts.textKey(kind, other.card.text), id, instructions, null))
+                other.copy(key = other.key.copy(styleHash = key.styleHash))
+            }
+        }
 
         override suspend fun keep(
             key: CardKey,
             text: String,
-        ) = cache.keep(keyed(key), text)
+        ) = cache.keep(keyFor(key, text), text)
 
         override suspend fun keep(
             key: CardKey,
             text: String,
             writtenAt: Instant,
-        ) = cache.keep(keyed(key), text, writtenAt)
+        ) = cache.keep(keyFor(key, text), text, writtenAt)
 
         override suspend fun keep(
             key: CardKey,
             text: String,
             writtenAt: Instant,
             rewritten: Set<RewritePart>,
-        ) = cache.keep(keyed(key), text, writtenAt, rewritten)
+        ) = cache.keep(keyFor(key, text), text, writtenAt, rewritten)
     }
 
     private fun read(name: String): String? =
@@ -230,8 +314,8 @@ class PromptLab(
         const val SETTINGS = "settings.json"
         const val LOG = "log.json"
 
-        // The first requests remembered of each kind: a few tracks back.
-        const val REMEMBERED = 12
+        // The texts remembered of each kind: a listening session back.
+        const val REMEMBERED = 64
         const val HEX = 16
     }
 }

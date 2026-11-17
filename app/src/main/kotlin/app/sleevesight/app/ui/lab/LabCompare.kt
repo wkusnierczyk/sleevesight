@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -43,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
-import app.sleevesight.app.lab.PromptLab
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.ui.home.AiLabel
 import app.sleevesight.app.ui.home.CheckedProse
@@ -55,52 +53,24 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.synthesis.GroundingCheck
-import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.LabMark
 import app.sleevesight.core.synthesis.LabPrompts
 import app.sleevesight.core.synthesis.PromptKind
 
-/** The prompt lab, in the debug build only (`AppGraph`); none elsewhere, where nothing of it shows. */
-internal val LocalPromptLab = staticCompositionLocalOf<PromptLab?> { null }
-
 /**
- * What a comparison is about, as the insight shown knows it: its [kind], the track ([title],
- * [artist], [album]), what the prompt it was written from holds, as the prompt writes it ([needles]:
- * the title, a genre's name; none, and the latest request of its kind is taken), and, to check each
- * version as the insight is checked, its [evidence] and whether the
- * model's own knowledge was allowed ([allowModel]); no evidence, and each version shows as written.
+ * [LabCompare] under [insight], a written text of [kind] on [track], checked against [evidence]: in
+ * the debug build only, and only with a track.
  */
-internal data class LabSubject(
-    val kind: PromptKind,
-    val title: String,
-    val artist: String?,
-    val album: String?,
-    val needles: List<String> = emptyList(),
-    val evidence: EvidenceSet? = null,
-    val allowModel: Boolean = false,
-)
-
-/**
- * What a comparison of [insight], [kind]'s, is about, on [track]: its title and, as its prompt has
- * them, the [needles] besides (a genre's name); checked against [evidence], the insight's.
- */
-internal fun labSubject(
+@Composable
+internal fun LabCompareUnder(
     kind: PromptKind,
-    track: TrackState,
+    track: TrackState?,
     insight: InsightState.Written,
-    evidence: EvidenceSet? = track.evidence,
-    needles: List<String> = emptyList(),
-): LabSubject =
-    LabSubject(
-        kind = kind,
-        title = track.nowPlaying.title,
-        artist = track.nowPlaying.artists,
-        album = track.nowPlaying.album,
-        needles = (listOf(track.nowPlaying.title) + needles).map(InsightPrompt::oneLine),
-        evidence = evidence,
-        allowModel = insight.grounded.allowModel,
-    )
+    evidence: EvidenceSet? = track?.evidence,
+) {
+    if (BuildConfig.DEBUG && track != null) LabCompare(labSubject(kind, track, insight, evidence))
+}
 
 /**
  * *Compare {n} prompts · {n} paid calls* (#1003), under an insight, after *Report the insight*, in
@@ -132,7 +102,7 @@ internal fun LabCompare(subject: LabSubject) {
                     run =
                         Comparing.start(
                             subject,
-                            lab.sent(subject.kind, subject.needles),
+                            lab.written(subject.kind, subject.text)?.sent,
                             settings,
                             scope,
                             failure = { failureText(it, resources) },

@@ -71,7 +71,8 @@ class ComparingTest {
             system = InsightPrompt.system(false),
         )
 
-    private val subject = LabSubject(PromptKind.KEY, "Sundown", "Gordon Lightfoot", null)
+    private val subject =
+        LabSubject(PromptKind.KEY, "Sundown", "Gordon Lightfoot", null, "Sundown was written at a farm.")
 
     private fun TestScope.start(settings: LabSettings): Comparing =
         Comparing.start(

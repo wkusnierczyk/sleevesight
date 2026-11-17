@@ -21,6 +21,7 @@ import androidx.compose.ui.text.withStyle
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.settings.ListedModelNames
+import app.sleevesight.app.ui.lab.LabText
 import app.sleevesight.app.ui.lab.LocalPromptLab
 import app.sleevesight.app.ui.lab.labCreditText
 import app.sleevesight.app.ui.settings.effortName
@@ -137,9 +138,10 @@ internal fun creditString(credit: Credit): String = creditText(credit, LocalReso
  * reader reads the credit and what follows as the line shows them, then *Read aloud*. With no credit,
  * what follows alone; with neither, *Read aloud* alone at the row's end; nothing with none.
  *
- * In the debug build, with the prompt lab on and [labKind]'s texts written with a variant (#1003),
- * the credit names it ("Written by Claude Haiku 5.5 · prompt B."), its text in the developer mark
- * tagged *Debug build*, so a screenshot shows the line is not the Play build's.
+ * In the debug build, with the prompt lab on, for [lab], a text a variant wrote (#1003), the credit
+ * names that variant ("Written by Claude Haiku 5.5 · prompt B."), its text in the developer mark
+ * tagged *Debug build*, so a screenshot shows the line is not the Play build's. The variant is the
+ * one that wrote the text ([labVariant]), whatever the lab is set to now.
  */
 @Composable
 internal fun CreditRow(
@@ -147,11 +149,11 @@ internal fun CreditRow(
     modifier: Modifier = Modifier,
     after: List<String> = emptyList(),
     readAloud: (@Composable () -> Unit)? = null,
-    labKind: PromptKind? = null,
+    lab: LabText? = null,
 ) {
-    val variant = if (BuildConfig.DEBUG && labKind != null) labVariant(labKind) else null
-    val resources = LocalResources.current
-    val credited = if (variant != null && credit != null) labCreditText(credit, variant, resources) else credit
+    // The credit naming the variant that wrote the text, if one did; none outside the debug build.
+    val labbed = if (BuildConfig.DEBUG && credit != null && lab != null) labCredited(credit, lab) else null
+    val credited = labbed ?: credit
     val said = credited != null || after.isNotEmpty()
     if (!said && readAloud == null) return
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -172,7 +174,7 @@ internal fun CreditRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (variant != null && credit != null) {
+            if (labbed != null) {
                 DeveloperMark(modifier.weight(1f), tag = stringResource(R.string.lab_mark_tag)) { line(Modifier) }
             } else {
                 line(modifier.weight(1f))
@@ -187,15 +189,30 @@ internal fun CreditRow(
 /** The test tag of the credit under an insight, the key insight's and an item's (#811, #1162). */
 const val INSIGHT_BY_TAG: String = "insight-by"
 
+// [credit] naming the variant that wrote [lab]'s text, while the lab is on and it is not the release
+// prompt; null otherwise.
+@Composable
+private fun labCredited(
+    credit: String,
+    lab: LabText,
+): String? {
+    val resources = LocalResources.current
+    return labVariant(lab.kind, lab.text)?.let { labCreditText(credit, it, resources) }
+}
+
 /**
- * The variant [kind]'s texts are written with while the prompt lab is on and it is not the release
- * prompt's (#1003); null otherwise, and always outside the debug build. Read as the lab's settings
- * change, so a credit follows a switch.
+ * The variant that wrote [text], a text of [kind] on screen, while the prompt lab is on and it is not
+ * the release prompt (#1003): as the lab saw it written or read (`PromptLab.written`), so switching
+ * the lab never relabels a text already shown; null otherwise.
  */
 @Composable
-internal fun labVariant(kind: PromptKind): String? {
+internal fun labVariant(
+    kind: PromptKind,
+    text: String,
+): String? {
     val lab = LocalPromptLab.current ?: return null
     val on by lab.on.collectAsState()
-    val settings by lab.settings.collectAsState()
-    return settings.inUse(kind).takeIf { on && it != LabPrompts.RELEASE }
+    // Read so a text the lab notes after it is shown (written, or read from the cache) recomposes.
+    val seen by lab.seen.collectAsState()
+    return seen[kind]?.let { lab.written(kind, text) }?.variant?.takeIf { on && it != LabPrompts.RELEASE }
 }

@@ -232,12 +232,14 @@ class TesterReportScreenTest {
         show {
             open()
             compose.onNodeWithTag(REPORT_DIALOG_TAG).assertExists()
-            for (kept in TesterPart.entries.filter { it.includedAtFirst }) {
+            for (kept in TesterPart.entries - TesterPart.HISTORY) {
                 part(kept).assertIsOn()
                 assertTrue(kept.label, preview().contains("## ${kept.label}\n"))
             }
             part(TesterPart.HISTORY).assertIsOff()
             assertFalse(preview().contains("## ${TesterPart.HISTORY.label}"))
+            // The prompt lab's log (#1003) is offered only with the lab, which this review was not given.
+            compose.onNodeWithTag("tester_part_$LAB_PART").assertDoesNotExist()
             assertEquals(0, historyReads)
 
             part(TesterPart.HISTORY).performClick()

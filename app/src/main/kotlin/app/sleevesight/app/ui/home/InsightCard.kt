@@ -17,10 +17,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
-import app.sleevesight.app.ui.lab.LabCompare
-import app.sleevesight.app.ui.lab.labSubject
+import app.sleevesight.app.ui.lab.LabCompareUnder
+import app.sleevesight.app.ui.lab.LabText
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -238,7 +239,7 @@ private fun Footer(
             Modifier.testTag(INSIGHT_BY_TAG),
             after = afterCredit(context),
             readAloud = readAloud?.let { { ReadAloudButton(it, READ_ALOUD_TAG) } },
-            labKind = PromptKind.KEY,
+            lab = if (BuildConfig.DEBUG) LabText(PromptKind.KEY, insight.grounded.text) else null,
         )
         if (readAloud?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
         lookingAgainLine(context)?.let {
@@ -265,7 +266,7 @@ private fun Footer(
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
         context.track?.let { track -> ReportAction(reportModifier) { actions.onReport(track, insight) } }
         // The prompt lab's *Compare* (#1003), in the debug build only, after *Report the insight*.
-        context.track?.let { track -> LabCompare(labSubject(PromptKind.KEY, track, insight)) }
+        if (BuildConfig.DEBUG) LabCompareUnder(PromptKind.KEY, context.track, insight)
         // Last, just above the split button's disabled Write, which it explains (#911).
         context.unavailable?.let { ModelUnavailable(it, actions.onSettings) }
     }

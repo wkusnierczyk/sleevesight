@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
@@ -106,7 +107,7 @@ fun WithTesterReport(
         val context = LocalContext.current
         val handoff = feed.mail ?: remember(context) { PhoneMail(context) }
         // The prompt lab's log (#1003), offered in the debug build only.
-        val lab = LocalPromptLab.current
+        val lab = if (BuildConfig.DEBUG) LocalPromptLab.current else null
         TesterReportDialog(snapshot, { feed.reports.history(snapshot) }, handoff, lab?.let { { it.logText() } }) {
             open = null
         }

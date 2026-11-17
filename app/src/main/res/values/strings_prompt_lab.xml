@@ -95,6 +95,7 @@
     <!-- The credit with a variant in use: %1$s the credit without its full stop, %2$s the variant's id. -->
     <string name="lab_credit">%1$s · prompt %2$s.</string>
 
-    <!-- The tester report's part. -->
+    <!-- The tester report's part: its name (also its heading in the mail), and what it holds. -->
+    <string name="lab_report_label">Prompt lab\'s log</string>
     <string name="lab_report_part">The comparisons the prompt lab logged on this phone, as its export holds them, with the tracks\' titles. Off until you turn it on.</string>
 </resources>

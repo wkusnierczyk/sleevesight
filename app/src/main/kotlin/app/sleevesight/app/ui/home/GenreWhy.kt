@@ -12,12 +12,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreReason
 import app.sleevesight.app.pipeline.Unavailability
 import app.sleevesight.app.ui.GENRE_LABELS_DOCS_URL
-import app.sleevesight.app.ui.lab.LabCompare
-import app.sleevesight.app.ui.lab.labSubject
+import app.sleevesight.app.ui.lab.LabCompareUnder
+import app.sleevesight.app.ui.lab.LabText
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkedText
@@ -166,7 +167,6 @@ internal fun ReasonShown(
     question: String,
     context: InsightContext,
     actions: ReasonActions,
-    genre: String? = null,
 ) {
     when (val state = shown.state) {
         is InsightState.Writing ->
@@ -205,10 +205,7 @@ internal fun ReasonShown(
                 }
                 ReasonCredits(shown, state, evidence, shownAs, actions.readAloud)
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
-                // The prompt lab's *Compare* (#1003), in the debug build only.
-                context.track?.let { track ->
-                    LabCompare(labSubject(PromptKind.GENRE_REASONS, track, state, evidence, listOfNotNull(genre)))
-                }
+                if (BuildConfig.DEBUG) LabCompareUnder(PromptKind.GENRE_REASONS, context.track, state, evidence)
             }
 
         // The AI could not explain it (#762), then what is off that could (#695). Not for a genre the
@@ -256,7 +253,7 @@ private fun ReasonCredits(
         CreditRow(
             shown.model?.let { creditString(Credit(it, shown.effort, web = fromWeb)) },
             readAloud = readAloud?.let { { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) } },
-            labKind = PromptKind.GENRE_REASONS,
+            lab = if (BuildConfig.DEBUG) LabText(PromptKind.GENRE_REASONS, state.grounded.text) else null,
         )
         GroundingLine(state.grounded, details = false)
         TranslatedLine(state.grounded, evidence, label = shownAs)

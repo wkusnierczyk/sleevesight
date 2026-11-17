@@ -183,7 +183,13 @@ private fun Answered(
     answer(shown.answer, shown.model)
     val credit = creditString(Credit(shown.model, shown.effort))
     val byTag = Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG))
-    val variant = if (BuildConfig.DEBUG && kind == SearchKind.EXPLAIN) labVariant(PromptKind.EXPLAIN) else null
+    val explained = (shown.answer as? SearchAnswer.Explanation)?.grounded?.text
+    val variant =
+        if (BuildConfig.DEBUG && kind == SearchKind.EXPLAIN && explained != null) {
+            labVariant(PromptKind.EXPLAIN, explained)
+        } else {
+            null
+        }
     if (variant != null) {
         val resources = LocalResources.current
         DeveloperMark(tag = stringResource(R.string.lab_mark_tag)) {
@@ -196,10 +202,9 @@ private fun Answered(
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(texts.tag(AI_SEARCH_KNOWLEDGE_TAG)))
     }
     shown.keptAt?.let { KeptLine(it) }
-    if (kind == SearchKind.EXPLAIN) {
-        LabCompare(
-            LabSubject(PromptKind.EXPLAIN, track.nowPlaying.title, track.nowPlaying.artists, track.nowPlaying.album),
-        )
+    if (BuildConfig.DEBUG && kind == SearchKind.EXPLAIN && explained != null) {
+        val playing = track.nowPlaying
+        LabCompare(LabSubject(PromptKind.EXPLAIN, playing.title, playing.artists, playing.album, explained))
     }
     last(shown.answer)
 }

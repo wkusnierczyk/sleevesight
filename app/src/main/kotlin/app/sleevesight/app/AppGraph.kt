@@ -334,7 +334,11 @@ class AppGraph internal constructor(
             musicBrainzThrough = musicBrainzThrough,
             // Every AI request and its reply in logcat, in debug builds only (#767); there too, the
             // prompt lab's variants (#1003).
-            aiThrough = { provider -> PromptDump.watching(provider).let { promptLab?.through(it) ?: it } },
+            aiThrough = { provider ->
+                PromptDump.watching(provider).let { watched ->
+                    if (BuildConfig.DEBUG) promptLab?.through(watched) ?: watched else watched
+                }
+            },
             // What the search in the track's language found about an artist or an album (#939): in
             // [artistResults] while the switch is on, else in memory for the process.
             keepsArtists = { artistKeeping.on },
@@ -394,8 +398,10 @@ class AppGraph internal constructor(
 
     init {
         // The prompt lab varies nothing outside developer mode (#1003).
-        promptLab?.let { lab ->
-            mainScope.launch { latestSettings.collect { lab.developerMode(it?.developerMode == true) } }
+        if (BuildConfig.DEBUG) {
+            promptLab?.let { lab ->
+                mainScope.launch { latestSettings.collect { lab.developerMode(it?.developerMode == true) } }
+            }
         }
     }
 
@@ -569,9 +575,8 @@ class AppGraph internal constructor(
                     aiTried = { diagnostics.log.record(it) },
                 ) {
                     // Cards written with a prompt lab's variant kept under keys of their own (#1003).
-                    StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch).let {
-                        promptLab?.cache(it)
-                            ?: it
+                    StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch).let { store ->
+                        if (BuildConfig.DEBUG) promptLab?.cache(store) ?: store else store
                     }
                 },
             normalizer = normalizer,

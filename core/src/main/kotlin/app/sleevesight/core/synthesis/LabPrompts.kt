@@ -151,6 +151,24 @@ object LabPrompts {
     }
 
     /**
+     * [text], a reply or a kept card of [kind] or the text shown from it, as the lab tells written texts
+     * apart by it: what a reader is shown of it ([shownReply]), its whitespace runs made one space.
+     */
+    fun textKey(
+        kind: PromptKind,
+        text: String,
+    ): String = shownReply(kind, text).split(WHITESPACE).filter { it.isNotEmpty() }.joinToString(" ")
+
+    /**
+     * Whether [a] and [b], each a [textKey], are one written text: the same, or, both long enough to
+     * be told apart, one holding the other whole (a text shown with a note of the model's taken out).
+     */
+    fun sameText(
+        a: String,
+        b: String,
+    ): Boolean = a == b || (minOf(a.length, b.length) >= SAME_TEXT_LEAST && (a in b || b in a))
+
+    /**
      * The lab's kind of a card kept as [kind] about [subject] (`CardKey`), whose key a variant in use
      * sets apart; null for a card the lab does not vary.
      */
@@ -185,6 +203,11 @@ object LabPrompts {
                 .trim()
         return line + text.substring(first.length)
     }
+
+    private val WHITESPACE = Regex("\\s+")
+
+    // The fewest characters a text shown from a reply holds for [sameText] to take it as part of it.
+    private const val SAME_TEXT_LEAST = 40
 
     private const val GENRE_LIST_OPENING = "You name the genres of one recorded track for a music app"
     private const val GENRE_REASON_OPENING = "You explain a genre label on a music app's now-playing screen."
