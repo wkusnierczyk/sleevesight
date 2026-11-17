@@ -127,6 +127,18 @@ internal class InPlaceMemory(
         track = playing
     }
 
+    /**
+     * Shows [item] alone beside [playing]: the one panel on it (#1128), so that with the panel each
+     * back (*One panel* off) only the one shown is open.
+     */
+    fun show(
+        item: InPlace,
+        playing: NowPlaying,
+    ) {
+        opened = listOf(item)
+        track = playing
+    }
+
     /** Closes every panel beside [playing]: the one panel's *Close* (#1128). */
     fun closeAll(playing: NowPlaying) {
         opened = emptyList()
@@ -358,7 +370,7 @@ private fun OnePanelLine(
         if (folded.isNotEmpty()) {
             ClosedButtons(folded, { Modifier.handoffTarget(handoff, buttonOf(it)) }) { item ->
                 item.page?.let { return@ClosedButtons it() }
-                memory.open(item.id, playing)
+                memory.show(item.id, playing)
                 handoff.moveTo(tabOf(item.id))
             }
         }
@@ -372,7 +384,7 @@ private fun OnePanelLine(
                     .onGloballyPositioned { area.set(screenBounds(host, it)) },
                 Modifier.handoffTarget(handoff, closeTarget),
                 { Modifier.handoffTarget(handoff, tabOf(it)) },
-                pick = { tapped -> memory.open(tapped.id, playing) },
+                pick = { tapped -> memory.show(tapped.id, playing) },
                 close = {
                     memory.closeAll(playing)
                     handoff.moveTo(buttonOf(shown))

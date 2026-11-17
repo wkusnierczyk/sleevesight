@@ -455,6 +455,18 @@ class OnePanelScreenTest {
         }
 
     @Test
+    fun theSwitchTurnedOffShowsOnlyThePanelShownNotThoseShownBefore() =
+        show {
+            tap(DATES_CHIP_TAG)
+            tap(genres)
+            tap(lyrics)
+            current.value = state(settings = Settings(onePanel = false))
+            compose.waitForIdle()
+            onlyOpen(LYRICS_PANEL_TAG)
+            compose.onNodeWithTag(LYRICS_PANEL_HEADING_TAG).assertExists()
+        }
+
+    @Test
     fun withTheSwitchOffEachButtonOpensAPanelOfItsOwn() =
         show(state(settings = Settings(onePanel = false))) {
             tap(DATES_CHIP_TAG)
