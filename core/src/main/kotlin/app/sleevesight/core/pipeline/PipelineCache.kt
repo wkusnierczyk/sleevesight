@@ -201,6 +201,8 @@ data class OtherCard(
  * @property styleHash a hash of the user's style the card used (D14), SHA-256 in hex.
  * @property modelKnowledge whether the model's own knowledge was allowed.
  * @property effort the reasoning effort asked for, null for the provider's default.
+ * @property variant in the debug build's prompt lab (#1003), the variant the card is written with
+ *   (`PromptChoices.keyed`), its instructions in [styleHash]; null with no lab.
  */
 data class CardKey(
     val kind: CardKind,
@@ -212,7 +214,15 @@ data class CardKey(
     val model: String,
     val modelKnowledge: Boolean,
     val effort: ReasoningEffort?,
+    val variant: String? = null,
 ) {
+    /**
+     * The card's identity for the prompt lab (#1003): what its request (`CompletionRequest.card`) and
+     * the text shown from it (`WrittenBy.card`) both carry, so a comparison starts from exactly the
+     * request that wrote it; null with no lab.
+     */
+    val card: String? get() = variant?.let { toString() }
+
     init {
         val expected =
             when (kind) {

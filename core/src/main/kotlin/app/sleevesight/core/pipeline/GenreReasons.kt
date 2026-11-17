@@ -121,7 +121,7 @@ class GenreReasons(
             model = model,
             modelKnowledge = settings.isEnabled(SourceId.MODEL),
             effort = settings.effort(access.provider.id),
-        )
+        ).let { key -> access.choices.keyed(key) { styleHash(hasher, it) } }
     }
 
     /**
@@ -349,6 +349,7 @@ class GenreReasons(
                 CompletionRequest.maxTokensFor(key.effort),
                 key.effort,
                 system = GenreReasonPrompt.system(key.modelKnowledge, dates()),
+                card = key.card,
             )
         counted(QuestionCost.CALL)
         val shows: (String) -> Boolean =
@@ -381,7 +382,8 @@ class GenreReasons(
         val access = checkNotNull(ai)
         val question = ReasonQuestion(track, label, evidence, key.modelKnowledge, hasher, now(), dates())
         show(InsightState.Writing(""), now())
-        val base = CompletionRequest(key.model, "", CompletionRequest.maxTokensFor(key.effort), key.effort)
+        val base =
+            CompletionRequest(key.model, "", CompletionRequest.maxTokensFor(key.effort), key.effort, card = key.card)
         val reply = WebQuestions(access, web).ask(question, asking.search, asking.limit, base, counted)
         val at = now()
         val pages = question.pages.map(KeptPage::of)
@@ -551,7 +553,15 @@ class GenreReasons(
                 if (GenreDispute.disputes(reply.grounded.text, forms(key, track), names(track))) {
                     InsightState.NoEvidence
                 } else {
-                    val by = WrittenBy(key.promptVersion, key.provider, key.model, key.effort)
+                    val by =
+                        WrittenBy(
+                            key.promptVersion,
+                            key.provider,
+                            key.model,
+                            key.effort,
+                            variant = key.variant,
+                            card = key.card,
+                        )
                     InsightState.Written(reply.grounded, cached, usage, complete, writtenBy = by, searched = searched)
                 }
             }

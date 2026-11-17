@@ -238,6 +238,8 @@ class TesterReportScreenTest {
             }
             part(TesterPart.HISTORY).assertIsOff()
             assertFalse(preview().contains("## ${TesterPart.HISTORY.label}"))
+            // The prompt lab's log (#1003) is offered only with the lab, which this review was not given.
+            compose.onNodeWithTag("tester_part_$LAB_PART").assertDoesNotExist()
             assertEquals(0, historyReads)
 
             part(TesterPart.HISTORY).performClick()
