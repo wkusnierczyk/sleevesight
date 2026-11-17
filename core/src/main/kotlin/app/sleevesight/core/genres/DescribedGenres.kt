@@ -24,8 +24,8 @@ data class DescribedIn(
  * genre once, in the order its lines name them, citing the first line it is found in
  * ([TrackLabel.describedIn]); its labels are of [GenreLevel.ARTIST], for that artist, credited to no
  * label source. The artist's own names in a line name no genre ("Soul II Soul", the band
- * *Electronic*). A line is the artist's its adapter says it is about ([EvidenceLine.about], by [names]; the
- * one credited artist when it names none of them); one that
+ * *Electronic*). A line is the artist's its adapter says it is about ([EvidenceLine.about], by [names]; no
+ * one's when that is none of [artists], #1376); one that
  * does not say is the artist's when the track credits one, or, with several, a web page's is
  * [webArtist]'s, the Artist panel's subject, whom the artist's web search (#912) looks up: the lead
  * performer once the roles tell a composer apart (#1199), else the first credited artist; and
@@ -303,7 +303,9 @@ private fun artistOf(
 ): String? {
     line.about?.let { about ->
         val same = { artist: String -> names?.sameName(artist, about) ?: artist.equals(about, ignoreCase = true) }
-        return artists.firstOrNull(same) ?: artists.singleOrNull()
+        // Never the lone credited artist's when it names another (#1376: Puccini's article, kept, on a
+        // replay of *Nessun Dorma* by Pavarotti alone without MusicBrainz's roles).
+        return artists.firstOrNull(same)
     }
     return when {
         artists.size == 1 -> artists.single()
