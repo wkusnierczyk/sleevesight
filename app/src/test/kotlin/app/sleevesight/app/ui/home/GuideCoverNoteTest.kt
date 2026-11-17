@@ -130,15 +130,16 @@ class GuideCoverNoteTest {
             compose
                 .onNodeWithTag(GUIDE_NOTE_PANEL_TEXT_TAG)
                 .assert(hasText("Album art"))
-                .assert(hasText(app.getString(R.string.home_guide_about_cover)))
-            val about = app.getString(R.string.home_guide_about_cover)
-            assertTrue(about, about.startsWith("The album’s cover. A tap turns it over"))
+                .assert(hasText(ABOUT))
+            assertEquals(ABOUT, app.getString(R.string.home_guide_about_cover))
             save("guide-cover-panel")
             compose.onNodeWithTag(GUIDE_NOTE_CLOSE_TAG).performClick()
             compose.waitForIdle()
             assertEquals(0, panels().size)
             note(GuidePart.COVER).performScrollTo().performClick()
             compose.waitForIdle()
+            assertEquals(1, panels().size)
+            // A second tap on the note closes it too.
             note(GuidePart.COVER).performScrollTo().performClick()
             compose.waitForIdle()
             assertEquals(0, panels().size)
@@ -179,8 +180,31 @@ class GuideCoverNoteTest {
                 }
                 assertTrue("$a and $magnifier", a.intersect(magnifier).let { it.width <= 0f || it.height <= 0f })
             }
+            // The cover note's arrow, its point and head, clear of the magnifier.
+            val guide = bounds(GUIDE_PICTURE_TAG)
+            val arrows =
+                compose
+                    .onNodeWithTag(GUIDE_MARKS_TAG)
+                    .fetchSemanticsNode()
+                    .config[GuideArrowsKey]
+            assertEquals(GuidePart.entries.size, arrows.size)
+            val arrow = arrows[GuidePart.COVER.ordinal]
+            for (point in listOf(arrow.end, arrow.head, arrow.head2)) {
+                val at = point + guide.topLeft
+                assertTrue("$at outside $magnifier", !magnifier.contains(at))
+            }
             save(name)
         }
+
+    private companion object {
+        const val ABOUT =
+            "The album’s cover. A tap turns it over to show the album’s tracklist from MusicBrainz: each " +
+                "track with its length, the playing song marked. An album of several discs has a page for " +
+                "each, swiped sideways, with the disc’s number at the top. A tap anywhere on the back turns " +
+                "it back. When there is no tracklist, the back says why: MusicBrainz is still looking, has " +
+                "no tracklist for the album, has several albums of that name, could not be reached, or is " +
+                "disabled."
+    }
 
     private fun save(name: String) {
         val dir = out ?: return

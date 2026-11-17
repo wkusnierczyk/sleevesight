@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toOffset
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.logo.LocalLogoIntro
@@ -144,7 +145,14 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
                         .handoffTarget(handoff, notes[part.ordinal]),
                 ) { open = if (open == part) null else part }
             }
-            GuideMarks(picture.arrows, { open?.let { parts[it] } }, pen, Modifier.layoutId(GuideSlot.MARKS))
+            GuideMarks(
+                picture.arrows,
+                { open?.let { parts[it] } },
+                pen,
+                Modifier.layoutId(GuideSlot.MARKS).testTag(GUIDE_MARKS_TAG).semantics {
+                    guideArrows = picture.arrows.value
+                },
+            )
             GuideMagnifierButton(
                 Modifier.layoutId(GuideSlot.MAGNIFIER).semantics { traversalIndex = -1f },
             ) { magnified = true }
@@ -201,7 +209,17 @@ private fun MeasureScope.measureGuide(
     }
     val noteWidth = (width - pictureWidth - metrics.gap).toInt().coerceAtLeast(0)
     val notes = GuidePart.entries.map { slot(GuideNoteSlot(it))!!.measure(Constraints(maxWidth = noteWidth)) }
-    val shown = guideLayout(found.toMap(), notes.map { it.height.toFloat() }, mini.width, mini.height, metrics)
+    val magnifier = slot(GuideSlot.MAGNIFIER)!!.measure(Constraints())
+    val magnifierAt = magnifierAt(parts.getValue(GuidePart.COVER), magnifier.width, magnifier.height, metrics)
+    val shown =
+        guideLayout(
+            found.toMap(),
+            notes.map { it.height.toFloat() },
+            mini.width,
+            mini.height,
+            metrics,
+            Rect(magnifierAt.toOffset(), Size(magnifier.width.toFloat(), magnifier.height.toFloat())),
+        )
     // Each note's button over its text: as high as its target, as wide as the text, at least 48 dp.
     val buttons =
         GuidePart.entries.map { part ->
@@ -211,7 +229,6 @@ private fun MeasureScope.measureGuide(
             val high = target.endInclusive.roundToInt() - target.start.roundToInt()
             slot(part)!!.measure(Constraints.fixed(wide.coerceAtLeast(0), high.coerceAtLeast(0)))
         }
-    val magnifier = slot(GuideSlot.MAGNIFIER)!!.measure(Constraints())
     val panel =
         open?.let { part ->
             val measurable = slot(GuideSlot.PANEL) ?: return@let null
@@ -228,10 +245,6 @@ private fun MeasureScope.measureGuide(
         }
     val height = max(shown.height, panel?.let { (it, top) -> (top + it.height).toFloat() } ?: 0f).roundToInt()
     val marks = slot(GuideSlot.MARKS)!!.measure(Constraints.fixed(width, height))
-    val inset = (metrics.unit * MAGNIFIER_INSET).roundToInt()
-    // At the cover's bottom right corner, clear of the arrows, which cross the picture's own corners
-    // and point at the cover's middle.
-    val corner = parts[GuidePart.COVER] ?: Rect(0f, 0f, pictureWidth.toFloat(), mini.height.toFloat())
     return layout(width, height) {
         mini.place(0, 0)
         shown.notes.forEachIndexed { i, at -> notes[i].place(at.x.roundToInt(), at.y.roundToInt()) }
@@ -239,10 +252,7 @@ private fun MeasureScope.measureGuide(
         buttons.forEachIndexed { i, button ->
             button.place(shown.notes[i].x.roundToInt(), shown.targets[i].start.roundToInt())
         }
-        magnifier.place(
-            corner.right.roundToInt() - magnifier.width - inset,
-            corner.bottom.roundToInt() - magnifier.height - inset,
-        )
+        magnifier.place(magnifierAt)
         panel?.let { (it, top) -> it.place(0, top) }
         if (picture.arrows.value != shown.arrows) picture.arrows.value = shown.arrows
     }
@@ -520,9 +530,6 @@ private val NOTE_SIZE = 18.sp
 
 /** Where a note's panel comes in a screen reader's order: right after its note. */
 private const val PANEL_AFTER_NOTE = 0.5f
-
-/** The magnifier's distance from the picture's bottom right corner, in dp. */
-private const val MAGNIFIER_INSET = 2f
 
 // The example track.
 private const val EXAMPLE_PLAYER = "Spotify"

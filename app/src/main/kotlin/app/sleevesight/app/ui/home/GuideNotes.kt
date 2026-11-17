@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -154,6 +156,15 @@ internal fun GuideMarks(
 internal fun guideNoteTag(part: GuidePart): String = "home-guide-note:${part.name.lowercase()}"
 
 internal fun guideNoteTextTag(part: GuidePart): String = "home-guide-note-text:${part.name.lowercase()}"
+
+/**
+ * The pen's marks' test tag, and the arrows they draw, in the guide's measure, as a property of
+ * their semantics (#994), for tests to check where they run; no screen reader reads it.
+ */
+const val GUIDE_MARKS_TAG: String = "home-guide-marks"
+
+internal val GuideArrowsKey = SemanticsPropertyKey<List<GuideArrow>>("GuideArrows")
+internal var SemanticsPropertyReceiver.guideArrows by GuideArrowsKey
 
 /** The test tags of a note's panel, of its name and description, and of its *Close*. */
 const val GUIDE_NOTE_PANEL_TAG: String = "home-guide-note-panel"
