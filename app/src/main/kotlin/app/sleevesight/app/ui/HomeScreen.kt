@@ -5,6 +5,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,19 +41,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.home.CoverPane
+import app.sleevesight.app.ui.home.CoverSlot
+import app.sleevesight.app.ui.home.HEADER_TRAVERSAL
+import app.sleevesight.app.ui.home.LocalCoverPane
 import app.sleevesight.app.ui.home.NothingPlaying
+import app.sleevesight.app.ui.home.ONE_COLUMN_MAX_WIDTH
+import app.sleevesight.app.ui.home.SPLIT_WIDTH
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.logo.LogoSpin
 import app.sleevesight.app.ui.report.ReportButtonState
@@ -64,6 +79,7 @@ import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.developerMarkHeight
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.min
 
 /**
  * Where the first-run flow lands: a header that stays at the top ([HomeHeader]), and under it, while
@@ -100,17 +116,39 @@ fun HomeScreen(
         // above the report button while that shows.
         val above = if (report != null) reportClearance() else 0.dp
         MessageHost(Modifier.fillMaxSize().safeDrawingPadding(), above) {
-            Column {
-                // Animated under Compose's motion duration scale, which follows the phone's animator
-                // duration scale: with animations off, Home is at the top at once.
-                HomeHeader(
-                    scroll,
-                    onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } },
-                    onOpenSettings,
-                    themeButton,
-                    if (accessGranted) logoSpin else null,
-                )
-                HomeBody(scroll, accessGranted, onOpenFirstRun, reportShown = report != null, pipeline)
+            // From [SPLIT_WIDTH] wide (#1097), by width whichever way the phone is held: the cover on
+            // a side of its own, when there is one. The same parts either way, so what they keep
+            // (the open panels, the scroll position) stays when the phone turns.
+            BoxWithConstraints {
+                val pane = remember { CoverPane() }.takeIf { maxWidth >= SPLIT_WIDTH }
+                CompositionLocalProvider(LocalCoverPane provides pane) {
+                    HomeFrame(
+                        pane,
+                        header = {
+                            // Animated under Compose's motion duration scale, which follows the
+                            // phone's animator duration scale: with animations off, Home is at the top at once.
+                            // Read first, as in portrait, though the cover's side is to its left.
+                            Box(if (pane != null) Modifier.semantics { headerFirst() } else Modifier) {
+                                HomeHeader(
+                                    scroll,
+                                    onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } },
+                                    onOpenSettings,
+                                    themeButton,
+                                    if (accessGranted) logoSpin else null,
+                                )
+                            }
+                        },
+                        body = {
+                            HomeBody(
+                                scroll,
+                                accessGranted,
+                                onOpenFirstRun,
+                                reportShown = report != null,
+                                pipeline,
+                            )
+                        },
+                    )
+                }
             }
             report?.let {
                 TesterReportButton(
@@ -123,9 +161,50 @@ fun HomeScreen(
     }
 }
 
+/**
+ * Home's parts in place: the [header] over the [body], what scrolls; from [SPLIT_WIDTH] wide ([pane]
+ * not null, #1097), with a track's cover on the left on a side of its own ([CoverSlot]), as tall as
+ * Home and at most half its width, and the header and the body to its right. With no cover to show
+ * (nothing playing, an ad), the header and the body take the whole width, as in portrait. The cover's
+ * side is composed last, so the cover a track puts there ([CoverInPane]) shows in the same frame.
+ */
+@Composable
+private fun HomeFrame(
+    pane: CoverPane?,
+    header: @Composable () -> Unit,
+    body: @Composable () -> Unit,
+) {
+    Layout(
+        contents =
+            listOf(header, body, {
+                if (pane !=
+                    null
+                ) {
+                    CoverSlot(pane)
+                }
+            }),
+    ) { (heads, bodies, covers), constraints ->
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val cover = covers.firstOrNull()?.measure(Constraints(maxWidth = width / 2, maxHeight = height))
+        val left = cover?.width ?: 0
+        val right = width - left
+        val head = heads.first().measure(Constraints(minWidth = right, maxWidth = right, maxHeight = height))
+        val rest = bodies.first().measure(Constraints.fixed(right, (height - head.height).coerceAtLeast(0)))
+        // Placed in the order a screen reader meets them, the header first.
+        layout(width, height) {
+            head.placeRelative(left, 0)
+            cover?.placeRelative(0, 0)
+            rest.placeRelative(left, head.height)
+        }
+    }
+}
+
 // What scrolls under the header: while access is on, what is playing and the way back to what
 // leaves the device; while it is off, the way to turn it on. It ends below the report button when
 // that shows, under *Auto* too, so scrolled to the end, where the button is back, it covers nothing.
+// Split in two with no cover to show ([LocalCoverPane] empty, #1097: nothing playing), one column at
+// most [ONE_COLUMN_MAX_WIDTH] wide, centred.
 @Composable
 private fun HomeBody(
     scroll: ScrollState,
@@ -134,16 +213,20 @@ private fun HomeBody(
     reportShown: Boolean,
     pipeline: @Composable () -> Unit,
 ) {
+    val pane = LocalCoverPane.current
     Column(
         modifier =
             Modifier
+                // Split in two, what scrolls is read in the screen's order, not as a group of its own,
+                // so its player row comes before the cover's side, and its title after (#1097).
+                .then(if (pane != null) Modifier.semantics { isTraversalGroup = false } else Modifier)
                 .verticalScroll(scroll)
                 .padding(
                     start = 16.dp,
                     end = 16.dp,
                     top = 8.dp,
                     bottom = if (reportShown) reportClearance() else 8.dp,
-                ),
+                ).oneColumnWithoutCover(pane),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (accessGranted) {
@@ -164,6 +247,28 @@ private fun HomeBody(
             Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
         }
     }
+}
+
+/**
+ * At most [ONE_COLUMN_MAX_WIDTH] wide, centred, while Home is split in two and [pane] shows no cover;
+ * as wide as given otherwise. Read as it is laid out, once the track has put its cover there or not.
+ */
+private fun Modifier.oneColumnWithoutCover(pane: CoverPane?): Modifier =
+    layout { measurable, constraints ->
+        val cap = if (pane != null && pane.content == null) ONE_COLUMN_MAX_WIDTH.roundToPx() else constraints.maxWidth
+        val width = min(constraints.maxWidth, cap)
+        val placeable =
+            measurable.measure(
+                constraints.copy(minWidth = min(constraints.minWidth, width), maxWidth = width),
+            )
+        val outer = if (constraints.hasBoundedWidth) constraints.maxWidth else placeable.width
+        layout(outer, placeable.height) { placeable.placeRelative((outer - placeable.width) / 2, 0) }
+    }
+
+// The header as a screen reader reads it on Home split in two (#1097): one group, first.
+private fun SemanticsPropertyReceiver.headerFirst() {
+    isTraversalGroup = true
+    traversalIndex = HEADER_TRAVERSAL
 }
 
 /**

@@ -323,11 +323,13 @@ private fun OpenedAlbum(
 }
 
 // The album's tracklist, a single disc as one list, several a page each; picked of several albums of
-// its name, under the line that says who picked it, whose *Change* opens them ([change], #1080).
+// its name, under the line that says who picked it, whose *Change* opens them ([change], #1080). Where
+// it was left kept in [tracklist] (#1097).
 @Composable
 internal fun FoundBack(
     back: CoverBack.Found,
     change: () -> Unit,
+    tracklist: TracklistMemory,
 ) {
     Column(Modifier.fillMaxSize()) {
         val albums = back.albums
@@ -335,9 +337,9 @@ internal fun FoundBack(
         if (albums != null && pickedBy != null) PickedLine(albums, pickedBy, change)
         val rest = Modifier.weight(1f).fillMaxWidth()
         if (back.discs.size == 1) {
-            DiscTracks(back.discs.single().tracks, back.playing?.track, rest)
+            DiscTracks(back.discs.single().tracks, back.playing?.track, rest, 0, tracklist)
         } else {
-            Column(rest) { DiscPages(back) }
+            Column(rest) { DiscPages(back, tracklist) }
         }
     }
 }

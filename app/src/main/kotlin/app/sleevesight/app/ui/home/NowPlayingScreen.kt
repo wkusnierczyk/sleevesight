@@ -285,7 +285,9 @@ internal class NowPlayingActions(
  * *Sources*, straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
  * followed player shows the players to start and the guide to Home ([IdleHome], #627), and an ad
  * playing in place of a track its neutral state ([AdHome], #880). A track the
- * pipeline has not reached yet shows at once, its evidence and insight to come.
+ * pipeline has not reached yet shows at once, its evidence and insight to come. Home split in two
+ * ([LocalCoverPane], #1097), the art and the position go to the cover's side ([CoverInPane]), and the
+ * rest stays here in its order.
  *
  * *Sounds like* waits for its card (Phase 2: `TrackState` has no similar artists yet), and so do
  * the rest of the detail content, the transport controls and the handoff to the player (design,
@@ -322,6 +324,9 @@ internal fun NowPlayingContent(
         NoTrackHome(state, actions)
         return
     }
+    // Under the return, so a while with no cover shows the next one's front; above the art's colours,
+    // so the cover turned over outlives those arriving, and the phone turning (#1097).
+    val back = rememberCoverMemory()
     val shown = Showing(state, playing)
     // *Retry* beside the sources that did not answer, under the insight and in *Sources* (#1121).
     val retries = Retries(shown.view, playing, actions.askAgain)
@@ -349,8 +354,7 @@ internal fun NowPlayingContent(
     ArtTheme(state.art) {
         CompositionLocalProvider(LocalTrackCleared provides shown.cleared) {
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                PlayerRow(playing.player, state.playback, actions)
-                ArtAndProgress(state.art, state.playback, header.duration, coverTurn(shown, header, settings, actions))
+                PlayerAndCover(state, playing, header, coverTurn(shown, header, settings, actions, back), actions)
                 val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
                 TrackHeader(shown, header, UnderAlbumLine(inPlace, settings, notes, genresPage), actions, people.named)

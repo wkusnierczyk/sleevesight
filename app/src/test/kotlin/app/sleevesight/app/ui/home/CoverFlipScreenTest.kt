@@ -120,6 +120,7 @@ class CoverFlipScreenTest {
                                 retry = {},
                                 openSources = {},
                                 colors = MaterialTheme.colorScheme,
+                                memory = rememberCoverMemory(),
                             )
                         ArtAndProgress(null, PlaybackInfo.NONE, null, turn)
                     }
