@@ -90,6 +90,9 @@ internal class InsightWriter(
     // Whether the track's title leads with its composer (#1195): its prompt's rules and its card's version.
     private val composed = track.composer != null
 
+    // Whether the prompt names a composer the player does not credit (#1376, `ArtistRoles.named`): its card's version.
+    private val uncredited = roles.uncredited.isNotEmpty()
+
     // Whether the run fell back to the whole evidence (#239), after `NO_EVIDENCE` to a prompt that
     // left lines out: every later call of the run, a tapped Retry too, goes straight to it.
     private var whole = false
@@ -351,7 +354,7 @@ internal class InsightWriter(
     // (#1142): decided on the lines sent, which may be fewer than the whole evidence the card's note is.
     private fun userMessage(sent: EvidenceSet): String {
         val thin = HomeShown.nothingBeyond(sent, nowPlaying, track, authors, composition)
-        return InsightPrompt.user(nowPlaying, track, sent, roles, nothingBeyond = thin)
+        return InsightPrompt.user(nowPlaying, track, sent, roles.named, nothingBeyond = thin)
     }
 
     // The reply, checked against what its prompt was [sent] (#239): a citation of a line left out
@@ -496,7 +499,7 @@ internal class InsightWriter(
             kind = CardKind.INSIGHT,
             entity = CardEntity.Track(track, nowPlaying.duration),
             evidenceFingerprint = evidence.fingerprint,
-            promptVersion = InsightPrompt.version(composed),
+            promptVersion = InsightPrompt.version(composed, uncredited),
             styleHash = styleHash(parts.hasher),
             provider = provider,
             model = model,

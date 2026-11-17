@@ -115,6 +115,40 @@ class ComposerItemInsightsTest {
         }
 
     @Test
+    fun `the lone credited performer's lines leave out the uncredited composer's, which are the composer's`() =
+        runTest {
+            // #1376: Wikipedia looks up Puccini's article too, on *Nessun Dorma* by Pavarotti alone.
+            val drafts =
+                listOf(
+                    about(PAVAROTTI, "Luciano Pavarotti was an Italian tenor."),
+                    about(PUCCINI, "Giacomo Puccini was an Italian composer."),
+                )
+            val roles = ArtistRoles(emptyList(), listOf(PAVAROTTI), classical = true, uncredited = listOf(PUCCINI))
+            val nessun = track("Nessun Dorma", PAVAROTTI, drafts, roles)
+            assertEquals(PAVAROTTI, items.name(InsightItem.ARTIST, nessun))
+            assertEquals(listOf(drafts[0].text), texts(InsightItem.ARTIST, nessun))
+            assertEquals(PUCCINI, items.name(InsightItem.COMPOSER, nessun))
+            assertEquals(listOf(drafts[1].text), texts(InsightItem.COMPOSER, nessun))
+        }
+
+    @Test
+    fun `a replay without MusicBrainz's roles keeps the composer's kept lines out of the performer's`() =
+        runTest {
+            // #1376: Wikipedia's result kept Puccini's article; this play has no roles (MusicBrainz off
+            // or not answering), so nothing names Puccini uncredited, and his lines still are not Pavarotti's.
+            val drafts =
+                listOf(
+                    about(PAVAROTTI, "Luciano Pavarotti was an Italian tenor."),
+                    about(PUCCINI, "Giacomo Puccini was an Italian composer."),
+                    line(SourceId.WIKIPEDIA, "An Italian tenor of the twentieth century.", Scope.ARTIST),
+                )
+            val replay = track("Nessun Dorma", PAVAROTTI, drafts)
+            assertEquals(PAVAROTTI, items.name(InsightItem.ARTIST, replay))
+            // A line that says whom it is about is that artist's; one that does not say, the lone artist's.
+            assertEquals(listOf(drafts[0].text, drafts[2].text), texts(InsightItem.ARTIST, replay))
+        }
+
+    @Test
     fun `the composer's card is the one an artist's insight about the composer has, written once`() =
         runTest {
             val composer = checkNotNull(items.evidence(InsightItem.COMPOSER, k545, settings))

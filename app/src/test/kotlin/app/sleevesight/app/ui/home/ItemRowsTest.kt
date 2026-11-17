@@ -201,6 +201,18 @@ class ItemRowsTest {
     }
 
     @Test
+    fun aLeadNamingTheComposerMusicBrainzNamesUncreditedIsLeftOutToo() {
+        // #1376: only the orchestra credited, so the normalizer finds no lead; MusicBrainz names Barber.
+        val orchestra = "New York Philharmonic"
+        val barber = ArtistRoles(emptyList(), listOf(orchestra), classical = true, uncredited = listOf("Samuel Barber"))
+        assertEquals("Adagio for Strings", music("Barber: Adagio for Strings", orchestra, barber).name)
+        assertEquals("Adagio for Strings", music("Samuel Barber: Adagio for Strings", orchestra, barber).name)
+        // A lead naming no composer of the work stays; so does every lead with no composer named.
+        assertEquals("Elegy: Adagio for Strings", music("Elegy: Adagio for Strings", orchestra, barber).name)
+        assertEquals("Barber: Adagio for Strings", music("Barber: Adagio for Strings", orchestra).name)
+    }
+
+    @Test
     fun theVersionLineIsNotAffectedByTheComposerLead() {
         // #1356: the version comes from the title's end, the lead from its start.
         val barber = ArtistRoles(listOf("Samuel Barber"), listOf("New York Philharmonic"))
