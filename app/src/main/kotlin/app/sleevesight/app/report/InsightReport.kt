@@ -138,6 +138,7 @@ internal fun providerName(provider: ProviderId): String =
         ProviderId.ANTHROPIC -> "Anthropic"
         ProviderId.OPENAI -> "OpenAI"
         ProviderId.GOOGLE -> "Google"
+        ProviderId.OPENROUTER -> "OpenRouter"
         ProviderId.OLLAMA -> "Ollama"
     }
 

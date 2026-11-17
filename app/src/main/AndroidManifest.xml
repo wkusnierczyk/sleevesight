@@ -100,12 +100,23 @@
         android:usesCleartextTraffic="false"
         tools:ignore="DataExtractionRules">
 
+        <!-- singleTop: OpenRouter's answer to a sign-in (#1157) comes back to the activity that
+             opened it, through onNewIntent, rather than starting a second one. -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- The callback of a sign-in with OpenRouter (#1157): the browser opens it with the
+                 one-time code, which is worth nothing without the verifier the app keeps. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="app.sleevesight" android:host="openrouter" />
             </intent-filter>
         </activity>
 

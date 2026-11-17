@@ -45,6 +45,9 @@ enum class SecretId(
     /** The name a setup code gives the key (#268). */
     val keyName: KeyName,
 ) {
+    /** OpenRouter's API key, for the AI service (#1157): from its sign-in, or pasted. */
+    OPENROUTER("ai.openrouter", KeyName.OPENROUTER),
+
     /** Anthropic's API key, for the AI service. */
     ANTHROPIC("ai.anthropic", KeyName.ANTHROPIC),
 
@@ -71,6 +74,7 @@ enum class SecretId(
                 ProviderId.ANTHROPIC -> ANTHROPIC
                 ProviderId.OPENAI -> OPENAI
                 ProviderId.GOOGLE -> GOOGLE
+                ProviderId.OPENROUTER -> OPENROUTER
                 ProviderId.OLLAMA -> null
             }
 

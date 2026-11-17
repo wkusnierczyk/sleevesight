@@ -104,6 +104,32 @@
     <string name="settings_track_language_always_detail">Searches in the track’s language for every track that has one other than English. With Exa on, one more Exa API call for each such track.</string>
     <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
+    <!-- AI services → OpenRouter (#1157): its sign-in, in place of the link to its key. -->
+    <string name="settings_openrouter_sign_in">Sign in with OpenRouter</string>
+    <string name="settings_openrouter_sign_in_line">Opens OpenRouter in your browser: sign in or create an account, and approve Sleevesight. OpenRouter then gives this phone a key of your own, billed to your OpenRouter account. Through it, you can use Claude, GPT and Gemini models.</string>
+    <!-- The bold part as the key dialogs' terms (settings_terms_*). -->
+    <string name="settings_openrouter_terms"><b>Signing in means agreeing to OpenRouter’s Terms of Service.</b> They require you to be 18 or older.</string>
+    <!-- %1$s is settings_openrouter_key_here, a link to the OpenRouter API key's row in Secrets. -->
+    <string name="settings_openrouter_or_key">Or set your OpenRouter API key %1$s.</string>
+    <string name="settings_openrouter_key_here">here</string>
+    <string name="settings_openrouter_waiting">Finish signing in in your browser.</string>
+    <string name="settings_openrouter_exchanging">Getting your key from OpenRouter…</string>
+    <string name="settings_openrouter_signed_in">Signed in to OpenRouter. The key is stored encrypted on this phone.</string>
+    <!-- Opens the key's page on OpenRouter; the open-in-new symbol after it is the ↗. -->
+    <string name="settings_openrouter_manage">Manage the key on OpenRouter</string>
+    <string name="settings_openrouter_sign_out">Sign out</string>
+    <!-- What a screen reader reads for the Sign out button. -->
+    <string name="settings_openrouter_sign_out_named">Sign out of OpenRouter</string>
+    <string name="settings_openrouter_sign_out_title">Sign out of OpenRouter?</string>
+    <string name="settings_openrouter_sign_out_text">The key is deleted from this phone, and Sleevesight stops using OpenRouter. The key itself still works until you delete it on OpenRouter, under Keys.</string>
+    <!-- A sign-in that did not finish: one line above the button, until the next sign-in. -->
+    <string name="settings_openrouter_closed">Not signed in: the browser was closed before OpenRouter sent a key.</string>
+    <string name="settings_openrouter_declined">Not signed in: Sleevesight was not approved on OpenRouter.</string>
+    <string name="settings_openrouter_offline">Not signed in: no connection. Try again.</string>
+    <string name="settings_openrouter_expired">Not signed in: the sign-in took longer than 10 minutes. Try again.</string>
+    <string name="settings_openrouter_refused">Not signed in: OpenRouter did not hand over the key. Try again.</string>
+    <!-- The key saved, and refused by OpenRouter since (#1157). -->
+    <string name="settings_openrouter_key_refused">OpenRouter no longer accepts this key: it may have been deleted there. Sign in again.</string>
     <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
     <string name="settings_set_key">Set your %1$s here.</string>
     <!-- The same, once the key is saved (#667). -->

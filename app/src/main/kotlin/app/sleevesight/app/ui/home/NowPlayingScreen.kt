@@ -450,6 +450,7 @@ private fun insightContext(
     cardShown = view.cardShown && track != null,
     rewriteFailed = view.rewriteFailed.takeIf { track != null },
     unanswered = retries.forInsight(track),
+    provider = settings?.aiProvider,
 )
 
 // The insight card's menu of *Reactive*'s modes (#615): the mode chosen, fixed while *Show

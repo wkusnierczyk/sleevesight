@@ -29,6 +29,7 @@ import app.sleevesight.app.pipeline.AppItemNotes
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.AskAiWired
 import app.sleevesight.app.pipeline.AutoSearches
+import app.sleevesight.app.pipeline.KeyRefusals
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.NetDump
 import app.sleevesight.app.pipeline.PipelineHost
@@ -45,6 +46,8 @@ import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.pipeline.vocalsWanted
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.KeyGate
+import app.sleevesight.app.secrets.OpenRouterLogin
+import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
@@ -124,6 +127,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
@@ -347,8 +351,36 @@ class AppGraph internal constructor(
         wiring.close()
     }
 
+    /**
+     * The AI services whose saved key was refused (#1157), heard on every call and model list
+     * through [aiProviders]; *AI services* says so under OpenRouter.
+     */
+    val keyRefusals = KeyRefusals()
+
     /** The AI services' clients, for the settings screen's model list and the pipeline. */
-    val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders
+    val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders.mapValues { keyRefusals.watching(it.value) }
+
+    /**
+     * Signing in with OpenRouter (#1157): its key saved as any other, and OpenRouter switched on at
+     * once, the service on before switched off, as its switch does. A key saved whose switch could
+     * not be saved on is still a sign-in that finished: the switch is there to move.
+     */
+    val openRouterLogin =
+        OpenRouterLogin(
+            wiring.openRouterSignIn,
+            save = { key ->
+                (secrets.set(SecretId.OPENROUTER, key) == SaveResult.SAVED).also { saved ->
+                    if (saved) {
+                        try {
+                            settings.update { it.copy(aiProvider = ProviderId.OPENROUTER) }
+                        } catch (_: IOException) {
+                            // Not switched on: the key is saved, and the switch can be moved.
+                        }
+                    }
+                }
+            },
+            scope = mainScope,
+        )
 
     /**
      * Whether each AI service's selected model can be used (#540): checked against the service's
@@ -771,6 +803,12 @@ class AppGraph internal constructor(
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
         // Each player the session layer sees appears under *Players*, switched off.
         mainScope.launch { seenPlayersRecorder.run() }
+        // A key refused (#1157) is no longer said to be once another is saved, or it is removed.
+        mainScope.launch {
+            secrets.changes.collect {
+                keyRefusals.keysChanged { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } }
+            }
+        }
         // The guide to Home, hidden once, is back for the next time nothing plays (#627).
         mainScope.launch { guideHiding.clearOnPlay(sessions.nowPlaying) }
         // A reading aloud stops with its track, and a new insight is read with *Read new insights aloud* (#325).

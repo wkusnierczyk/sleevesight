@@ -20,7 +20,7 @@
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
     <string name="first_run_to_sources">To the sources you enable (MusicBrainz, Wikipedia and Wikidata, Last.fm, LRCLIB, Exa web search): the title, artists and album of the playing track, as names or identifiers, cleaned of tags such as “2006 Remaster”. LRCLIB also gets the track’s length. Exa may also get searches about the track, its album or its artist, some written by your AI service. MusicBrainz may also get the title and artists of the next track in the queue.</string>
-    <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead in the sources, but no AI insight is written for it until it plays.</string>
+    <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. OpenRouter passes them on to the company whose model you choose. This is for the playing track only: the next one in the queue is looked up ahead in the sources, but no AI insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it. Always encrypted.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for the cover image. The address itself may identify the album or episode.</string>
     <!-- The lyrics links on Home (#728): sent only by the browser, on a tap. -->
@@ -58,6 +58,7 @@
     <string name="settings_ai_provider_anthropic">Anthropic</string>
     <string name="settings_ai_provider_openai">OpenAI</string>
     <string name="settings_ai_provider_google">Google</string>
+    <string name="settings_ai_provider_openrouter">OpenRouter</string>
     <!-- The AI service that needs no key, not offered under AI services yet: named on Load keys and
          in the key dialog when it is the AI service on (#763). -->
     <string name="settings_ai_provider_ollama">Ollama</string>
@@ -74,6 +75,7 @@
     <string name="settings_key_absent">Not set</string>
     <string name="settings_key_saved">Saved</string>
     <string name="settings_key_unreadable">Saved, but it can no longer be read</string>
+    <string name="settings_key_name_openrouter">OpenRouter API key</string>
     <string name="settings_key_name_anthropic">Anthropic API key</string>
     <string name="settings_key_name_openai">OpenAI API key</string>
     <string name="settings_key_name_google">Google Gemini API key</string>
@@ -89,6 +91,7 @@
     <string name="settings_terms_anthropic"><b>Using this key means agreeing to Anthropic’s Commercial Terms of Service.</b> They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
     <string name="settings_terms_openai"><b>Using this key means agreeing to the OpenAI Services Agreement.</b> It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
     <string name="settings_terms_google"><b>Using this key means agreeing to Google’s Gemini API terms.</b> They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
+    <string name="settings_terms_openrouter"><b>Using this key means agreeing to OpenRouter’s Terms of Service.</b> They require you to be 18 or older.</string>
     <string name="setup_terms">Using an AI service’s key means agreeing to that service’s terms: its key dialog says what they require.</string>
     <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Purge keys” in Secrets.</string>
     <string name="settings_key_write_failed">The key could not be saved: the phone’s storage failed. Try again.</string>

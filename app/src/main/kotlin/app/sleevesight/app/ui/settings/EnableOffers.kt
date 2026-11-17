@@ -19,7 +19,8 @@ import java.io.IOException
 @StringRes
 internal fun serviceName(id: SecretId): Int =
     when (id) {
-        SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE -> providerName(requireNotNull(providerOf(id)))
+        SecretId.OPENROUTER, SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE ->
+            providerName(requireNotNull(providerOf(id)))
         SecretId.LASTFM -> R.string.settings_source_lastfm
         SecretId.EXA -> R.string.settings_engine_exa
     }

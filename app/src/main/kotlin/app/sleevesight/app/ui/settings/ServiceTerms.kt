@@ -24,9 +24,12 @@ internal fun serviceTerms(id: SecretId): ServiceTerms? =
         SecretId.OPENAI -> ServiceTerms(R.string.settings_terms_openai, OPENAI_TERMS)
         // Gemini API Additional Terms of Service, effective 23 March 2026.
         SecretId.GOOGLE -> ServiceTerms(R.string.settings_terms_google, GOOGLE_TERMS)
+        // Terms of Service, last updated 31 August 2026 (#1157).
+        SecretId.OPENROUTER -> ServiceTerms(R.string.settings_terms_openrouter, OPENROUTER_TERMS)
         SecretId.LASTFM, SecretId.EXA -> null
     }
 
 internal const val ANTHROPIC_TERMS = "https://www.anthropic.com/legal/commercial-terms"
 internal const val OPENAI_TERMS = "https://openai.com/policies/services-agreement/"
 internal const val GOOGLE_TERMS = "https://ai.google.dev/gemini-api/terms"
+internal const val OPENROUTER_TERMS = "https://openrouter.ai/terms"

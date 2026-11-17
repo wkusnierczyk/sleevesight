@@ -25,7 +25,7 @@ internal enum class KeyGroup(
 /** The group of the key [id]'s service. */
 internal fun groupOf(id: SecretId): KeyGroup =
     when (id) {
-        SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE -> KeyGroup.AI
+        SecretId.OPENROUTER, SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE -> KeyGroup.AI
         SecretId.LASTFM -> KeyGroup.MUSIC
         SecretId.EXA -> KeyGroup.SEARCH
     }
@@ -39,7 +39,8 @@ internal fun providerOf(id: SecretId): ProviderId? = ProviderId.entries.firstOrN
  */
 internal fun Settings.serviceOn(id: SecretId): Boolean =
     when (id) {
-        SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE -> aiProvider != null && aiProvider == providerOf(id)
+        SecretId.OPENROUTER, SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE ->
+            aiProvider != null && aiProvider == providerOf(id)
         SecretId.LASTFM -> SourceSwitch.LASTFM in enabledSources
         SecretId.EXA -> SourceSwitch.WEB in enabledSources && WebEngine.EXA in webEngines
     }
@@ -56,7 +57,7 @@ internal fun Settings.withService(
     on: Boolean,
 ): Settings =
     when (id) {
-        SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE -> {
+        SecretId.OPENROUTER, SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE -> {
             val provider = providerOf(id)
             when {
                 on -> copy(aiProvider = provider)
