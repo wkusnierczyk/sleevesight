@@ -170,6 +170,15 @@
     <!-- Under the album (#729), quieter: the record label (or labels, joined by commas) of the release
          being played, then the album's year: "Parlophone · 1965"; either alone when only it is known. -->
     <string name="home_album_release">%1$s · %2$s</string>
+    <!-- Under the album (#729), the release's own year, then in brackets the year the album first came
+         out, when the release played is a later edition: "2019 (1969)", as in "Apple Records · 2019 (1969)". -->
+    <string name="home_album_year_first">%1$s (%2$s)</string>
+    <!-- As home_album_released_by_in, for a later edition (#729): %4$s the year the album first came
+         out: "Abbey Road, released by Apple Records in 2019, first released in 1969." -->
+    <string name="home_album_released_by_in_first">%1$s, released by %2$s in %3$s, first released in %4$s.</string>
+    <!-- As home_album_released_by_in_first, with no label known: "Abbey Road, released in 2019, first
+         released in 1969." -->
+    <string name="home_album_released_in_first">%1$s, released in %2$s, first released in %3$s.</string>
     <!-- The album and the line under it, as a screen reader reads them in one (#729): %1$s the album,
          %2$s its label or labels ("Harvest and Capitol Records"), %3$s the year. -->
     <string name="home_album_released_by_in">%1$s, released by %2$s in %3$s.</string>

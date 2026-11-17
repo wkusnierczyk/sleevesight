@@ -20,8 +20,8 @@ import org.junit.Test
 /**
  * The line under Home's album (#729): the record labels of the release the back of the cover shows,
  * the one the song is matched to or the one chosen among albums of one name, and the album's year;
- * either alone, none when neither is known; the labels left out when their release is of another
- * year than the one shown.
+ * either alone, none when neither is known; a later edition's own year with the album's first in
+ * brackets.
  */
 class RecordLabelTest {
     private val group = "g-sundown"
@@ -83,13 +83,28 @@ class RecordLabelTest {
     }
 
     @Test
+    fun anotherSongsReleaseOfTheAlbumNeverStandsInForThisOnes() {
+        // Two songs of one group on different releases: the second waits for its own.
+        val next = TracklistKey(group, "rec-carefree")
+        val carefree =
+            resolved.copy(resolution = resolved.resolution!!.copy(recordingMbid = "rec-carefree"))
+        val states = mapOf(key to found(listOf("Reprise")))
+        assertEquals(AlbumLabels.Looking, albumLabels(carefree, sundown, true, states))
+        val looking = states + (next to TracklistState.Looking)
+        assertEquals(AlbumLabels.Looking, albumLabels(carefree, sundown, true, looking))
+        assertEquals(
+            AlbumLabels.Known(listOf("Warner"), "1974"),
+            albumLabels(carefree, sundown, true, states + (next to found(listOf("Warner")))),
+        )
+    }
+
+    @Test
     fun theLineHoldsTheLabelsAndTheYearEitherAloneOrNone() {
         val both = AlbumLabels.Known(listOf("Harvest", "Capitol Records"), "1973")
         assertEquals(
             ReleaseLine(listOf("Harvest", "Capitol Records"), "1973"),
             releaseLine("The Dark Side of the Moon", "1973", both),
         )
-        assertEquals(ReleaseLine(listOf("Parlophone"), null), releaseLine("Rubber Soul", null, known("Parlophone")))
         assertEquals(ReleaseLine(emptyList(), "1965"), releaseLine("Rubber Soul", "1965", AlbumLabels.Known()))
         assertNull(releaseLine("Rubber Soul", null, AlbumLabels.Known()))
         // Still looked up: the year alone, which Home shows once its wait is over.
@@ -97,24 +112,34 @@ class RecordLabelTest {
     }
 
     @Test
-    fun aReleaseOfAnotherYearThanTheOneShownGivesNoLabelTheYearStands() {
-        val later = AlbumLabels.Known(listOf("Apple"), "2009")
-        assertEquals(ReleaseLine(emptyList(), "1965"), releaseLine("Rubber Soul", "1965", later))
-        // Undated, it is taken as the one shown.
+    fun aLaterEditionShowsItsOwnLabelAndYearTheFirstInBrackets() {
+        val later = AlbumLabels.Known(listOf("Apple Records"), "2019")
+        assertEquals(ReleaseLine(listOf("Apple Records"), "2019", "1969"), releaseLine("Abbey Road", "1969", later))
+        // The same year: no brackets.
+        assertEquals(ReleaseLine(listOf("Parlophone"), "1965"), releaseLine("Rubber Soul", "1965", known("Parlophone")))
+        // A year and no label: the year alone, with its first.
         assertEquals(
-            ReleaseLine(listOf("Parlophone"), "1965"),
-            releaseLine("Rubber Soul", "1965", AlbumLabels.Known(listOf("Parlophone"))),
+            ReleaseLine(emptyList(), "2019", "1969"),
+            releaseLine("Abbey Road", "1969", AlbumLabels.Known(emptyList(), "2019")),
         )
+        // No first year known: the release's own alone.
+        assertEquals(ReleaseLine(listOf("Apple Records"), "2019"), releaseLine("Abbey Road", null, later))
+    }
+
+    @Test
+    fun anUndatedReleaseShowsItsLabelAlone() {
+        val undated = AlbumLabels.Known(listOf("Apple Records"))
+        assertEquals(ReleaseLine(listOf("Apple Records"), null), releaseLine("Abbey Road", "1969", undated))
     }
 
     @Test
     fun anAlbumNamingItsEditionsYearShowsTheLabelAlone() {
-        // #1116: the name gives the year, so the line gives none, and the release played gives the label.
-        val remaster = AlbumLabels.Known(listOf("Warner Records"), "2024")
-        assertEquals(
-            ReleaseLine(listOf("Warner Records"), null),
-            releaseLine("Material Girl (2024 Remaster)", "1985", remaster),
-        )
+        // #1116: the name gives the year, so the line gives none.
+        val remaster = AlbumLabels.Known(listOf("Sire"), "2024")
+        assertEquals(ReleaseLine(listOf("Sire"), null), releaseLine("Material Girl (2024 Remaster)", "1985", remaster))
+        val original = AlbumLabels.Known(listOf("Sire"), "1985")
+        assertEquals(ReleaseLine(listOf("Sire"), null), releaseLine("Material Girl (2024 Remaster)", "1985", original))
+        assertNull(releaseLine("Material Girl (2024 Remaster)", "1985", AlbumLabels.Known(emptyList(), "2024")))
     }
 
     private fun known(label: String) = AlbumLabels.Known(listOf(label), "1965")

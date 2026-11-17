@@ -117,6 +117,38 @@ class RememberedMusicBrainzTest {
         }
 
     @Test
+    fun `the same question asked while it is being asked is asked once`() =
+        runTest {
+            // #729: two lookups reaching one release before its first answer arrives.
+            val hold = CompletableDeferred<Unit>()
+            counting.hold = hold
+            val first = async { remembered.searchRecordings("Song", "Artist") }
+            val second = async { remembered.searchRecordings("Song", "Artist") }
+            runCurrent()
+            hold.complete(Unit)
+            assertEquals(first.await(), second.await())
+            assertEquals(listOf("search Song"), counting.asked)
+        }
+
+    @Test
+    fun `a question given up while asked leaves the one waiting on it to ask itself`() =
+        runTest {
+            val hold = CompletableDeferred<Unit>()
+            counting.hold = hold
+            val first = async { remembered.searchRecordings("Song", "Artist") }
+            runCurrent()
+            val second = async { remembered.searchRecordings("Song", "Artist") }
+            runCurrent()
+            first.cancel()
+            runCurrent()
+            hold.complete(Unit)
+            second.await()
+            assertEquals(listOf("search Song", "search Song"), counting.asked)
+            remembered.searchRecordings("Song", "Artist")
+            assertEquals(2, counting.asked.size)
+        }
+
+    @Test
     fun `work that looks afresh is answered by MusicBrainz, and its answers are kept`() =
         runTest {
             remembered.searchRecordings("Song", "Artist")

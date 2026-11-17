@@ -132,6 +132,17 @@ class KeyDataTest {
         }
 
     @Test
+    fun aLaterEditionGivesItsOwnYearAndTheFirstInBrackets() =
+        show(
+            sundown.copy(album = "Abbey Road"),
+            HeaderYears(album = "1969"),
+            labels = AlbumLabels.Known(listOf("Apple Records"), "2019"),
+        ) {
+            assertEquals("Apple Records · 2019 (1969)", releaseLine())
+            assertEquals("Abbey Road, released by Apple Records in 2019, first released in 1969.", said("Abbey Road"))
+        }
+
+    @Test
     fun withTheLabelAloneTheLineHoldsIt() =
         show(gold, HeaderYears(), labels = AlbumLabels.Known(listOf("Reprise"))) {
             assertEquals("Reprise", releaseLine())

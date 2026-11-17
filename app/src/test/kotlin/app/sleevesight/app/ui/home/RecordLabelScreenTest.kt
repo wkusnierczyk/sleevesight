@@ -19,6 +19,7 @@ import app.sleevesight.app.pipeline.TracklistKey
 import app.sleevesight.app.pipeline.TracklistState
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
+import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
@@ -80,7 +81,26 @@ class RecordLabelScreenTest {
         }
 
         override fun retry(key: TracklistKey) = Unit
+
+        val dropped = mutableListOf<TracklistKey>()
+
+        override fun dropAhead(key: TracklistKey) {
+            dropped += key
+            shown.update { if (it[key] == TracklistState.Looking) it - key else it }
+        }
     }
+
+    // The next song of the album, on another release of its group.
+    private val nextKey = TracklistKey(group, "rec-carefree")
+    private val next: TrackState =
+        track(carefree).copy(
+            resolution =
+                Resolution(
+                    outcome = Outcome.SongArticle,
+                    recordingMbid = "rec-carefree",
+                    releaseDates = listOf(ReleaseDate("Sundown", "1974", group, "Album")),
+                ),
+        )
 
     private val feed = Feed()
 
@@ -158,6 +178,24 @@ class RecordLabelScreenTest {
             answer("Reprise")
             compose.onNodeWithTag(RELEASE_HELD_TAG, useUnmergedTree = true).assertDoesNotExist()
             assertEquals("Reprise · 1974", line())
+        }
+
+    @Test
+    fun aSkipGivesUpTheSkippedTracksLookupAndTheNextSongWaitsForItsOwnRelease() =
+        show(state(resolved)) { current ->
+            current.value = state(next)
+            frames()
+            // The first song's release, still asked, given up; the next one's asked.
+            assertEquals(listOf(key), feed.dropped)
+            assertEquals(listOf(key, nextKey), feed.asked.distinct())
+            assertHeld()
+            // Another song's release of the album found meanwhile does not end the wait.
+            answer("Reprise")
+            assertHeld()
+            val release = MbTracklist("r2", emptyList(), "1974", labels = listOf("Warner"))
+            feed.shown.update { it + (nextKey to TracklistState.Found(release)) }
+            frames()
+            assertEquals("Warner · 1974", line())
         }
 
     @Test

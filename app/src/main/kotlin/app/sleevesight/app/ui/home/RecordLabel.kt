@@ -43,8 +43,9 @@ internal sealed interface AlbumLabels {
  * The record labels of the release of [header]'s album being played (#729), with [musicBrainzOn] as
  * *Sources* has it, from the tracklists looked up, [states]: the release the back of the cover shows
  * ([tracklistKey], #984), the one the song is matched to, or of several albums of the name the one the
- * listener chose, of [choices] (#1080). While a new song of the album is looked up, the release found
- * for another song of it stands in ([stateOf]), as on the back. Known and empty with MusicBrainz off,
+ * listener chose, of [choices] (#1080). Only that key's own lookup counts: another song's release of
+ * the album, which the back shows meanwhile, may be another edition, so it never ends the wait. Known
+ * and empty with MusicBrainz off,
  * the song not found or not reached, no album or no release group named, several albums of the name
  * none of which the recording tells apart, or the release not found or not reached.
  */
@@ -61,7 +62,7 @@ internal fun albumLabels(
         !musicBrainzOn || none == NoDates.OFF -> NO_LABELS
         chosen == null && none == NoDates.LOOKING -> AlbumLabels.Looking
         chosen == null && none != NoDates.NO_DATES -> NO_LABELS
-        else -> tracklistKey(track, header, choices)?.let { labelsOf(stateOf(it, states)) } ?: NO_LABELS
+        else -> tracklistKey(track, header, choices)?.let { labelsOf(states[it]) } ?: NO_LABELS
     }
 }
 
@@ -77,34 +78,42 @@ private fun labelsOf(state: TracklistState?): AlbumLabels =
 private val NO_LABELS = AlbumLabels.Known()
 
 /**
- * What the line under the album says (#729): the [labels] of the release played, and the [year] after
- * them, as the album line used to show it (`albumLineYear`: none when the album's name gives its
- * edition's, #1116).
+ * What the line under the album says (#729): the [labels] of the release played, the [year] after
+ * them, and, when it is a later edition, the year the album first came out in brackets after that,
+ * [first].
  */
 internal data class ReleaseLine(
     val labels: List<String>,
     val year: String?,
+    val first: String? = null,
 )
 
 /**
- * The line under [album] (#729): the labels of [labels], the release played, and [year], the album's
- * year by [ReleaseDate.albumYear]'s rules (`headerYears`), shown unless the album's name gives its
- * edition's ([albumLineYear]). The label and the year say one release: when the release's own year is
- * known and is not the year shown, the song matched to a later edition than the year says (a bonus
- * track's), the year stands and the labels are left out, the year being the one the album line and
- * *Dates* have always gone by. Labels still [AlbumLabels.Looking] count as none: Home holds the line
- * back meanwhile, and shows this once its wait is over. Null when there is neither.
+ * The line under [album] (#729), from [labels], the release played, and [year], the album's year by
+ * [ReleaseDate.albumYear]'s rules (`headerYears`), the one the album line showed before:
+ * - with the release known, its own labels and its own year, and [year] in brackets when the two
+ *   differ ("Apple Records · 2019 (1969)"); its labels alone when it has no date; its labels alone
+ *   too when the album's name gives its edition's year ([albumLineYear], #1116: "Material Girl (2024
+ *   Remaster)");
+ * - with no release known (MusicBrainz off, the release not found or with neither a label nor a date,
+ *   or still [AlbumLabels.Looking], which Home holds back meanwhile and shows so once its wait is
+ *   over), [year] alone, as the album line had it.
+ * Null when there is nothing to say.
  */
 internal fun releaseLine(
     album: String,
     year: String?,
     labels: AlbumLabels,
 ): ReleaseLine? {
-    val shown = albumLineYear(album, year)
     val known = labels as? AlbumLabels.Known ?: NO_LABELS
-    val agree = shown == null || known.year == null || known.year == shown
-    val named = known.labels.takeIf { agree }.orEmpty()
-    return if (named.isEmpty() && shown == null) null else ReleaseLine(named, shown)
+    val own = known.year
+    val line =
+        when {
+            known.labels.isEmpty() && own == null -> ReleaseLine(emptyList(), albumLineYear(album, year))
+            own == null || albumLineYear(album, own) == null -> ReleaseLine(known.labels, null)
+            else -> ReleaseLine(known.labels, own, year?.takeIf { it != own })
+        }
+    return line.takeUnless { it.labels.isEmpty() && it.year == null }
 }
 
 /**
@@ -134,20 +143,26 @@ internal fun ReleaseAbout(
     }
 }
 
-/** [line] as shown: "Harvest, Capitol Records · 1973", or the labels or the year alone. */
+/**
+ * [line] as shown: "Harvest, Capitol Records · 1973", "Apple Records · 2019 (1969)", or the labels or
+ * the year alone, the year with its first in brackets when it has one.
+ */
 @Composable
 private fun releaseShown(line: ReleaseLine): String {
     val labels = line.labels.joinToString(", ").ifEmpty { null }
+    val year =
+        line.year?.let { own -> line.first?.let { stringResource(R.string.home_album_year_first, own, it) } ?: own }
     return when {
-        labels != null && line.year != null -> stringResource(R.string.home_album_release, labels, line.year)
-        else -> labels ?: line.year.orEmpty()
+        labels != null && year != null -> stringResource(R.string.home_album_release, labels, year)
+        else -> labels ?: year.orEmpty()
     }
 }
 
 /**
  * The album and [line] under it as a screen reader reads them: "Rubber Soul, released by Parlophone
- * in 1965.", "…, released by Parlophone.", "…, released in 1965."; several labels named together,
- * "Harvest and Capitol Records" ([namedInOrder]).
+ * in 1965.", "Abbey Road, released by Apple Records in 2019, first released in 1969.", "…, released
+ * by Parlophone.", "…, released in 1965."; several labels named together, "Harvest and Capitol
+ * Records" ([namedInOrder]).
  */
 @Composable
 private fun releaseSaid(
@@ -155,10 +170,14 @@ private fun releaseSaid(
     line: ReleaseLine,
 ): String {
     val labels = namedInOrder(line.labels).ifEmpty { null }
+    val year = line.year
+    val first = line.first
     return when {
-        labels != null && line.year != null ->
-            stringResource(R.string.home_album_released_by_in, album, labels, line.year)
+        labels != null && year != null && first != null ->
+            stringResource(R.string.home_album_released_by_in_first, album, labels, year, first)
+        labels != null && year != null -> stringResource(R.string.home_album_released_by_in, album, labels, year)
         labels != null -> stringResource(R.string.home_album_released_by, album, labels)
-        else -> stringResource(R.string.home_album_released_in, album, line.year.orEmpty())
+        first != null -> stringResource(R.string.home_album_released_in_first, album, year.orEmpty(), first)
+        else -> stringResource(R.string.home_album_released_in, album, year.orEmpty())
     }
 }

@@ -50,6 +50,58 @@ class AlbumTracklistFeedTest {
     )
 
     @Test
+    fun aLookupAheadGivenUpIsCancelledAndForgottenSoTheNextTracksIsNotHeldBehindIt() =
+        runTest {
+            // #729: a skip while the skipped track's release is still asked.
+            val hold = CompletableDeferred<Unit>()
+            val feed = feed(hold = hold)
+            val skipped = TracklistKey("g-skipped", "rec-1")
+            feed.lookAhead(skipped)
+            runCurrent()
+            assertEquals(TracklistState.Looking, feed.states.value[skipped])
+            feed.dropAhead(skipped)
+            runCurrent()
+            assertNull(feed.states.value[skipped])
+            // Given up, it never lands, even once its answer would have come.
+            hold.complete(Unit)
+            runCurrent()
+            assertNull(feed.states.value[skipped])
+            feed.lookAhead(g)
+            runCurrent()
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[g])
+            // Asked again later, it is asked anew.
+            feed.lookAhead(skipped)
+            runCurrent()
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[skipped])
+            assertEquals(listOf("g-skipped", "g", "g-skipped"), asked)
+        }
+
+    @Test
+    fun aLookupAheadTheCoverTurnedToIsNotGivenUp() =
+        runTest {
+            val hold = CompletableDeferred<Unit>()
+            val feed = feed(hold = hold)
+            feed.lookAhead(g)
+            runCurrent()
+            feed.look(g)
+            feed.dropAhead(g)
+            hold.complete(Unit)
+            runCurrent()
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[g])
+            assertEquals(listOf("g"), asked)
+        }
+
+    @Test
+    fun aLookupAheadThatEndedIsKept() =
+        runTest {
+            val feed = feed()
+            feed.lookAhead(g)
+            runCurrent()
+            feed.dropAhead(g)
+            assertEquals(TracklistState.Found(tracklist), feed.states.value[g])
+        }
+
+    @Test
     fun theAlbumsOfOneNameAreAskedOnceAndAgainOnlyOnRetryAfterAFailure() =
         runTest {
             // #1080: on the listener's tap, all of them in one lookup.

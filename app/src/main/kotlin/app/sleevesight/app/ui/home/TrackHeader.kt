@@ -1,7 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -66,7 +66,13 @@ private fun releaseLabels(
     // A feed that looks nothing up (a preview's) gives no label: none is waited for.
     val on = settings?.isEnabled(SourceId.MUSICBRAINZ) != false && actions.tracklists.looksUp
     val key = if (on) tracklistKey(shown.track, header, choices) else null
-    LaunchedEffect(key, actions.tracklists) { key?.let(actions.tracklists::look) }
+    // Given up once the track it was for is no longer shown (a skip), so skipped tracks' lookups do
+    // not queue ahead of this one's under MusicBrainz's one request a second.
+    DisposableEffect(key, actions.tracklists) {
+        val feed = actions.tracklists
+        key?.let(feed::lookAhead)
+        onDispose { key?.let(feed::dropAhead) }
+    }
     return albumLabels(shown.track, header, on, states, choices)
 }
 
