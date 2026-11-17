@@ -1,0 +1,8 @@
+What's new in 0.8.0:
+- Sign in with OpenRouter: one account for Claude, GPT, Gemini and free models.
+- Home: the record label under the album; a landscape layout on wide screens.
+- Several albums of one name: see each, choose the one playing.
+- Classical: the composer and librettists, even when the player names only the performer.
+- A misspelled title is checked with AI and found again.
+- Text the sources don't back is dimmed, with a ? note.
+- Dates, Genres and Lyrics share one panel.

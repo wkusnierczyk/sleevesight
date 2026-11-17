@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.7.2
+docs_version: 0.8.0
 nav:
-  - id: results-for-072
+  - id: results-for-080
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.7.2
+## Results for 0.8.0
 
-Checked on 16 November 2026, on the code of release 0.7.2.
+Checked on 17 November 2026, on the code of release 0.8.0.
 
-- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app. The app's libraries are the same as in 0.7.1.
+- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app; none of them changed since 0.7.2.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
-- **Code checks:** Android lint's security checks found nothing.
-- **Security review:** no way found to reach your keys or your data in the new code. The build now fails if checking the downloaded libraries is turned off or loosened, and 0.7.1's slowdown in reading a long AI reply is fixed. The new MusicBrainz name lookups are free, at most two per track, and keep to one request a second. Left for a later release: an older slowdown of the same kind elsewhere in reading a reply, and a tightening of the build's checks. Neither reaches keys or data.
+- **Code checks:** Android lint's security checks found nothing, in the app or in the modules beside it.
+- **Security review:** no way found to reach your keys or your data in the new code. The OpenRouter sign-in gives its key only to the sign-in that started it: the app keeps a one-time secret (PKCE) and a random state, and both must match. The new spelling check is one more paid web search and AI request, and only for a track MusicBrainz cannot find; the privacy policy names it. Two slowdowns on unusual text are left: one when showing an unusual AI reply, one on an unusual artist name. One minor nuisance is left: another app can cancel a sign-in while it is under way. None of these reaches keys or data.
 
 ## What is checked
 
