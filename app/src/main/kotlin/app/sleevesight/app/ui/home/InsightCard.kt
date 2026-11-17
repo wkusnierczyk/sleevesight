@@ -15,8 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.isTraversalGroup
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -32,14 +30,13 @@ import app.sleevesight.core.pipeline.InsightState
  * Model prose is plain text: its only interactive parts are the citation chips, built from the
  * evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go to the
  * pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
- * insight's text, when the evidence it was written from holds nothing beyond what Home shows
- * ([InsightState.Written.nothingBeyondHome], #1142), a quiet line says no more source information was
- * found. Under that, its footer ([Footer], #671), each part on its own line: *As written previously.* with
- * what follows from it, for an insight written earlier, or *Rewritten with …* for one *Rewrite
- * insight* wrote (#854), or an automatic write in place of another model's (#972); [GroundingLine],
- * a note, or with [groundingDetails] (*Show grounding details*, #437) the grounding check's counts
- * in full; and *Report the insight* (#390), which hands the insight and its track to
- * [InsightActions.onReport].
+ * insight's text, its footer ([Footer], #671), each part on its own line: first the credit
+ * (#959, #1162), *Written by {model}.* or *Rewritten by {model}.* with what else it was written with,
+ * then what follows from it, with *Read aloud* at the row's end; when the evidence it was written from
+ * holds nothing beyond what Home shows ([InsightState.Written.nothingBeyondHome], #1142), a quiet line
+ * saying no more source information was found; [GroundingLine], a note, or with [groundingDetails]
+ * (*Show grounding details*, #437) the grounding check's counts in full; and *Report the insight*
+ * (#390), which hands the insight and its track to [InsightActions.onReport].
  *
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
  * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
@@ -47,18 +44,13 @@ import app.sleevesight.core.pipeline.InsightState
  * that is null, before the settings' first read. Beside a written insight, the menu begins with
  * *Look again* (#617), enabled while it can be tapped ([offersLookAgain]).
  *
- * With a written insight, at the end of the heading's row, *Read aloud* (#325, #725,
+ * With a written insight, at the end of the credit's row (#959), *Read aloud* (#325, #725,
  * [ReadAloudButton]) when there is [readAloud]: a plain icon button, by the text it reads rather than
  * by the split button, where it was taken for part of the card's actions; it makes no AI call and
- * carries no **AI** mark. With no insight written, the heading stands alone, as tall as the button, so
- * the insight does not move down when it is written. Its width is kept first: at a large font size the
- * heading wraps in what is left. While it reads with the music paused though *Reduce volume* is
- * chosen, on a speaker whose volume the phone cannot set (#803), a quiet note under the heading says so.
- *
- * Under the heading, in its row, a byline (#811): "by {model}" in the panels' credit style
- * ([InsightByline], [SearchCredit]), naming the model that wrote the text ([insightModel]) as *AI services*
- * lists it, or its id once no longer listed. *Read aloud* does not say it; a screen reader
- * reads it in its place, after the heading.
+ * carries no **AI** mark. The heading stands alone, as tall as the button, as it has always been, so
+ * the insight does not move down when it is written. While it reads with the music paused though
+ * *Reduce volume* is chosen, on a speaker whose volume the phone cannot set (#803), a quiet note under
+ * the credit's row says so.
  */
 @Suppress("LongParameterList") // The insight, what it is shown with, and its actions, each on its own.
 @Composable
@@ -71,20 +63,12 @@ internal fun InsightCard(
     readAloud: ReadAloudControl? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val read = readAloud?.takeIf { insight is InsightState.Written }
         Row(
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(INSIGHT_HEADING_TAG),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Measured after the button, in the width it leaves. One traversal group, so a screen
-            // reader reads the heading and the byline before *Read aloud*, each on its own (#811).
-            Column(Modifier.weight(1f).semantics { isTraversalGroup = true }) {
-                Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
-                insightModel(insight)?.let { InsightByline(it) }
-            }
-            read?.let { ReadAloudButton(it, READ_ALOUD_TAG) }
+            Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
         }
-        if (read?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
         // A track the last *Clear history* holds (#1112): its findings were cleared and nothing is
         // asked, so the card says so, with *Look up again*, rather than why nothing is written yet;
         // a model found unavailable (#540) is still said, under it, with its link.
@@ -92,7 +76,7 @@ internal fun InsightCard(
             ClearedInsight(actions.onLookUpAgain)
             context.unavailable?.let { ModelUnavailable(it, actions.onSettings) }
         } else {
-            InsightBody(insight, context, actions, groundingDetails)
+            InsightBody(insight, context, actions, groundingDetails, readAloud)
         }
         val lookAgain =
             (insight as? InsightState.Written)?.let {
@@ -142,6 +126,7 @@ private fun InsightBody(
     context: InsightContext,
     actions: InsightActions,
     groundingDetails: Boolean,
+    readAloud: ReadAloudControl?,
 ) {
     // A model found unavailable (#540): said in place of why nothing is written, or of the failure
     // it caused; the split button offers no Write, which would fail again. With an insight, it is
@@ -168,7 +153,7 @@ private fun InsightBody(
             if (context.offers.stop) Quiet(stringResource(R.string.home_insight_writing_stop))
         }
 
-        is InsightState.Written -> Written(insight, context, actions, groundingDetails)
+        is InsightState.Written -> Written(insight, context, actions, groundingDetails, readAloud)
         InsightState.NoEvidence -> Quiet(stringResource(R.string.home_insight_no_evidence))
         // Write offered again after a call that failed or was stopped: a new paid call, on a tap
         // only, from the split button, which the line says in the same breath.
@@ -201,41 +186,37 @@ private fun Written(
     context: InsightContext,
     actions: InsightActions,
     groundingDetails: Boolean,
+    readAloud: ReadAloudControl?,
 ) {
     val paragraphs = insight.grounded.paragraphs
     if (paragraphs.isEmpty()) Prose(AnnotatedString(insight.grounded.text))
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
-    // Written from evidence that holds nothing beyond what Home shows (#1142): said under the text, in
-    // the card's quiet note style, as the line on a source not reached under it is.
-    if (insight.nothingBeyondHome) {
-        Quiet(stringResource(R.string.home_insight_nothing_beyond), Modifier.testTag(INSIGHT_NOTHING_BEYOND_TAG))
-    }
-    // Its *Retry* goes once tapped, so it hands the focus to *Report the insight* under it, which
-    // stays beside a written insight in either layout (#1121).
-    val handoff = rememberFocusHandoff()
-    val report = remember { FocusRequester() }
-    context.unanswered?.let { InsightPartial(it) { handoff.moveTo(report) } }
-    Footer(insight, context, actions, groundingDetails, Modifier.handoffTarget(handoff, report))
+    Footer(insight, context, actions, groundingDetails, readAloud)
 }
 
 /**
  * The footer under a written insight (#671): each part on its own line, at the start, top to
  * bottom, so each wraps on its own at a large font size and a screen reader reads them in order:
- * - *As written previously.*, or for an insight a rewrite wrote (*Rewrite insight*, #854, or an
- *   automatic write in place of another model's, #972), *Rewritten with …* ([writtenBefore]), with
- *   what follows from it on the same line;
+ * - first, the credit (#959, #1162, [insightCredit]): *Written by {model}.*, or for an insight a
+ *   rewrite wrote (*Rewrite insight*, #854, or an automatic write in place of another model's, #972),
+ *   *Rewritten by {model}.*, with what else it was written with; then what follows from it on the same
+ *   line ([afterCredit]); *Read aloud* ([readAloud]) at the row's end, and under the row, while it
+ *   reads with the music paused in place of a lower volume (#803), that it does;
  * - while *Look again* looks the sources up, what it is doing ([lookingAgainLine]), with the turning
  *   record before it (#785);
+ * - written from evidence that holds nothing beyond what Home shows (#1142), that no more source
+ *   information was found; and a source not reached ([InsightPartial]), with its *Retry*, whose focus
+ *   goes once tapped to *Report the insight* (#1121);
  * - the grounding line ([GroundingLine]): the note on the dimmed sentences, or, with
  *   [groundingDetails] (developer mode, inside its mark), the grounding check's counts. The note
- *   stays where the counts are, which take its place in developer mode: under the line about the
- *   insight's history and above *Report the insight*, the action it leads to;
+ *   stays where the counts are, which take its place in developer mode: under the credit and above
+ *   *Report the insight*, the action it leads to;
  * - which citations it translated from the track's language ([TranslatedLine], #902);
  * - that the reply stopped early, for an incomplete insight;
  * - *Report the insight* ([ReportAction]), in the theme's error colour, where the focus goes from the
- *   *Retry* of the line above the footer ([reportModifier], #1121) as it goes;
+ *   *Retry* of the line on a source not reached (#1121) as it goes;
  * - while the model is found unavailable (#540), that it is ([ModelUnavailable]), with its link to the
  *   settings (#911): last, just above the split button, whose Write it leaves disabled, and in place
  *   of what *Rewrite insight* would use, which is not offered then.
@@ -246,19 +227,35 @@ private fun Footer(
     context: InsightContext,
     actions: InsightActions,
     groundingDetails: Boolean,
-    reportModifier: Modifier = Modifier,
+    readAloud: ReadAloudControl?,
 ) {
     Column(Modifier.fillMaxWidth()) {
-        val looking = lookingAgainLine(context)
-        writtenBefore(insight, context, looking != null)?.let { Quiet(it) }
-        looking?.let {
+        CreditRow(
+            insightCredit(insight),
+            Modifier.testTag(INSIGHT_BY_TAG),
+            after = afterCredit(context),
+            readAloud = readAloud?.let { { ReadAloudButton(it, READ_ALOUD_TAG) } },
+        )
+        if (readAloud?.pausedInstead == true) Quiet(stringResource(R.string.home_read_aloud_paused_instead))
+        lookingAgainLine(context)?.let {
             Busy(
                 stringResource(it),
                 MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        // Not *Kept from before.*: the line above says so.
+        // Written from evidence that holds nothing beyond what Home shows (#1142), in the card's quiet
+        // note style, as the line on a source not reached under it is.
+        if (insight.nothingBeyondHome) {
+            Quiet(stringResource(R.string.home_insight_nothing_beyond), Modifier.testTag(INSIGHT_NOTHING_BEYOND_TAG))
+        }
+        // Its *Retry* goes once tapped, so it hands the focus to *Report the insight* under it, which
+        // stays beside a written insight in either layout (#1121).
+        val handoff = rememberFocusHandoff()
+        val report = remember { FocusRequester() }
+        context.unanswered?.let { InsightPartial(it) { handoff.moveTo(report) } }
+        val reportModifier = Modifier.handoffTarget(handoff, report)
+        // No *Kept from before.*: the credit says who wrote it.
         GroundingLine(insight.grounded, details = groundingDetails)
         TranslatedLine(insight.grounded, context.track?.evidence, insight.held)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
@@ -269,45 +266,24 @@ private fun Footer(
 }
 
 /**
- * The footer's first line (#671): *As written previously.* for an insight not written in this run
- * but earlier, on an earlier play of the track (from the cache, or the card paid for shown in place
- * of an insight the run lacks, #606), or before a *Look again*, a settings change or a rewrite that
- * failed. For an insight a rewrite wrote (*Rewrite insight*, or an automatic write in place of the
- * insight another model kept, #972), *Rewritten with …* in its place, never both
- * ([rewrittenLine], #854): on the play it was rewritten, though just written, and on every later
- * one while it is the one kept. Then, on the same line, what follows from it, in the order it
- * happened: that a rewrite failed or was stopped (not that the service refused the model while it is
- * found unavailable, which the footer's last line says, #969: [rewriteFailureShown]), that *Look
- * again* found nothing new (#617, [lookAgainLine]), and, while *Rewrite insight* is offered (#615,
- * #625), what it would rewrite the insight with ([rewriteOfferLine], #854), what a look again found
- * new included. What *Look again* is looking up is not on this line but on its own under it (#785,
- * [lookingAgainLine]); while it looks ([lookingAgain]), the line shows all the same. Null for an
- * insight written the first time just now, with nothing to follow.
+ * What follows the credit on its line (#671, #1162), in the order it happened: that a rewrite failed
+ * or was stopped (not that the service refused the model while it is found unavailable, which the
+ * footer's last line says, #969: [rewriteFailureShown]), that *Look again* found nothing new (#617,
+ * [lookAgainLine]), and, while *Rewrite insight* is offered (#615, #625), what it would rewrite the
+ * insight with ([rewriteOfferLine], #854), what a look again found new included. What *Look again* is
+ * looking up is not on this line but on its own under it (#785, [lookingAgainLine]).
  */
 @Composable
-private fun writtenBefore(
-    insight: InsightState.Written,
-    context: InsightContext,
-    lookingAgain: Boolean,
-): String? {
-    val after =
-        buildList {
-            // In the order things happened: a rewrite that failed, then what a later look again found.
-            // Not a model refused while the note under the footer says it is unavailable (#969).
-            rewriteFailureShown(context.rewriteFailed, context.unavailable)?.let { add(rewriteFailure(it)) }
-            lookAgainLine(context)?.let { add(stringResource(it)) }
-            rewriteOfferLine(context)?.let { add(it) }
-        }
-    val rewritten = rewrittenLine(insight)
-    // Kept from before, or rewritten: said on its own; else only with something to follow.
-    val said = insight.cached || context.cardShown || rewritten != null
-    if (!said && after.isEmpty() && !lookingAgain) return null
-    return (listOf(rewritten ?: stringResource(R.string.home_written_before)) + after).joinToString(" ")
-}
+private fun afterCredit(context: InsightContext): List<String> =
+    buildList {
+        rewriteFailureShown(context.rewriteFailed, context.unavailable)?.let { add(rewriteFailure(it)) }
+        lookAgainLine(context)?.let { add(stringResource(it)) }
+        rewriteOfferLine(context)?.let { add(it) }
+    }
 
 /**
  * Why a rewrite ended without an insight (#854): stopped ([PipelineHost.STOPPED]), or failed and why;
- * said after *As written previously.*, by the key insight's footer and by the items' (#911).
+ * said after the credit, by the key insight's footer and by the items' (#911).
  */
 @Composable
 internal fun rewriteFailure(why: String): String =

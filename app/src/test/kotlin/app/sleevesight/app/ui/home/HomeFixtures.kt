@@ -5,11 +5,13 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
@@ -85,6 +87,12 @@ internal object HomeFixtures {
         insight = insight,
         genresAssembled = true,
     )
+
+    /** Who wrote an insight, at the service's default effort, as its credit names it ([HAIKU_CREDIT], #1162). */
+    val haiku = WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", effort = null)
+
+    /** The credit of an insight [haiku] wrote the first time (#1162). */
+    const val HAIKU_CREDIT = "Written by Claude Haiku 5.5."
 
     /**
      * [reply], checked against [evidence] as written, the model's own knowledge allowed or not; with

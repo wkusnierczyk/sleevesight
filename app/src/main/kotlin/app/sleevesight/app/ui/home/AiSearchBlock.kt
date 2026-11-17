@@ -73,8 +73,8 @@ import app.sleevesight.core.synthesis.SearchKind
  *   of the line, as *Retry* is beside its line ([LineButton]); the focus handed from the button to
  *   *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
- *   with its page, [FromSite]), then "by {model}" on a line of its own, in italics, however it was
- *   asked, then from the model's knowledge "From the AI model's own knowledge, not verified", and,
+ *   with its page, [FromSite]), then "Written by {model}." (#1162) on a line of its own, in italics,
+ *   however it was asked, then from the model's knowledge "From the AI model's own knowledge, not verified", and,
  *   kept from before, when it was written ([KeptLine], #851); last, what the answer puts after
  *   these notes ([last], the explanation's *Read more*, #1067);
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
@@ -153,8 +153,9 @@ internal fun AiSearchBlock(
     }
 }
 
-// What [shown] found, under a rule, as the panel shows it ([answer]); then its credit, asked by a tap
-// or automatically (#801's revised pick); from the model's knowledge marked so, as an insight's claim
+// What [shown] found, under a rule, as the panel shows it ([answer]); then its credit, "Written by
+// {model}." with the effort when not the default (#1162), asked by a tap or automatically (#801's
+// revised pick); from the model's knowledge marked so, as an insight's claim
 // from it is (#801); kept from before, when it was written (#851); and, last, what the answer puts
 // after its notes ([last]: the explanation's *Read more*, #1067).
 @Composable
@@ -166,7 +167,7 @@ private fun Answered(
 ) {
     PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
     answer(shown.answer, shown.model)
-    SearchCredit(stringResource(R.string.home_ai_by, shown.model), Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG)))
+    SearchCredit(creditString(Credit(shown.model, shown.effort)), Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG)))
     if (!shown.way.web) {
         SearchCredit(stringResource(R.string.home_cite_model), Modifier.testTag(texts.tag(AI_SEARCH_KNOWLEDGE_TAG)))
     }
@@ -192,8 +193,8 @@ private fun NothingFound(
 }
 
 /**
- * "by {model}" under what *Ask AI* found ([text]), on a line of its own, in italics (#773); and under
- * it, for an answer from the model's knowledge, that it is (#801).
+ * The credit under what *Ask AI* found ([text]: "Written by {model}.", #1162), on a line of its own,
+ * in italics (#773); and under it, for an answer from the model's knowledge, that it is (#801).
  */
 @Composable
 internal fun SearchCredit(

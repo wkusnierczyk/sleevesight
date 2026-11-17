@@ -185,7 +185,7 @@ class ItemTapWritesScreenTest {
             for (item in ROW_ITEMS) row(item).performScrollTo().performClick()
             compose.waitForIdle()
             assertTrue(notes.writes.isEmpty())
-            compose.onNodeWithText("by Claude Haiku 4.5").assertExists()
+            compose.onNodeWithText("Written by Claude Haiku 4.5.").assertExists()
             compose.onNodeWithText(text(R.string.home_insight_stopped)).assertExists()
             compose.onNodeWithTag(ITEM_FAILED_TAG).assertExists()
         }

@@ -46,7 +46,7 @@ import kotlin.math.abs
 
 /**
  * The footer under a written insight (#671, which replaced #606's row): each part on its own line,
- * at the start, top to bottom: *As written previously.* with what follows from it, the grounding
+ * at the start, top to bottom: the credit with what follows from it (#1162), the grounding
  * line (the note on the dimmed sentences, or in developer mode the counts), then *Report
  * the insight*, its label where the lines start, in the theme's error colour, light and dark. At twice
  * the font size each line wraps on its own, on the whole row. A screen reader reads them in that
@@ -68,7 +68,10 @@ class InsightFooterLayoutTest {
         block: (MainActivity) -> Unit,
     ) {
         // The second sentence cites nothing: dimmed, so the note shows.
-        val insight = HomeFixtures.written("Sundown was recorded in 1973 [MB1]. It is a classic.", cached = true)
+        val insight =
+            HomeFixtures
+                .written("Sundown was recorded in 1973 [MB1]. It is a classic.", cached = true)
+                .copy(writtenBy = HomeFixtures.haiku)
         val context =
             InsightContext(
                 HomeFixtures.track(insight = insight),
@@ -200,7 +203,7 @@ class InsightFooterLayoutTest {
 
     private companion object {
         const val CARD = "card"
-        const val BEFORE = "As written previously. Rewriting stopped. Tap Rewrite insight"
+        const val BEFORE = "Written by Claude Haiku 5.5. Rewriting stopped. Tap Rewrite insight"
         const val NOTE = "Dimmed text is not backed by the sources."
         const val COUNTS = "1 of 2 sentences grounded · 1 uncited"
         const val REPORT = "Report the insight"

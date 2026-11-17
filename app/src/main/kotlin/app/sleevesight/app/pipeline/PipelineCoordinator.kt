@@ -2050,7 +2050,7 @@ private fun CoordinatorState.Run.keptFor(
 // or effort wrote (#911, `Run.kept`) when the run offers Write or writes by itself (#972), and no card
 // paid for: it is the card paid for, so it is shown, and the Write offered beside it is *Rewrite
 // insight*, as for a card written before a settings change; a call made by itself rewrites it, as a
-// tap's does: "Rewritten with …", and shown again, saying why, if the call fails or is stopped. A
+// tap's does: "Rewritten by …", and shown again, saying why, if the call fails or is stopped. A
 // ledger written by a call that failed or was stopped has no card either, so it takes it too; it
 // stays written, so nothing is written again without a tap.
 private fun CoordinatorState.Ledger.answered(

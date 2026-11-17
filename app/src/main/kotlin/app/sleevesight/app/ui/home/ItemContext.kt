@@ -1,9 +1,5 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -122,24 +117,24 @@ internal class OpeningWrite(
 }
 
 /**
- * What [item] shows unfolded, or on its page: "by {model}" and *Read aloud* once written; the insight,
- * cited (a citation opens *Sources* at its line, the album's own lines among them, #522); *Report the
- * insight*. Before it is written: opened by a tap ([tapped]), written at once in every mode (#948),
- * *Writing…* with the turning record meanwhile: under an automatic mode as an opening
+ * What [item] shows unfolded, or on its page: once written, the insight, cited (a citation opens
+ * *Sources* at its line, the album's own lines among them, #522), then its credit with *Read aloud*
+ * (#959, #1162); *Report the insight*. Before it is written: opened by a tap ([tapped]), written at
+ * once in every mode (#948), *Writing…* with the turning record meanwhile: under an automatic mode as an opening
  * ([ItemContext.automatic]); under *On demand* once, the tap's consent, while [opening] is due, which
  * it ends as soon as the item's state is known, so a written, kept, stopped or failed one opens as it
  * is, and nothing asks again. Else, "Tap Write insight…" and *Write insight* with the **AI** mark,
  * whatever the mode and whatever held it back (a panel left open at a new track under *On demand*,
  * or one an automatic mode held back): an item says nothing of why (#948). The insight
- * another AI service, model or effort wrote, shown in place of none (#911), says so ("As written
- * previously.", with what *Rewrite insight* would rewrite it with), and *Rewrite insight*, with the
- * **AI** mark, rewrites it; one a rewrite wrote, on a tap or an automatic write in its place
- * (#972), says "Rewritten with …". With the model found unavailable (#540), that is said under a
- * written insight too, last, and *Rewrite insight* is *Write insight*, disabled.
+ * another AI service, model or effort wrote, shown in place of none (#911), is credited to that
+ * model, with what *Rewrite insight* would rewrite it with after the credit, and *Rewrite insight*,
+ * with the **AI** mark, rewrites it; one a rewrite wrote, on a tap or an automatic write in its place
+ * (#972), says so in its credit, "Rewritten by …" (#1162). With the model found unavailable (#540),
+ * that is said under a written insight too, last, and *Rewrite insight* is *Write insight*, disabled.
  *
- * [shown] is what [item] shows, when its caller follows it already ([itemShown]): Home's panel, which
- * draws *Read aloud* in its heading ([ItemReadAloud], #894) and so passes [readAloud] false, leaving
- * it out of the byline's row. [afterRetry] runs after a tap on *Retry* beside sources not reached
+ * [shown] is what [item] shows, when its caller follows it already ([itemShown]): Home's panel. On
+ * Home's panel and on the item's page alike, *Read aloud* is at the end of the credit's row, under
+ * the text (#959, #1162). [afterRetry] runs after a tap on *Retry* beside sources not reached
  * (#1163), whose line then goes: it hands the focus on (to the panel's *Close*, the page's back
  * arrow), as the other panels' *Retry* does (#724).
  *
@@ -154,7 +149,6 @@ internal fun ItemContent(
     context: ItemContext,
     tapped: Boolean,
     shown: ItemShown? = null,
-    readAloud: Boolean = true,
     opening: OpeningWrite = OpeningWrite.NONE,
     afterRetry: () -> Unit = {},
 ) {
@@ -172,7 +166,7 @@ internal fun ItemContent(
     PeopleBefore(item, split)
     WritesOnTap(item, track, context, now, opening)
     val writingDue = opening.due && !context.automatic
-    ItemShownContent(item, track, context, tapped, now, ItemShowing(readAloud, writingDue, afterRetry))
+    ItemShownContent(item, track, context, tapped, now, ItemShowing(writingDue, afterRetry))
     PeopleAfter(item, split, context)
 }
 
@@ -237,30 +231,10 @@ internal fun itemShown(
     return shown
 }
 
-/**
- * *Read aloud* of [item]'s insight, once written ([shown]), under [modifier]: in the heading of its
- * panel on Home (#894), the panel's content leaving its own out; nothing before.
- */
-@Composable
-internal fun ItemReadAloud(
-    item: InsightItem,
-    context: ItemContext,
-    shown: ItemShown,
-    modifier: Modifier = Modifier,
-) {
-    val track = context.track ?: return
-    val written = (shown as? ItemShown.Shown)?.state as? InsightState.Written ?: return
-    itemReading(context.readAloud, item, track, written, context.notes)?.let {
-        // In a box of its own, so [modifier] (the heading's alignment) reaches the row it sits in.
-        Box(modifier) { ReadAloudButton(it, itemReadAloudTag(item)) }
-    }
-}
-
-// How [ItemContent] shows an item: with *Read aloud* in its byline's row ([readAloud]); *Writing…* for
-// one offered while its tap's write is due ([writingDue], #948); and where the focus goes after *Retry*
-// beside sources not reached ([afterRetry], #1163).
+// How [ItemContent] shows an item: *Writing…* for one offered while its tap's write is due
+// ([writingDue], #948); and where the focus goes after *Retry* beside sources not reached
+// ([afterRetry], #1163).
 private class ItemShowing(
-    val readAloud: Boolean,
     val writingDue: Boolean,
     val afterRetry: () -> Unit,
 )
@@ -384,17 +358,11 @@ private fun Shown(
         }
 
         is InsightState.Written -> {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { shown.model?.let { InsightByline(it) } }
-                if (showing.readAloud) {
-                    itemReading(context.readAloud, item, track, state, context.notes)?.let {
-                        ReadAloudButton(it, itemReadAloudTag(item))
-                    }
-                }
-            }
             // The song's insight in two parts (#1133): each part under its heading.
             CheckedParagraphs(state.grounded, shown.evidence.evidence, onCite, label)
-            WrittenFooter(item, shown, state, track, context, label)
+            // *Read aloud* at the end of the credit's row, first under the text (#959).
+            val reading = itemReading(context.readAloud, item, track, state, context.notes)
+            WrittenFooter(item, shown, state, track, context, label, reading)
         }
 
         InsightState.NoEvidence -> NothingToWriteFrom(item, shown.evidence, context, showing.afterRetry)
