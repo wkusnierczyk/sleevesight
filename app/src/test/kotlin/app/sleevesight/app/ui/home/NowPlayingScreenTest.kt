@@ -385,19 +385,24 @@ class NowPlayingScreenTest {
                         "It topped the charts (${text(R.string.home_cite, "W1")}). " +
                             "It is loved (${text(R.string.home_cite_model)}). " +
                             "It charted (${text(R.string.home_cite_unknown, "L1")}). " +
-                            "It is great (${text(R.string.home_cite_none)}).",
+                            // One `?` chip for the run of two dimmed sentences, after the second (#954).
+                            "It is great (${text(R.string.home_cite_none)}) (${text(R.string.home_cite_see_note)}).",
                     ),
                 ),
             )
             // The line a chip scrolls to is an action too, in case the description hides the link.
+            // Then the way to the note on the dimmed text (#954).
             val actions = prose.fetchSemanticsNode().config[SemanticsActions.CustomActions]
-            assertEquals(listOf(text(R.string.home_cite, "W1")), actions.map { it.label })
+            assertEquals(
+                listOf(text(R.string.home_cite, "W1"), text(R.string.home_cite_see_note)),
+                actions.map { it.label },
+            )
 
             // Wikipedia's lines hidden (a display filter only); the action shows its line.
             unfold()
             compose.onNodeWithTag(CHIP_PREFIX + "W", useUnmergedTree = true).performScrollTo().performClick()
             assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "W1").fetchSemanticsNodes().size)
-            compose.runOnUiThread { assertTrue(actions.single().action()) }
+            compose.runOnUiThread { assertTrue(actions.first().action()) }
             compose.waitForIdle()
             compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
         }
@@ -410,6 +415,9 @@ class NowPlayingScreenTest {
         val reply = "It topped the charts [W1]. It is a single [WD1]."
         val writing = InsightState.Writing(reply, held)
         for (insight in listOf(writing, written(reply, held = held))) {
+            // Once checked, the sentence citing a line the prompt left out is dimmed, with its `?` chip (#954).
+            val checked = insight is InsightState.Written
+            val noteChip = if (checked) " (${text(R.string.home_cite_see_note)})" else ""
             show(state(PipelineView(track(insight = insight), aiReady = true))) {
                 val node =
                     compose
@@ -422,12 +430,13 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "It is a single (${text(R.string.home_cite_unknown, "WD1")}).",
+                                "It is a single (${text(R.string.home_cite_unknown, "WD1")})$noteChip.",
                         ),
                     ),
                 )
                 val actions = node.fetchSemanticsNode().config[SemanticsActions.CustomActions]
-                assertEquals(listOf(text(R.string.home_cite, "W1")), actions.map { it.label })
+                val toNote = listOfNotNull(text(R.string.home_cite_see_note).takeIf { checked })
+                assertEquals(listOf(text(R.string.home_cite, "W1")) + toNote, actions.map { it.label })
                 val prose =
                     node
                         .fetchSemanticsNode()
@@ -453,7 +462,8 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "They called it \"great.\" (${text(R.string.home_cite_none)})",
+                                "They called it \"great.\" (${text(R.string.home_cite_none)})" +
+                                " (${text(R.string.home_cite_see_note)})",
                         ),
                     ),
                 )
@@ -475,7 +485,8 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "(See the sleeve (${text(R.string.home_cite_none)}).)",
+                                "(See the sleeve (${text(R.string.home_cite_none)})" +
+                                " (${text(R.string.home_cite_see_note)}).)",
                         ),
                     ),
                 )
@@ -497,7 +508,8 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "(They called it \"great.\") (${text(R.string.home_cite_none)})",
+                                "(They called it \"great.\") (${text(R.string.home_cite_none)})" +
+                                " (${text(R.string.home_cite_see_note)})",
                         ),
                     ),
                 )

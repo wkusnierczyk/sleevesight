@@ -5,7 +5,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -152,31 +151,32 @@ class InsightMarkdownScreenTest {
             val first = textOf("Sundown")
             assertEquals("Sundown\nIt topped the charts ${chip("W1")}.", first.text)
             val second = textOf("It was recorded")
-            assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great.", second.text)
+            // Its `?` chip (#954) before its stop.
+            assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great\u2060\u00A0${chip("?")}.", second.text)
             assertFalse('#' in first.text || '-' in second.text)
-            // The second item is a sentence of its own, on its own line, and flagged as uncited (#574).
-            val muted = lightColorScheme().onSurfaceVariant
-            val flagged = second.spanStyles.filter { it.item.color == muted }
-            assertEquals(listOf("It is great."), flagged.map { second.text.substring(it.start, it.end) })
+            // The second item is a sentence of its own, on its own line, and flagged as uncited (#574),
+            // dimmed (#954).
+            val flagged = second.spanStyles.filter { it.item.color.alpha < 1f }
+            assertEquals(listOf("It is great", "."), flagged.map { second.text.substring(it.start, it.end) })
         }
 
     @Test
     fun anUncitedSentenceWithBoldAndItalicsIsDimmedAndSaidToBeSo() =
         show(written("It topped the charts [W1]. It is **really** *great*.")) {
             val prose = textOf("It topped the charts")
-            // Dimmed: the muted colour and italics (#819); a title in it is set upright.
-            val muted = lightColorScheme().onSurfaceVariant
+            // Dimmed: upright, the text's colour at 60 % (#954, in italics until then, #819); a title in it
+            // stays in italics, as anywhere.
             val really = prose.spanStyles.single { prose.text.substring(it.start, it.end) == "really" }.item
             assertEquals(FontWeight.Bold, really.fontWeight)
-            assertEquals(FontStyle.Italic, really.fontStyle)
-            assertEquals(muted, really.color)
+            assertEquals(null, really.fontStyle)
+            assertEquals(0.6f, really.color.alpha, 0.01f)
             val great = prose.spanStyles.single { prose.text.substring(it.start, it.end) == "great" }.item
-            assertEquals(FontStyle.Normal, great.fontStyle)
-            assertEquals(muted, great.color)
+            assertEquals(FontStyle.Italic, great.fontStyle)
+            assertEquals(0.6f, great.color.alpha, 0.01f)
             assertEquals(
                 listOf(
                     "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                        "It is really great (${text(R.string.home_cite_none)}).",
+                        "It is really great (${text(R.string.home_cite_none)}) (${text(R.string.home_cite_see_note)}).",
                 ),
                 prose("It topped the charts").fetchSemanticsNode().config[SemanticsProperties.ContentDescription],
             )

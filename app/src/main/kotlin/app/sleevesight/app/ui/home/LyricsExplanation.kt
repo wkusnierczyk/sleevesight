@@ -17,7 +17,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.openWebLink
 import app.sleevesight.core.evidence.EvidenceSet
@@ -33,7 +32,9 @@ import app.sleevesight.core.synthesis.sameAddress
 /**
  * What the song is about, as [answer] has it (#908), under the rule *Ask AI* draws: its sentences as
  * an insight's ([CheckedProse]'s look), a sentence no page backs (uncited, or citing a page it was not
- * given) dimmed, in the muted colour and in italics, and read as not cited. Each citation is the line
+ * given) dimmed ([dimmedText], #954), read as not cited, and followed by a `?` chip that goes to the
+ * note under the text ([UnbackedNote]), read "Not backed, see the note" and offered as an action too.
+ * Each citation is the line
  * *Sources* lists its page under (#1067: [lines], *Sources*' own, by the page's address, `sourcesLines`
  * naming it *explanation*), shown by that line's id ("S7") and opening *Sources* at it ([onCite]), as
  * an insight's citation does; a page *Sources* has no line for (no evidence to add it to) keeps the
@@ -48,34 +49,72 @@ internal fun AiExplanation(
 ) {
     val uris = LocalUriHandler.current
     val resources = LocalResources.current
-    val colours = MaterialTheme.colorScheme
     val chips = citeStyles()
-    val flagged = SpanStyle(color = colours.onSurfaceVariant, fontStyle = FontStyle.Italic)
+    val flagged = dimmedText()
     val byId = remember(answer, lines) { citedLines(answer.pages, lines) }
     val sentences = answer.grounded.paragraphs.flatten()
     val runs = remember(answer) { sentences.zip(shown(sentences.map { it.text }, checked = true)) }
+    // The sentences that end with a `?` chip (#954): the last of each run of doubtful ones shown, the
+    // text drawn as one paragraph; a sentence that shows as nothing neither ends a run nor breaks one.
+    val marked = remember(runs) { chipEnds(runs) }
     val uncited = stringResource(R.string.home_cite_none)
+    // "(not cited) (Not backed, see the note)": the sentence's note, then its `?` chip's (#954).
+    val uncitedMarked = "$uncited) (${stringResource(R.string.home_cite_see_note)}"
     val spoken =
-        runs.joinToString(
-            " ",
-        ) { (sentence, parts) -> spokenSentence(sentence, parts, byId, uncited, resources) }
+        runs.withIndex().joinToString(" ") { (i, run) ->
+            val (sentence, parts) = run
+            spokenSentence(sentence, parts, byId, if (marked[i]) uncitedMarked else uncited, resources)
+        }
     // A citation's line in *Sources*, or, with none, its page in the browser.
     val open = { cited: CitedLine -> if (cited.inSources) onCite(cited.shown) else openWebLink(uris, cited.url) }
-    Text(
-        explanationText(runs, byId, chips, flagged) { id -> byId[id]?.let(open) },
-        style = MaterialTheme.typography.bodyLarge,
-        modifier =
-            Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
-                contentDescription = spoken
-                customActions =
-                    byId.values.distinctBy { it.shown }.take(MAX_PAGE_ACTIONS).map { cited ->
-                        CustomAccessibilityAction(resources.getString(R.string.home_cite, cited.shown)) {
-                            open(cited)
-                            true
-                        }
-                    }
-            },
-    )
+    val dimmed = runs.any { (sentence, parts) -> doubtful(sentence) && !parts.isBlank() }
+    WithUnbackedNote {
+        val note = LocalNoteFocus.current?.takeIf { dimmed }
+        val seeNote = stringResource(R.string.home_cite_see_note)
+        Text(
+            explanationText(runs, byId, ExplanationLooks(chips, flagged, note, marked)) { id -> byId[id]?.let(open) },
+            style = MaterialTheme.typography.bodyLarge,
+            modifier =
+                Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
+                    contentDescription = spoken
+                    customActions =
+                        byId.values.distinctBy { it.shown }.take(MAX_PAGE_ACTIONS).map { cited ->
+                            CustomAccessibilityAction(resources.getString(R.string.home_cite, cited.shown)) {
+                                open(cited)
+                                true
+                            }
+                        } +
+                        listOfNotNull(
+                            note?.let { focus ->
+                                CustomAccessibilityAction(seeNote) {
+                                    focus.go()
+                                    true
+                                }
+                            },
+                        )
+                },
+        )
+        // The note the dimmed sentences' `?` chips go to (#954), right under the text.
+        if (dimmed) UnbackedNote()
+    }
+}
+
+// How the explanation's text looks: its citations' [chips], a doubtful sentence's look ([flagged]),
+// the note its `?` chips go to ([note], #954), and which sentences end with one ([marked]).
+private class ExplanationLooks(
+    val chips: CiteStyles,
+    val flagged: SpanStyle,
+    val note: NoteFocus?,
+    val marked: List<Boolean>,
+)
+
+// Which of [runs] end with a `?` chip (#954, [runEnds]), among those that show.
+private fun chipEnds(runs: List<Pair<CheckedSentence, List<ShownRun>>>): List<Boolean> {
+    val shownAt = runs.indices.filterNot { runs[it].second.isBlank() }
+    val ends = runEnds(shownAt.map { doubtful(runs[it].first) })
+    val marked = MutableList(runs.size) { false }
+    shownAt.forEachIndexed { k, i -> marked[i] = ends[k] }
+    return marked
 }
 
 /**
@@ -138,38 +177,57 @@ internal fun lineOf(
 private fun doubtful(sentence: CheckedSentence): Boolean =
     sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
 
-// The sentences' [runs] as shown: a doubtful one dimmed ([flagged]), each citation of a page in
-// [byId] a chip as the insight's ([appendCite], in [chips]) showing its line's id, whose tap runs
-// [open] with the id the page was given, any other a missing one's.
+// The sentences' [runs] as shown: a doubtful one dimmed ([ExplanationLooks.flagged]), the last of a
+// run of them followed by a `?` chip (#954, [appendUnbacked]), each citation of a page in [byId] a
+// chip as the insight's ([appendCite], in [ExplanationLooks.chips]) showing its line's id, whose tap
+// runs [open] with the id the page was given, any other a missing one's.
 private fun explanationText(
     runs: List<Pair<CheckedSentence, List<ShownRun>>>,
     byId: Map<String, CitedLine>,
-    chips: CiteStyles,
-    flagged: SpanStyle,
+    looks: ExplanationLooks,
     open: (String) -> Unit,
 ): AnnotatedString =
     buildAnnotatedString {
         runs.forEachIndexed { i, (sentence, parts) ->
             if (i > 0) append(' ')
-            for (part in parts) {
-                when (part) {
-                    is ShownRun.Text -> appendText(part, flagged.takeIf { doubtful(sentence) })
-                    is ShownRun.Cite -> {
-                        val cited = byId[part.id]
-                        if (cited == null) {
-                            appendCite(part.id, part.id, CiteKind.UNKNOWN, chips, open)
-                        } else {
-                            // Tagged by the line it opens, as an insight's chip is; tapped, by its own id.
-                            appendCite(cited.shown, cited.shown, CiteKind.LINE, chips, onCite = { open(part.id) })
-                        }
-                    }
-                }
+            if (looks.marked[i]) {
+                val (before, after) = unbackedAt(parts)
+                appendParts(before, byId, looks, looks.flagged, open)
+                appendUnbacked(before, looks.chips, looks.note)
+                appendParts(after, byId, looks, looks.flagged, open)
+            } else {
+                appendParts(parts, byId, looks, looks.flagged.takeIf { doubtful(sentence) }, open)
             }
         }
     }
 
+// A sentence's [parts], its text in [flagged] when dimmed, its citations as [explanationText] says.
+private fun AnnotatedString.Builder.appendParts(
+    parts: List<ShownRun>,
+    byId: Map<String, CitedLine>,
+    looks: ExplanationLooks,
+    flagged: SpanStyle?,
+    open: (String) -> Unit,
+) {
+    for (part in parts) {
+        when (part) {
+            is ShownRun.Text -> appendText(part, flagged)
+            is ShownRun.Cite -> {
+                val cited = byId[part.id]
+                if (cited == null) {
+                    appendCite(part.id, part.id, CiteKind.UNKNOWN, looks.chips, open)
+                } else {
+                    // Tagged by the line it opens, as an insight's chip is; tapped, by its own id.
+                    appendCite(cited.shown, cited.shown, CiteKind.LINE, looks.chips, onCite = { open(part.id) })
+                }
+            }
+        }
+    }
+}
+
 // [sentence] ([parts]) as a screen reader hears it: each citation "Source S7", by its line in
-// *Sources*, or that no such page was given; a doubtful one said to be not cited ([uncited]).
+// *Sources*, or that no such page was given; a doubtful one said to be not cited, then its `?` chip
+// (#954), "Not backed, see the note" ([uncited], both).
 private fun spokenSentence(
     sentence: CheckedSentence,
     parts: List<ShownRun>,
