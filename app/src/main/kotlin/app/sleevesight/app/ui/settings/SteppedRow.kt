@@ -18,6 +18,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -89,18 +90,67 @@ internal data class SteppedLook(
 )
 
 /**
- * Where a [SteppedRow] stores a move only once the thumb is let go, and asks first before a stop
- * lower than the stored one (#1126: a shorter *Keep history for* deletes at once): [ask] shows the
- * question for the stop let go at, by its words ([Stops.spoken]), and calls `confirm` to store it or
- * `cancel` to put the thumb back. A higher stop is stored at once.
+ * Where a [SteppedRow] stores a move only once the thumb is let go, and asks first before a value
+ * lower than the one it holds (#1126: a shorter *Keep history for* deletes at once). [current] is
+ * the value stored, which may lie between the stops; [lower] says whether a value is lower than
+ * another; [ask] shows the question for the stop let go at, by its words ([Stops.spoken]), and
+ * calls `confirm` to store it or `cancel` to put the thumb back. A higher value is stored at once.
  */
-internal fun interface AskBeforeLower {
-    @Composable
-    fun Ask(
-        spoken: String,
-        confirm: () -> Unit,
-        cancel: () -> Unit,
-    )
+internal class AskBeforeLower<T>(
+    val current: T,
+    val lower: (T, T) -> Boolean,
+    val ask: @Composable (spoken: String, confirm: () -> Unit, cancel: () -> Unit) -> Unit,
+)
+
+/** A value chosen and not yet stored, held apart from null, which may be a value itself. */
+private class Chosen<T>(
+    val value: T,
+)
+
+/**
+ * What a [SteppedRow] with [AskBeforeLower] knows between a release and the store's answer: the
+ * last value chosen and not yet stored ([pending]), and whether the thumb moved since it was last
+ * let go ([moved]). A release is compared with [basis], the value chosen last whether stored yet or
+ * not: compared with the stored one, two quick releases, Forever and then 1 year, would both pass
+ * as longer while the writes queue up, and the second would shorten without asking.
+ */
+private class Release<T> {
+    var pending by mutableStateOf<Chosen<T>?>(null)
+    var moved = false
+
+    // Not an elvis: a pending choice may itself be null (*Forever*).
+    fun basis(current: T): T {
+        val chosen = pending
+        return if (chosen != null) chosen.value else current
+    }
+
+    /** Stores [value] with [choose], held as [pending] until the store says it holds it. */
+    fun store(
+        value: T,
+        choose: (T) -> Unit,
+    ) {
+        pending = Chosen(value)
+        choose(value)
+    }
+
+    /**
+     * The thumb let go at [value]: nothing where it did not move or came back to the value held, a
+     * question where [value] is lower (true returned), else stored at once.
+     */
+    fun letGo(
+        value: T,
+        ask: AskBeforeLower<T>,
+        choose: (T) -> Unit,
+    ): Boolean {
+        val held = basis(ask.current)
+        val wasMoved = moved
+        moved = false
+        // Not moved, or back at the value held: nothing to store, and a value stored between the
+        // stops stays as it is.
+        val asks = wasMoved && value != held && ask.lower(value, held)
+        if (wasMoved && value != held && !asks) store(value, choose)
+        return asks
+    }
 }
 
 /**
@@ -109,7 +159,7 @@ internal fun interface AskBeforeLower {
  * follows a drag before the store does, and its label, so it can name it; none where null); then
  * the slider, one stop for each of [stops], [stored] the index of the one stored, each with its
  * label under it ([StopLabels]), or only the ends' ([SteppedLook.endsOnly]). A move is stored at
- * once ([choose]), or, with [askBeforeLower], once the thumb is let go, a lower stop asked first. A
+ * once ([choose]), or, with [askBeforeLower], once the thumb is let go, a lower value asked first. A
  * screen reader reads the slider by the row's name, with the value in words. Where the setting does
  * not apply ([applies] false), the whole row dims and cannot be moved (#999). The slider has a thumb
  * and a track of its own ([Thumb], [StopsTrack]), as the picked design draws them, in the colour of
@@ -126,7 +176,7 @@ internal fun <T> SteppedRow(
     applies: Boolean,
     tags: SteppedTags,
     look: SteppedLook = SteppedLook(),
-    askBeforeLower: AskBeforeLower? = null,
+    askBeforeLower: AskBeforeLower<T>? = null,
     choose: (T) -> Unit,
 ) {
     val alpha = if (applies) 1f else DIMMED_ALPHA
@@ -136,6 +186,9 @@ internal fun <T> SteppedRow(
     var shown by remember(stored) { mutableFloatStateOf(stored.toFloat()) }
     // The stop let go at that waits for an answer ([askBeforeLower]).
     var asking by remember { mutableStateOf<Int?>(null) }
+    val release = remember { Release<T>() }
+    // A choice stored drops from pending, once the store says it holds it.
+    SideEffect { if (release.pending?.value == askBeforeLower?.current) release.pending = null }
     val index = shown.roundToInt().coerceIn(indices)
     val labels = stops.labels
     Column(Modifier.fillMaxWidth().padding(start = look.start, top = 8.dp, bottom = 8.dp)) {
@@ -149,17 +202,14 @@ internal fun <T> SteppedRow(
                 val before = shown.roundToInt().coerceIn(indices)
                 shown = moved
                 val chosen = moved.roundToInt().coerceIn(indices)
+                if (chosen != before) release.moved = true
                 if (askBeforeLower == null && chosen != before) choose(stops.values[chosen])
             },
             onRelease =
-                askBeforeLower?.let {
+                askBeforeLower?.let { ask ->
                     {
                         val chosen = shown.roundToInt().coerceIn(indices)
-                        when {
-                            chosen > stored -> choose(stops.values[chosen])
-                            chosen < stored -> asking = chosen
-                            else -> shown = stored.toFloat()
-                        }
+                        if (release.letGo(stops.values[chosen], ask, choose)) asking = chosen
                     }
                 },
             spoken = title to stops.spoken[index],
@@ -169,16 +219,19 @@ internal fun <T> SteppedRow(
         )
         StopLabels(if (look.endsOnly) endsOnly(labels) else labels, color, tags.stops)
     }
+    val ask = askBeforeLower ?: return
     asking?.let { lower ->
-        askBeforeLower?.Ask(
-            spoken = stops.spoken[lower],
-            confirm = {
+        ask.ask(
+            stops.spoken[lower],
+            {
                 asking = null
-                choose(stops.values[lower])
+                release.store(stops.values[lower], choose)
             },
-            cancel = {
+            {
                 asking = null
-                shown = stored.toFloat()
+                // Back at the value held: the one chosen last, else the one stored.
+                val held = stops.values.indexOf(release.basis(ask.current))
+                shown = (if (held >= 0) held else stored).toFloat()
             },
         )
     }

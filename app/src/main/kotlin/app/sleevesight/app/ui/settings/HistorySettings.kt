@@ -108,9 +108,18 @@ private fun KeepHistoryRow(
         applies = true,
         tags = SteppedTags(KEEP_HISTORY_SLIDER_TAG, KEEP_HISTORY_STOPS_TAG, KEEP_HISTORY_VALUE_TAG),
         look = SteppedLook(start = 0.dp),
-        askBeforeLower = { spoken, confirm, cancel -> ShortenHistoryDialog(spoken, confirm, cancel) },
+        askBeforeLower =
+            AskBeforeLower(settings.historyLifetime, ::shorter) { spoken, confirm, cancel ->
+                ShortenHistoryDialog(spoken, confirm, cancel)
+            },
     ) { chosen -> update { it.copy(historyLifetime = chosen) } }
 }
+
+/** Whether history kept for [lifetime] is kept shorter than for [than]; null is *Forever*. */
+private fun shorter(
+    lifetime: Duration?,
+    than: Duration?,
+): Boolean = lifetime != null && (than == null || lifetime < than)
 
 /**
  * Asks before *Keep history for* is shortened to [time] (#1126), in words (*30 days*): [onShorten]
