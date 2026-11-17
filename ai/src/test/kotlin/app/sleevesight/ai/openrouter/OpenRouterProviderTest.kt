@@ -24,10 +24,15 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -136,6 +141,69 @@ class OpenRouterProviderTest {
             assertEquals(CompletionRequest.DEFAULT_MAX_TOKENS, body["max_tokens"]!!.jsonPrimitive.int)
             assertEquals(1, body["messages"]!!.jsonArray.size)
         }
+
+    @Test
+    fun `a request asking for JSON sends OpenRouter's JSON mode, and a plain one none`() =
+        runTest {
+            val (_, asked) = events(request.copy(json = true)) { ok(reply) }
+            val format = sentBody(asked)["response_format"]!!.jsonObject
+            assertEquals("json_object", format["type"]!!.jsonPrimitive.content)
+            val (_, plain) = events { ok(reply) }
+            assertNull(sentBody(plain)["response_format"])
+        }
+
+    /*
+     * *Explain the song* through OpenRouter (#1400), the replies recorded on the phone: the same
+     * prompt was answered in prose with no JSON mode, which the app cannot read, and as the JSON
+     * object it asks for through Anthropic directly. The test below documents those replies: its fake
+     * OpenRouter answers each way by whether the request body carries `response_format`, so it shows
+     * the reply each body is read into, not how OpenRouter's model behaves.
+     */
+    private val proseExplanation =
+        "Annie Lennox has said the song is fundamentally about aspiration, motivation and purpose [S8]. " +
+            "She has also described its lyrics as hopeless and nihilistic [S9][S14]."
+
+    private val jsonExplanation =
+        "{\"explanation\": \"Annie Lennox says the song is fundamentally about aspiration, motivation and " +
+            "purpose. [S8] She also calls it a dark song, hopeless and vulnerable. [S9]\"}"
+
+    private fun recorded(sent: NetRequest): NetResult<NetResponse> {
+        val text = if ("response_format" in sent.body!!.text) jsonExplanation else proseExplanation
+        val chunk =
+            buildJsonObject {
+                putJsonArray("choices") {
+                    addJsonObject {
+                        putJsonObject("delta") { put("content", text) }
+                        put("finish_reason", "stop")
+                    }
+                }
+            }
+        return ok(sse(chunk.toString(), "[DONE]"))
+    }
+
+    private fun text(events: List<CompletionEvent>) =
+        events.filterIsInstance<CompletionEvent.Delta>().joinToString("") { it.text }
+
+    @Test
+    fun `an explanation asked for as JSON comes back as the JSON object, where without the mode it was prose`() =
+        runTest {
+            val explain = request.copy(prompt = "Reply with one JSON object only: {\"explanation\": \"…\"}")
+            val (plain, _) = events(explain) { recorded(it) }
+            assertFalse(text(plain).trim().startsWith("{"))
+            val (moded, _) = events(explain.copy(json = true)) { recorded(it) }
+            val answer = Json.parseToJsonElement(text(moded)).jsonObject
+            assertTrue(answer["explanation"]!!.jsonPrimitive.content.startsWith("Annie Lennox says"))
+            assertEquals(StopReason.END, (moded.last() as CompletionEvent.Done).stopReason)
+        }
+
+    private fun sentBody(net: ReplayNetClient): JsonObject =
+        Json
+            .parseToJsonElement(
+                net.requests
+                    .single()
+                    .body!!
+                    .text,
+            ).jsonObject
 
     @Test
     fun `reasoning in the stream is not shown`() =

@@ -125,6 +125,7 @@ class AiSearchesExplainTest {
                 )
             assertEquals(SearchState.Searching(web = true), shown.first())
             val prompt = provider.requests.single().prompt
+            assertTrue(provider.requests.single().json)
             assertTrue("[S1] $wikipedia" in prompt)
             assertTrue("[S2] ${found.url}" in prompt)
             val answered = assertIs<SearchState.Answered>(last)

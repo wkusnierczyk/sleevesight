@@ -100,6 +100,7 @@ class GenreListsTest {
             val key = checkNotNull(lists.key(track, settings))
             val listed = assertIs<GenreListState.Listed>(lists.ask(key, track) { state, _ -> shown += state })
             assertEquals(1, provider.requests.size)
+            assertTrue(provider.requests.single().json)
             // "Gothic Folk" is not on the app's genre list, so it is dropped.
             assertEquals(listOf("postpunk", "blues"), listed.genres.map { it.identity })
             assertEquals(GenreLevel.TRACK, listed.genres.first().level)
@@ -171,6 +172,8 @@ class GenreListsTest {
                 reasons.write(key, track, label) { _, _ -> }
             }
             val reasonPrompts = provider.requests.drop(1).map { it.prompt.lowercase() }
+            // A reason is plain text, the list before it JSON (#1400).
+            assertEquals(listOf(true, false, false), provider.requests.map { it.json })
             assertEquals(2, reasonPrompts.size)
             // Rock, which only MusicBrainz gives and the AI did not list, reaches neither; nor any vote.
             for (prompt in reasonPrompts) {

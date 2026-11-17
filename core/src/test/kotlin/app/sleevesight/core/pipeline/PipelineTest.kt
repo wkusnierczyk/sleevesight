@@ -321,6 +321,8 @@ class PipelineTest {
             val request = provider.requests.single()
             assertEquals("claude-opus-5-5", request.model)
             assertEquals(ReasoningEffort.HIGH, request.effort)
+            // The key insight is plain text, never asked for as JSON (#1400).
+            assertFalse(request.json)
         }
 
     @Test

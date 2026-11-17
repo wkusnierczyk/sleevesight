@@ -52,6 +52,12 @@ interface AiProvider {
  * there have been. [toolsAllowed] false keeps the tools (a conversation that has used them must
  * still declare them) but has the model answer without calling one: the last turn of a loop.
  *
+ * [json] (#1400): the prompt asks for one JSON object as the whole reply (*Search with AI*, *Explain
+ * the song*, the genre lists, the spelling and vocals checks). A client whose service needs to be told
+ * so, beyond the prompt, says so in its own way: OpenRouter's `response_format`. The prompt still asks
+ * for the shape, and the reply is read as before; false (the insights, the genre reasons) asks for
+ * plain text.
+ *
  * [card], in the debug build's prompt lab only (#1003), names the card the request writes
  * (`CardKey.card`), so a comparison starts from exactly this request; never sent, null otherwise.
  */
@@ -65,6 +71,7 @@ data class CompletionRequest(
     val toolsAllowed: Boolean = true,
     val system: String? = null,
     val card: String? = null,
+    val json: Boolean = false,
 ) {
     init {
         require(maxTokens > 0) { "maxTokens must be positive, was $maxTokens" }

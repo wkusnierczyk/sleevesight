@@ -231,6 +231,8 @@ class ItemInsightsTest {
             items.write(key, InsightItem.SONG, track, evidence) { _, _ -> }
             assertTrue("the song's own story" in provider.requests.single().prompt)
             assertTrue("was a Canadian singer-songwriter" !in provider.requests.single().prompt)
+            // An insight is plain text, never asked for as JSON (#1400).
+            assertFalse(provider.requests.single().json)
         }
 
     @Test

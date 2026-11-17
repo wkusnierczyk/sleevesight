@@ -119,6 +119,8 @@ class AiSearchesTest {
             assertEquals(AiSearchPrompt.build(SearchKind.GENRES, facts, answers.genreNames), request.prompt)
             assertTrue("folk rock" in request.prompt)
             assertEquals(AiSearches.maxTokensFor(request.effort), request.maxTokens)
+            // Asked for as one JSON object (#1400), which a client may tell its service.
+            assertTrue(request.json)
             // Kept as the reply, read and checked again when found.
             val key = checkNotNull(searches.key(track, SearchKind.GENRES, settings))
             // Kept in its envelope (#801), with how it was asked.
