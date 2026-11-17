@@ -164,10 +164,17 @@ class MusicBrainzClassicalFoundTest {
                 ),
                 asked,
             )
-            // The composer is not credited on the track, so none is told apart; the work still dates the
-            // music and names who wrote its words.
-            assertEquals(ArtistRoles(emptyList(), listOf("Luciano Pavarotti"), classical = true), resolution.roles)
+            // The composer is not credited on the track, so none is told apart among its artists; the
+            // aria's work names him, kept apart as uncredited (#1298), and still dates the music and names
+            // who wrote its words.
+            val roles = ArtistRoles(emptyList(), listOf("Luciano Pavarotti"), true, listOf("Giacomo Puccini"))
+            assertEquals(roles, resolution.roles)
             assertEquals("1921", resolution.composed?.from)
             assertEquals(listOf("Giuseppe Adami", "Renato Simoni"), resolution.lyrics.librettists)
+            // Home names them all as if credited, every one marked as MusicBrainz's.
+            val split = assertNotNull(ArtistSplit.of(track, roles, resolution.lyrics))
+            assertEquals(AuthorsName.AUTHORS, split.name)
+            assertEquals(listOf("Giacomo Puccini", "Giuseppe Adami", "Renato Simoni"), split.uncredited)
+            assertEquals("Luciano Pavarotti", split.lead)
         }
 }

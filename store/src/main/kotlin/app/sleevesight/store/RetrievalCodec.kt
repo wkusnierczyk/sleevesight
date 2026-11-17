@@ -68,7 +68,9 @@ internal object RetrievalCodec {
      * extraction version 15). When the music was composed (#1132, [SourceResult.composed]) is an
      * optional field too, made a miss the same way (MusicBrainz's extraction version 18, Wikipedia's 6).
      * The work's librettists (#1274, [WorkLyrics.librettists]) are an optional field too, made a miss
-     * the same way (MusicBrainz's extraction version 19).
+     * the same way (MusicBrainz's extraction version 19). The work's composers the track does not
+     * credit (#1298, [ArtistRoles.uncredited]) are an optional field too, made a miss the same way
+     * (MusicBrainz's extraction version 21).
      * The genres Wikidata states (#1098, [SourceResult.statedGenres]) are an optional field too, made a
      * miss the same way (Wikipedia's extraction version 9).
      */
@@ -135,7 +137,7 @@ internal object RetrievalCodec {
                             it.librettists,
                         )
                     },
-                roles = result.roles?.let { RolesJson(it.composers, it.performers, it.classical) },
+                roles = result.roles?.let { RolesJson(it.composers, it.performers, it.classical, it.uncredited) },
                 composed = result.composed?.let { ComposedJson(it.from, it.to, it.source.tag, it.url) },
                 trackOnly = result.trackOnly,
                 pages = result.pages,
@@ -194,7 +196,7 @@ internal object RetrievalCodec {
                         )
                     },
                 lyrics = stored.lyrics?.let(::lyrics),
-                roles = stored.roles?.let { ArtistRoles(it.composers, it.performers, it.classical) },
+                roles = stored.roles?.let { ArtistRoles(it.composers, it.performers, it.classical, it.uncredited) },
                 composed = stored.composed?.date(),
                 trackOnly = stored.trackOnly,
                 pages = stored.pages,
@@ -317,13 +319,15 @@ internal object RetrievalCodec {
         val url: String,
     )
 
-    // The composers and performers MusicBrainz told (#1180, `SourceResult.roles`), and whether the work
-    // is of a classical form (#1199); false in one kept before.
+    // The composers and performers MusicBrainz told (#1180, `SourceResult.roles`), whether the work
+    // is of a classical form (#1199), false in one kept before, and the composers it names whom the
+    // track does not credit (#1298), none in one kept before.
     @Serializable
     private data class RolesJson(
         val composers: List<String> = emptyList(),
         val performers: List<String> = emptyList(),
         val classical: Boolean = false,
+        val uncredited: List<String> = emptyList(),
     )
 
     // When the music was composed (#1132, `SourceResult.composed`), its source by its tag.

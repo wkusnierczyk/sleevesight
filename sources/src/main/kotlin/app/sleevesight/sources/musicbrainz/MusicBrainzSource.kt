@@ -80,7 +80,9 @@ class MusicBrainzSource(
      * upgrade asks every kept result again, so it costs no further request. 19: the work's
      * librettists are kept (`WorkLyrics.librettists`, #1274), and its lines name them, released in
      * the same version as 17 too. 20: classical recordings found by the fallbacks, a lent work,
-     * librettists out of the performers (#1289), released in the same version as 17.
+     * librettists out of the performers (#1289), released in the same version as 17. 21: a classical
+     * work's composers the track does not credit are kept (`ArtistRoles.uncredited`, #1298), so a
+     * track kept crediting its performer alone is asked again.
      * Without [genres] (*Show genres* off, #444), it keeps no tags, and its results are kept apart
      * ([WITHOUT_GENRES_VERSION]).
      */
@@ -121,4 +123,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 20
+private const val EXTRACTION_VERSION = 21

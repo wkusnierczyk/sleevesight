@@ -19,6 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -31,9 +34,12 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
+import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.ArtistSplit
 import app.sleevesight.core.pipeline.AuthorsName
 import app.sleevesight.core.pipeline.InsightItem
+import app.sleevesight.core.resolution.MusicBrainzEvidence
 
 // The other people of a track whose roles tell the composer apart from the performers (#1199): in
 // the artist's panel, the other performers; in the Authors panel, who wrote the music and who wrote
@@ -220,9 +226,16 @@ private fun NamedArtist(
 fun itemChipTag(name: String): String = "item-chip:$name"
 
 // The composer, or every author, on a line of their own under the performers (#1199), after a
-// quieter label as the Composer row names them: "Composer: Wolfgang Amadeus Mozart".
+// quieter label as the Composer row names them: "Composer: Wolfgang Amadeus Mozart". When it names
+// anyone the track does not credit (#1298, [ArtistSplit.uncredited]), MusicBrainz's line on the work,
+// [cite], as a citation chip at its end, as the insight's are: a tap opens *Sources* at it ([onCite]),
+// and a screen reader hears it after the names, "(Source MB4)", the link offered as an action too.
 @Composable
-internal fun AuthorsLine(split: ArtistSplit) {
+internal fun AuthorsLine(
+    split: ArtistSplit,
+    cite: String? = null,
+    onCite: (String) -> Unit = {},
+) {
     val label =
         stringResource(
             when (split.name) {
@@ -232,14 +245,64 @@ internal fun AuthorsLine(split: ArtistSplit) {
             },
         )
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val styles = citeStyles()
+    val names = split.authors.joinToString(", ")
     val line =
         buildAnnotatedString {
             withStyle(SpanStyle(color = muted)) { append(label) }
             append(" ")
-            append(split.authors.joinToString(", "))
+            append(names)
+            if (cite != null) {
+                append(" ")
+                appendCite(cite, cite, CiteKind.LINE, styles, onCite)
+            }
         }
-    Text(line, Modifier.testTag(KEY_AUTHORS_TAG), style = MaterialTheme.typography.bodyLarge)
+    val source = cite?.let { stringResource(R.string.home_cite, it) }
+    Text(
+        line,
+        Modifier.testTag(KEY_AUTHORS_TAG).semantics {
+            if (cite != null && source != null) {
+                contentDescription = "$label $names ($source)"
+                customActions =
+                    listOf(
+                        CustomAccessibilityAction(source) {
+                            onCite(cite)
+                            true
+                        },
+                    )
+            }
+        },
+        style = MaterialTheme.typography.bodyLarge,
+    )
 }
+
+/**
+ * The line of [lines], those *Sources* lists, that [split]'s line under the title cites (#1298): none
+ * while it names only authors the track credits; else MusicBrainz's line on the work naming one it
+ * does not ([MusicBrainzEvidence.creditedNames]), else its first on the work; none while *Sources* has
+ * no such line.
+ */
+internal fun authorsCite(
+    split: ArtistSplit?,
+    lines: EvidenceSet?,
+): String? {
+    val uncredited = split?.uncredited.orEmpty()
+    if (uncredited.isEmpty()) return null
+    val work =
+        lines
+            ?.lines
+            .orEmpty()
+            .filter { it.source == SourceId.MUSICBRAINZ && it.url?.contains(WORK_PAGE) == true }
+    val naming =
+        work.firstOrNull { line ->
+            val names = MusicBrainzEvidence.creditedNames(line.text).orEmpty()
+            uncredited.any { it in names }
+        }
+    return (naming ?: work.firstOrNull())?.id
+}
+
+// The path of a MusicBrainz work's page, which its lines on the work link.
+private const val WORK_PAGE = "musicbrainz.org/work/"
 
 /** The test tag of the composer's line under the performers (#1199). */
 const val KEY_AUTHORS_TAG: String = "key-authors"

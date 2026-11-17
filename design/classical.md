@@ -336,7 +336,21 @@ else "this piece"). The Artist row is then
 *Performer*, singular even when other performers are known (#1276): its insight is the lead
 performer's, the others its chips; where nothing tells the roles apart, it stays *Artist*. Home's
 artist lines put the composer on a line of their own under the performers
-("Composer: Wolfgang Amadeus Mozart"). A web line's artist for the genres a description names
+("Composer: Wolfgang Amadeus Mozart").
+
+When the player credits only the performer (Spotify's *Nessun Dorma* by Luciano Pavarotti alone,
+#1298, the mock-up's pick of 2026-11-17), the composers the resolved work names whom the track does
+not credit (`ArtistRoles.uncredited`, by MusicBrainz's names, from its CC0 `composer` work
+relationships alone, never its tags or other supplementary data) are shown as if credited: the
+*Composer* or *Authors* row, *Performer* for the credited artist, the *Composer:* or *Authors:* line
+under the title. Only on a classical work (the roles' classical form), and only when every credited
+composer is one the work names by name, so a composer is never named twice in two spellings. The
+line under the title then ends with one citation chip of MusicBrainz's line on the work, as the
+insight's chips are ("MB4", read "Source MB4"), whose tap opens *Sources* at it, whenever it names
+anyone the player does not credit (`ArtistSplit.uncredited`): the uncredited composer, and the
+librettists or lyricists MusicBrainz names (also on Spotify's *Nessun doma - Turandot*, which credits
+Puccini). The rows carry no mark. The key insight's prompt and the searches that mean the credited
+composers still read the credited ones alone (`ArtistRoles.composers`). A web line's artist for the genres a description names
 (`DescribedGenres`) is the Artist panel's subject, the lead performer, whose web search found it;
 the lines the composer's or a performer's insight gathered are listed in *Sources* marked as about
 that artist, so a genre their page names goes to that artist's described row.

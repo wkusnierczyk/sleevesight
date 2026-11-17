@@ -27,7 +27,10 @@ import app.sleevesight.core.sources.ResolvedArtist
  * as for a composer (#1289: Spotify credits *Nessun dorma*'s librettists before Pavarotti). On a
  * classical work the performers the recording has come first, in the track's order, so the lead
  * ([ArtistRoles.lead]) is one who plays on it, not a name the player lists before them.
- * Whether the work is of a classical form is kept with them ([ArtistRoles.classical], #1199).
+ * Whether the work is of a classical form is kept with them ([ArtistRoles.classical], #1199), and on
+ * such a work the composers it names whom the track does not credit ([ArtistRoles.uncredited], #1298:
+ * Spotify credits *Nessun Dorma* to Pavarotti alone), unless a credited composer is one the work does not
+ * name by name (a title's lead spelt otherwise), who may be one of them.
  * Null when the work names no composer: the title's lead then decides ([ArtistRoles.of]).
  */
 internal fun NameMatcher.rolesOf(
@@ -66,7 +69,36 @@ internal fun NameMatcher.rolesOf(
             .filterNot { if (strict(it)) it in performing else it in onRecording }
             .distinct()
     val wrote = wordsOnly(track, work, if (classical) performing else onRecording)
-    return ArtistRoles(composed, performersOf(track, composed.toSet() + wrote, onRecording, classical), classical)
+    // On a classical work, its composers the track does not credit, when every credited one is one it names.
+    val uncredited = if (classical) uncredited(track, resolved, composers, composed - byWork.toSet()) else emptyList()
+    return ArtistRoles(
+        composed,
+        performersOf(track, composed.toSet() + wrote, onRecording, classical),
+        classical,
+        uncredited,
+    )
+}
+
+// The work's [composers] whom [track] does not credit (#1298), by MusicBrainz's names, once each: none
+// of its artists is one by name, nor resolved to their id ([resolved]). MusicBrainz's special-purpose
+// artists (`[traditional]`, `[unknown]`) are no one to name. None while a credited composer is one the
+// work does not name by name ([unnamed]: a title's lead spelt otherwise), who may be one of them.
+private fun NameMatcher.uncredited(
+    track: NormalizedTrack,
+    resolved: List<ResolvedArtist>,
+    composers: List<MbArtistRelation>,
+    unnamed: List<String>,
+): List<String> {
+    if (unnamed.isNotEmpty()) return emptyList()
+    val ids = resolved.mapNotNull { it.mbid }.toSet()
+    return composers
+        .distinctBy { it.artistMbid }
+        .filter { relation ->
+            !relation.artistName.startsWith("[") &&
+                relation.artistMbid !in ids &&
+                track.artists.none { sameName(relation.artistName, it) }
+        }.map { it.artistName }
+        .distinct()
 }
 
 // [track]'s performers: its credited artists but those who [wrote] the work and an artist the title names
