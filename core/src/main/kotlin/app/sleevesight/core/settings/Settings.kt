@@ -140,6 +140,11 @@ import kotlin.time.Duration.Companion.seconds
  *   unfolded, or as they were left on the track before. Folded by default, so Home stays short and
  *   the key insight comes first. With *Reactive* set to an automatic mode, an insight that starts
  *   unfolded is written, unless its artist or album has one already. Only under *Expandable boxes*.
+ * @property onePanel *One panel for Dates, Genres and Lyrics* (#1128): whether *Dates*, *Genres*
+ *   and *Lyrics* on Home open one shared panel, the three buttons at its top as its tabs, rather
+ *   than a panel each. On by default: the three need not be open at once, and one panel saves the
+ *   room three take. It applies under either *Layout*: on, *Genres* opens in the panel under
+ *   *Separate pages* too.
  * @property lyricsLinks *Lyrics links* (#728): whether Home shows a *Lyrics* button for the playing
  *   track, opening into links to its lyrics on the lyrics sites its MusicBrainz work links to, or,
  *   when it links to none, a search on Genius ([lyricsSearch]). On by default: a link sends nothing
@@ -244,6 +249,7 @@ data class Settings(
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val sourcesOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
     val itemsOnNewTrack: NewTrackFold = NewTrackFold.FOLDED,
+    val onePanel: Boolean = true,
     val lyricsLinks: Boolean = true,
     val lyricsSearch: Boolean = true,
     val showPhoneName: Boolean = false,

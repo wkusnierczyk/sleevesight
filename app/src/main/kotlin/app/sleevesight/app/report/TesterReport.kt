@@ -459,6 +459,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
                 .joinToString()
                 .ifEmpty { NONE }
         },
+        "onePanel" to { onOff(it.onePanel) },
         "lyricsLinks" to { onOff(it.lyricsLinks) },
         "lyricsSearch" to { onOff(it.lyricsSearch) },
         "dismissed" to { s ->
