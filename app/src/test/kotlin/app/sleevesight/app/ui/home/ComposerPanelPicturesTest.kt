@@ -11,7 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -40,6 +40,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -127,7 +128,7 @@ class ComposerPanelPicturesTest {
                         "Giacomo Puccini (1858–1924) was an Italian composer of opera, " +
                         "among them La bohème and Tosca [W1].",
                 ),
-                "Artist, Giacomo Puccini, uses AI",
+                "Artists, Giacomo Puccini, others, uses AI",
             ),
             Situation(
                 5,
@@ -137,7 +138,7 @@ class ComposerPanelPicturesTest {
                     InsightItem.ARTIST to
                         "Gotye is the stage name of Wouter De Backer, a Belgian-Australian musician [W1].",
                 ),
-                "Artist, Gotye, uses AI",
+                "Artists, Gotye, others, uses AI",
             ),
         )
 
@@ -190,7 +191,10 @@ class ComposerPanelPicturesTest {
                 }
             }
             compose.waitForIdle()
-            compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).assertContentDescriptionEquals(situation.artistRow)
+            // An *Artists* row (#1168) reads "{first}, others" where that fits, else the first alone.
+            val row = compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST))
+            val said = row.fetchSemanticsNode().config[SemanticsProperties.ContentDescription].single()
+            assertTrue(said, said == situation.artistRow || said == situation.artistRow.replace(", others", ""))
             save("$name-a-rows")
             compose.onNodeWithTag(itemRowTag(InsightItem.ARTIST)).performClick()
             compose.waitForIdle()

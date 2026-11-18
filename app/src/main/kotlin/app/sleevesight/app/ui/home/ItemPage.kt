@@ -45,7 +45,7 @@ internal fun ItemPage(
         return
     }
     Column(Modifier.semantics(mergeDescendants = true) {}) {
-        Text(row.name, Modifier.testTag(ITEM_PAGE_NAME_TAG), style = MaterialTheme.typography.titleLarge)
+        Text(rowName(row), Modifier.testTag(ITEM_PAGE_NAME_TAG), style = MaterialTheme.typography.titleLarge)
         row.version?.let {
             Text(
                 stringResource(R.string.home_item_version, it),
