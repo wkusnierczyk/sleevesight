@@ -51,7 +51,8 @@ import org.robolectric.RobolectricTestRunner
  * The artist's insight with nothing to write from while MusicBrainz could not be reached (#1163):
  * its panel says so, with *Retry*, which asks MusicBrainz again, rather than that the sources give
  * nothing; with every source answered, it says the sources give nothing. The album's alike (#1187),
- * its own lookups not reached gathered again by *Retry*, the track's MusicBrainz asked again.
+ * its own lookups not reached gathered again by *Retry*, the track's MusicBrainz asked again. With
+ * every source answered and no line, it names the sources asked (#1308).
  */
 @RunWith(RobolectricTestRunner::class)
 class ItemUnreachableScreenTest {
@@ -130,7 +131,12 @@ class ItemUnreachableScreenTest {
     ) {
         val nothing = app.getString(noEvidence(item, null))
         if (unanswered.isEmpty()) {
-            compose.onNodeWithText(nothing).assertExists()
+            // No line at all: the sources asked, named (#1308).
+            val noun = if (item == InsightItem.ALBUM) "album" else "artist"
+            compose
+                .onNodeWithText("Asked MusicBrainz, Wikipedia, Last.fm and a web search: none has this $noun.")
+                .assertExists()
+            compose.onNodeWithText(nothing).assertDoesNotExist()
             compose.onNodeWithTag(ITEM_UNREACHABLE_TAG).assertDoesNotExist()
         } else {
             compose.onNodeWithText(nothing).assertDoesNotExist()
@@ -161,7 +167,7 @@ class ItemUnreachableScreenTest {
     }
 
     @Test
-    fun withEverySourceAnsweredItSaysTheSourcesGiveNothing() {
+    fun withEverySourceAnsweredItNamesTheSourcesAsked() {
         show(emptyList())
         assertEquals(emptyList<Any>(), retried)
     }
@@ -226,7 +232,7 @@ class ItemUnreachableScreenTest {
     }
 
     @Test
-    fun theAlbumWithEverySourceAnsweredSaysTheSourcesGiveNothing() {
+    fun theAlbumWithEverySourceAnsweredNamesTheSourcesAsked() {
         show(emptyList(), InsightItem.ALBUM)
         assertEquals(emptyList<Any>(), retried)
         assertEquals(emptyList<InsightItem>(), notes.gatheredAgain)
