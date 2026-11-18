@@ -133,6 +133,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -409,6 +410,9 @@ class AppGraph internal constructor(
             scope = pipelineScope,
             kept = RefusedModelPrefs(appContext),
             stored = { provider -> SecretId.forProvider(provider)?.let { secrets.isStored(it) } == true },
+            // What was refused is forgotten only when the key is saved, replaced or removed (#1425).
+            keyEdits =
+                secrets.edits.mapNotNull { id -> ProviderId.entries.firstOrNull { SecretId.forProvider(it) == id } },
         )
 
     /** The guide to Home's *Hide once* (#627, #759), held in memory, never stored. */

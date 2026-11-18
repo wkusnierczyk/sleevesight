@@ -17,7 +17,10 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -185,6 +188,17 @@ class SecretStore(
      */
     private val resets = MutableStateFlow(0)
 
+    private val edited = MutableSharedFlow<SecretId>(extraBufferCapacity = SecretId.entries.size)
+
+    /**
+     * Each key saved, replaced or removed here, as it happens, once the file is written (#1425):
+     * by [set] when it saves, [clear] when it writes, and [reset] for every key, when it removed
+     * the entries or deleted the Keystore key that sealed them. Only changes made through the app,
+     * which is the only way a key changes: never a read, one that fails included. Nothing is
+     * replayed: a collector hears the changes made after it subscribed.
+     */
+    val edits: SharedFlow<SecretId> = edited.asSharedFlow()
+
     /** Each key's state, as the settings screen shows it. */
     val states: Flow<Map<SecretId, SecretState>> =
         combine(data, resets) { prefs, _ -> prefs }
@@ -293,11 +307,12 @@ class SecretStore(
                 sealed == null -> SaveResult.NOT_SEALED
                 write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) } -> SaveResult.SAVED
                 else -> SaveResult.NOT_WRITTEN
-            }
+            }.also { if (it == SaveResult.SAVED) edited.emit(id) }
         }
 
     /** Removes the key [id]. False when DataStore could not write. */
-    suspend fun clear(id: SecretId): Boolean = writes.withLock { write { it.remove(keyOf(id)) } }
+    suspend fun clear(id: SecretId): Boolean =
+        writes.withLock { write { it.remove(keyOf(id)) }.also { if (it) edited.emit(id) } }
 
     /**
      * *Purge keys*: removes every saved key and deletes the Keystore
@@ -326,6 +341,7 @@ class SecretStore(
                 val removed = write { prefs -> SecretId.entries.forEach { prefs.remove(keyOf(it)) } }
                 val deleted = withContext(dispatcher) { cipher.deleteKey() }
                 if (deleted) servicesOff(SecretId.entries.toSet())
+                if (removed || deleted) SecretId.entries.forEach { edited.emit(it) }
                 ResetResult(removed, deleted, statesNow())
             } finally {
                 resets.update { it + 1 }

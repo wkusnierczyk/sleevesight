@@ -94,18 +94,21 @@ class Ticket internal constructor(
  * - The selection ([selected]): each service's selected model, and the one switched on. A
  *   service's revision moves when its model changes, or when it is switched on or off.
  * - Each service's key ([keyRead]): the fingerprint of the key last read, and the revision, which
- *   moves when the fingerprint does. A read that found no key while the key is still stored (a read
+ *   moves when the fingerprint does, and when the key store says the key was saved, replaced or
+ *   removed ([keyChanged], #1425). A read that found no key while the key is still stored (a read
  *   that failed for now) is ignored, and counts as no read at all; of the others, one issued before
- *   the last one applied is stale and dropped.
+ *   the last one applied, or before the last change, is stale and dropped.
  * - The marks ([listed], [answered]): an answer counts only if it was made with the key known now
  *   (when one is known), for the model selected now (once the settings are read), and both
  *   revisions are those of its [Ticket].
  * - The models refused for each service's saved key ([refused], #970), whichever is selected,
  *   [kept] when the loop starts: a call with one ends refused, and it joins them; one that answers,
- *   and it leaves them; another key read for the service, and they all go. A call counts for them
- *   if it was made with the key known now and its key revision is that of its [Ticket], whatever
- *   model is selected now.
+ *   and it leaves them; the service's key saved, replaced or removed through the app ([keyChanged],
+ *   #1425), and they all go. No read moves them, one that fails or finds another key included. A
+ *   call counts for them if it was made with the key known now and its key revision is that of its
+ *   [Ticket], whatever model is selected now.
  */
+@Suppress("TooManyFunctions") // One per event of the loop, and the rules they share.
 internal class ModelMarks(
     private val providers: Set<ProviderId>,
     kept: RefusedModels = emptyMap(),
@@ -128,8 +131,9 @@ internal class ModelMarks(
     private val readOrder = HashMap<ProviderId, Long>()
     private val keyRevisions = HashMap<ProviderId, Long>()
 
-    // The services whose stored key could not be read before any was (#970).
-    private val unread = HashSet<ProviderId>()
+    // The services whose key was saved, replaced or removed since their last read (#1425): no answer
+    // counts for them until a read issued after the change is applied.
+    private val changed = HashSet<ProviderId>()
 
     // Each service's model chosen from the refused ones to try it, until a call with it ends (#970).
     private val retrying = HashMap<ProviderId, String>()
@@ -168,7 +172,8 @@ internal class ModelMarks(
     /**
      * [provider]'s key read, as [print] (null for none), the read issued as [order]; [stored] says
      * whether a key is stored all the same (the read failed for now). A key that changed drops the
-     * service's marks made with another.
+     * service's marks made with another; [refused] stays as it is, whatever the read found (#1425):
+     * only [keyChanged] clears it.
      */
     fun keyRead(
         provider: ProviderId,
@@ -177,24 +182,33 @@ internal class ModelMarks(
         stored: Boolean,
     ) {
         // A read that failed for now says nothing, and must not stand in for the reads issued before
-        // it; but the key it could not read may be replaced before one is read (#970).
-        if (print == null && stored) {
-            if (provider !in prints) unread += provider
-            return
-        }
+        // it. Nor does it say the key changed: the key store says that ([keyChanged], #1425).
+        if (print == null && stored) return
         if (order <= (readOrder[provider] ?: 0L)) return
         readOrder[provider] = order
-        val known = provider in prints
-        val moved = known && prints[provider] != print
+        val moved = changed.remove(provider) || (provider in prints && prints[provider] != print)
         if (moved) keyRevisions[provider] = (keyRevisions[provider] ?: 0L) + 1
         prints[provider] = print
-        // The first key read after the one stored could not be: maybe the same, maybe one saved in its
-        // place; what was refused is cleared rather than kept for a key it may not belong to.
-        val unknown = !known && unread.remove(provider)
-        keyMarks(provider, print, moved || unknown)
-        // Another key saved for the service, or none: what the old one was refused says nothing of
-        // the next (#970).
-        if (moved || unknown || print == null) refused = refused - provider
+        keyMarks(provider, print, moved)
+    }
+
+    /**
+     * [provider]'s key saved, replaced or removed through the app (the key store's change, #1425),
+     * told as [order], in the order of the reads: what was refused with the key before goes from
+     * [refused], and so do the service's marks, all made with it. Until a read issued after the
+     * change is applied, no answer counts for the service: a read issued before it may have found
+     * the key it replaced, and is dropped, and a ticket taken before it no longer counts.
+     */
+    fun keyChanged(
+        provider: ProviderId,
+        order: Long,
+    ) {
+        readOrder[provider] = maxOf(readOrder[provider] ?: 0L, order)
+        keyRevisions[provider] = (keyRevisions[provider] ?: 0L) + 1
+        changed += provider
+        marks = marks - provider
+        retrying -= provider
+        refused = refused - provider
     }
 
     /**
@@ -298,6 +312,7 @@ internal class ModelMarks(
         ticket: Ticket,
     ): Boolean =
         !ticket.never &&
+            provider !in changed &&
             (provider !in prints || prints[provider] == print) &&
             (keyRevisions[provider] ?: 0L) == (ticket.keys[provider] ?: 0L)
 
