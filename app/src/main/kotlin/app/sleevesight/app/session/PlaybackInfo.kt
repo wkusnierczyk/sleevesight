@@ -99,4 +99,18 @@ enum class Transport(
 
     /** Whether it moves to another track: a change it causes is the user's (D5), not detected. */
     val skips: Boolean get() = this == PREVIOUS || this == NEXT
+
+    /**
+     * Whether, to a player advertising [actions], this goes as the play/pause media button: Play or
+     * Pause to one that advertises `ACTION_PLAY_PAUSE` without its own `ACTION_PLAY` or `ACTION_PAUSE`.
+     */
+    fun byPlayPauseButton(actions: Long): Boolean {
+        val own =
+            when (this) {
+                PLAY -> PlaybackState.ACTION_PLAY
+                PAUSE -> PlaybackState.ACTION_PAUSE
+                else -> return false
+            }
+        return actions and own == 0L && actions and PlaybackState.ACTION_PLAY_PAUSE != 0L
+    }
 }

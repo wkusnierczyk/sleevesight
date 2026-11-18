@@ -65,7 +65,7 @@ internal class SessionsOfOnePlayerTest : SessionRepositoryFixture() {
         assertEquals(PlaybackInfo(SPOTIFY, PlaybackStatus.PLAYING, 24.seconds, 1_000, 1f), playback)
         // The bar moves with the track: 10 s after the report, 10 s further on.
         assertEquals(34.seconds, playback.positionAt(11_000))
-        assertSame(car, repository.playerActivity())
+        assertSame(car, repository.playerActivity(SPOTIFY))
     }
 
     @Test

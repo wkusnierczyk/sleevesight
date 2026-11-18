@@ -498,8 +498,8 @@ class AppGraph internal constructor(
         )
 
     /**
-     * What turns the record in Home's header logo (#848): whether the player line says *Playing*
-     * and *Spin the logo while music plays* is on, and *Logo speed*.
+     * What turns the record in Home's header logo (#848): whether the followed player says *Playing*
+     * (the player menu's state line) and *Spin the logo while music plays* is on, and *Logo speed*.
      */
     val logoSpin: StateFlow<LogoSpin> =
         combine(sessions.nowPlaying, sessions.playback, latestSettings, LogoSpin::of)
@@ -1093,20 +1093,22 @@ class AppGraph internal constructor(
     }
 
     /**
-     * Shows [player] on Home (#1409: chosen in Home's player menu) while it has a session, as the
-     * user's action ([SessionRepository.follow]). On the main thread.
+     * Shows [player] on Home (#1409: chosen in Home's player menu) while it has a session
+     * ([SessionRepository.follow]); the user's action only when Home then shows another player, not
+     * for the one already shown. Recorded before the switch, which may publish its change at once.
+     * On the main thread.
      */
     val followPlayer: (String) -> Unit = { player ->
         if (player in sessions.followedStates.value) {
-            userActions.acted()
+            if (sessions.playback.value.player != player) userActions.acted()
             sessions.follow(player)
         }
     }
 
     /**
      * The intent that opens a player from its launcher entry, for *Open the app ↗* under its name in
-     * the settings (#444), and for Home's player row when the session gives no usable screen (#596);
-     * null for one with none, or not visible to this app.
+     * the settings (#444), and for the player menu's *Open <player>* when the session gives no usable
+     * screen (#596, #1209); null for one with none, or not visible to this app.
      */
     fun playerLaunchIntent(packageName: String): Intent? =
         appContext.packageManager.getLaunchIntentForPackage(packageName)

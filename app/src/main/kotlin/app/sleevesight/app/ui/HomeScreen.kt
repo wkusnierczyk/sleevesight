@@ -222,7 +222,7 @@ private fun HomeBody(
         modifier =
             Modifier
                 // Split in two, what scrolls is read in the screen's order, not as a group of its own,
-                // so its player row comes before the cover's side, and its title after (#1097).
+                // so the header comes before the cover's side, and the title after (#1097).
                 .then(if (pane != null) Modifier.semantics { isTraversalGroup = false } else Modifier)
                 .verticalScroll(scroll)
                 .padding(

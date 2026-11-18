@@ -12,6 +12,7 @@ import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.KeyEvent
 
 /**
  * One player's media session, as the session layer reads it: a seam over `MediaController`, so
@@ -28,7 +29,7 @@ interface PlayerSession {
     val queue: List<MediaSession.QueueItem>?
     val queueTitle: CharSequence?
 
-    /** The player's own screen for this session, when it names one: the home screen's player row opens it. */
+    /** The player's own screen for this session, when it names one: the player menu's *Open <player>* opens it. */
     val sessionActivity: PendingIntent? get() = null
 
     /**
@@ -69,9 +70,13 @@ interface ActiveSessions {
     fun stop()
 }
 
-/** A [PlayerSession] over a `MediaController`. */
+/**
+ * A [PlayerSession] over a `MediaController`; [press] sends a media button's key event to the player
+ * (the controller's `dispatchMediaButtonEvent`; a seam for tests).
+ */
 class ControllerSession(
     private val controller: MediaController,
+    private val press: (KeyEvent) -> Unit = { controller.dispatchMediaButtonEvent(it) },
 ) : PlayerSession {
     override val key: Any = controller.sessionToken
     override val player: String = controller.packageName
@@ -105,14 +110,20 @@ class ControllerSession(
 
     // From Android 16 a binder's `RemoteException` comes back unchecked: the whole call is guarded.
     @Suppress("TooGenericExceptionCaught") // Whatever the controller throws, the tap sends nothing.
+    // A player that advertises only the combined play/pause action takes it as the media button it
+    // stands for (`KEYCODE_MEDIA_PLAY_PAUSE`, pressed and released), not as `play()` or `pause()`.
     override fun send(control: Transport): Boolean =
         try {
             val controls = controller.transportControls
-            when (control) {
-                Transport.PLAY -> controls.play()
-                Transport.PAUSE -> controls.pause()
-                Transport.PREVIOUS -> controls.skipToPrevious()
-                Transport.NEXT -> controls.skipToNext()
+            when {
+                control.byPlayPauseButton(controller.playbackState?.actions ?: 0L) -> {
+                    press(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
+                    press(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
+                }
+                control == Transport.PLAY -> controls.play()
+                control == Transport.PAUSE -> controls.pause()
+                control == Transport.PREVIOUS -> controls.skipToPrevious()
+                else -> controls.skipToNext()
             }
             true
         } catch (e: RuntimeException) {

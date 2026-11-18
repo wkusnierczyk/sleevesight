@@ -104,7 +104,7 @@ import kotlin.time.Duration.Companion.seconds
  * transport controls, only those its state advertises ([PlaybackInfo.allows]), never to a call. A
  * track change that follows a Previous or Next sent from here, or the switch to a player chosen in
  * the menu, within [USER_CHANGE_WINDOW], is the user's action ([ChangeCause.USER_ACTION]), not put
- * through skip detection (D5). The player's own screen opens from the home screen ([playerActivity]).
+ * through skip detection (D5). The player's own screen opens from Home's player menu ([playerActivity]).
  */
 @Suppress("LongParameterList", "TooManyFunctions") // What it follows and does; the clock and the judge are seams.
 class SessionRepository(
@@ -221,20 +221,11 @@ class SessionRepository(
     val seenPlayers: StateFlow<Set<String>> = seenState.asStateFlow()
 
     /**
-     * The own screen of the player whose track is shown (its session activity), for the home
-     * screen's player row; null when there is no such player or it names none. Read when asked,
-     * on the main thread: it asks the player's session, so it is not published with every state.
-     */
-    fun playerActivity(): PendingIntent? =
-        lastShown
-            ?.takeIf { it.gate.key !in afterCall }
-            ?.let { shown -> shown.gate.read(shown::asCall) { it.sessionActivity } }
-
-    /**
      * The own screen of [player] (its session activity), for Home's player menu (#1209), which names
      * the player whose state [playback] publishes, perhaps before its track is shown: the session
      * [playback] is of when it is [player]'s, else [player]'s first session that may be shown; null
-     * when it has none, or the session names none. Never another player's.
+     * when it has none, or the session names none. Never another player's. Read when asked, on the
+     * main thread: it asks the player's session, so it is not published with every state.
      */
     fun playerActivity(player: String): PendingIntent? {
         val session =
