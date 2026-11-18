@@ -489,10 +489,10 @@ data class TrackGenres(
         if (genres.isEmpty()) return this
         val listed = listing.map { it.identity }.toSet()
         val have = all.map { it.genre.identity }.toSet()
-        val marked =
-            rows.map { row ->
-                row.copy(labels = row.labels.map { if (it.genre.identity in listed) it.copy(aiModel = model) else it })
-            }
+        val credit = { label: TrackLabel -> if (label.genre.identity in listed) label.copy(aiModel = model) else label }
+        // A genre past a row's cap (#1281) the list has is credited to the model too, so it may reach a
+        // prompt as the question's genre alone; the rows' five, what prompts list, are as they were.
+        val marked = rows.map { row -> row.copy(labels = row.labels.map(credit), extras = row.extras.map(credit)) }
         val added =
             listing
                 .filter { it.identity !in have }

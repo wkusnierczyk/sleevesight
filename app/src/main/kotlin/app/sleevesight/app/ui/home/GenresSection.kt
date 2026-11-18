@@ -324,12 +324,15 @@ private fun GenresBox(
 ) {
     var chosen by choice.chosen
     var touched by choice.tapped
-    val more = choice.more.value
     val order = rememberGenreOrder()
     val labels = track.genres.chips(order)
     // The genres past the rows' cap (#1281), as chips once *Show more* shows them.
     val extras = track.genres.extraChips(order)
+    val more = choice.more.value && extras.isNotEmpty()
     val open = choice.open(track.genres, order, extras)
+    // None left past the cap (a later row's labels took the last of them): folded, so the next ones,
+    // if any come, start folded and *Genre tags* shows no extras meanwhile.
+    SideEffect { if (extras.isEmpty()) choice.more.value = false }
     val handoff = rememberFocusHandoff()
     // A requester per chip shown, by its genre's identity, and the genre of the chip last tapped:
     // plain, read only by the moves. By genre, not by the chip's tag, which names its row: a genre
@@ -400,7 +403,8 @@ private fun EveryGenre(
 ) {
     val order = rememberGenreOrder()
     val handoff = rememberFocusHandoff()
-    val shown = more.value
+    val extras = track.genres.extraChips(order)
+    val shown = more.value && extras.isNotEmpty()
     val panels = @Composable { labels: List<PlacedLabel> ->
         for (label in labels) {
             // Keyed by genre: a genre landing earlier in the order moves the panels, not their content.
@@ -412,7 +416,7 @@ private fun EveryGenre(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         panels(track.genres.chips(order))
         // The genres past the rows' cap (#1281), each in a panel of its own once *Show more* shows them.
-        val extras = track.genres.extraChips(order)
+        SideEffect { if (extras.isEmpty()) more.value = false }
         MoreGenres(extras, shown, handoff, { panels(extras) }) { more.value = !shown }
     }
 }

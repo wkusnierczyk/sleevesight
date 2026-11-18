@@ -377,4 +377,60 @@ class GenresMoreScreenTest {
             genresWithNoDefinition(playing) { _, _ -> true },
         )
     }
+
+    @Test
+    fun whenALaterRowTakesTheLastExtraTheExtrasFoldAndTheRowsShowNone() {
+        // Britpop alone past the cap, on the track's row; then the album's labels come with it.
+        val one = trackRow.copy(extras = trackRow.extras.filter { it.genre.identity == "britpop" })
+        val before = TrackGenres(listOf(one))
+        val album = GenreRow(GenreLevel.ALBUM, null, listOf(label("britpop", GenreLevel.ALBUM)))
+        val playing = mutableStateOf(track().copy(genres = before))
+        show(before, playing) {
+            tap(GENRES_MORE_TAG)
+            assertTrue(exists(cell(one, "britpop")))
+            compose.runOnUiThread { playing.value = playing.value.copy(genres = TrackGenres(listOf(one, album))) }
+            compose.waitForIdle()
+            assertFalse(exists(GENRES_LESS_TAG))
+            assertFalse(exists(GENRES_WEAKER_TAG))
+            assertFalse(exists(GENRES_MORE_TAG))
+            // Britpop a chip of the five now; the track's row shows its five alone.
+            assertFalse(exists(cell(one, "britpop")))
+            // A later extra starts folded.
+            val next = one.copy(extras = one.extras + label("trip hop", GenreLevel.TRACK))
+            compose.runOnUiThread { playing.value = playing.value.copy(genres = TrackGenres(listOf(next, album))) }
+            compose.waitForIdle()
+            assertTrue(exists(GENRES_MORE_TAG))
+            assertFalse(exists(GENRES_LESS_TAG))
+        }
+    }
+
+    @Test
+    fun anExtraTheAisListGivesIsCreditedToTheModelAndMayReachAPromptAsItsGenreAlone() {
+        val psychedelic =
+            GenreLabel("psychedelic rock", "Psychedelic Rock", "psychedelicrock", level = GenreLevel.TRACK)
+        val listed = rich.withAi(listOf(psychedelic), "Model")
+        // The track's row is full: the genre stays past its cap, credited to the model there.
+        assertEquals(
+            "Model",
+            listed.rows
+                .first()
+                .extras
+                .single { it.genre.identity == "psychedelicrock" }
+                .aiModel,
+        )
+        assertEquals(
+            rich.rows.map {
+                it.labels.map { l ->
+                    l.genre.identity
+                }
+            },
+            listed.rows.map { it.labels.map { l -> l.genre.identity } },
+        )
+        val before = track().copy(genres = rich)
+        val after = track().copy(genres = listed)
+        assertFalse(GenreReasons.prompted(before, "psychedelicrock"))
+        assertTrue(GenreReasons.prompted(after, "psychedelicrock"))
+        // What *Search with AI* lists stays the five.
+        assertEquals(searchFacts(before, before.nowPlaying), searchFacts(after, after.nowPlaying))
+    }
 }
