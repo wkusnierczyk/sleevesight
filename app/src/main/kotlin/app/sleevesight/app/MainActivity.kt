@@ -25,6 +25,7 @@ import app.sleevesight.app.settings.dismissals
 import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.ThemeButtonFeed
+import app.sleevesight.app.ui.home.HeaderPlayerFeed
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
 import app.sleevesight.app.ui.home.NowPlayingPage
@@ -62,7 +63,6 @@ class MainActivity : ComponentActivity() {
             settings = graph.latestSettings,
             normalizer = Normalizer(JvmAccentFolder),
             playerLabel = graph::playerLabel,
-            playerActivity = graph.sessions::playerActivity,
             playerLaunch = graph::playerLaunchIntent,
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
@@ -99,6 +99,24 @@ class MainActivity : ComponentActivity() {
             tracklists = graph.tracklists,
             // The album's release group's first release, for Dates (#1099).
             releaseGroups = graph.releaseGroups,
+        )
+    }
+
+    // The followed player in Home's header (#1409, #1209): the record plays and pauses it, and its icon
+    // opens the player menu.
+    private val headerPlayer: HeaderPlayerFeed by lazy {
+        HeaderPlayerFeed(
+            playback = graph.sessions.playback,
+            followed = graph.sessions.followedStates,
+            settings = graph.latestSettings,
+            label = graph::playerLabel,
+            activity = graph.sessions::playerActivity,
+            launch = graph::playerLaunchIntent,
+            installed = installedPlayers,
+            send = graph.sendToPlayer,
+            follow = graph.followPlayer,
+            nowPlaying = graph.sessions.nowPlaying,
+            ad = graph.sessions.ad,
         )
     }
 
@@ -202,6 +220,7 @@ class MainActivity : ComponentActivity() {
                                 themeButton = themeButton,
                                 // The header logo's record turning while music plays (#848).
                                 logoSpin = graph.logoSpin,
+                                player = headerPlayer,
                             )
                         }
                         intro?.let { LogoIntroOverlay(it) }

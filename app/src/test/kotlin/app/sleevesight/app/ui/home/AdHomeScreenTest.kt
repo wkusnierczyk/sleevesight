@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -100,10 +99,8 @@ class AdHomeScreenTest {
             compose
                 .onNodeWithText("An ad is playing. Sleevesight looks nothing up for ads and writes no insight.")
                 .assertExists()
-            // The player row alone can be tapped: it opens the player.
-            val taps = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()
-            assertEquals(1, taps.size)
-            compose.onNode(hasClickAction() and hasTestTag(PLAYER_TAG)).assertExists()
+            // Nothing can be tapped: the player opens from the header's player menu (#1209).
+            assertEquals(0, compose.onAllNodes(hasClickAction()).fetchSemanticsNodes().size)
             for (text in NOT_SHOWN) {
                 assertEquals(text, 0, compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size)
             }

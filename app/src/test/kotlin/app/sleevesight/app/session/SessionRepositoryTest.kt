@@ -283,7 +283,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         followed.value = setOf(YOUTUBE_MUSIC, SPOTIFY)
         system.active = listOf(app, spotify)
         repository.start()
-        assertSame(screen, repository.playerActivity())
+        assertSame(screen, repository.playerActivity(YOUTUBE_MUSIC))
 
         // Spotify's report still settling: once the call is found, Spotify is not yet shown in its
         // place, so the session that was shown stays the last one shown.
@@ -291,15 +291,15 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         app.marksCall = true
         val reads = app.reads
 
-        assertNull(repository.playerActivity())
+        assertNull(repository.playerActivity(YOUTUBE_MUSIC))
         assertEquals(reads, app.reads)
 
         // In the wait after the call, too.
         app.call(false)
-        assertNull(repository.playerActivity())
+        assertNull(repository.playerActivity(YOUTUBE_MUSIC))
         assertEquals(reads, app.reads)
         waitOutTheCall()
-        assertSame(screen, repository.playerActivity())
+        assertSame(screen, repository.playerActivity(YOUTUBE_MUSIC))
     }
 
     @Test
@@ -504,7 +504,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun thePlayerActivityIsThatOfThePlayerWhoseTrackIsShown() {
+    fun thePlayerActivityOfThePlayerShownIsItsOwnSessions() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
         fun activity(code: Int) =
@@ -519,17 +519,19 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
                 sessionActivity = youtube,
             )
         val playing = FakeSession(SPOTIFY, sessionActivity = spotify)
-        assertNull(repository.playerActivity())
+        assertNull(repository.playerActivity(SPOTIFY))
         followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
         system.active = listOf(paused, playing)
         repository.start()
-        assertSame(spotify, repository.playerActivity())
+        assertEquals(SPOTIFY, repository.playback.value.player)
+        assertSame(spotify, repository.playerActivity(SPOTIFY))
 
         playing.settled(state(PlaybackState.STATE_PAUSED))
-        assertSame(youtube, repository.playerActivity())
+        assertEquals(YOUTUBE_MUSIC, repository.playback.value.player)
+        assertSame(youtube, repository.playerActivity(YOUTUBE_MUSIC))
 
         repository.stop()
-        assertNull(repository.playerActivity())
+        assertNull(repository.playerActivity(YOUTUBE_MUSIC))
     }
 
     @Test
