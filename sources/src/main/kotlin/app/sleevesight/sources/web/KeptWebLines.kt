@@ -21,11 +21,15 @@ internal class KeptWebLines(
     private val before: ArtistPart,
     private val marked: Boolean = false,
 ) {
-    // The web's lines by key, while [kept] keeps nothing.
-    private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
+    // The web's lines by key, with whether they were kept with no search made (#1308), while [kept]
+    // keeps nothing: one entry, so the mark goes with its lines.
+    private val remembered = Lru<String, Remembered>(REMEMBERED)
 
-    // Whether those lines were kept with no search made, by key, while [kept] keeps nothing (#1308).
-    private val unsearchedHere = Lru<String, Boolean>(REMEMBERED)
+    // Lines remembered, and whether they were kept with no search made.
+    private class Remembered(
+        val lines: List<EvidenceDraft>,
+        val unsearched: Boolean,
+    )
 
     // The searches under way, by key.
     private val searching = OneSearchAtATime<List<EvidenceDraft>>()
@@ -35,7 +39,7 @@ internal class KeptWebLines(
         if (kept.persists) {
             kept.getCarried(part, before, key)?.let { KeptDrafts.decode(it.value) }
         } else {
-            remembered.get(key)
+            remembered.get(key)?.lines
         }
 
     /** [lines] kept for [key], none included, found by a search. */
@@ -58,8 +62,7 @@ internal class KeptWebLines(
             kept.keep(part, key, KeptDrafts.encode(lines))
             if (marked) kept.keep(part, markOf(key), if (searched) SEARCHED else UNSEARCHED)
         } else {
-            remembered.put(key, lines)
-            if (marked) unsearchedHere.put(key, !searched)
+            remembered.put(key, Remembered(lines, marked && !searched))
         }
     }
 
@@ -68,7 +71,7 @@ internal class KeptWebLines(
         if (kept.persists) {
             kept.get(part, key) != null && kept.get(part, markOf(key))?.value == UNSEARCHED
         } else {
-            remembered.get(key) != null && unsearchedHere.get(key) == true
+            remembered.get(key)?.unsearched == true
         }
 
     /**

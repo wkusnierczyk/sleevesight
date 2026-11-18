@@ -64,15 +64,21 @@ internal class ItemContext(
     val sources: EvidenceSet? = null,
     val retries: Retries? = null,
     val searches: AiSearchFeed = AiSearchFeed.None,
-    val keys: Map<SecretId, SecretState> = emptyMap(),
+    val keys: Map<SecretId, SecretState>? = emptyMap(),
     val needsKey: Set<SourceId> = emptySet(),
     val openSettingsAt: (SettingsTarget) -> Unit = {},
 ) {
-    /** The sources [item]'s insight, [evidence]'s, asked and did not ask (#1308, [sourcesAsked]). */
+    /**
+     * The sources [item]'s insight, [evidence]'s, asked and did not ask (#1308, [sourcesAsked]); those not
+     * asked only once the keys' states are read ([keys] not null), so none says "disabled" for "no key".
+     */
     fun asked(
         item: InsightItem,
         evidence: ItemEvidence,
-    ): SourcesAsked = sourcesAsked(item, evidence, settings, keys, needsKey)
+    ): SourcesAsked {
+        val asked = sourcesAsked(item, evidence, settings, keys.orEmpty(), needsKey)
+        return if (keys == null) asked.copy(notAsked = emptyList()) else asked
+    }
 
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on

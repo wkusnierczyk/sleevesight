@@ -78,10 +78,11 @@ class ItemSourcesAskedScreenTest {
     private fun show(
         item: InsightItem,
         settings: Settings = Settings(writeAutomatically = WriteAutomatically.NEVER),
-        keys: Map<SecretId, SecretState> = SAVED,
+        keys: Map<SecretId, SecretState>? = SAVED,
         byName: Boolean = false,
         held: SourcesHeld? = null,
         webSkipped: Boolean = false,
+        webDue: Boolean = false,
         block: () -> Unit,
     ) {
         val evidence =
@@ -91,6 +92,7 @@ class ItemSourcesAskedScreenTest {
                 held = held,
                 byName = byName,
                 webSkipped = webSkipped,
+                webDue = webDue,
             )
         notes.shown.value = mapOf(item to ItemShown.Shown(InsightState.NoEvidence, evidence))
         val state =
@@ -199,9 +201,29 @@ class ItemSourcesAskedScreenTest {
         }
 
     @Test
-    fun anAlbumLookedUpByItsNameNamesNeitherMusicBrainzNorLastFm() =
+    fun anAlbumLookedUpByItsNameNamesNeitherMusicBrainzNorLastFm() {
         show(InsightItem.ALBUM, byName = true) {
             asked("Asked Wikipedia and a web search: none has this album.")
+            noneNotAsked()
+        }
+        // MusicBrainz switched off, why the album has no release group: named as not asked.
+        show(InsightItem.ALBUM, settings(SourceSwitch.MUSICBRAINZ), byName = true) {
+            asked("Asked Wikipedia and a web search: none has this album.")
+            notAsked("Not asked: MusicBrainz (disabled). See Settings\u00A0→\u00A0Sources.", SettingsTarget.sources)
+        }
+    }
+
+    @Test
+    fun aWebSearchStillDueIsNotNamed() =
+        show(InsightItem.ALBUM, webDue = true) {
+            asked("Asked MusicBrainz, Wikipedia and Last.fm: none has this album.")
+            noneNotAsked()
+        }
+
+    @Test
+    fun untilTheKeysAreReadNoSourceIsNamedAsNotAsked() =
+        show(InsightItem.ALBUM, settings(SourceSwitch.LASTFM), keys = null) {
+            asked("Asked MusicBrainz, Wikipedia and a web search: none has this album.")
             noneNotAsked()
         }
 

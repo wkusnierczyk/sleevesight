@@ -213,6 +213,20 @@ class ArtistWebSourceTest {
         }
 
     @Test
+    fun `in memory the mark goes with its lines`() =
+        runTest {
+            val source = ArtistWebSource(Web(), names)
+            source.keep(artist, emptyList(), searched = false)
+            // Other artists push the rest out, the artist's lines renewed meanwhile: its mark with them.
+            repeat(KeptWebLines.REMEMBERED) {
+                source.keep(ArtistWebQuery("Artist $it", null), emptyList())
+                if (it % 16 == 0) source.renew(artist)
+            }
+            assertEquals(emptyList(), source.kept(artist))
+            assertTrue(source.unsearched(artist))
+        }
+
+    @Test
     fun `a gate closed while the kept lines are read sends nothing and keeps nothing`() =
         runTest {
             val reading = CompletableDeferred<Unit>()

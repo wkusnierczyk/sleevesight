@@ -187,7 +187,8 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val unavailable by feed.unavailableModel.collectAsState()
     val guideHidden by feed.guideHidden.collectAsState()
     val ad by feed.ad.collectAsState()
-    val keys by feed.keys.collectAsState(initial = emptyMap())
+    // Null until first read, so no line says "disabled" for "no key" meanwhile (#1308).
+    val keys by feed.keys.collectAsState<Map<SecretId, SecretState>, Map<SecretId, SecretState>?>(initial = null)
     return NowPlayingState(view, playing, playback, art, settings, unavailable, guideHidden, ad, keys)
 }
 
@@ -237,7 +238,7 @@ internal class NowPlayingState(
     val unavailable: UnavailableModel? = null,
     val guideHidden: Boolean = false,
     val ad: AdPlaying? = null,
-    val keys: Map<SecretId, SecretState> = emptyMap(),
+    val keys: Map<SecretId, SecretState>? = emptyMap(),
 )
 
 /**

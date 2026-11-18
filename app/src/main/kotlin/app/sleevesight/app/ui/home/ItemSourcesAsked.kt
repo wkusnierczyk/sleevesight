@@ -63,11 +63,12 @@ internal data class SourcesAsked(
  * - MusicBrainz and Wikipedia (Wikidata with it), each by its switch;
  * - Last.fm, by its switch and its key;
  * - for an album looked up by its name ([ItemEvidence.byName]), neither MusicBrainz nor Last.fm, which
- *   are not asked about an album with no release group;
+ *   are not asked about an album with no release group (MusicBrainz switched off still named so);
  * - a web search: the song's and the album's by *Exa web search* and its key; the artist's (and
  *   any other artist's) by those and *AI web search*, which searches for the artist only when it is
  *   not *Off*, and not when the AI service wrote its insight without searching
- *   ([ItemEvidence.webSkipped]: none was asked, and nothing is switched off).
+ *   ([ItemEvidence.webSkipped]: none was asked, and nothing is switched off); none, either, while the
+ *   album's or the artist's search is still due ([ItemEvidence.webDue]: it failed, or was not made).
  */
 internal fun sourcesAsked(
     item: InsightItem,
@@ -76,9 +77,11 @@ internal fun sourcesAsked(
     keys: Map<SecretId, SecretState>,
     needsKey: Set<SourceId>,
 ): SourcesAsked {
-    // Looked up by its name: MusicBrainz and Last.fm not asked about the album.
+    // Looked up by its name: MusicBrainz and Last.fm not asked about the album; MusicBrainz switched off
+    // (why it has no release group) still named as not asked.
     val byName = item == InsightItem.ALBUM && evidence.byName
-    val switched = if (byName) listOf(SourceId.WIKIPEDIA) else listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA)
+    val musicBrainz = SourceId.MUSICBRAINZ.takeUnless { byName && settings.isEnabled(it) }
+    val switched = listOfNotNull(musicBrainz, SourceId.WIKIPEDIA)
     // Each source the item asks, and why it was not asked, null when it was.
     val why =
         switched.map { it to disabled(it).takeUnless { _ -> settings.isEnabled(it) } } +
@@ -116,6 +119,9 @@ private fun webSearch(
                 ),
             )
         item.aboutArtist && evidence.webSkipped -> null
+        // The album's or the artist's search still due (failed, refused, or not yet made): none made.
+        // The song's is the track's own too, made whatever its own.
+        item != InsightItem.SONG && evidence.webDue -> null
         else -> WebSearch(null)
     }
 }
