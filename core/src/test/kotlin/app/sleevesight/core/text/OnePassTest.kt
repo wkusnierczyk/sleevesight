@@ -32,6 +32,30 @@ class OnePassTest {
         assertEquals(everyOther.findAll(all).map { it.range }.toList(), everyOther.rangesIn(all))
     }
 
+    @Test
+    fun `a text that holds the first marks up to the digits is marked with no digit`() {
+        // U+0001 to U+002F held: a digit after them would have been the mark, and `$0` before it read as
+        // `$00`, losing the closing mark.
+        val text = buildString { for (c in 1..0x2F) append(c.toChar()) } + "a b a"
+        val a = Regex("a")
+        assertEquals(listOf(0x2F..0x2F, 0x33..0x33), a.rangesIn(text))
+        assertEquals(a.findAll(text).map { it.range }.toList(), a.rangesIn(text))
+    }
+
+    @Test
+    fun `empty matches and a match where the last ended are found as findAll finds them`() {
+        // One matcher steps over a whole surrogate pair after an empty match, and reads `\G` as the last
+        // match's end; `findAll` starts afresh at each character.
+        for (text in listOf("\uD83C\uDFB5", "x\uD83C\uDFB5xx", "", "ab")) {
+            for (regex in listOf(Regex("x*"), Regex("(?=b)"))) {
+                assertEquals(regex.findAll(text).map { it.range }.toList(), regex.rangesIn(text), "$regex")
+            }
+        }
+        val g = Regex("\\Ga")
+        assertEquals(listOf(0..0, 1..1), g.rangesIn("aaba"))
+        assertEquals(g.findAll("aaba").map { it.range }.toList(), g.rangesIn("aaba"))
+    }
+
     private fun String.quoted() = replace("\n", "\\n").replace("\r", "\\r")
 
     // Varied texts of the pieces the regexes below weigh, as `GroundingScanTest`'s are made.
