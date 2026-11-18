@@ -3,6 +3,8 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.ModelRefusal
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.core.ai.ReasoningEffort
@@ -43,7 +45,7 @@ internal fun AiSection(
     modelName: (String) -> String,
     update: Update,
     open: (SettingsDialog) -> Unit,
-    unavailable: Map<ProviderId, String> = emptyMap(),
+    unavailable: Map<ProviderId, UnavailableModel> = emptyMap(),
 ) {
     for (provider in OFFERED_PROVIDERS) {
         val gone = goneModel(provider, settings, unavailable)
@@ -53,7 +55,7 @@ internal fun AiSection(
     AiRetryRow(settings, secrets, update)
 }
 
-/** [provider]'s switch, model and effort; [gone] its selected model, when found unavailable. */
+/** [provider]'s switch, model and effort; [gone] its selected model, when found unavailable, and why. */
 @Suppress("LongParameterList") // The provider, what the rows show, and what they change.
 @Composable
 private fun ProviderRows(
@@ -63,7 +65,7 @@ private fun ProviderRows(
     modelName: (String) -> String,
     update: Update,
     open: (SettingsDialog) -> Unit,
-    gone: String?,
+    gone: UnavailableModel?,
 ) {
     val keyId = SecretId.forProvider(provider)
     val key = keyId?.let { secrets[it] }
@@ -112,12 +114,15 @@ private fun ProviderRows(
     EffortRow(provider, name, settings, update, open)
 }
 
-/** [provider]'s selected model, when found unavailable ([unavailable], by provider; #540); else null. */
+/**
+ * [provider]'s selected model, when found unavailable ([unavailable], by provider; #540), with how a
+ * call refused it (#970); else null.
+ */
 internal fun goneModel(
     provider: ProviderId,
     settings: Settings,
-    unavailable: Map<ProviderId, String>,
-): String? = settings.model(provider)?.takeIf { unavailable[provider] == it }
+    unavailable: Map<ProviderId, UnavailableModel>,
+): UnavailableModel? = unavailable[provider]?.takeIf { settings.model(provider) == it.model }
 
 /** What [provider]'s model row shows: the model chosen, by name, or its default's, marked as the default. */
 @Composable
@@ -135,13 +140,25 @@ internal fun modelValue(
     }
 }
 
-/** What the model row of the service [name] says of its model [gone], found unavailable; null for none. */
+/**
+ * What the model row of the service [name] says of its model [gone], found unavailable: that it is
+ * not listed, or how a call refused it (#970); null for none.
+ */
 @Composable
 internal fun modelUnavailable(
     name: String,
-    gone: String?,
+    gone: UnavailableModel?,
     modelName: (String) -> String,
-): String? = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) }
+): String? =
+    gone?.let {
+        val text =
+            when (it.refusal) {
+                ModelRefusal.NOT_SERVED -> R.string.settings_model_no_longer_served
+                ModelRefusal.ACCOUNT -> R.string.settings_model_refused_account
+                null -> R.string.settings_model_not_available
+            }
+        stringResource(text, name, modelName(it.model))
+    }
 
 /**
  * [provider]'s reasoning efforts to choose from, its own scale's and the service's own; null without a

@@ -110,6 +110,13 @@
     <string name="settings_model_no_key">Save the API key to list the service’s models.</string>
     <!-- Under a service's model row (#540): the service, and the model's name. -->
     <string name="settings_model_not_available">The currently selected %1$s model %2$s is not available. Please select another model or provider.</string>
+    <!-- Under a service's model row when a call found the model refused (#970): the service, and the model's name. -->
+    <string name="settings_model_no_longer_served">The currently selected %1$s model %2$s is no longer served. Please select another model or provider.</string>
+    <string name="settings_model_refused_account">The currently selected %1$s model %2$s is refused for your account. Please select another model or provider.</string>
+    <!-- In the list of models (#970): over the models a call with the saved key found refused, put last, and why each, under its name. -->
+    <string name="settings_model_refused_heading">Refused with your key. Select to try again.</string>
+    <string name="settings_model_why_not_served">No longer served</string>
+    <string name="settings_model_why_refused_account">Refused for your account</string>
     <string name="settings_model_failed_unauthorized">The models could not be listed: the service refused the key.</string>
     <string name="settings_model_failed_offline">The models could not be listed: no connection.</string>
     <string name="settings_model_failed_connection">The models could not be listed: the connection dropped.</string>

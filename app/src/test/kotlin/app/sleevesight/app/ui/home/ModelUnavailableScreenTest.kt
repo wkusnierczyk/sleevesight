@@ -21,6 +21,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.ModelRefusal
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.session.PlaybackInfo
@@ -208,6 +209,26 @@ class ModelUnavailableScreenTest {
             compose.waitForIdle()
             assertEquals(listOf(SettingsTarget(SettingsSection.AI_SERVICES, "model_ANTHROPIC")), settingsOpenedAt)
         }
+
+    @Test
+    fun aModelACallFoundRefusedIsSaidInTheWordsOfHowItWasRefused() {
+        val words =
+            mapOf(
+                ModelRefusal.NOT_SERVED to "is no longer served",
+                ModelRefusal.ACCOUNT to "is refused for your account",
+            )
+        for ((refusal, how) in words) {
+            show(InsightState.Idle(canWrite = false), haiku.copy(refusal = refusal)) {
+                compose
+                    .onNodeWithTag(MODEL_UNAVAILABLE_TAG)
+                    .performScrollTo()
+                    .assertTextEquals(
+                        "The currently selected Anthropic model Claude Haiku 5.5 $how. " +
+                            "Please select another model or provider in AI services.",
+                    )
+            }
+        }
+    }
 
     @Test
     fun aWrittenInsightStaysAndNothingIsSaidWithoutAnUnavailableModel() {

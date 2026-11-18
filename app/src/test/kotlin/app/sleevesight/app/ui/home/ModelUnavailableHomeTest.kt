@@ -222,8 +222,9 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
 
     private fun top(node: SemanticsNodeInteraction) = node.fetchSemanticsNode().positionInRoot.y
 
+    // The service answered that it does not know the model: said so (#970).
     private val said =
-        "The currently selected Anthropic model $OTHER is not available. " +
+        "The currently selected Anthropic model $OTHER is no longer served. " +
             "Please select another model or provider in AI services."
 
     private val previously = "Written by $FIRST."

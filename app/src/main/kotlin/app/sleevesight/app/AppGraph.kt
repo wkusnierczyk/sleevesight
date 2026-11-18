@@ -75,6 +75,7 @@ import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.PrunePlayersMigration
+import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.speech.ReadAloud
@@ -398,13 +399,15 @@ class AppGraph internal constructor(
      * model list at start (once lookups are allowed) and at each opening of the model choice, and
      * marked unavailable by a call the service answers that it does not know the model or refuses
      * it. While the switched-on service's model is unavailable, no insight is written, and the
-     * settings and Home say so.
+     * settings and Home say so. The models a call found refused are kept for the saved key across
+     * starts (#970), for the model list to put last.
      */
     val modelCheck =
         ModelCheck(
             aiProviders,
             key = { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } },
             scope = pipelineScope,
+            kept = RefusedModelPrefs(appContext),
             stored = { provider -> SecretId.forProvider(provider)?.let { secrets.isStored(it) } == true },
         )
 
