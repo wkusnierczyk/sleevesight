@@ -216,8 +216,9 @@
     <string name="load_keys_intro_open">On a computer, or another device that has your keys, open the API keys page:</string>
     <string name="load_keys_intro_start">Tap Start to proceed.</string>
     <string name="load_keys_start">Start</string>
-    <!-- What a screen reader says of a numbered step's title: %1$d is its number, %2$s its title. -->
-    <string name="load_keys_step">Step %1$d: %2$s</string>
+    <!-- What a screen reader says of a numbered step's title (#1022): %1$d is its number, %2$d the
+         number of steps, %3$s its title. -->
+    <string name="load_keys_step">Step %1$d of %2$d: %3$s</string>
     <string name="load_keys_words_title">Encryption words</string>
     <string name="load_keys_words_secret">The following five words are a unique one-time secret, used to encrypt your API keys in a QR code. Only this phone can read keys from the code.</string>
     <string name="load_keys_words_give">Provide these words to the QR generator page; the first three letters are enough. See instructions given there.</string>
