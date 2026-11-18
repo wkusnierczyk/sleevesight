@@ -234,13 +234,15 @@ private fun DrawScope.stepRing(
     if (radius <= 0f) return
     // The gap as a length along the ring, in degrees at its radius, half of it each side of a joint.
     val gap = Math.toDegrees((STEP_RING_GAP.toPx() / radius).toDouble()).toFloat()
-    val sweep = QUARTER - gap
+    // A part per numbered step: four, so quarters.
+    val part = FULL_TURN / LOAD_KEYS_STEPS
+    val sweep = part - gap
     val stroke = Stroke(width = width, cap = StrokeCap.Butt)
     for (quarter in 0 until LOAD_KEYS_STEPS) {
         drawArc(
             color = if (quarter < reached) filled else unfilled,
             // Compose's 0° is 3 o'clock, and angles grow clockwise; 12 o'clock is -90°.
-            startAngle = TWELVE_O_CLOCK + quarter * QUARTER + gap / 2,
+            startAngle = TWELVE_O_CLOCK + quarter * part + gap / 2,
             sweepAngle = sweep,
             useCenter = false,
             topLeft = Offset(size.width / 2 - radius, size.height / 2 - radius),
@@ -250,11 +252,8 @@ private fun DrawScope.stepRing(
     }
 }
 
-/** *Load keys*' numbered steps, which a step's ring is split into ([stepRing]). */
-internal const val LOAD_KEYS_STEPS = 4
-
-/** A quarter of the ring, in degrees. */
-private const val QUARTER = 90f
+/** The whole ring, in degrees. */
+private const val FULL_TURN = 360f
 
 /** 12 o'clock, in Compose's degrees (0° at 3 o'clock). */
 private const val TWELVE_O_CLOCK = -90f

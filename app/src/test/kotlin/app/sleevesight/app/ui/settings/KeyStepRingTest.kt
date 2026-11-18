@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -54,6 +56,10 @@ class KeyStepRingTest {
     @Test
     fun aQuarterFilledPerStepReachedAtLargeFont() = assertQuarters(fontScale = 2f)
 
+    /** Right to left, the ring still fills clockwise from 12 o'clock: step 1 from 12 to 3, not 9 to 12. */
+    @Test
+    fun aQuarterFilledPerStepReachedRightToLeft() = assertQuarters(fontScale = 1f, direction = LayoutDirection.Rtl)
+
     @Test
     fun aScreenReaderSaysTheStepOfHowMany() {
         show(fontScale = 1f, step = 2, title = R.string.load_keys_scan_title) {
@@ -69,15 +75,18 @@ class KeyStepRingTest {
         }
     }
 
-    private fun assertQuarters(fontScale: Float) {
+    private fun assertQuarters(
+        fontScale: Float,
+        direction: LayoutDirection = LayoutDirection.Ltr,
+    ) {
         for (step in 1..LOAD_KEYS_STEPS) {
-            show(fontScale, step) { image ->
+            show(fontScale, step, direction = direction) { image ->
                 val ring = ink(image) { r, g, b -> (r > 200 || b > 200) && g < 120 }
                 val cx = (ring[0] + ring[2]) / 2.0
                 val cy = (ring[1] + ring[3]) / 2.0
                 // Along the middle of the 2 dp stroke, inside the ring's outer edge.
                 val radius = (ring[2] - ring[0] + 1) / 2.0 - density()
-                val case = "step $step, font scale $fontScale"
+                val case = "step $step, font scale $fontScale, $direction"
                 for (quarter in 0 until LOAD_KEYS_STEPS) {
                     val middle = colourAt(image, cx, cy, radius, quarter * QUARTER + QUARTER / 2)
                     val expected = if (quarter < step) "filled" else "unfilled"
@@ -114,13 +123,17 @@ class KeyStepRingTest {
         fontScale: Float,
         step: Int?,
         title: Int = R.string.load_keys_keys_title,
+        direction: LayoutDirection = LayoutDirection.Ltr,
         check: (Bitmap) -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
                     val density = LocalDensity.current
-                    CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                    CompositionLocalProvider(
+                        LocalDensity provides Density(density.density, fontScale),
+                        LocalLayoutDirection provides direction,
+                    ) {
                         MaterialTheme(colorScheme = COLOURS) {
                             Box(Modifier.background(Color.White).testTag(TAG)) {
                                 KeyScreenTitle(title, step = step)
