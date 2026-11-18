@@ -39,6 +39,7 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.withLibrary
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
@@ -240,8 +241,9 @@ internal fun AiGenres(
 /**
  * Why [track] is [genre], as *Ask AI* said with the genre ([reason], #952), as the AI list's genres
  * show theirs ([ReasonShown], #762): under *Why is this …?* as a heading, its sentences cited as *Explain
- * the song*'s are ([AiExplanation]: from the web, each its page's chip, opening *Sources* at its line
- * where it has one ([shown]'s lines and [PanelNotes.onCite]), else the page; from the model's own
+ * the song*'s are ([AiExplanation]: from the web, each its page's chip, named and opening *Sources*'
+ * line for it ([shown]'s lines, which list the answer's pages, `answeredGenrePages`, and
+ * [PanelNotes.onCite]), so its id is never another page's; from the model's own
  * knowledge, the **AI** chip at the end of each sentence, and no line saying so); then *Read aloud*
  * alone at the right of the row under it, which reads the question, then the reason. No credit of its
  * own: the answer's, under the chips, is its.
@@ -264,6 +266,16 @@ private fun AnswerReason(
         AiExplanation(reason, shown.lines, shown.onCite, tag = AI_GENRE_REASON_TEXT_TAG)
         readAloud?.let { CreditRow(null, readAloud = { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) }) }
     }
+}
+
+/**
+ * The pages the reasons of *Ask AI*'s genres in [search] cite (#952), each once, in the answer's
+ * order, as web lines of *Sources* list them: each named by its site ([siteOf]), its title not kept;
+ * none for no answer, or one from the model's knowledge.
+ */
+internal fun answeredGenrePages(search: AiSearch): List<WebPage> {
+    val answer = (search as? AiSearch.Answered)?.answer as? SearchAnswer.Genres ?: return emptyList()
+    return answer.sources.map { url -> WebPage(url, null, siteOf(url)) }
 }
 
 /** The test tags of the reason *Ask AI* gave with a genre (#952), and of its text. */

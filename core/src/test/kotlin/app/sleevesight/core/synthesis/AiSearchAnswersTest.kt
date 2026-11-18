@@ -276,6 +276,15 @@ class AiSearchAnswersTest {
                 "{\"name\": \"ambient\", \"reason\": \"See ambient.example.com for more. [AI]\"}, " +
                 "\"dub\", {\"name\": \"electronic\", \"reason\": \"Synthesisers throughout. [AI]\"}]}"
         assertEquals(listOf("Electronic"), genres(reply))
+        // Citations or marks alone, no words: no reason, the genre dropped before the five are counted.
+        assertEquals(
+            listOf("Electronic"),
+            genres(
+                "{\"genres\": [{\"name\": \"house\", \"reason\": \"[AI]\"}, " +
+                    "{\"name\": \"techno\", \"reason\": \"** [AI] . [AI]\"}, " +
+                    "{\"name\": \"electronic\", \"reason\": \"Synthesisers. [AI]\"}]}",
+            ),
+        )
         // None left: nothing usable, as the panel's "found nothing".
         assertEquals(
             SearchReading.NothingUsable,

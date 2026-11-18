@@ -16,7 +16,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -290,6 +292,29 @@ class AiGenreReasonScreenTest {
             assertEquals(1, compose.onAllNodesWithTag(AI_SEARCH_FROM_TAG).fetchSemanticsNodes().size)
             assertFalse(shows(app.getString(R.string.home_cite_model)))
         }
+
+    @Test
+    fun aReasonsPageJoinsSourcesSoItsChipNeverNamesAnotherPagesLine() {
+        // The track has a web line of its own, S1, another page: the reason's page is listed after it.
+        val track = empty.copy(evidence = HomeFixtures.withWeb)
+        current.value =
+            NowPlayingState(PipelineView(track, aiReady = true), track.nowPlaying, playback, settings = Settings())
+        show {
+            val reply =
+                "{\"genres\": [{\"name\": \"electronic\", \"reason\": " +
+                    "\"The album's page lists it under electronic. [S1]\", \"source\": \"$discogs\"}]}"
+            answered(reply, pages = listOf(discogs))
+            assertEquals("The album's page lists it under electronic (Source S2).", said(AI_GENRE_REASON_TEXT_TAG))
+            // The chip opens *Sources* at that line, the page's, not the track's S1.
+            compose
+                .onNodeWithTag(AI_GENRE_REASON_TEXT_TAG)
+                .performScrollTo()
+                .performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "S2" }
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "S2").performScrollTo()
+            assertTrue(compose.onAllNodesWithText("discogs.com", substring = true).fetchSemanticsNodes().isNotEmpty())
+        }
+    }
 }
 
 // Within this much of the edge, in pixels: an icon button's touch target is wider than its node.

@@ -73,6 +73,10 @@ class WebAnswersTest {
                 .flatten()
                 .map { it.status },
         )
+        // A citation alone says nothing: dropped.
+        assertNull(
+            found(SearchKind.GENRES, """{"genres": [{"name": "rock", "reason": "[S1]", "source": "$discogs"}]}"""),
+        )
         // The shape before #952, the pages listed together: nothing kept.
         assertNull(found(SearchKind.GENRES, """{"genres": ["folk rock"], "sources": ["$discogs"]}"""))
     }

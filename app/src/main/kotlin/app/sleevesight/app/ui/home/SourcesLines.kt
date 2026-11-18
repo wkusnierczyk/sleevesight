@@ -180,9 +180,10 @@ internal fun withAlbum(
  * check*, while the genres *Genres* composes ([composedGenres], *Find the lyrics*' answer from
  * [search] with them) still weigh its answer ([checkedPage]), and not again when another line has its
  * address; after it, the pages the song's explanation from [search] cites (#1067, [explainedPages]),
- * fresh or kept, named *explanation*, each address once. A reason's citations, the check's and the
- * explanation's show these ids by address ([shownLine], [webLineOf], [lineOf]), so they never point at another
- * page.
+ * fresh or kept, named *explanation*, each address once; last, under an empty *Genres*, the pages
+ * the reasons of *Ask AI*'s genres cite (#952, [answeredGenrePages]), named *genres*. A reason's
+ * citations, the check's and the explanation's show these ids by address ([shownLine], [webLineOf],
+ * [lineOf]), so they never point at another page.
  */
 @Composable
 internal fun sourcesLines(
@@ -230,8 +231,15 @@ internal fun sourcesLines(
         track?.let { search.answered(it, SearchKind.EXPLAIN) } ?: flowOf(AiSearch.None)
     }.collectAsState(AiSearch.None)
     val explanation = explainedPages(explained)
-    return remember(genreLines, checked, explanation) {
-        withPages(withPages(genreLines, checked, LinePurpose.VOCALS_CHECK), explanation, LinePurpose.EXPLANATION)
+    // The pages the reasons of *Ask AI*'s genres cite (#952), read only, under an empty *Genres* alone.
+    val asked by remember(search, track?.normalized, track?.nowPlaying?.duration, track?.nowPlaying?.album) {
+        track?.let { search.answered(it, SearchKind.GENRES) } ?: flowOf(AiSearch.None)
+    }.collectAsState(AiSearch.None)
+    val reasoned = answeredGenrePages(asked).takeIf { track?.genres?.hasTags != true }.orEmpty()
+    return remember(genreLines, checked, explanation, reasoned) {
+        val explained =
+            withPages(withPages(genreLines, checked, LinePurpose.VOCALS_CHECK), explanation, LinePurpose.EXPLANATION)
+        withPages(explained, reasoned, LinePurpose.GENRES)
     }
 }
 

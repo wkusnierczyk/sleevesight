@@ -154,7 +154,8 @@ sealed interface SearchReading {
  *   insight's text is ([GroundingCheck]): from the model's knowledge, its sentences citing `[AI]`;
  *   from the web, its page ([GENRE_PAGE_ID], `S1`, the entry's `source`), the model's own knowledge
  *   not allowed. A sentence citing nothing, or what it may not, is kept, shown dimmed; a genre with
- *   no reason, or none of whose sentences is backed, is dropped, its chip never shown; none left,
+ *   no reason, one of citations or marks alone, or none of whose sentences is backed, is dropped,
+ *   its chip never shown; none left,
  *   nothing usable.
  * - **Lyrics** ([SearchKind.LYRICS]): only `https` links whose host is Genius or a site of
  *   MusicBrainz's lyrics whitelist, or a subdomain of one, look-alikes rejected; one per site, the
@@ -532,6 +533,8 @@ private fun reasonIn(
             ?.takeIf {
                 it.length <= AiSearchAnswers.REASON_MAX && !EXPLANATION_ADDRESS.containsMatchIn(masked(it, artists))
             }
+            // Words, not citations alone ("[AI]", "[S1]") nor marks: a reason that says nothing is none.
+            ?.takeIf { it.replace(CITATION_MARK, "").any(Char::isLetterOrDigit) }
     // From the web, its page, or none: no page found, no reason.
     val pages = page?.let { found -> listOfNotNull(found(entry)?.let { CitedPage(AiSearchAnswers.GENRE_PAGE_ID, it) }) }
     val grounded =
@@ -543,6 +546,10 @@ private fun reasonIn(
         grounded?.paragraphs?.flatten()?.any { it.status == SentenceStatus.OK || it.status == SentenceStatus.MODEL }
     return if (grounded != null && backed == true) SearchAnswer.Explanation(grounded, pages.orEmpty()) else null
 }
+
+// A citation in a genre's reason (#952), `[AI]` or `[S1]`, whatever it holds: removed, what is left
+// must have words. The brackets escaped, inside the class too, for ICU.
+private val CITATION_MARK = Regex("""\[[^\]]*\]""")
 
 // [text] with each of [names] (not blank) put as a plain word, matched in any case.
 private fun masked(
