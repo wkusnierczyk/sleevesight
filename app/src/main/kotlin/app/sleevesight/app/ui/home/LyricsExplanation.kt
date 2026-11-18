@@ -23,6 +23,7 @@ import app.sleevesight.app.ui.openWebLink
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.synthesis.CheckedSentence
 import app.sleevesight.core.synthesis.CitedPage
+import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SentenceStatus
 import app.sleevesight.core.synthesis.sameAddress
@@ -41,12 +42,17 @@ import app.sleevesight.core.synthesis.sameAddress
  * an insight's citation does; a page *Sources* has no line for (no evidence to add it to) keeps the
  * id it was given and opens in the browser. A screen reader hears each citation as "Source S7", and
  * has each line as an action of the text too, as an insight's paragraph offers its lines.
+ *
+ * Also a genre's reason from *Ask AI* (#952), tagged [tag]: one from the model's own knowledge, as
+ * its check allowed it ([app.sleevesight.core.synthesis.GroundedText.allowModel]), shows each `[AI]`
+ * as an insight's **AI** chip, read "From the AI model’s own knowledge, not verified".
  */
 @Composable
 internal fun AiExplanation(
     answer: SearchAnswer.Explanation,
     lines: EvidenceSet? = null,
     onCite: (String) -> Unit = {},
+    tag: String = LYRICS_EXPLANATION_TAG,
 ) {
     val uris = LocalUriHandler.current
     val resources = LocalResources.current
@@ -54,6 +60,7 @@ internal fun AiExplanation(
     val flagged = dimmedText()
     val byId = remember(answer, lines) { citedLines(answer.pages, lines) }
     val sentences = answer.grounded.paragraphs.flatten()
+    val modelAllowed = answer.grounded.allowModel
     val runs = remember(answer) { sentences.zip(shown(sentences.map { it.text }, checked = true)) }
     // The sentences that end with a `?` chip (#954): the last of each run of doubtful ones shown, the
     // text drawn as one paragraph; a sentence that shows as nothing neither ends a run nor breaks one.
@@ -64,7 +71,8 @@ internal fun AiExplanation(
     val spoken =
         runs.withIndex().joinToString(" ") { (i, run) ->
             val (sentence, parts) = run
-            spokenSentence(sentence, parts, byId, if (marked[i]) uncitedMarked else uncited, resources)
+            val said = if (marked[i]) uncitedMarked else uncited
+            spokenSentence(sentence, parts, CitedIds(byId, modelAllowed), said, resources)
         }
     // A citation's line in *Sources*, or, with none, its page in the browser.
     val open = { cited: CitedLine -> if (cited.inSources) onCite(cited.shown) else openWebLink(uris, cited.url) }
@@ -73,13 +81,15 @@ internal fun AiExplanation(
         val note = LocalNoteFocus.current?.takeIf { dimmed }
         val seeNote = stringResource(R.string.home_cite_see_note)
         val text =
-            explanationText(runs, byId, ExplanationLooks(chips, flagged, note, marked)) { id -> byId[id]?.let(open) }
+            explanationText(runs, byId, ExplanationLooks(chips, flagged, note, marked, modelAllowed)) { id ->
+                byId[id]?.let(open)
+            }
         val exported = remember(text) { withoutIsolates(text) }
         Text(
             text,
             style = citedTextStyle(MaterialTheme.typography.bodyLarge),
             modifier =
-                Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
+                Modifier.testTag(tag).semantics {
                     this.text = exported
                     contentDescription = spoken
                     customActions =
@@ -105,13 +115,24 @@ internal fun AiExplanation(
 }
 
 // How the explanation's text looks: its citations' [chips], a doubtful sentence's look ([flagged]),
-// the note its `?` chips go to ([note], #954), and which sentences end with one ([marked]).
+// the note its `?` chips go to ([note], #954), which sentences end with one ([marked]), and whether
+// `[AI]` is an **AI** chip ([modelAllowed], a genre's reason from the model's knowledge, #952).
 private class ExplanationLooks(
     val chips: CiteStyles,
     val flagged: SpanStyle,
     val note: NoteFocus?,
     val marked: List<Boolean>,
+    val modelAllowed: Boolean = false,
 )
+
+// The pages cited, by the id each was given ([byId]), and whether `[AI]` is allowed ([modelAllowed]).
+private class CitedIds(
+    val byId: Map<String, CitedLine>,
+    val modelAllowed: Boolean,
+) {
+    // Whether citing [id] is the model's own knowledge, allowed (#952).
+    fun model(id: String): Boolean = modelAllowed && id == GroundingCheck.MODEL_ID
+}
 
 // Which of [runs] end with a `?` chip (#954, [runEnds]), among those that show.
 private fun chipEnds(runs: List<Pair<CheckedSentence, List<ShownRun>>>): List<Boolean> {
@@ -219,7 +240,9 @@ private fun AnnotatedString.Builder.appendParts(
             is ShownRun.Text -> appendText(part, flagged)
             is ShownRun.Cite -> {
                 val cited = byId[part.id]
-                if (cited == null) {
+                if (cited == null && looks.modelAllowed && part.id == GroundingCheck.MODEL_ID) {
+                    appendCite(part.id, part.id, CiteKind.MODEL, looks.chips, open)
+                } else if (cited == null) {
                     appendCite(part.id, part.id, CiteKind.UNKNOWN, looks.chips, open)
                 } else {
                     // Tagged by the line it opens, as an insight's chip is; tapped, by its own id.
@@ -231,12 +254,13 @@ private fun AnnotatedString.Builder.appendParts(
 }
 
 // [sentence] ([parts]) as a screen reader hears it: each citation "Source S7", by its line in
-// *Sources*, or that no such page was given; a doubtful one said to be not cited, then its `?` chip
-// (#954), "Not backed, see the note" ([uncited], both).
+// *Sources*, or that no such page was given; `[AI]`, where allowed, "From the AI model’s own
+// knowledge, not verified" (#952); a doubtful one said to be not cited, then its `?` chip (#954),
+// "Not backed, see the note" ([uncited], both).
 private fun spokenSentence(
     sentence: CheckedSentence,
     parts: List<ShownRun>,
-    byId: Map<String, CitedLine>,
+    ids: CitedIds,
     uncited: String,
     resources: Resources,
 ): String {
@@ -246,9 +270,14 @@ private fun spokenSentence(
                 when (part) {
                     is ShownRun.Text -> part.text
                     is ShownRun.Cite -> {
-                        val cited = byId[part.id]
-                        val said = if (cited != null) R.string.home_cite else R.string.home_lyrics_cite_unknown
-                        " (${resources.getString(said, cited?.shown ?: part.id)}) "
+                        val cited = ids.byId[part.id]
+                        val said =
+                            when {
+                                cited != null -> resources.getString(R.string.home_cite, cited.shown)
+                                ids.model(part.id) -> resources.getString(R.string.home_cite_model)
+                                else -> resources.getString(R.string.home_lyrics_cite_unknown, part.id)
+                            }
+                        " ($said) "
                     }
                 }
             }.replace(SPACES, " ")

@@ -31,11 +31,15 @@ sealed interface SearchAnswer {
 
     /**
      * *Genres*' answer: labels of the app's fixed list, in the answer's order, at most five; from the
-     * web (#801), the pages that give them ([sources]).
+     * web (#801), the pages their reasons cite ([sources]), in that order, each once. Each genre's
+     * reason (#952), by its identity ([reasons]): why the track is that genre, checked and cited as
+     * an explanation is ([Explanation]: its page `S1` from the web, `[AI]` from the model's own
+     * knowledge); a genre the answer gives no usable reason for is not kept.
      */
     data class Genres(
         val genres: List<GenreLabel>,
         val sources: List<String> = emptyList(),
+        val reasons: Map<String, Explanation> = emptyMap(),
     ) : SearchAnswer
 
     /** *Lyrics*' answer: one page per site, as *Lyrics* links MusicBrainz's (`lyricsLinks`). */
@@ -145,7 +149,14 @@ sealed interface SearchReading {
  *   injects instructions, or a model that rambles, cannot fill the panel.
  * - **Genres** ([SearchKind.GENRES]): only names on the app's fixed list ([vocabulary]), matched as a
  *   source's tags are ([GenreVocabulary.labelsFor]: case and spacing aside, a synonym's spelling as
- *   one genre), once each, in the answer's order, at most five.
+ *   one genre), once each, in the answer's order, at most five; each with its reason (#952), on one
+ *   line, at most [REASON_MAX] characters, none with a link or a web address, checked as an
+ *   insight's text is ([GroundingCheck]): from the model's knowledge, its sentences citing `[AI]`;
+ *   from the web, its page ([GENRE_PAGE_ID], `S1`, the entry's `source`), the model's own knowledge
+ *   not allowed. A sentence citing nothing, or what it may not, is kept, shown dimmed; a genre with
+ *   no reason, one of citations or marks alone, or none of whose sentences is backed, is dropped,
+ *   its chip never shown; none left,
+ *   nothing usable.
  * - **Lyrics** ([SearchKind.LYRICS]): only `https` links whose host is Genius or a site of
  *   MusicBrainz's lyrics whitelist, or a subdomain of one, look-alikes rejected; one per site, the
  *   one whose path names the track's artist where there are several, as `lyricsLinks` chooses
@@ -166,8 +177,8 @@ sealed interface SearchReading {
  * **From the web** (#801, `pages` given to [read]): every value names the page it came from, one of
  * the pages the searches found ([sameAddress]: its fragment and a closing `/` aside); a value with
  * none, or another, is dropped, as a value that fails a check is. A date's page is its own
- * (`album_date.source`, `first_release.source`, `original.source`); the genres' pages are listed
- * together (`sources`), and with none of them found, no genre is kept; a lyrics link is a page
+ * (`album_date.source`, `first_release.source`, `original.source`); a genre's is its own too
+ * (`genres[].source`, #952), and a genre with none found is not kept; a lyrics link is a page
  * itself, so it must be one found.
  */
 class AiSearchAnswers(
@@ -205,7 +216,7 @@ class AiSearchAnswers(
             } else {
                 when (kind) {
                     SearchKind.DATES -> dates(answer)
-                    SearchKind.GENRES -> genres(answer)
+                    SearchKind.GENRES -> genres(answer, artists, page = null)
                     SearchKind.LYRICS -> lyrics(answer, artists)
                     SearchKind.DEFINITION -> definition(answer)
                     SearchKind.EXPLAIN, SearchKind.SPELLING -> null
@@ -224,10 +235,7 @@ class AiSearchAnswers(
         val found = { address: String? -> address?.let { a -> pages.firstOrNull { sameAddress(it, a) } } }
         return when (kind) {
             SearchKind.DATES -> webDates(answer, found)
-            SearchKind.GENRES -> {
-                val sources = answer.strings("sources").mapNotNull(found).distinct()
-                genres(answer)?.takeIf { sources.isNotEmpty() }?.copy(sources = sources)
-            }
+            SearchKind.GENRES -> genres(answer, artists) { entry -> found(entry.text("source")) }
             SearchKind.LYRICS ->
                 pages(answer.strings("lyrics_urls").mapNotNull(found), artists, accentFolder)
                     .takeIf { it.isNotEmpty() }
@@ -300,12 +308,35 @@ class AiSearchAnswers(
         return Original(artist, date, on)
     }
 
-    private fun genres(answer: JsonObject): SearchAnswer.Genres? {
-        val names = answer.strings("genres")
-        return vocabulary
-            .labelsFor(names, level = GenreLevel.TRACK)
-            .takeIf { it.isNotEmpty() }
-            ?.let(SearchAnswer::Genres)
+    // The genres in [answer] (#952: `genres`, each `{"name", "reason"}`, from the web with its
+    // `source`), each with its reason checked ([reasonIn]); [page] gives an entry's page found, null
+    // for an answer from the model's knowledge. A name with no usable reason is left out before the
+    // names are matched, so it takes no place among the five.
+    private fun genres(
+        answer: JsonObject,
+        artists: List<String>,
+        page: ((JsonObject) -> String?)?,
+    ): SearchAnswer.Genres? {
+        val reasoned =
+            (answer["genres"] as? JsonArray).orEmpty().mapNotNull { element ->
+                val entry = element as? JsonObject ?: return@mapNotNull null
+                val name = entry.name("name") ?: return@mapNotNull null
+                val reason = reasonIn(entry, artists, page) ?: return@mapNotNull null
+                name to reason
+            }
+        val labels = vocabulary.labelsFor(reasoned.map { it.first }, level = GenreLevel.TRACK)
+        // Each label's reason: the first entry whose name is that genre.
+        val reasons =
+            labels.associate { label ->
+                label.identity to
+                    reasoned
+                        .first { (name, _) ->
+                            vocabulary.labelsFor(listOf(name), level = GenreLevel.TRACK).firstOrNull()?.identity ==
+                                label.identity
+                        }.second
+            }
+        val sources = labels.flatMap { reasons.getValue(it.identity).pages }.map { it.url }.distinct()
+        return labels.takeIf { it.isNotEmpty() }?.let { SearchAnswer.Genres(it, sources, reasons) }
     }
 
     private fun lyrics(
@@ -346,6 +377,15 @@ class AiSearchAnswers(
          * citations, with room to spare.
          */
         const val EXPLANATION_MAX: Int = 1_000
+
+        /**
+         * The longest reason for a genre kept (#952), in characters: one or two short sentences, with
+         * their citations, and room to spare; one longer is a model that rambles.
+         */
+        const val REASON_MAX: Int = 500
+
+        /** The id a genre's reason from the web cites its page by (#952): the entry's own `source`. */
+        const val GENRE_PAGE_ID: String = "S1"
 
         /** The marks of Markdown or HTML a definition (#786) may not carry. */
         const val MARKUP: String = "<>[]`*#|"
@@ -475,6 +515,41 @@ private fun explanationIn(
     val backed = sentences.any { it.status == SentenceStatus.OK }
     return if (grounded == null || !backed) null else SearchAnswer.Explanation(grounded, pages)
 }
+
+// A genre's reason in [entry] (#952), checked as an explanation's text is ([explanationIn]): from the
+// web ([page] not null), against its page, the entry's `source` found among the pages, which it cites
+// as [AiSearchAnswers.GENRE_PAGE_ID], the model's own knowledge not allowed; from the model's
+// knowledge, citing `[AI]`. Null for none, one too long or with an address, one whose page was not
+// found, or one no sentence of which is backed.
+private fun reasonIn(
+    entry: JsonObject,
+    artists: List<String>,
+    page: ((JsonObject) -> String?)?,
+): SearchAnswer.Explanation? {
+    val text =
+        entry
+            .text("reason")
+            ?.let(::oneLine)
+            ?.takeIf {
+                it.length <= AiSearchAnswers.REASON_MAX && !EXPLANATION_ADDRESS.containsMatchIn(masked(it, artists))
+            }
+            // Words, not citations alone ("[AI]", "[S1]") nor marks: a reason that says nothing is none.
+            ?.takeIf { it.replace(CITATION_MARK, "").any(Char::isLetterOrDigit) }
+    // From the web, its page, or none: no page found, no reason.
+    val pages = page?.let { found -> listOfNotNull(found(entry)?.let { CitedPage(AiSearchAnswers.GENRE_PAGE_ID, it) }) }
+    val grounded =
+        text?.takeIf { page == null || pages?.isNotEmpty() == true }?.let {
+            val ids = pages.orEmpty().map(CitedPage::id).toSet()
+            (GroundingCheck.check(it, ids, allowModel = page == null) as? InsightReply.Written)?.grounded
+        }
+    val backed =
+        grounded?.paragraphs?.flatten()?.any { it.status == SentenceStatus.OK || it.status == SentenceStatus.MODEL }
+    return if (grounded != null && backed == true) SearchAnswer.Explanation(grounded, pages.orEmpty()) else null
+}
+
+// A citation in a genre's reason (#952), `[AI]` or `[S1]`, whatever it holds: removed, what is left
+// must have words. The brackets escaped, inside the class too, for ICU.
+private val CITATION_MARK = Regex("""\[[^\]]*\]""")
 
 // [text] with each of [names] (not blank) put as a plain word, matched in any case.
 private fun masked(

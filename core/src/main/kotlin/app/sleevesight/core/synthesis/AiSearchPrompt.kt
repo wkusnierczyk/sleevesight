@@ -130,8 +130,17 @@ object AiSearchPrompt {
     const val EXPLAIN_VERSION: Int = 1
 
     /**
+     * The version of [SearchKind.GENRES]' prompts, from the model's knowledge and from the web alike
+     * (the key tells the two apart, `CardKey.modelKnowledge`), their own since each genre came with
+     * its reason (#952): 2. An answer kept from before has no reason, so none of its genres would be
+     * kept ([AiSearchAnswers]); a new version asks again rather than showing it as nothing found.
+     */
+    const val GENRES_VERSION: Int = 2
+
+    /**
      * The version of [kind]'s prompt, part of its answer's cache key: [VERSION], or
-     * [DEFINITION_VERSION], or [EXPLAIN_VERSION]; with web search ([web]), [WEB_VERSION].
+     * [DEFINITION_VERSION], [EXPLAIN_VERSION] or [GENRES_VERSION]; with web search ([web]),
+     * [WEB_VERSION].
      */
     fun version(
         kind: SearchKind,
@@ -141,6 +150,7 @@ object AiSearchPrompt {
             kind == SearchKind.DEFINITION -> DEFINITION_VERSION
             kind == SearchKind.EXPLAIN -> EXPLAIN_VERSION
             kind == SearchKind.SPELLING -> SpellingPrompt.VERSION
+            kind == SearchKind.GENRES -> GENRES_VERSION
             web -> WEB_VERSION
             else -> VERSION
         }
@@ -227,7 +237,8 @@ object AiSearchPrompt {
                     "\"first_release\": {\"date\": \"YYYY-MM-DD\", \"title\": \"…\", \"type\": \"album|single|EP\"}, " +
                     "\"original\": {\"artist\": \"…\", \"year\": \"YYYY\", " +
                     "\"release\": {\"title\": \"…\", \"date\": \"YYYY-MM-DD\", \"type\": \"album|single|EP\"}}}"
-            SearchKind.GENRES -> "{\"genres\": [\"…\", \"…\"]}"
+            SearchKind.GENRES ->
+                "{\"genres\": [{\"name\": \"…\", \"reason\": \"First sentence. [AI] Second sentence. [AI]\"}]}"
             SearchKind.LYRICS -> "{\"lyrics_urls\": [\"https://…\"]}"
             SearchKind.DEFINITION -> "{\"definition\": \"…\"}"
             SearchKind.EXPLAIN -> ExplainPrompt.SHAPE
@@ -243,7 +254,8 @@ object AiSearchPrompt {
      *   from the album.
      * - [SearchKind.GENRES]: at most five, most specific first, of the app's fixed list ([genres],
      *   `GenreVocabulary`, some 80 names: the app keeps no other, so a name off it is a wasted answer),
-     *   and none for the artist in general when the track differs.
+     *   and none for the artist in general when the track differs; each with why the track is that
+     *   genre (#952, [genreRules]), each sentence citing `[AI]`, and none without one.
      * - [SearchKind.LYRICS]: only the sites MusicBrainz allows a lyrics link to ([LyricsSite], named
      *   with their domains, as the app checks them), the page of this artist's version where there
      *   is one, and never a URL made up from the title: a link the model has not seen is the likeliest
@@ -268,12 +280,7 @@ object AiSearchPrompt {
                     "- original: only when this track is a cover of a song first recorded by another artist: " +
                         "that artist, the year of the first recording, and the release it first came out on.",
                 )
-            SearchKind.GENRES ->
-                listOf(
-                    "- genres: at most five genre names for this track, the most specific first, only from " +
-                        "this list: " + genres.joinToString(", ") + ".",
-                    "- Name the genres of this track; not the artist's other genres when the track differs.",
-                )
+            SearchKind.GENRES -> genreRules(genres, web = false)
             SearchKind.LYRICS ->
                 listOf(
                     "- lyrics_urls: the https addresses of this song's lyrics pages, only on these sites: " +
@@ -294,6 +301,36 @@ object AiSearchPrompt {
             SearchKind.EXPLAIN -> ExplainPrompt.rules(dates)
             SearchKind.SPELLING -> SpellingPrompt.RULES
         }
+
+    /**
+     * The rules of [SearchKind.GENRES]' answer (#952), from the model's knowledge or from the [web]:
+     * up to five names of the list ([genres]), each with why this track is that genre, in one or two
+     * short sentences of plain text about what marks it (not a definition of the genre, which the
+     * panel shows above it), each sentence citing where it is from: `[AI]`, the model's own
+     * knowledge; from the web, its page, `[S1]` ([AiSearchAnswers.GENRE_PAGE_ID]), standing for the
+     * entry's `source`. A genre with no reason is left out: the app keeps none without one.
+     */
+    fun genreRules(
+        genres: Collection<String>,
+        web: Boolean,
+    ): List<String> =
+        listOf(
+            "- genres: at most five genres for this track, the most specific first, each name only from " +
+                "this list: " + genres.joinToString(", ") + ".",
+            "- Name the genres of this track; not the artist's other genres when the track differs.",
+            "- reason: one or two short sentences on why this track is that genre: what in its sound, style " +
+                "or making marks it as that genre. Not a definition of the genre.",
+            if (web) {
+                "- source: the address of the page that says this track or its artist is that genre; the " +
+                    "reason only from what that page says. End every sentence of the reason with " +
+                    "[${AiSearchAnswers.GENRE_PAGE_ID}], which stands for that page."
+            } else {
+                "- End every sentence of the reason with [AI], as it is from your own knowledge."
+            },
+            "- Plain text only in a reason: no Markdown, no HTML, no links or web addresses, no line breaks.",
+            ExplainPrompt.QUOTE_RULE,
+            "- Leave out a genre you cannot give a reason for.",
+        )
 
     /**
      * The track, fenced as data, then the question: each field on one line ([InsightPrompt.oneLine]),
@@ -535,7 +572,10 @@ object WebPrompt {
                     "\"original\": {\"artist\": \"…\", \"year\": \"YYYY\", " +
                     "\"release\": {\"title\": \"…\", \"date\": \"YYYY-MM-DD\", \"type\": \"album|single|EP\"}, " +
                     "\"source\": \"https://…\"}}"
-            SearchKind.GENRES -> "{\"genres\": [\"…\", \"…\"], \"sources\": [\"https://…\"]}"
+            SearchKind.GENRES ->
+                "{\"genres\": [{\"name\": \"…\", " +
+                    "\"reason\": \"First sentence. [${AiSearchAnswers.GENRE_PAGE_ID}] Second sentence. " +
+                    "[${AiSearchAnswers.GENRE_PAGE_ID}]\", \"source\": \"https://…\"}]}"
             SearchKind.LYRICS -> "{\"lyrics_urls\": [\"https://…\"]}"
             SearchKind.DEFINITION, SearchKind.EXPLAIN, SearchKind.SPELLING -> AiSearchPrompt.shape(kind)
         }
@@ -549,9 +589,7 @@ object WebPrompt {
         genres: Collection<String>,
     ): List<String> =
         when (kind) {
-            SearchKind.GENRES ->
-                AiSearchPrompt.rules(kind, genres) +
-                    "- sources: the addresses of the pages that give these genres for this track or its artist."
+            SearchKind.GENRES -> AiSearchPrompt.genreRules(genres, web = true)
             SearchKind.LYRICS ->
                 listOf(
                     "- lyrics_urls: the addresses of pages among those found that hold this song's lyrics, " +

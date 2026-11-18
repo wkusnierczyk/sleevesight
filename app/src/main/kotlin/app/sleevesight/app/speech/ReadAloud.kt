@@ -14,6 +14,7 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.GroundedText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -151,6 +152,22 @@ class ReadAloud(
             scope.launch {
                 reasons.collect { now -> shown(id, ((now as? GenreReason.Shown)?.state as? InsightState.Written)) }
             }
+    }
+
+    /**
+     * Reads [grounded], the reason *Ask AI* gave for [track]'s [genre] with the genre (#952), after
+     * its [question] (*Why is this …?*), as a genre's reason is read ([readGenreReason]), under the
+     * same button's id. It is kept with the answer, which nothing rewrites in its place, so nothing
+     * is followed: it stops as any reading does, with the track or a tap.
+     */
+    fun readAnswerReason(
+        track: TrackState,
+        genre: String,
+        question: String,
+        grounded: GroundedText,
+    ) {
+        val written = InsightState.Written(grounded, cached = true)
+        read(Reading(Reading.genreReason(genre), track.nowPlaying, written, script(track, question, written), locale()))
     }
 
     /**

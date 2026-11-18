@@ -242,17 +242,69 @@ class AiSearchAnswersTest {
 
     @Test
     fun genresOnTheListAreKeptOnceEachInTheAnswersOrderAtMostFive() {
-        assertEquals(listOf("Indie Rock", "Post-Punk"), genres("{\"genres\": [\"indie rock\", \"Post-punk\"]}"))
-        // Off the list, dropped; two spellings of one genre, once; case and spaces aside.
+        assertEquals(listOf("Indie Rock", "Post-Punk"), genres(reasoned("indie rock", "Post-punk")))
+        // Off the list, dropped; two spellings of one genre, once; case and spaces aside; not an entry, none.
         assertEquals(
             listOf("Hip Hop", "Rock"),
-            genres("{\"genres\": [\"space jazz from mars\", \"  Hip Hop \", \"hip-hop\", \"ROCK\", 7]}"),
+            genres(reasoned("space jazz from mars", "  Hip Hop ", "hip-hop", "ROCK").replace("]}", ", 7]}")),
         )
-        assertEquals(
-            5,
-            genres("{\"genres\": [\"rock\", \"pop\", \"jazz\", \"blues\", \"folk\", \"soul\", \"punk\"]}")?.size,
-        )
+        assertEquals(5, genres(reasoned("rock", "pop", "jazz", "blues", "folk", "soul", "punk"))?.size)
     }
+
+    @Test
+    fun eachGenreKeepsItsReasonCitingTheModelsKnowledge() {
+        val reply =
+            "{\"genres\": [{\"name\": \"electronic\", " +
+                "\"reason\": \"Built from synthesisers and drum machines. [AI] Its beat is programmed. [AI]\"}]}"
+        val answer = (answers.read(SearchKind.GENRES, reply) as SearchReading.Found).answer as SearchAnswer.Genres
+        val reason = answer.reasons.getValue(answer.genres.single().identity)
+        val sentences = reason.grounded.paragraphs.flatten()
+        assertEquals(listOf(SentenceStatus.MODEL, SentenceStatus.MODEL), sentences.map { it.status })
+        assertEquals("Built from synthesisers and drum machines. [AI]", sentences.first().text.trim())
+        assertTrue(reason.grounded.fromModelAlone)
+        assertEquals(emptyList(), reason.pages)
+        assertEquals(emptyList(), answer.sources)
+    }
+
+    @Test
+    fun aGenreWithNoUsableReasonIsDroppedAndTakesNoPlace() {
+        // No reason, a blank one, one citing nothing, one too long, one with an address, a bare name.
+        val reply =
+            "{\"genres\": [{\"name\": \"downtempo\"}, {\"name\": \"house\", \"reason\": \"  \"}, " +
+                "{\"name\": \"techno\", \"reason\": \"It is techno.\"}, " +
+                "{\"name\": \"trance\", \"reason\": \"${"a".repeat(AiSearchAnswers.REASON_MAX)} [AI]\"}, " +
+                "{\"name\": \"ambient\", \"reason\": \"See ambient.example.com for more. [AI]\"}, " +
+                "\"dub\", {\"name\": \"electronic\", \"reason\": \"Synthesisers throughout. [AI]\"}]}"
+        assertEquals(listOf("Electronic"), genres(reply))
+        // Citations or marks alone, no words: no reason, the genre dropped before the five are counted.
+        assertEquals(
+            listOf("Electronic"),
+            genres(
+                "{\"genres\": [{\"name\": \"house\", \"reason\": \"[AI]\"}, " +
+                    "{\"name\": \"techno\", \"reason\": \"** [AI] . [AI]\"}, " +
+                    "{\"name\": \"electronic\", \"reason\": \"Synthesisers. [AI]\"}]}",
+            ),
+        )
+        // None left: nothing usable, as the panel's "found nothing".
+        assertEquals(
+            SearchReading.NothingUsable,
+            answers.read(SearchKind.GENRES, "{\"genres\": [{\"name\": \"downtempo\"}, \"rock\"]}"),
+        )
+        // A reason with one backed sentence is kept, its sentence citing nothing dimmed.
+        val mixed = "{\"genres\": [{\"name\": \"rock\", \"reason\": \"Loud guitars. [AI] Surely rock.\"}]}"
+        val answer = (answers.read(SearchKind.GENRES, mixed) as SearchReading.Found).answer as SearchAnswer.Genres
+        val statuses =
+            answer.reasons.values
+                .single()
+                .grounded.paragraphs
+                .flatten()
+                .map { it.status }
+        assertEquals(listOf(SentenceStatus.MODEL, SentenceStatus.UNCITED), statuses)
+    }
+
+    // A reply naming [names], each with a reason from the model's knowledge.
+    private fun reasoned(vararg names: String): String =
+        "{\"genres\": [" + names.joinToString(", ") { "{\"name\": \"$it\", \"reason\": \"Its sound. [AI]\"}" } + "]}"
 
     private fun lyrics(
         reply: String,

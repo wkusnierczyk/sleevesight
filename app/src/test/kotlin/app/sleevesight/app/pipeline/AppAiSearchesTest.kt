@@ -50,7 +50,10 @@ class AppAiSearchesTest {
         const val CLEAR_WAIT_MS = 300L
     }
 
-    private val provider = CountingProvider().apply { reply = { "{\"genres\": [\"folk rock\"]}" } }
+    private val provider =
+        CountingProvider().apply {
+            reply = { "{\"genres\": [{\"name\": \"folk rock\", \"reason\": \"Its guitars. [AI]\"}]}" }
+        }
     private val clock = MovedClock()
     private val settings = MutableStateFlow<Settings?>(Settings(aiProvider = ProviderId.ANTHROPIC))
     private val cache = CardCache(clock = clock) { settings.value?.historyLifetime }

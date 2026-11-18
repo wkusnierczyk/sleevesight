@@ -33,7 +33,7 @@ import kotlin.test.assertTrue
  * failures shown and not kept; a search stopped before it settles shows and keeps nothing.
  */
 class AiSearchesTest {
-    private val provider = FakeProvider { FakeProvider.done("{\"genres\": [\"folk rock\", \"rock\"]}") }
+    private val provider = FakeProvider { FakeProvider.done(GENRES_REPLY) }
     private val cache = MemoryCache()
     private val answers = AiSearchAnswers(GenreVocabulary.load(JvmResourceReader), JvmAccentFolder)
     private val searches = AiSearches(AiAccess(provider, Secret("k")), cache, JvmHasher, answers)
@@ -125,7 +125,7 @@ class AiSearchesTest {
             val key = checkNotNull(searches.key(track, SearchKind.GENRES, settings))
             // Kept in its envelope (#801), with how it was asked.
             val kept = AiSearches.Kept.of(checkNotNull(cache.cards[key]))
-            assertEquals("{\"genres\": [\"folk rock\", \"rock\"]}", kept.reply)
+            assertEquals(GENRES_REPLY, kept.reply)
             assertEquals(1, kept.calls)
             assertEquals(last, searches.kept(key, SearchKind.GENRES, track)?.state)
         }
@@ -245,3 +245,8 @@ class AiSearchesTest {
             assertEquals(state, kept.state)
         }
 }
+
+// A reply for *Genres* (#952): each genre with its reason, from the model's knowledge.
+private const val GENRES_REPLY: String =
+    "{\"genres\": [{\"name\": \"folk rock\", \"reason\": \"Acoustic guitars over a rock beat. [AI]\"}, " +
+        "{\"name\": \"rock\", \"reason\": \"A full band drives it. [AI]\"}]}"

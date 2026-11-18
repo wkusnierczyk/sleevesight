@@ -3,6 +3,8 @@ package app.sleevesight.app.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -14,12 +16,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiGenreList
 import app.sleevesight.app.pipeline.AiSearch
 import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.PanelLibrary
+import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
@@ -32,14 +39,15 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.LaterLabels
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.withLibrary
+import app.sleevesight.core.sources.WebPage
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
-// The genres *Search with AI* named under an empty *Genres* (#773): chips as the panel's, each unfolding
-// its genre under them, which shows what the genre is and nothing else.
+// The genres *Ask AI* named under an empty *Genres* (#773): chips as the panel's, each unfolding its
+// genre under them, which shows what the genre is, then why the track is that genre (#952).
 
 /**
  * What *Search with AI* in *Genres*' panel or page (#773) works from, for [track], under no genre and
@@ -92,7 +100,7 @@ internal fun GenresSearch(
     AiSearchBlock(PanelSearch(ask.feed, search.track, search.header), SearchKind.GENRES) { answer, model ->
         val asked = weighed.track
         if (answer is SearchAnswer.Genres && asked != null) {
-            AiGenres(asked, answer.genres, notes.notes, search, model)
+            AiGenres(asked, answer, notes, search, model)
             // From the web (#801): the pages that give them, under the chips, on one line (#1204).
             FromSites(answer.sources)
         }
@@ -166,32 +174,34 @@ private class LyricsFoundFeed(
 
     private fun withoutInstrumental(state: AiSearch): AiSearch {
         val answer = (state as? AiSearch.Answered)?.answer as? SearchAnswer.Genres ?: return state
-        val left = answer.genres.filter { it.identity != TrackGenres.INSTRUMENTAL }
-        return if (left.isEmpty()) {
+        val left = withoutInstrumental(answer)
+        return if (left.genres.isEmpty()) {
             AiSearch.NothingFound(state.model, state.way, state.keptAt)
         } else {
-            state.copy(answer = answer.copy(genres = left))
+            state.copy(answer = left)
         }
     }
 }
 
 /**
- * The [genres] *Search with AI* named for [track] (#773), as *Genres*' chips ([Chips]): a tap
+ * The genres *Ask AI* named for [track] ([answer], #773), as *Genres*' chips ([Chips]): a tap
  * unfolds the genre under them and a rule, as the chips of the sources' genres do ([GenresBox],
  * #786), with no heading or *Close*; another chip replaces it, the same chip folds it, and the focus
  * stays on the chip. Folded on each new track. What unfolds is the genre's definition from Wikipedia
- * ([notes], in each of its states, with *Search with AI* for one Wikipedia does not give, [search])
- * alone, the credit under the chips being the answer's: no *Why is this …?*, whose evidence does not
- * carry the genre, and no tags, as no source's tags give it.
+ * ([shown]'s notes, in each of its states, with *Ask AI* for one Wikipedia does not give, [search]),
+ * then the reason the answer gave with the genre ([AnswerReason], #952); the credit under the chips
+ * is the answer's, and no tags, as no source's tags give it.
  */
 @Composable
 internal fun AiGenres(
     track: TrackState,
-    genres: List<GenreLabel>,
-    notes: GenreNotes,
+    answer: SearchAnswer.Genres,
+    shown: PanelNotes,
     search: PanelSearch = PanelSearch(),
     model: String? = null,
 ) {
+    val genres = answer.genres
+    val notes = shown.notes
     var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
     // Marked AI, as the genres the AI's list adds are (#762, #801), credited to [model].
     val row = GenreRow(GenreLevel.TRACK, null, genres.map { TrackLabel(it, emptyList(), aiModel = model) })
@@ -221,11 +231,75 @@ internal fun AiGenres(
                         }
                     }
                     WeakEvidenceNote(track.genres.aiWeakEvidence(genre.identity), genre)
+                    answer.reasons[genre.identity]?.let { reason -> AnswerReason(track, genre, reason, shown) }
                 }
             }
         }
     }
 }
+
+/**
+ * Why [track] is [genre], as *Ask AI* said with the genre ([reason], #952), as the AI list's genres
+ * show theirs ([ReasonShown], #762): under *Why is this …?* as a heading, its sentences cited as *Explain
+ * the song*'s are ([AiExplanation]: from the web, each its page's chip, named and opening *Sources*'
+ * line for it ([shown]'s lines, which list the answer's pages, `answeredGenrePages`, and
+ * [PanelNotes.onCite]), so its id is never another page's; from the model's own
+ * knowledge, the **AI** chip at the end of each sentence, and no line saying so); then *Read aloud*
+ * alone at the right of the row under it, which reads the question, then the reason. No credit of its
+ * own: the answer's, under the chips, is its.
+ */
+@Composable
+private fun AnswerReason(
+    track: TrackState,
+    genre: GenreLabel,
+    reason: SearchAnswer.Explanation,
+    shown: PanelNotes,
+) {
+    val question = stringResource(R.string.genre_why, inSentence(genre.label))
+    val reader = shown.readAloud
+    val readAloud =
+        readAloudControl(reader, Reading.genreReason(genre.identity)) {
+            reader?.readAnswerReason(track, genre.identity, question, reason.grounded)
+        }
+    Column(Modifier.testTag(AI_GENRE_REASON_TAG), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(question, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+        AiExplanation(reason, shown.lines, shown.onCite, tag = AI_GENRE_REASON_TEXT_TAG)
+        readAloud?.let { CreditRow(null, readAloud = { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) }) }
+    }
+}
+
+/**
+ * [answer] without Instrumental (#996, for a track with lyrics found), nor its reason (#952); its
+ * pages ([SearchAnswer.Genres.sources]) those the reasons left cite, so no page is listed that no chip
+ * cites. An answer with no reasons (none kept before #952) keeps its pages.
+ */
+internal fun withoutInstrumental(answer: SearchAnswer.Genres): SearchAnswer.Genres {
+    val left = answer.genres.filter { it.identity != TrackGenres.INSTRUMENTAL }
+    if (answer.reasons.isEmpty()) return answer.copy(genres = left)
+    val reasons = answer.reasons.filterKeys { it != TrackGenres.INSTRUMENTAL }
+    val pages = left.flatMap { reasons[it.identity]?.pages.orEmpty() }.map { it.url }.distinct()
+    return answer.copy(genres = left, sources = pages, reasons = reasons)
+}
+
+/**
+ * The pages the reasons of the genres *Ask AI* in [search] names for [track] cite (#952), as its
+ * panel shows them (without Instrumental for a track with lyrics found, #996, [withoutInstrumental]),
+ * each once, in the answer's order, as web lines of *Sources* list them: each named by its site
+ * ([siteOf]), its title not kept; none for no answer, or one from the model's knowledge.
+ */
+internal fun answeredGenrePages(
+    search: AiSearch,
+    track: TrackState?,
+): List<WebPage> {
+    val answer = (search as? AiSearch.Answered)?.answer as? SearchAnswer.Genres ?: return emptyList()
+    val drops = track?.genres?.singing?.dropsInstrumental == true
+    val shown = if (drops) withoutInstrumental(answer) else answer
+    return shown.sources.map { url -> WebPage(url, null, siteOf(url)) }
+}
+
+/** The test tags of the reason *Ask AI* gave with a genre (#952), and of its text. */
+const val AI_GENRE_REASON_TAG: String = "ai-genre:reason"
+const val AI_GENRE_REASON_TEXT_TAG: String = "ai-genre:reason-text"
 
 // The AI's genre list for [track] (#762) as [notes] give it: null while none is known. A new
 // subscription only when what the list's key is made of changes, not on every state of the track.
