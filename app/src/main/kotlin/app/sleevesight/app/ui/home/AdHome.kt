@@ -24,9 +24,10 @@ import app.sleevesight.app.session.PlaybackInfo
 
 /**
  * Home while the player plays an ad (#880; the session layer's [AdPlaying]), in place of a track: the
- * player row, as for a track; in the art's place a plain tile, with nothing of the ad's (no image,
- * no text the player sends), and the playback position under it when the player gives the ad's
- * length; "Ad playing on <player>", the player named as the player row names it; under it, that the
+ * player is in the header, as for a track (its icon and menu, #1209); in the art's place a plain
+ * tile, with nothing of the ad's (no image, no text the player sends), and the playback position
+ * under it when the player gives the ad's
+ * length; "Ad playing on <player>", the player named as the header names it; under it, that the
  * next track shows when the ad ends; then, where *Key insights* would be, a note that nothing is
  * looked up or written for ads.
  *
@@ -47,7 +48,6 @@ internal fun AdHome(
         modifier = Modifier.fillMaxWidth().testTag(AD_HOME_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        PlayerRow(ad.player, playback, actions)
         // No art: the plain tile a track without art shows, never the ad's image.
         ArtAndProgress(art = null, playback = playback, duration = ad.duration)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

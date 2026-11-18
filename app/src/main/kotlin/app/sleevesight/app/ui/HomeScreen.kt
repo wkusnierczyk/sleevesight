@@ -2,7 +2,6 @@ package app.sleevesight.app.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
@@ -48,9 +46,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
@@ -63,9 +59,13 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.home.CoverPane
 import app.sleevesight.app.ui.home.CoverSlot
 import app.sleevesight.app.ui.home.HEADER_TRAVERSAL
+import app.sleevesight.app.ui.home.HeaderPlayerFeed
 import app.sleevesight.app.ui.home.LocalCoverPane
+import app.sleevesight.app.ui.home.LogoAndRecord
 import app.sleevesight.app.ui.home.NothingPlaying
 import app.sleevesight.app.ui.home.ONE_COLUMN_MAX_WIDTH
+import app.sleevesight.app.ui.home.PlayerMenuButton
+import app.sleevesight.app.ui.home.RecordButton
 import app.sleevesight.app.ui.home.SPLIT_WIDTH
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.logo.LogoSpin
@@ -96,7 +96,9 @@ import kotlin.math.min
  *
  * With [themeButton] (#636: *Theme button* on, the default), the header shows the theme button
  * before the cogwheel. With [logoSpin] (#848), the header logo's record turns while it says so and
- * notification access is on, as the player line under the header then says *Playing*.
+ * notification access is on, as the followed player then says it plays. With [player] (#1409, #1209)
+ * and access on, the record plays and pauses the followed player, and the player's own icon after it
+ * opens the player menu.
  */
 @Suppress("LongParameterList") // The header's and the body's seams, each one of Home's parts.
 @Composable
@@ -107,6 +109,7 @@ fun HomeScreen(
     report: ReportButtonState? = null,
     themeButton: ThemeButtonState? = null,
     logoSpin: StateFlow<LogoSpin>? = null,
+    player: HeaderPlayerFeed? = null,
     pipeline: @Composable () -> Unit = {},
 ) {
     val scroll = rememberScrollState()
@@ -135,6 +138,7 @@ fun HomeScreen(
                                     onOpenSettings,
                                     themeButton,
                                     if (accessGranted) logoSpin else null,
+                                    if (accessGranted) player else null,
                                 )
                             }
                         },
@@ -272,12 +276,15 @@ private fun SemanticsPropertyReceiver.headerFirst() {
 }
 
 /**
- * Home's header (#445), pinned above what scrolls: the one-line logo ([HeaderLogo], #383), which
- * scrolls Home back to the top, and at the end the cogwheel, which opens the settings, with the
- * theme button ([themeButton], #636), which opens the theme menu (#771), before it while *Theme
- * button* is on. The logo's record turns as [logoSpin] says (#848). A divider under it
- * shows once Home has scrolled. A menu icon, if one comes, goes beside the cogwheel.
+ * Home's header (#445), pinned above what scrolls: the one-line logo ([HeaderLogo], #383), whose words
+ * scroll Home back to the top, and whose record is a button of its own ([RecordButton], #1409), which
+ * plays and pauses the followed player ([player]); after the logo, while a followed player has a
+ * session, the player's own icon, which opens the player menu ([PlayerMenuButton], #1209); and at the
+ * end the cogwheel, which opens the settings, with the theme button ([themeButton], #636), which
+ * opens the theme menu (#771), before it while *Theme button* is on. The logo's record turns as
+ * [logoSpin] says (#848). A divider under it shows once Home has scrolled.
  */
+@Suppress("LongParameterList") // The header's parts, each on its own.
 @Composable
 private fun HomeHeader(
     scroll: ScrollState,
@@ -285,6 +292,7 @@ private fun HomeHeader(
     onOpenSettings: () -> Unit,
     themeButton: ThemeButtonState?,
     logoSpin: StateFlow<LogoSpin>?,
+    player: HeaderPlayerFeed?,
 ) {
     val spin = logoSpin?.collectAsState()?.value ?: LogoSpin.STILL
     // The header's box, which a debug build's bug crawls out of and back into (#848).
@@ -304,20 +312,10 @@ private fun HomeHeader(
         ) {
             // Weighted, so the buttons are measured first and keep their 48 dp at any font size; not
             // filled, so the tap target is the logo and not the row's empty middle.
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f, fill = false)
-                        .heightIn(min = 48.dp)
-                        // One button: the click and its role from `clickable`, the spoken label in
-                        // place of the logo, which says nothing itself.
-                        .clickable(role = Role.Button, onClick = onScrollToTop)
-                        .clearAndSetSemantics { contentDescription = toTop }
-                        .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                // The one-line logo (#383), in place of the name, which the label still says.
-                HeaderLogo(spin = spin, crawlSpace = { box })
+            Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+                LogoAndRecord(spin, { box }, toTop, onScrollToTop, player, Modifier.weight(1f, fill = false))
+                // The followed player's own icon (#1209), while one has a session.
+                player?.let { PlayerMenuButton(it) }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // The current theme, named and drawn, which opens the theme menu (#771), first; the

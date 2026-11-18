@@ -168,7 +168,6 @@ internal class ModelUnavailableHomeTest : PipelineHostFixture() {
                 settings = settings,
                 normalizer = Normalizer(JvmAccentFolder),
                 playerLabel = { it },
-                playerActivity = { null },
                 write = host::write,
                 stop = host::stop,
                 unavailableModel = check.shown(settings).stateIn(scope, SharingStarted.Eagerly, null),
