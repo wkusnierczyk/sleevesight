@@ -29,6 +29,8 @@ import app.sleevesight.app.pipeline.TracklistFeed
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
+import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.session.AdPlaying
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.settings.Dismissals
@@ -51,8 +53,10 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * What the home screen reads, and where its actions go: the pipeline's view, the session layer's
@@ -97,6 +101,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property releaseGroups the albums' release groups' first releases, for *Dates* (#1099).
  * @property ad the ad the player plays in place of a track (#880), which Home shows as such
  *   ([AdHome]); null while it plays none.
+ * @property keys the keys' states (never a key), for an item's insight no source has, whose line says
+ *   a source was not asked for want of its key (#1308); none known by default.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -129,6 +135,7 @@ class HomeFeed(
     val lookUpAgain: (NowPlaying) -> Unit = {},
     val tracklists: TracklistFeed = TracklistFeed.None,
     val releaseGroups: GroupFeed = GroupFeed.None,
+    val keys: Flow<Map<SecretId, SecretState>> = flowOf(emptyMap()),
 )
 
 /**
@@ -150,8 +157,10 @@ fun NowPlayingHome(
 
 /**
  * A page of Home's ([page], #447), from the same [feed] as Home, for the track playing; [onBack]
- * goes back, and the page's links go where Home's do.
+ * goes back, and the page's links go where Home's do: to a setting, [openSettingsAt] (#1308, an item's
+ * page naming a source not asked).
  */
+@Suppress("LongParameterList") // The page, what it reads, and where its taps go.
 @Composable
 fun NowPlayingPage(
     feed: HomeFeed,
@@ -159,8 +168,9 @@ fun NowPlayingPage(
     openSettings: () -> Unit = {},
     openPage: (HomePage) -> Unit = {},
     onBack: () -> Unit = {},
+    openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 ) {
-    NowPlayingPageContent(page, nowPlayingState(feed), feed.actions(openSettings, openPage), onBack)
+    NowPlayingPageContent(page, nowPlayingState(feed), feed.actions(openSettings, openPage, openSettingsAt), onBack)
 }
 
 // What [feed] publishes, as it changes. The settings are held for the process, so a screen coming
@@ -177,13 +187,13 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val unavailable by feed.unavailableModel.collectAsState()
     val guideHidden by feed.guideHidden.collectAsState()
     val ad by feed.ad.collectAsState()
-    return NowPlayingState(view, playing, playback, art, settings, unavailable, guideHidden, ad)
+    val keys by feed.keys.collectAsState(initial = emptyMap())
+    return NowPlayingState(view, playing, playback, art, settings, unavailable, guideHidden, ad, keys)
 }
 
 private fun HomeFeed.actions(
     openSettings: () -> Unit,
     openPage: (HomePage) -> Unit,
-    // Home's pages show no note that links to a setting: only Home's insight card does (#581).
     openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 ) = NowPlayingActions(
     normalize = normalizer::normalize,
@@ -227,6 +237,7 @@ internal class NowPlayingState(
     val unavailable: UnavailableModel? = null,
     val guideHidden: Boolean = false,
     val ad: AdPlaying? = null,
+    val keys: Map<SecretId, SecretState> = emptyMap(),
 )
 
 /**

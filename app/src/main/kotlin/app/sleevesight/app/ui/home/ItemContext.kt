@@ -20,6 +20,8 @@ import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.UnavailableModel
+import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.Reading
 import app.sleevesight.app.ui.settings.SettingsTarget
@@ -62,7 +64,16 @@ internal class ItemContext(
     val sources: EvidenceSet? = null,
     val retries: Retries? = null,
     val searches: AiSearchFeed = AiSearchFeed.None,
+    val keys: Map<SecretId, SecretState> = emptyMap(),
+    val needsKey: Set<SourceId> = emptySet(),
+    val openSettingsAt: (SettingsTarget) -> Unit = {},
 ) {
+    /** The sources [item]'s insight, [evidence]'s, asked and did not ask (#1308, [sourcesAsked]). */
+    fun asked(
+        item: InsightItem,
+        evidence: ItemEvidence,
+    ): SourcesAsked = sourcesAsked(item, evidence, settings, keys, needsKey)
+
     /**
      * Whether *Reactive* is set to an automatic mode, with *Show insights* on: an item unfolded or on
      * its page is then asked for at once, as an opening when a tap opened it, else by itself, which
@@ -446,6 +457,9 @@ internal fun itemContext(
     retries = Retries(shown.view, shown.playing, actions.askAgain, actions.itemRetried),
     searches = actions.aiSearches,
     unavailable = state.unavailable.takeIf { settings.writeInsights },
+    keys = state.keys,
+    needsKey = state.view.needsKey,
+    openSettingsAt = actions.openSettingsAt,
     onModelSettings = {
         state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) } ?: actions.openSettings()
     },

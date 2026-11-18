@@ -60,6 +60,8 @@ import kotlin.time.TimeSource
  * own ([ItemPrompt.PARTS_VERSION]); of its [evidence]'s artist-level lines, [composerLines] are the ids
  * of those about a composer, as the lines for each artist are taken (`ItemInsights.artistLines`: whom
  * the adapter says a line is about, else the name its text holds), the others about a performer.
+ * [byName] when it is the album's, with no release group, looked up by its name: Last.fm is then not
+ * asked about it, so its empty panel does not name Last.fm among the sources asked (#1308).
  */
 @Suppress("LongParameterList") // The lines, and what each kind of item's evidence says of them.
 class ItemEvidence(
@@ -71,6 +73,7 @@ class ItemEvidence(
     val held: SourcesHeld? = null,
     val parts: Boolean = false,
     val composerLines: Set<String> = emptySet(),
+    val byName: Boolean = false,
 ) {
     /** The sources that could not be reached, which the row names ([SourcesHeld.named]); none without [held]. */
     val unanswered: List<SourceId> get() = held?.named.orEmpty()
@@ -578,6 +581,7 @@ class ItemInsights(
             unreachable = found?.unreachable == true || threw,
             webDue = found?.webDue == true,
             held = if (lines.lines.isEmpty()) albumHeld(album, run, settings, found?.unanswered, failed) else null,
+            byName = album.group == null,
         )
     }
 
@@ -1105,7 +1109,13 @@ class ItemInsights(
         val set = EvidenceSet.of(evidence.evidence.lines.map(::draftOf) + more, hasher)
         // The sources not reached, while the search found nothing either (#1187).
         val held = evidence.held?.takeIf { set.lines.isEmpty() }
-        return ItemEvidence(set, matching(set.lines, shown), unreachable = evidence.unreachable, held = held)
+        return ItemEvidence(
+            set,
+            matching(set.lines, shown),
+            unreachable = evidence.unreachable,
+            held = held,
+            byName = evidence.byName,
+        )
     }
 
     // The artist-level lines of the track's [own] evidence about [artist] (the primary artist, or the

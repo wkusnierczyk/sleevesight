@@ -292,6 +292,10 @@
     <string name="home_settings_sources_link">Settings\u00A0→\u00A0Sources</string>
     <!-- A link that opens Settings at AI services (#762). -->
     <string name="home_settings_ai_services_link">Settings\u00A0→\u00A0AI services</string>
+    <!-- A link that opens Settings at a key under Secrets (#1308). -->
+    <string name="home_settings_secrets_link">Settings\u00A0→\u00A0Secrets</string>
+    <!-- A link that opens Settings at AI web search under Insights (#1308). -->
+    <string name="home_settings_insights_link">Settings\u00A0→\u00A0Insights</string>
     <!-- MusicBrainz could not be reached; Retry (home_retry) beside it asks it again. -->
     <string name="home_musicbrainz_unreachable">MusicBrainz could not be reached.</string>
     <!-- MusicBrainz accepted no recording of the track. -->
@@ -604,6 +608,29 @@
     <string name="home_item_no_evidence_album">The sources give nothing to write the album’s insight from.</string>
     <string name="home_item_no_evidence_composer">The sources give nothing to write the composer’s insight from.</string>
     <string name="home_item_no_evidence_named">The sources give nothing to write this artist’s insight from.</string>
+    <!-- An item no source has (#1308), in place of home_item_no_evidence_*: the sources asked about it,
+         as the Sources chips name them, %1$s one, two (home_sources_two) or more (home_sources_list),
+         the web's as home_item_asked_web. -->
+    <string name="home_item_asked_song">Asked %1$s: none has this song.</string>
+    <!-- The same on a classical track, where the song's row is called Music (#1331). -->
+    <string name="home_item_asked_song_classical">Asked %1$s: none has this music.</string>
+    <string name="home_item_asked_artist">Asked %1$s: none has this artist.</string>
+    <string name="home_item_asked_album">Asked %1$s: none has this album.</string>
+    <string name="home_item_asked_composer">Asked %1$s: none has this composer.</string>
+    <string name="home_item_asked_named">Asked %1$s: none has this artist.</string>
+    <!-- The web search among the sources asked (home_item_asked_*). -->
+    <string name="home_item_asked_web">a web search</string>
+    <!-- Under it, one line for each source the item would ask that was not asked (#1308): %1$s the
+         source as Settings names it (Last.fm, Exa web search, AI web search), %2$s why
+         (home_item_not_asked_disabled, _no_key, _off), %3$s a link to where it is set
+         (home_settings_sources_link, home_settings_secrets_link, home_settings_insights_link). -->
+    <string name="home_item_not_asked">Not asked: %1$s (%2$s). See %3$s.</string>
+    <!-- Switched off under Settings → Sources. -->
+    <string name="home_item_not_asked_disabled">disabled</string>
+    <!-- Its key not saved under Settings → Secrets. -->
+    <string name="home_item_not_asked_no_key">no key</string>
+    <!-- AI web search set to Off under Settings → Insights. -->
+    <string name="home_item_not_asked_off">off</string>
     <!-- An item whose call failed, beside its Retry; %1$s: why. -->
     <string name="home_item_failed">The insight could not be written: %1$s.</string>
     <!-- The insight. -->
