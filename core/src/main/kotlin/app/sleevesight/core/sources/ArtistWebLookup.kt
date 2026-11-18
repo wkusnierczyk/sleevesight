@@ -44,6 +44,23 @@ interface ArtistWebLookup {
     )
 
     /**
+     * Keeps [lines] as [keep] does, and whether the AI service [searched] (#1308): false when it wrote
+     * the artist's insight with no search made, so "found nothing" is kept with no search behind it,
+     * which [unsearched] then says. By default, as [keep].
+     */
+    suspend fun keep(
+        artist: ArtistWebQuery,
+        lines: List<EvidenceDraft>,
+        searched: Boolean,
+    ) = keep(artist, lines)
+
+    /**
+     * Whether the lines kept for [artist] were kept with no search made (#1308, [keep] with `searched`
+     * false), while they are kept; false by default.
+     */
+    suspend fun unsearched(artist: ArtistWebQuery): Boolean = false
+
+    /**
      * The line [page], found by the AI service's own search (*Up to 3 times*), gives for [artist], by
      * the rules the app's own search keeps a result by (#912's review: about the artist, not a
      * source the app reads itself, page boilerplate left out, cut as a web line is); null when it
