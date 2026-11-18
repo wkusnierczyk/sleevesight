@@ -131,6 +131,9 @@ internal class ModelMarks(
     // The services whose stored key could not be read before any was (#970).
     private val unread = HashSet<ProviderId>()
 
+    // Each service's model chosen from the refused ones to try it, until a call with it ends (#970).
+    private val retrying = HashMap<ProviderId, String>()
+
     /** The revisions now, for a request about to be issued. */
     fun ticket(): Ticket = Ticket(keyRevisions.toMap(), selectionRevisions.toMap())
 
@@ -153,6 +156,8 @@ internal class ModelMarks(
             }
         }
         selection = now
+        // Another model selected after one chosen to try it: its try is over.
+        retrying.entries.removeAll { (p, model) -> before?.models?.get(p) == model && now.models[p] != model }
         val switched = before != null && before.on != now.on
         marks =
             marks.filter { (provider, mark) ->
@@ -193,16 +198,19 @@ internal class ModelMarks(
     }
 
     /**
-     * [provider]'s [model] chosen again from the list to try it (#970), whether or not it was the
-     * selected model already: a refusal's mark of it is lifted, so the next call tries it, as a
-     * fresh selection; it stays among [refused] until a call with it answers.
+     * [provider]'s [model] chosen from the list's refused models to try it (#970), whether or not it
+     * was the selected model already: any mark of it is lifted, so the next call tries it, as a
+     * fresh selection, and a list that does not hold it (a model retired, or closed to a new choice)
+     * does not mark it while it is tried ([retrying]). The try ends when a call with it ends, which
+     * answers (it leaves [refused]) or refuses it (it is marked again), or once another model is
+     * selected; it stays among [refused] until a call with it answers.
      */
     fun retry(
         provider: ProviderId,
         model: String,
     ) {
-        val mark = marks[provider] ?: return
-        if (mark.model != model || mark.why != UnavailableReason.REFUSED) return
+        retrying[provider] = model
+        if (marks[provider]?.model != model) return
         marks = marks - provider
         selectionRevisions[provider] = (selectionRevisions[provider] ?: 0L) + 1
     }
@@ -236,7 +244,8 @@ internal class ModelMarks(
         ticket: Ticket,
     ) {
         if (!counts(provider, model, print, ticket)) return
-        val holds = models.any { it.id == model }
+        // A model tried again is tried whatever the list says, until its call ends (#970).
+        val holds = models.any { it.id == model } || retrying[provider] == model
         val mark = marks[provider]?.takeIf { it.model == model }
         marks =
             when {
@@ -265,6 +274,7 @@ internal class ModelMarks(
         val now = if (refusal != null) kept + (model to refusal) else kept - model
         refused = if (now.isEmpty()) refused - provider else refused + (provider to now)
         if (!counts(provider, model, print, ticket)) return
+        if (retrying[provider] == model) retrying -= provider
         marks =
             when {
                 refusal != null -> marks + (provider to UnavailableMark(model, REFUSED, print, refusal))

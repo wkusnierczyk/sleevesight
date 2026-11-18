@@ -286,6 +286,51 @@ class RefusedModelsTest {
             job.cancel()
         }
 
+    @Test
+    fun aRefusedModelTheListNoLongerHoldsChosenToTryIsTriedWithListLookupsOn() =
+        runTest {
+            // The service's list holds none of its models now; Opus was refused before.
+            kept.models = mapOf(ProviderId.ANTHROPIC to mapOf(OPUS to ModelRefusal.NOT_SERVED))
+            val check = check()
+            val settings = MutableStateFlow(anthropic)
+            val job = launch { check.run(settings, flowOf(Unit), MutableStateFlow(true)) }
+            runCurrent()
+            check.ticket()
+
+            // Chosen from the refused models: the retry, then the selection, which the start check
+            // lists for, and the list does not hold it.
+            check.retry(ProviderId.ANTHROPIC, OPUS)
+            settings.value = opus
+            runCurrent()
+            check.ticket()
+            assertFalse("tried, whatever the list says", check.blocks(opus))
+
+            // Its call is refused: marked again, and the list's next check keeps it so.
+            check.ended(NOT_FOUND, OPUS)
+            assertTrue(check.blocks(opus))
+            check.check(ProviderId.ANTHROPIC, OPUS)
+            check.ticket()
+            assertTrue(check.blocks(opus))
+
+            // Chosen again, though selected: tried again, whatever mark it had.
+            check.retry(ProviderId.ANTHROPIC, OPUS)
+            check.check(ProviderId.ANTHROPIC, OPUS)
+            check.ticket()
+            assertFalse(check.blocks(opus))
+
+            // Its call answers: it leaves the refused; the try is over.
+            check.ended(DONE, OPUS)
+            assertNull(check.anthropic())
+            check.check(ProviderId.ANTHROPIC, OPUS)
+            check.ticket()
+            assertEquals(
+                "the list's absence counts again",
+                UnavailableReason.LISTED_ABSENT,
+                check.unavailable.value[ProviderId.ANTHROPIC]?.why,
+            )
+            job.cancel()
+        }
+
     private companion object {
         val DEFAULT = Settings.DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC)
         const val OPUS = "claude-opus-5-5"
