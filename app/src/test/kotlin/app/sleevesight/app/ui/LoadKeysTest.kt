@@ -353,7 +353,7 @@ class LoadKeysTest {
             compose.onNodeWithText(openRouter).assertIsDisplayed()
             // OpenRouter's `sk-or-` key under OpenAI's name has the wrong shape: refused, by its ending.
             val openAi = text(R.string.settings_ai_provider_openai)
-            compose.onNodeWithText("• $openAi, ending ${ending(openRouterKey)}").assertIsDisplayed()
+            compose.onNodeWithText("\u2022\u00A0$openAi, ending ${ending(openRouterKey)}").assertIsDisplayed()
 
             toServices()
             complete()
