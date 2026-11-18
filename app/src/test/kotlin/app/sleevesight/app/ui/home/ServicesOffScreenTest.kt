@@ -18,6 +18,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.secrets.SecretId
@@ -42,6 +44,11 @@ import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.synthesis.SearchAnswer
+import app.sleevesight.core.synthesis.SearchFacts
+import app.sleevesight.core.synthesis.SearchKind
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -263,6 +270,84 @@ class ServicesOffScreenTest {
             compose.onNodeWithTag(SOURCES_KEY_NOTE_TAG).assertExists()
             assertTrue(count("Last.fm needs your key.") >= 1)
             follows(see(R.string.home_settings_sources_link), SettingsTarget.sources)
+        }
+    }
+
+    // *Ask AI*'s genres, answered for the track: chips under the panel's lines (#773).
+    private val aiGenres =
+        object : AiSearchFeed {
+            override fun search(
+                track: TrackState,
+                kind: SearchKind,
+                genre: String?,
+            ): Flow<AiSearch> =
+                flowOf(
+                    if (kind == SearchKind.GENRES) {
+                        val label = GenreLabel("folk rock", "Folk Rock", "folk rock", level = GenreLevel.TRACK)
+                        AiSearch.Answered(SearchAnswer.Genres(listOf(label)), "Claude Haiku 5.5")
+                    } else {
+                        AiSearch.None
+                    },
+                )
+
+            override fun ask(
+                track: TrackState,
+                kind: SearchKind,
+                facts: SearchFacts,
+                automatic: Boolean,
+                genre: String?,
+            ): Boolean = false
+
+            override fun stop(
+                track: TrackState,
+                kind: SearchKind,
+                genre: String?,
+            ) = Unit
+        }
+
+    private val everySourceOff =
+        Settings(
+            onePanel = false,
+            enabledSources = sourcesWithout(SourceSwitch.MUSICBRAINZ, SourceSwitch.LASTFM, SourceSwitch.WIKIPEDIA),
+        )
+
+    @Test
+    fun whileAskAisGenresShowThePanelSaysNothingOfTheSourcesOff() {
+        val withAi = NowPlayingActions(normalizer::normalize, openSettingsAt = { opened += it }, aiSearches = aiGenres)
+        for (state in listOf(
+            state(settings = everySourceOff),
+            state(settings = Settings(onePanel = false, enabledSources = sourcesWithout(SourceSwitch.LASTFM))),
+        )) {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity {
+                    it.setContent {
+                        Column(Modifier.verticalScroll(rememberScrollState())) { NowPlayingContent(state, withAi) }
+                    }
+                }
+                compose.waitForIdle()
+                tap(GENRES_CHIP_TAG)
+                compose.onNodeWithText("Folk Rock", substring = true).assertExists()
+                assertEquals(0, count(see(R.string.home_settings_sources_link)))
+                assertEquals(0, compose.onAllNodesWithText("disabled.", substring = true).fetchSemanticsNodes().size)
+            }
+        }
+    }
+
+    @Test
+    fun whileAskAisGenresShowTheGenresPageSaysNothingOfTheSourcesOff() {
+        val track = labelled()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        GenresPage(track, everySourceOff, search = PanelSearch(aiGenres, track, track.nowPlaying))
+                    }
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithText("Folk Rock", substring = true).assertExists()
+            assertEquals(0, count(see(R.string.home_settings_sources_link)))
+            assertEquals(0, compose.onAllNodesWithText("disabled.", substring = true).fetchSemanticsNodes().size)
         }
     }
 

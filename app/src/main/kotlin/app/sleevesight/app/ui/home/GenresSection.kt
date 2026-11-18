@@ -171,7 +171,9 @@ internal fun GenresContent(
             GenresBox(track, notes, Choice(chosen, tapped), search)
         }
     }
-    if (shown.everyOff) OffLines(genresOffParts(shown.off), openSettingsAt, style)
+    // Not while *Ask AI*'s genres show under the lines (#766: nothing added while genres show).
+    val aiShown = aiGenresShown(search)
+    if (shown.everyOff) GenresOffLines(shown.off, aiShown, openSettingsAt, style)
     if (shown.looking.isNotEmpty()) {
         // Nothing asked for a track the last clear holds (#1112): it says so, without the record.
         Busy(
@@ -195,7 +197,7 @@ internal fun GenresContent(
     if (shown.none) {
         Text(stringResource(R.string.home_genres_none), style = style)
         // Nothing to show, with some genre sources off: which (#766). Not while genres show.
-        OffLines(genresOffParts(shown.off), openSettingsAt, style)
+        GenresOffLines(shown.off, aiShown, openSettingsAt, style)
     }
     GenresSearch(track, shown, search, notes)
 }
