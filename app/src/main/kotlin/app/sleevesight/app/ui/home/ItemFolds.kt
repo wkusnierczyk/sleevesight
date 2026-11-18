@@ -35,8 +35,10 @@ import app.sleevesight.core.sources.ArtistRoles
  * said in its panel's heading and on its page, or null for none. [kind] is what its button and its
  * panel's title call it, [action] its button's action as a screen reader names it, each a string's
  * id: the item's own ([itemKindOf], [itemShowAction]), but for the Composer row and the Artist row
- * of a track whose roles tell a composer apart (#1199, [itemRows]; *Performer*, #1276), and the
- * song's row on a classical one (*Music*, #1331).
+ * of a track whose roles tell a composer apart (#1199, [itemRows]; *Performer*, #1276), the song's
+ * row on a classical one (*Music*, #1331), and the *Artists* row of a track crediting several (#1168).
+ * [others] are the further artists such a row stands for besides [name], its first ([alsoOnTrack]):
+ * the row then reads "{first}, others" where that fits ([rowName]).
  */
 internal class ItemRow(
     val item: InsightItem,
@@ -44,6 +46,7 @@ internal class ItemRow(
     val version: String? = null,
     val kind: Int = itemKindOf(item),
     val action: Int = itemShowAction(item),
+    val others: List<String> = emptyList(),
 )
 
 /**
@@ -59,6 +62,9 @@ internal class ItemRow(
  * *Author* or *Authors*, [AuthorsName]); and the artist's by the lead performer, called *Performer*
  * (#1276), one performer even when others are known: the panel is about the lead, the others its
  * chips.
+ *
+ * With no split and more than one artist credited ([alsoOnTrack], #1168): *Artists*, by the first,
+ * the others in [ItemRow.others], each of them a section of its panel ([PeopleAfter]).
  */
 internal fun itemRows(
     header: NowPlaying,
@@ -68,8 +74,7 @@ internal fun itemRows(
     listOfNotNull(
         songRow(header, normalized, split),
         split?.let(::composerRow),
-        split?.let(::performerRow)
-            ?: normalized.primary.takeIf { it.isNotBlank() }?.let { ItemRow(InsightItem.ARTIST, it) },
+        split?.let(::performerRow) ?: artistRow(normalized),
         header.album
             ?.trim()
             ?.takeIf { it.isNotEmpty() }

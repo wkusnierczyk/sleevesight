@@ -22,6 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.logo.RECORD_SIZE
 import app.sleevesight.app.ui.logo.SpinningRecord
 import app.sleevesight.app.ui.theme.Panel
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -189,7 +191,7 @@ private fun ItemPanel(
             itemPanelTag(row.item),
             onClose = close,
             closeModifier = closeModifier,
-            subtitle = row.name,
+            subtitle = rowName(row),
             note = row.version?.let { stringResource(R.string.home_item_version, it) },
         ) { content() }
     }
@@ -206,7 +208,9 @@ private class RowLook(
 
 // A row: [kind]'s button, as [look] says, under [button]'s modifier (a focus requester), read with
 // [row]'s name as one stop; the name beside it, [whole] or clipped, [onName] on a tap that changes it,
-// the turning record before it while the insight is written (#948).
+// the turning record before it while the insight is written (#948). An *Artists* row (#1168) reads
+// "{first}, others" ([rowName]) where that fits on the name's one line, else the first artist alone,
+// clipped as any name; never a list of names cut short. Its button reads the name as shown.
 @Suppress("LongParameterList") // What the row shows, and its taps.
 @Composable
 private fun ItemRowLine(
@@ -218,41 +222,50 @@ private fun ItemRowLine(
     button: Modifier,
     onClick: () -> Unit,
 ) {
-    val action = stringResource(if (look.pages) R.string.home_page_open else row.action)
-    val named = "$kind, ${row.name}"
-    val marked = if (look.ai) stringResource(R.string.home_uses_ai, named) else named
-    val described = if (look.writing) stringResource(R.string.home_item_writing, marked) else marked
-    // One pass: the button measured first, the name's cell as tall as it at least, its first line
-    // centred on it (#1199), with no frame drawn before the heights are known.
-    Layout(
-        content = {
-            PanelChip(
-                kind,
-                itemRowTag(row.item),
-                modifier = button,
-                action = action,
-                collapsed = false,
-                description = described,
-                width = look.width,
-                ai = look.ai,
-                onClick = onClick,
-            )
-            if (look.writing) SpinningRecord()
-            NameText(row.name, whole, onName, itemNameTag(row.item))
-        },
-        modifier = Modifier.fillMaxWidth(),
-    ) { measurables, constraints ->
-        val loose = constraints.copy(minWidth = 0, minHeight = 0)
-        val chip = measurables.first().measure(loose)
-        val record = measurables.takeIf { look.writing }?.get(1)?.measure(loose)
-        val start = chip.width + COLUMN_GAP.roundToPx() + (record?.let { it.width + RECORD_GAP.roundToPx() } ?: 0)
-        val width = (constraints.maxWidth - start).coerceAtLeast(0)
-        val least = max(NAME_CELL.roundToPx(), chip.height)
-        val cell = measurables.last().measure(Constraints(width, width, least, Constraints.Infinity))
-        layout(constraints.maxWidth, max(chip.height, cell.height)) {
-            chip.place(0, 0)
-            record?.place(chip.width + COLUMN_GAP.roundToPx(), (chip.height - record.height) / 2)
-            cell.place(start, 0)
+    // What the line gives before the name, in the pixels its layout measures: the button, as wide as
+    // its width says, the gap after it, and the record while it turns, as wide as its size says.
+    val reserved =
+        with(LocalDensity.current) {
+            val record = RECORD_SIZE.toDp().roundToPx().takeIf { look.writing }
+            nameStart(look.width.roundToPx(), COLUMN_GAP.roundToPx(), record, RECORD_GAP.roundToPx())
+        }
+    FittedName(row, reserved) { shown ->
+        val action = stringResource(if (look.pages) R.string.home_page_open else row.action)
+        val named = "$kind, $shown"
+        val marked = if (look.ai) stringResource(R.string.home_uses_ai, named) else named
+        val described = if (look.writing) stringResource(R.string.home_item_writing, marked) else marked
+        // One pass: the button measured first, the name's cell as tall as it at least, its first line
+        // centred on it (#1199), with no frame drawn before the heights are known.
+        Layout(
+            content = {
+                PanelChip(
+                    kind,
+                    itemRowTag(row.item),
+                    modifier = button,
+                    action = action,
+                    collapsed = false,
+                    description = described,
+                    width = look.width,
+                    ai = look.ai,
+                    onClick = onClick,
+                )
+                if (look.writing) SpinningRecord()
+                NameText(shown, whole, onName, itemNameTag(row.item))
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { measurables, constraints ->
+            val loose = constraints.copy(minWidth = 0, minHeight = 0)
+            val chip = measurables.first().measure(loose)
+            val record = measurables.takeIf { look.writing }?.get(1)?.measure(loose)
+            val start = nameStart(chip.width, COLUMN_GAP.roundToPx(), record?.width, RECORD_GAP.roundToPx())
+            val width = (constraints.maxWidth - start).coerceAtLeast(0)
+            val least = max(NAME_CELL.roundToPx(), chip.height)
+            val cell = measurables.last().measure(Constraints(width, width, least, Constraints.Infinity))
+            layout(constraints.maxWidth, max(chip.height, cell.height)) {
+                chip.place(0, 0)
+                record?.place(chip.width + COLUMN_GAP.roundToPx(), (chip.height - record.height) / 2)
+                cell.place(start, 0)
+            }
         }
     }
 }
