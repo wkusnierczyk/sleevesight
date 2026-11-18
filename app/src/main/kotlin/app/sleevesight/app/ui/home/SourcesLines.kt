@@ -239,7 +239,8 @@ internal fun sourcesLines(
     return remember(genreLines, checked, explanation, reasoned) {
         val explained =
             withPages(withPages(genreLines, checked, LinePurpose.VOCALS_CHECK), explanation, LinePurpose.EXPLANATION)
-        withPages(explained, reasoned, LinePurpose.GENRES)
+        // A page any line has the address of (the track's Wikipedia article) is that line, not a new one.
+        withPages(explained, reasoned.filter { lineOf(it.url, explained.evidence) == null }, LinePurpose.GENRES)
     }
 }
 

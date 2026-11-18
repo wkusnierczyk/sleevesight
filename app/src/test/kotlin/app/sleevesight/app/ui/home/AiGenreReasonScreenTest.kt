@@ -315,6 +315,29 @@ class AiGenreReasonScreenTest {
             assertTrue(compose.onAllNodesWithText("discogs.com", substring = true).fetchSemanticsNodes().isNotEmpty())
         }
     }
+
+    @Test
+    fun aReasonCitingAPageSourcesListsAlreadyNamesThatLine() {
+        // The track's Wikipedia article is W1: a reason citing it shows W1, and no line is added for it.
+        val wikipedia = "https://en.wikipedia.org/wiki/Sundown"
+        val track = empty.copy(evidence = HomeFixtures.withWeb)
+        current.value =
+            NowPlayingState(PipelineView(track, aiReady = true), track.nowPlaying, playback, settings = Settings())
+        show {
+            val reply =
+                "{\"genres\": [{\"name\": \"electronic\", \"reason\": " +
+                    "\"Its article calls it electronic. [S1]\", \"source\": \"$wikipedia\"}]}"
+            answered(reply, pages = listOf(wikipedia))
+            assertEquals("Its article calls it electronic (Source W1).", said(AI_GENRE_REASON_TEXT_TAG))
+            compose
+                .onNodeWithTag(AI_GENRE_REASON_TEXT_TAG)
+                .performScrollTo()
+                .performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "W1" }
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").performScrollTo()
+            assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "S2").fetchSemanticsNodes().size)
+        }
+    }
 }
 
 // Within this much of the edge, in pixels: an icon button's touch target is wider than its node.
