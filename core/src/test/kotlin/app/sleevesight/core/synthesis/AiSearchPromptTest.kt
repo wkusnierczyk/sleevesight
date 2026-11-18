@@ -133,7 +133,13 @@ class AiSearchPromptTest {
         assertTrue("\"first_release\"" in AiSearchPrompt.shape(SearchKind.DATES))
         assertTrue("\"original\"" in AiSearchPrompt.shape(SearchKind.DATES))
         assertTrue("album|single|EP" in AiSearchPrompt.shape(SearchKind.DATES))
-        assertEquals("{\"genres\": [\"…\", \"…\"]}", AiSearchPrompt.shape(SearchKind.GENRES))
+        assertEquals(
+            "{\"genres\": [{\"name\": \"…\", \"reason\": \"First sentence. [AI] Second sentence. [AI]\"}]}",
+            AiSearchPrompt.shape(SearchKind.GENRES),
+        )
+        // Each genre with why (#952), cited, none without one.
+        assertTrue("End every sentence of the reason with [AI]" in AiSearchPrompt.system(SearchKind.GENRES))
+        assertTrue("Leave out a genre you cannot give a reason for." in AiSearchPrompt.system(SearchKind.GENRES))
         assertTrue("at most five" in AiSearchPrompt.system(SearchKind.GENRES))
         assertTrue("most specific first" in AiSearchPrompt.system(SearchKind.GENRES))
     }
@@ -184,8 +190,26 @@ class AiSearchPromptTest {
     @Test
     fun theDefinitionsPromptHasItsOwnVersion() {
         assertEquals(AiSearchPrompt.DEFINITION_VERSION, AiSearchPrompt.version(SearchKind.DEFINITION))
-        for (kind in SearchKind.entries - SearchKind.DEFINITION) {
+        for (kind in SearchKind.entries - SearchKind.DEFINITION - SearchKind.GENRES) {
             assertEquals(AiSearchPrompt.VERSION, AiSearchPrompt.version(kind))
         }
+    }
+
+    @Test
+    fun theGenresPromptsHaveTheirOwnVersionSinceEachGenreSaysWhy() {
+        // Raised from 1 (#952), from the model's knowledge and from the web alike: a kept answer has no reasons.
+        assertEquals(2, AiSearchPrompt.GENRES_VERSION)
+        assertEquals(AiSearchPrompt.GENRES_VERSION, AiSearchPrompt.version(SearchKind.GENRES))
+        assertEquals(AiSearchPrompt.GENRES_VERSION, AiSearchPrompt.version(SearchKind.GENRES, web = true))
+        assertEquals(AiSearchPrompt.WEB_VERSION, AiSearchPrompt.version(SearchKind.DATES, web = true))
+    }
+
+    @Test
+    fun fromTheWebEachGenreNamesItsPageAndCitesIt() {
+        val system = WebPrompt.system(SearchKind.GENRES, listOf("Rock"), limit = null)
+        assertTrue("\"source\": \"https://…\"" in system)
+        assertTrue("[S1], which stands for that page" in system)
+        assertFalse("[AI]" in system)
+        assertFalse("\"sources\"" in system)
     }
 }
