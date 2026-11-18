@@ -58,6 +58,14 @@ class ArtistWebSource(
         lines: List<EvidenceDraft>,
     ) = this.lines.keep(keyOf(artist), lines)
 
+    override suspend fun keep(
+        artist: ArtistWebQuery,
+        lines: List<EvidenceDraft>,
+        searched: Boolean,
+    ) = this.lines.keep(keyOf(artist), lines, searched)
+
+    override suspend fun unsearched(artist: ArtistWebQuery): Boolean = lines.unsearched(keyOf(artist))
+
     override fun pageLine(
         artist: ArtistWebQuery,
         page: WebPage,

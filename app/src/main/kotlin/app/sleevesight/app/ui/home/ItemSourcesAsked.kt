@@ -61,11 +61,13 @@ internal data class SourcesAsked(
  * states and [needsKey] the keyed sources switched on that are not looked up for want of a readable key
  * (`PipelineView.needsKey`):
  * - MusicBrainz and Wikipedia (Wikidata with it), each by its switch;
- * - Last.fm, by its switch and its key; for an album looked up by its name ([ItemEvidence.byName]),
- *   not at all, as Last.fm is not asked about an album with no release group;
+ * - Last.fm, by its switch and its key;
+ * - for an album looked up by its name ([ItemEvidence.byName]), neither MusicBrainz nor Last.fm, which
+ *   are not asked about an album with no release group;
  * - a web search: the song's and the album's by *Exa web search* and its key; the artist's (and
  *   any other artist's) by those and *AI web search*, which searches for the artist only when it is
- *   not *Off*.
+ *   not *Off*, and not when the AI service wrote its insight without searching
+ *   ([ItemEvidence.webSkipped]: none was asked, and nothing is switched off).
  */
 internal fun sourcesAsked(
     item: InsightItem,
@@ -74,31 +76,54 @@ internal fun sourcesAsked(
     keys: Map<SecretId, SecretState>,
     needsKey: Set<SourceId>,
 ): SourcesAsked {
-    val asked = mutableListOf<SourceId>()
-    val notAsked = mutableListOf<NotAsked>()
-    for (source in listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA)) {
-        if (settings.isEnabled(source)) asked += source else notAsked += disabled(source)
-    }
-    if (!(item == InsightItem.ALBUM && evidence.byName)) {
-        keyed(SourceId.LASTFM, SecretId.LASTFM, settings, keys, needsKey)?.let { notAsked += it } ?: run {
-            asked += SourceId.LASTFM
-        }
-    }
+    // Looked up by its name: MusicBrainz and Last.fm not asked about the album.
+    val byName = item == InsightItem.ALBUM && evidence.byName
+    val switched = if (byName) listOf(SourceId.WIKIPEDIA) else listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA)
+    // Each source the item asks, and why it was not asked, null when it was.
+    val why =
+        switched.map { it to disabled(it).takeUnless { _ -> settings.isEnabled(it) } } +
+            listOfNotNull(lastFm(settings, keys, needsKey).takeUnless { byName }) +
+            listOfNotNull(webSearch(item, evidence, settings, keys, needsKey)?.let { SourceId.WEB to it.notAsked })
+    return SourcesAsked(why.filter { it.second == null }.map { it.first }, why.mapNotNull { it.second })
+}
+
+// Last.fm, and why it was not asked, null when it was.
+private fun lastFm(
+    settings: Settings,
+    keys: Map<SecretId, SecretState>,
+    needsKey: Set<SourceId>,
+): Pair<SourceId, NotAsked?> = SourceId.LASTFM to keyed(SourceId.LASTFM, SecretId.LASTFM, settings, keys, needsKey)
+
+// Whether [item]'s web search was asked, as [sourcesAsked] says ([WebSearch.notAsked] null); null when
+// none was, nor was it held back by a setting: the artist's, written with no search made.
+private fun webSearch(
+    item: InsightItem,
+    evidence: ItemEvidence,
+    settings: Settings,
+    keys: Map<SecretId, SecretState>,
+    needsKey: Set<SourceId>,
+): WebSearch? {
     val exa = keyed(SourceId.WEB, SecretId.EXA, settings, keys, needsKey)
-    when {
-        exa != null -> notAsked += exa
+    return when {
+        exa != null -> WebSearch(exa)
         item.aboutArtist && settings.aiWebSearchUsed == AiWebSearch.OFF ->
-            notAsked +=
+            WebSearch(
                 NotAsked(
                     R.string.settings_ai_web_search,
                     NotAskedWhy.OFF,
                     SettingsTarget.aiWebSearch,
                     R.string.home_settings_insights_link,
-                )
-        else -> asked += SourceId.WEB
+                ),
+            )
+        item.aboutArtist && evidence.webSkipped -> null
+        else -> WebSearch(null)
     }
-    return SourcesAsked(asked, notAsked)
 }
+
+// An item's web search: asked, or [notAsked] and why.
+private class WebSearch(
+    val notAsked: NotAsked?,
+)
 
 // [source], switched off under *Sources*.
 private fun disabled(source: SourceId): NotAsked =

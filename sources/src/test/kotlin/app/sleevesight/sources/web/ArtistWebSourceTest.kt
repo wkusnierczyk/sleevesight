@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -124,6 +125,36 @@ class ArtistWebSourceTest {
             }
             // No engine: no search, nothing kept.
             assertNull(ArtistWebSource(null, names).search(ArtistWebQuery("Someone Else", null)))
+        }
+
+    @Test
+    fun `found nothing kept with no search made says so, until lines are kept again by a search`() =
+        runTest {
+            val clock = Moving()
+            for (store in listOf(MemoryArtistResults(clock, 90.days), null)) {
+                val source = if (store == null) ArtistWebSource(Web(), names) else ArtistWebSource(Web(), names, store)
+                // The AI service wrote with no search made (#1308).
+                source.keep(artist, emptyList(), searched = false)
+                assertEquals(emptyList(), source.kept(artist))
+                assertTrue(source.unsearched(artist))
+                source.renew(artist)
+                assertTrue(source.unsearched(artist))
+                // Its own searches found nothing: a search was made.
+                source.keep(artist, emptyList(), searched = true)
+                assertFalse(source.unsearched(artist))
+                // Kept with no search made, then gone: none said, nor after the app's own search.
+                source.keep(artist, emptyList(), searched = false)
+                store?.let {
+                    clock.now += 91.days
+                    assertFalse(source.unsearched(artist))
+                    assertTrue(checkNotNull(source.search(artist)).isNotEmpty())
+                    assertFalse(source.unsearched(artist))
+                }
+                // Kept the way [keep] always did: no mark, none said.
+                val other = ArtistWebQuery("Someone Else", null)
+                source.keep(other, emptyList())
+                assertFalse(source.unsearched(other))
+            }
         }
 
     @Test

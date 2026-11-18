@@ -61,7 +61,10 @@ import kotlin.time.TimeSource
  * of those about a composer, as the lines for each artist are taken (`ItemInsights.artistLines`: whom
  * the adapter says a line is about, else the name its text holds), the others about a performer.
  * [byName] when it is the album's, with no release group, looked up by its name: Last.fm is then not
- * asked about it, so its empty panel does not name Last.fm among the sources asked (#1308).
+ * asked about it, nor MusicBrainz about the album, so its empty panel names neither among the sources
+ * asked (#1308). [webSkipped] when it is an artist's whose web lines were kept with no search made: the
+ * AI service wrote its insight (*Up to 3 times*) without searching, so its empty panel does not name a
+ * web search (#1308).
  */
 @Suppress("LongParameterList") // The lines, and what each kind of item's evidence says of them.
 class ItemEvidence(
@@ -74,6 +77,7 @@ class ItemEvidence(
     val parts: Boolean = false,
     val composerLines: Set<String> = emptySet(),
     val byName: Boolean = false,
+    val webSkipped: Boolean = false,
 ) {
     /** The sources that could not be reached, which the row names ([SourcesHeld.named]); none without [held]. */
     val unanswered: List<SourceId> get() = held?.named.orEmpty()
@@ -501,7 +505,9 @@ class ItemInsights(
             else -> {
                 val kept = attempt { lookup.kept(query) }
                 val set = EvidenceSet.of(kept.orEmpty().filter { settings.isEnabled(it.source) }, hasher)
-                ItemEvidence(set, matching(set.lines, shown), webDue = kept == null)
+                // "Found nothing" kept with no search made (#1308).
+                val skipped = kept?.isEmpty() == true && attempt { lookup.unsearched(query) } == true
+                ItemEvidence(set, matching(set.lines, shown), webDue = kept == null, webSkipped = skipped)
             }
         }
     }
@@ -896,7 +902,7 @@ class ItemInsights(
         val access: AiAccess,
         val engine: WebSearcher,
         val question: ItemWebQuestion,
-        val keep: suspend (List<EvidenceDraft>) -> Unit,
+        val keep: suspend (List<EvidenceDraft>, Boolean) -> Unit,
     )
 
     // What [writeSearching] asks with for [item] on [track], when it applies ([searchesItself]).
@@ -925,13 +931,13 @@ class ItemInsights(
         subject: ItemPrompt.Subject,
         first: CardKey,
         track: TrackState,
-    ): Pair<ItemWebQuestion, suspend (List<EvidenceDraft>) -> Unit>? {
+    ): Pair<ItemWebQuestion, suspend (List<EvidenceDraft>, Boolean) -> Unit>? {
         val lookup = artistWeb
         val query = artistQuery(item, track)
         if (lookup == null || query == null) return null
         val line = { page: WebPage -> lookup.pageLine(query, page) }
         val question = ArtistQuestion(subject, track, first.modelKnowledge, names, hasher, now(), line, dates())
-        return question to { lookup.keep(query, it) }
+        return question to { lines, searched -> lookup.keep(query, lines, searched) }
     }
 
     // The song's question (#958), and where its pages are kept.
@@ -942,7 +948,7 @@ class ItemInsights(
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
-    ): Pair<ItemWebQuestion, suspend (List<EvidenceDraft>) -> Unit>? {
+    ): Pair<ItemWebQuestion, suspend (List<EvidenceDraft>, Boolean) -> Unit>? {
         val lookup = songWeb
         val own = ownEvidence(track, settings)
         if (lookup == null || own == null) return null
@@ -961,7 +967,8 @@ class ItemInsights(
                 { page -> lines(page, at) },
                 dates(),
             )
-        return question to { lookup.keep(query, it) }
+        // The song's web search is the track's own too, so whether the AI service searched is not kept.
+        return question to { lines, _ -> lookup.keep(query, lines) }
     }
 
     // What [writeSearching] was asked to write: the item on its track, under its settings, from its
@@ -1008,10 +1015,14 @@ class ItemInsights(
         // Named by the card its request was sent as (`first`), for the prompt lab's comparison (#1003).
         val read = outcome(reply.end, text, key, lines, null, rewritten).sentAs(first)
         val nothing = !searched && foundNothing(asked.item, read)
-        if (searched || nothing) attempt { searching.keep(drafts) }
-        // With "found nothing" kept, the item's evidence has no search due.
+        if (searched || nothing) attempt { searching.keep(drafts, searched) }
+        // With "found nothing" kept, the item's evidence has no search due; for the artist, none made (#1308).
         val none =
-            if (nothing) webEvidence(asked.item, asked.track, asked.settings, asked.evidence, emptyList()) else null
+            if (nothing) {
+                webEvidence(asked.item, asked.track, asked.settings, asked.evidence, emptyList(), skipped = true)
+            } else {
+                null
+            }
         val evidence = found ?: none ?: asked.evidence
         return SearchedWrite(evidence, key, kept(read, key, text, rewritten, asked))
     }
@@ -1079,10 +1090,11 @@ class ItemInsights(
             searched.evidence.lines
                 .filter { it.source == SourceId.WEB }
                 .map(::draftOf),
+            searched.webSkipped,
         )
 
     // [item]'s [evidence] on [track] with the web's [lines]: as the song's own is made ([songWith]), the
-    // others' [withWeb].
+    // others' [withWeb], [skipped] when they were kept with no search made (#1308).
     @Suppress("LongParameterList") // The item, what it is from and under, and what is added.
     private fun webEvidence(
         item: InsightItem,
@@ -1090,19 +1102,22 @@ class ItemInsights(
         settings: Settings,
         evidence: ItemEvidence,
         lines: List<EvidenceDraft>,
+        skipped: Boolean = false,
     ): ItemEvidence? {
-        if (item != InsightItem.SONG) return withWeb(track, settings, evidence, lines)
+        if (item != InsightItem.SONG) return withWeb(track, settings, evidence, lines, skipped)
         val own = ownEvidence(track, settings)
         val shown = track.evidence
         return if (own == null || shown == null) null else songWith(own, shown, track, settings, lines)
     }
 
-    // [evidence] on [track] with the web's [lines], those [settings] switch on.
+    // [evidence] on [track] with the web's [lines], those [settings] switch on; [skipped] when they were
+    // kept with no search made (#1308).
     private fun withWeb(
         track: TrackState,
         settings: Settings,
         evidence: ItemEvidence,
         lines: List<EvidenceDraft>,
+        skipped: Boolean = evidence.webSkipped,
     ): ItemEvidence? {
         val shown = track.evidence ?: return null
         val more = lines.filter { settings.isEnabled(it.source) && !it.aggregate }
@@ -1115,6 +1130,7 @@ class ItemInsights(
             unreachable = evidence.unreachable,
             held = held,
             byName = evidence.byName,
+            webSkipped = skipped,
         )
     }
 

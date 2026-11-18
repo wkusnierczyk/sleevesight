@@ -81,9 +81,17 @@ class ItemSourcesAskedScreenTest {
         keys: Map<SecretId, SecretState> = SAVED,
         byName: Boolean = false,
         held: SourcesHeld? = null,
+        webSkipped: Boolean = false,
         block: () -> Unit,
     ) {
-        val evidence = ItemEvidence(EvidenceSet.of(emptyList(), JvmHasher), emptyMap(), held = held, byName = byName)
+        val evidence =
+            ItemEvidence(
+                EvidenceSet.of(emptyList(), JvmHasher),
+                emptyMap(),
+                held = held,
+                byName = byName,
+                webSkipped = webSkipped,
+            )
         notes.shown.value = mapOf(item to ItemShown.Shown(InsightState.NoEvidence, evidence))
         val state =
             NowPlayingState(
@@ -191,9 +199,16 @@ class ItemSourcesAskedScreenTest {
         }
 
     @Test
-    fun anAlbumLookedUpByItsNameDoesNotNameLastFm() =
+    fun anAlbumLookedUpByItsNameNamesNeitherMusicBrainzNorLastFm() =
         show(InsightItem.ALBUM, byName = true) {
-            asked("Asked MusicBrainz, Wikipedia and a web search: none has this album.")
+            asked("Asked Wikipedia and a web search: none has this album.")
+            noneNotAsked()
+        }
+
+    @Test
+    fun anArtistWrittenWithNoSearchMadeDoesNotNameAWebSearch() =
+        show(InsightItem.ARTIST, webSkipped = true) {
+            asked("Asked MusicBrainz, Wikipedia and Last.fm: none has this artist.")
             noneNotAsked()
         }
 
