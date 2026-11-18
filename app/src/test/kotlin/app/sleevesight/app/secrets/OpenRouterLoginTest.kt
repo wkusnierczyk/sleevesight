@@ -34,7 +34,7 @@ class OpenRouterLoginTest {
         val exchanged = mutableListOf<Pair<String, String>>()
         private var made = 0
 
-        override val callback = "app.sleevesight://openrouter"
+        override val callback = "https://sleevesight.app/auth/openrouter/"
 
         override fun begin(): SignInStart {
             made++
@@ -209,11 +209,17 @@ class OpenRouterLoginTest {
     }
 
     @Test
-    fun theCallbackIsRecognisedByItsSchemeAndHostOnly() {
-        val callback = "app.sleevesight://openrouter"
-        assertTrue(OpenRouterLogin.isCallback("app.sleevesight://openrouter?code=abc", callback))
-        assertTrue(!OpenRouterLogin.isCallback("app.sleevesight://openrouterx?code=abc", callback))
-        assertTrue(!OpenRouterLogin.isCallback("https://openrouter.ai/?code=abc", callback))
+    fun theCallbackIsRecognisedByItsWholeAddressBeforeTheQuery() {
+        // `OpenRouterSignIn.CALLBACK` (`:ai`, which `:app` reaches only through `:wiring`).
+        val callback = "https://sleevesight.app/auth/openrouter/"
+        assertTrue(OpenRouterLogin.isCallback("https://sleevesight.app/auth/openrouter/?s=st&code=abc", callback))
+        assertTrue(OpenRouterLogin.isCallback("https://sleevesight.app/auth/openrouter/", callback))
+        // Another page of the site, a longer path, the same path elsewhere, or the old custom scheme.
+        assertTrue(!OpenRouterLogin.isCallback("https://sleevesight.app/?code=abc", callback))
+        assertTrue(!OpenRouterLogin.isCallback("https://sleevesight.app/auth/openrouter/x?code=abc", callback))
+        assertTrue(!OpenRouterLogin.isCallback("https://sleevesight.app.example/auth/openrouter/?code=abc", callback))
+        assertTrue(!OpenRouterLogin.isCallback("http://sleevesight.app/auth/openrouter/?code=abc", callback))
+        assertTrue(!OpenRouterLogin.isCallback("app.sleevesight://openrouter?code=abc", callback))
         assertTrue(!OpenRouterLogin.isCallback(null, callback))
     }
 

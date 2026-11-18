@@ -85,7 +85,7 @@ class OpenRouterSettingsTest {
 
     private val signIn =
         object : KeySignIn {
-            override val callback = "app.sleevesight://openrouter"
+            override val callback = "https://sleevesight.app/auth/openrouter/"
 
             override fun begin() = SignInStart("verifier", "state", "https://openrouter.ai/auth?code_challenge=c")
 

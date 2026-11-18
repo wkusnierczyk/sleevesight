@@ -26,9 +26,13 @@ import kotlin.io.encoding.Base64
  * the callback, with the verifier, for the key (`POST /api/v1/auth/keys`). The verifier goes only
  * into that request's body, which `:net` never logs; nor does it log the answer, which holds the key.
  *
- * The callback is the app's own scheme ([CALLBACK]): an `https://` App Link would need the site to
- * vouch for the app (`assetlinks.json`), and a page of its own. A code sent to another app that
- * claimed the scheme is no use without the verifier, which never leaves the phone but to OpenRouter.
+ * The callback is an `https://` App Link on the app's site ([CALLBACK], #1396): OpenRouter never
+ * returned to a custom scheme (`app.sleevesight://openrouter`, #1397), and its documentation names
+ * only `https://` callbacks (and `localhost` ones, for apps on a computer). The site vouches for the
+ * app (`.well-known/assetlinks.json`), so Android opens the link in the app; when it does not, the
+ * browser shows the page there, which only says to go back to the app. A code that reaches the
+ * browser, or anyone else, is no use without the verifier, which never leaves the phone but to
+ * OpenRouter.
  *
  * OpenRouter answers a code it refuses, or one past its ten minutes, with 403: both are
  * [KeyExchange.Refused]; the app tells them apart by the time taken.
@@ -92,8 +96,11 @@ class OpenRouterSignIn(
     }
 
     companion object {
-        /** Where OpenRouter sends the code: the app's own scheme, which its main activity takes. */
-        const val CALLBACK: String = "app.sleevesight://openrouter"
+        /**
+         * Where OpenRouter sends the code: a page on the app's site, an App Link its main activity
+         * takes (the manifest's intent filter, `autoVerify`), with a page of its own for a browser.
+         */
+        const val CALLBACK: String = "https://sleevesight.app/auth/openrouter/"
 
         /** The callback's parameter that carries the sign-in's state back. */
         const val STATE: String = "s"

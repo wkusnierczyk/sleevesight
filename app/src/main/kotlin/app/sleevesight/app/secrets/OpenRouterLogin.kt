@@ -203,11 +203,15 @@ class OpenRouterLogin(
                 .filter { '=' in it }
                 .associate { it.substringBefore('=') to it.substringAfter('=') }
 
-        /** Whether [uri] (as a string) is a sign-in's callback at [callback]. */
+        /**
+         * Whether [uri] (as a string) is a sign-in's callback at [callback]: the same address up to
+         * its query or fragment, whatever these hold (#1396: `https://sleevesight.app/auth/openrouter/`,
+         * so not another page of the site, nor the same path on another host).
+         */
         fun isCallback(
             uri: String?,
             callback: String,
-        ): Boolean = uri != null && (uri == callback || uri.startsWith("$callback?") || uri.startsWith("$callback/"))
+        ): Boolean = uri != null && uri.substringBefore('?').substringBefore('#') == callback
     }
 }
 

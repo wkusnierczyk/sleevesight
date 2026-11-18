@@ -9,7 +9,7 @@ import app.sleevesight.core.Secret
  * verifier never leaves the phone but in that exchange.
  */
 interface KeySignIn {
-    /** Where the service sends the code back to the app: the app's own scheme. */
+    /** Where the service sends the code back to the app: an App Link on the app's site. */
     val callback: String
 
     /** A new sign-in: its verifier and its state, made for it alone, and the page to open. */

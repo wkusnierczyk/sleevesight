@@ -60,8 +60,9 @@ class OpenRouterSignInTest {
         assertEquals(43, start.verifier.length)
         assert(start.url.startsWith("https://openrouter.ai/auth?"))
         val query = query(start.url)
-        // The callback with the sign-in's state, which the answer carries back.
-        assertEquals("app.sleevesight://openrouter?s=${start.state}", query["callback_url"])
+        // The callback, an https App Link on the app's site (#1396), with the sign-in's state, which the
+        // answer carries back.
+        assertEquals("https://sleevesight.app/auth/openrouter/?s=${start.state}", query["callback_url"])
         assertEquals(22, start.state.length)
         assertEquals(OpenRouterSignIn.challengeOf(start.verifier, JvmHasher), query["code_challenge"])
         assertEquals("S256", query["code_challenge_method"])
@@ -79,7 +80,10 @@ class OpenRouterSignInTest {
 
     @Test
     fun `a query value keeps the unreserved characters and encodes the rest`() {
-        assertEquals("app.sleevesight%3A%2F%2Fopenrouter", OpenRouterSignIn.encoded("app.sleevesight://openrouter"))
+        assertEquals(
+            "https%3A%2F%2Fsleevesight.app%2Fauth%2Fopenrouter%2F",
+            OpenRouterSignIn.encoded("https://sleevesight.app/auth/openrouter/"),
+        )
         assertEquals("a-b_c.d~e%20%C3%A9", OpenRouterSignIn.encoded("a-b_c.d~e é"))
     }
 
