@@ -339,7 +339,9 @@ data class TrackGenres(
     fun weakEvidence(identity: String): WeakEvidence? {
         val main = chips().firstOrNull { it.label.genre.identity == identity && it.weak }
         // A genre past the rows' cap (#1281) is weak only as Instrumental is, never for its votes.
-        val chip = main ?: extraChips().firstOrNull { it.label.genre.identity == identity && it.weak } ?: return null
+        val extra = extraChips().firstOrNull { it.label.genre.identity == identity && it.weak }
+        val chip = main ?: extra
+        if (chip == null) return null
         val few = main != null && fewVotes(chip, otherLevels())
         val mark: WeakEvidence? = if (few) null else statedAlone(chip) ?: libraryMark(chip)
         return signOfVocals(chip) ?: artistHint(chip) ?: mark ?: fewVotesOf(chip.label)
@@ -770,8 +772,7 @@ fun combineGenres(
                         labels.filter { it.level == level && (level != GenreLevel.ARTIST || it.artist == artist) }
                     },
                 )
-            val labels = combined.take(GenreVocabulary.MAX_LABELS)
-            labels.takeIf { it.isNotEmpty() }?.let {
+            combined.take(GenreVocabulary.MAX_LABELS).takeIf { it.isNotEmpty() }?.let {
                 GenreRow(level, artist, it, extras = combined.drop(GenreVocabulary.MAX_LABELS))
             }
         }
