@@ -172,7 +172,8 @@ internal fun GenresContent(
         }
     }
     // Not while *Ask AI*'s genres show under the lines (#766: nothing added while genres show).
-    val aiShown = aiGenresShown(search)
+    val ask = genresAsk(track, shown, search, notes)
+    val aiShown = aiGenresShown(ask, search)
     if (shown.everyOff) GenresOffLines(shown.off, aiShown, openSettingsAt, style)
     if (shown.looking.isNotEmpty()) {
         // Nothing asked for a track the last clear holds (#1112): it says so, without the record.
@@ -199,7 +200,7 @@ internal fun GenresContent(
         // Nothing to show, with some genre sources off: which (#766). Not while genres show.
         GenresOffLines(shown.off, aiShown, openSettingsAt, style)
     }
-    GenresSearch(track, shown, search, notes)
+    GenresSearch(ask, shown, search, notes)
 }
 
 // [sources] named together, alphabetically, whatever order they are declared or combine in (#1098):

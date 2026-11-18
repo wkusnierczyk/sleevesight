@@ -13,13 +13,18 @@ import app.sleevesight.core.synthesis.SearchKind
 // The genre sources that are off, in *Genres*' panel or page (#766), and *Ask AI*'s genres, which
 // hold them back: nothing is added while genres show.
 
-// Whether *Ask AI*'s genres for [search]'s track show in the panel ([GenresSearch], #773): its answer
-// names a genre. Read only (`AiSearchFeed.answered`), so a kept answer is not told to the log as served.
+// Whether *Ask AI*'s genres for [search]'s track show in the panel ([GenresSearch], #773): its answer,
+// as [ask]'s feed gives it (with lyrics found, without Instrumental, #996), names a genre. Read only
+// (`AiSearchFeed.answered`), so a kept answer is not told to the log as served.
 @Composable
-internal fun aiGenresShown(search: PanelSearch): Boolean {
-    val track = search.track ?: return false
-    val state by remember(search.feed, track.normalized, track.nowPlaying.duration, track.nowPlaying.album) {
-        search.feed.answered(track, SearchKind.GENRES)
+internal fun aiGenresShown(
+    ask: GenresAsk?,
+    search: PanelSearch,
+): Boolean {
+    val track = search.track
+    if (ask == null || track == null) return false
+    val state by remember(ask.feed, track.normalized, track.nowPlaying.duration, track.nowPlaying.album) {
+        ask.feed.answered(track, SearchKind.GENRES)
     }.collectAsState(AiSearch.None)
     return ((state as? AiSearch.Answered)?.answer as? SearchAnswer.Genres)?.genres?.isNotEmpty() == true
 }

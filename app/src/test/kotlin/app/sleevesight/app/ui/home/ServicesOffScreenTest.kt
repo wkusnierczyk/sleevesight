@@ -36,6 +36,7 @@ import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.Singing
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.ProviderId
@@ -273,8 +274,8 @@ class ServicesOffScreenTest {
         }
     }
 
-    // *Ask AI*'s genres, answered for the track: chips under the panel's lines (#773).
-    private val aiGenres =
+    // *Ask AI*'s genres, [named] (identities), answered for the track: chips under the panel's lines (#773).
+    private fun aiGenresOf(vararg named: String) =
         object : AiSearchFeed {
             override fun search(
                 track: TrackState,
@@ -283,8 +284,12 @@ class ServicesOffScreenTest {
             ): Flow<AiSearch> =
                 flowOf(
                     if (kind == SearchKind.GENRES) {
-                        val label = GenreLabel("folk rock", "Folk Rock", "folk rock", level = GenreLevel.TRACK)
-                        AiSearch.Answered(SearchAnswer.Genres(listOf(label)), "Claude Haiku 5.5")
+                        val labels =
+                            named.map {
+                                val shown = it.split(' ').joinToString(" ") { w -> w.replaceFirstChar(Char::uppercase) }
+                                GenreLabel(it, shown, it, level = GenreLevel.TRACK)
+                            }
+                        AiSearch.Answered(SearchAnswer.Genres(labels), "Claude Haiku 5.5")
                     } else {
                         AiSearch.None
                     },
@@ -305,6 +310,9 @@ class ServicesOffScreenTest {
             ) = Unit
         }
 
+    private fun withAi(vararg named: String) =
+        NowPlayingActions(normalizer::normalize, openSettingsAt = { opened += it }, aiSearches = aiGenresOf(*named))
+
     private val everySourceOff =
         Settings(
             onePanel = false,
@@ -313,7 +321,7 @@ class ServicesOffScreenTest {
 
     @Test
     fun whileAskAisGenresShowThePanelSaysNothingOfTheSourcesOff() {
-        val withAi = NowPlayingActions(normalizer::normalize, openSettingsAt = { opened += it }, aiSearches = aiGenres)
+        val withAi = withAi("folk rock")
         for (state in listOf(
             state(settings = everySourceOff),
             state(settings = Settings(onePanel = false, enabledSources = sourcesWithout(SourceSwitch.LASTFM))),
@@ -340,7 +348,8 @@ class ServicesOffScreenTest {
             scenario.onActivity {
                 it.setContent {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        GenresPage(track, everySourceOff, search = PanelSearch(aiGenres, track, track.nowPlaying))
+                        val search = PanelSearch(aiGenresOf("folk rock"), track, track.nowPlaying)
+                        GenresPage(track, everySourceOff, search = search)
                     }
                 }
             }
@@ -348,6 +357,47 @@ class ServicesOffScreenTest {
             compose.onNodeWithText("Folk Rock", substring = true).assertExists()
             assertEquals(0, count(see(R.string.home_settings_sources_link)))
             assertEquals(0, compose.onAllNodesWithText("disabled.", substring = true).fetchSemanticsNodes().size)
+        }
+    }
+
+    // Lyrics found for the track (#996): *Ask AI*'s Instrumental is dropped, and with it alone no genre shows.
+    private val sung = labelled(TrackGenres(singing = Singing(lyrics = true)))
+
+    @Test
+    fun withLyricsFoundAnAskAiInstrumentalAloneLeavesTheSourcesOffNamedInThePanel() {
+        val actions = withAi("instrumental")
+        val lastFmOff = Settings(onePanel = false, enabledSources = sourcesWithout(SourceSwitch.LASTFM))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        NowPlayingContent(state(sung, lastFmOff), actions)
+                    }
+                }
+            }
+            compose.waitForIdle()
+            tap(GENRES_CHIP_TAG)
+            assertEquals(0, count("Instrumental"))
+            compose.onNodeWithText("Last.fm is disabled.").assertExists()
+            follows(see(R.string.home_settings_sources_link), SettingsTarget.sources)
+        }
+    }
+
+    @Test
+    fun withLyricsFoundAnAskAiInstrumentalAloneLeavesTheSourcesOffNamedOnThePage() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        val search = PanelSearch(aiGenresOf("instrumental"), sung, sung.nowPlaying)
+                        GenresPage(sung, everySourceOff, search = search)
+                    }
+                }
+            }
+            compose.waitForIdle()
+            assertEquals(0, count("Instrumental"))
+            compose.onNodeWithText("MusicBrainz, Last.fm, Wikipedia and Wikidata are disabled.").assertExists()
+            assertEquals(1, count(see(R.string.home_settings_sources_link)))
         }
     }
 
