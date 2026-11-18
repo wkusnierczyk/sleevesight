@@ -568,6 +568,17 @@
     <string name="home_item_song_classical">Music</string>
     <string name="home_item_artist">Artist</string>
     <string name="home_item_album">Album</string>
+    <!-- The artist's row on a track crediting more than one artist (#1168), featured ones too: its
+         button and its panel's title, and its page's. Its panel holds the first artist's insight,
+         then a section for each of the others. -->
+    <string name="home_item_artists">Artists</string>
+    <!-- Beside the Artists row (#1168), where it fits on one line, and as its panel's subtitle and
+         its page's name; %1$s: the first artist, "Gotye, others". Where it does not fit, the first
+         artist alone. -->
+    <string name="home_item_name_others">%1$s, others</string>
+    <!-- In the Artists panel (#1168), above a section for each further artist on the track, each
+         with its own Write insight. -->
+    <string name="home_item_also_on_track">Also on this track</string>
     <!-- On a track whose roles tell the composer apart from the performers (#1199), the row before
          the artist's, about the composer: Composer for one composer whose work has no words or
          words of their own; Author for one who is not a classical composer; Authors for more than
@@ -604,6 +615,7 @@
     <string name="home_item_show_album">show the album’s insight</string>
     <string name="home_item_show_composer">show the composer’s insight</string>
     <string name="home_item_show_performer">show the performer’s insight</string>
+    <string name="home_item_show_artists">show the artists’ insights</string>
     <string name="home_item_show_author">show the author’s insight</string>
     <string name="home_item_show_authors">show the authors’ insight</string>
     <!-- A chip of another performer or an author (#1199), which gives way to that artist's insight

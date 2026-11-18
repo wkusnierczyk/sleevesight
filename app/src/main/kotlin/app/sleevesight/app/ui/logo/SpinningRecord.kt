@@ -192,7 +192,7 @@ private class FirstLine {
 }
 
 // The record's size, as the font scales it; one turn, 33⅓ rpm; the space between it and its message.
-private val RECORD_SIZE = 20.sp
+internal val RECORD_SIZE = 20.sp
 private const val FULL_TURN = 360f
 private const val TURN_MS = 1800
 private val RECORD_GAP = 8.dp
