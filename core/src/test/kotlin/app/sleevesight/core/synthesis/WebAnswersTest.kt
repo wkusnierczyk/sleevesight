@@ -55,9 +55,45 @@ class WebAnswersTest {
 
     @Test
     fun genresNeedAPageFoundAndCarryTheirPages() {
-        val genres = found(SearchKind.GENRES, """{"genres": ["folk rock"], "sources": ["$discogs", "https://x.y"]}""")
-        assertEquals(listOf(discogs), (genres as SearchAnswer.Genres).sources)
-        assertNull(found(SearchKind.GENRES, """{"genres": ["folk rock"]}"""))
+        val reply =
+            """{"genres": [
+                {"name": "folk rock", "reason": "Its page calls it folk rock. [S1]", "source": "$discogs/"},
+                {"name": "rock", "reason": "A rock record. [S1]", "source": "https://x.y"},
+                {"name": "pop", "reason": "A pop song. [S1]"},
+                {"name": "blues", "reason": "From memory, blues. [AI]", "source": "$genius"}]}"""
+        val genres = found(SearchKind.GENRES, reply) as SearchAnswer.Genres
+        // A page no search found, none, or a reason only from the model's knowledge: dropped.
+        assertEquals(listOf("Folk Rock"), genres.genres.map { it.label })
+        assertEquals(listOf(discogs), genres.sources)
+        val reason = genres.reasons.getValue(genres.genres.single().identity)
+        assertEquals(listOf(CitedPage(AiSearchAnswers.GENRE_PAGE_ID, discogs)), reason.pages)
+        assertEquals(
+            listOf(SentenceStatus.OK),
+            reason.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
+        // The shape before #952, the pages listed together: nothing kept.
+        assertNull(found(SearchKind.GENRES, """{"genres": ["folk rock"], "sources": ["$discogs"]}"""))
+    }
+
+    @Test
+    fun eachGenreFromTheWebCitesItsOwnPage() {
+        val reply =
+            """{"genres": [
+                {"name": "folk rock", "reason": "Folk rock, says the page. [S1]", "source": "$discogs"},
+                {"name": "rock", "reason": "Rock, says this one. [S1] Played loud. [AI]", "source": "$genius"}]}"""
+        val genres = found(SearchKind.GENRES, reply) as SearchAnswer.Genres
+        assertEquals(listOf(discogs, genius), genres.sources)
+        val rock = genres.reasons.getValue(genres.genres.last().identity)
+        assertEquals(genius, rock.pages.single().url)
+        // The model's own knowledge is not allowed from the web: that sentence is shown dimmed.
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.UNKNOWN),
+            rock.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
     }
 
     @Test
