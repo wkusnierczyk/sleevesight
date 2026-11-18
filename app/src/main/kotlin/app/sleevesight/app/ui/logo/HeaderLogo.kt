@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -14,19 +15,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -58,10 +57,8 @@ import kotlin.math.floor
  * Its record has the header's larger label ([HEADER_LABEL], #848), and turns while [spin] says so
  * (music playing, *Spin the logo while music plays* on), getting up to speed and coming to rest as a
  * turntable does ([recordMotion]); once the intro has ended, from where the intro landed it. The
- * record is drawn once, into a layer, in a box of its own just its size with a layer of its own,
- * and a step of the turn redraws only that box's layer, which draws the record's layer turned
- * (#963): the words are not drawn again, nor the record, and the screen redrawn is the record's
- * square. In a
+ * record is drawn once, into a layer of its own just its size, and a step of the turn only turns
+ * that layer (#963, #1326): the words are not drawn again, nor the record. In a
  * debug build the bug in its place never turns: while the record would, it crawls ([bugCrawl]),
  * every few seconds up out of [crawlSpace] (the header's box, in the root's pixels; the logo's own
  * box without one), and back in from its bottom to its place, drawn only inside that box.
@@ -76,9 +73,11 @@ fun HeaderLogo(
 
 /**
  * [HeaderLogo] with the bug in the record's place or not, whatever the build ([LOGO_BUG]): for
- * tests, which draw both on the one build they run on. The app's callers use [HeaderLogo] without
- * it, so the header always draws what the intro lands.
+ * tests, which draw both on the one build they run on, and may count the record's compositions
+ * and drawings ([counts]). The app's callers use [HeaderLogo] without it, so the header always
+ * draws what the intro lands.
  */
+@Suppress("LongParameterList") // The public one's, the bug's choice, and the tests' counts.
 @Composable
 internal fun HeaderLogo(
     bug: Boolean,
@@ -86,6 +85,7 @@ internal fun HeaderLogo(
     height: Dp = HEADER_LOGO_HEIGHT,
     spin: LogoSpin = LogoSpin.STILL,
     crawlSpace: () -> Rect? = { null },
+    counts: RecordCounts? = null,
 ) {
     val intro = LocalLogoIntro.current
     val colors = logoColors()
@@ -114,25 +114,27 @@ internal fun HeaderLogo(
                 drawCrawlingBug(colors, bugPath, line, box, crawl.value.trip)
             }
         }
-        if (bugPath == null) TurningRecord(colors, { shown }, motion)
+        if (bugPath == null) TurningRecord(colors, { shown }, motion, counts)
     }
 }
 
 /**
  * The header logo's record, in a box of the logo's size ([Modifier.matchParentSize]), placed as
  * the logo draws it, turned [motion]'s way, and drawn only once [shown] (#963). Its own box is just
- * its size, with a layer of its own, so a step redraws only that layer and only its square: the
- * record is drawn upright into another layer once (again only for a new size, place or colours),
- * and each step draws that one turned about the record's centre. The angle is read as it draws,
- * not as a layer property, which would count as a change of layout.
+ * its size, with a layer of its own, into which the record is drawn upright once (again only for a
+ * new size, place or colours, or once it shows). A step of the turn changes only that layer's
+ * rotation about the record's centre, read in the layer's block (#1326): the platform turns what the
+ * layer already holds, so a step recomposes nothing, lays out nothing and draws nothing again, not
+ * even the record, and the app's view keeps its drawing; only the layer's property is new.
  */
 @Composable
 private fun BoxScope.TurningRecord(
     colors: LogoColors,
     shown: () -> Boolean,
     motion: State<RecordMotion>,
+    counts: RecordCounts?,
 ) {
-    val record = rememberGraphicsLayer()
+    if (counts != null) SideEffect { counts.composed++ }
     // The record's box in the logo's, and the logo's place, from the last layout.
     val recordAt = remember { mutableStateOf<RecordBox?>(null) }
     Spacer(
@@ -145,30 +147,34 @@ private fun BoxScope.TurningRecord(
                 val placeable = measurable.measure(Constraints.fixed(box.width, box.height))
                 layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(box.topLeft) }
             }
-            // A layer of its own, whose properties never change: a step redraws this layer alone,
-            // not the nearest one above it (Home's whole screen), and no layout changes.
-            .graphicsLayer()
-            .drawWithCache {
+            // The turn: a property of this layer, about the record's centre in its box.
+            .graphicsLayer {
                 val box = recordAt.value
-                if (box != null && size.minDimension > 0f) {
-                    record.record {
-                        // The logo's own drawing, moved by the box's place: the same pixels.
-                        translate(-box.topLeft.x.toFloat(), -box.topLeft.y.toFloat()) {
-                            at(box.line) {
-                                translate(
-                                    LineShift.x,
-                                    LineShift.y,
-                                ) { drawRecordPlace(colors, null, RecordPose(RecordCentre)) }
-                            }
-                        }
-                    }
+                if (box != null && box.width > 0 && box.height > 0) {
+                    transformOrigin = TransformOrigin(box.centre.x / box.width, box.centre.y / box.height)
+                    rotationZ = motion.value.degrees
                 }
-                onDrawBehind {
-                    if (box == null || !shown() || size.minDimension <= 0f) return@onDrawBehind
-                    rotate(motion.value.degrees, box.centre) { drawLayer(record) }
+            }.drawBehind {
+                val box = recordAt.value
+                if (box == null || !shown() || size.minDimension <= 0f) return@drawBehind
+                counts?.let { it.drawn++ }
+                // The logo's own drawing, moved by the box's place: the same pixels.
+                translate(-box.topLeft.x.toFloat(), -box.topLeft.y.toFloat()) {
+                    at(box.line) {
+                        translate(LineShift.x, LineShift.y) { drawRecordPlace(colors, null, RecordPose(RecordCentre)) }
+                    }
                 }
             },
     )
+}
+
+/**
+ * For tests (#1326): how many times the header logo's record has been composed ([composed]) and
+ * drawn ([drawn]), to show that its turning does neither.
+ */
+internal class RecordCounts {
+    var composed: Int = 0
+    var drawn: Int = 0
 }
 
 /**

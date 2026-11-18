@@ -43,7 +43,8 @@ import kotlin.math.abs
  * The header logo's record turning while music plays (#848), on the test's clock: it gets up to
  * speed in 1 s and comes to rest in 2 s, where it stops; it waits for the intro to end; it stands
  * still where it is under *Remove animations* and off screen, and goes on from there; it moves 30
- * times a second, not on every frame (#963); and turning,
+ * times a second, not on every frame (#963), turning only its layer, with no composing or drawing
+ * again (#1326); and turning,
  * it is drawn with the header's larger label, light and dark (kept as PNGs when
  * `SLEEVESIGHT_PICTURES` names a directory).
  */
@@ -267,6 +268,33 @@ class HeaderSpinTest {
                 compose.mainClock.advanceTimeBy(2 * HALF_SECOND)
                 keep("home-header-turning-${if (dark) "dark" else "light"}")
             }
+        }
+    }
+
+    @Test
+    fun turningItNeitherComposesNorDrawsTheRecordAgain() {
+        val counts = RecordCounts()
+        show(content = {
+            HeaderLogo(
+                bug = false,
+                Modifier.testTag("logo"),
+                height = HEADER_LOGO_HEIGHT * 3,
+                spin = spin,
+                counts = counts,
+            )
+        }) {
+            val logo = { compose.onNodeWithTag("logo").captureToImage().asAndroidBitmap() }
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND + SLACK)
+            val first = logo()
+            val composed = counts.composed
+            val drawn = counts.drawn
+            assertTrue("drawn once at least: $drawn", drawn > 0)
+            // A second at full speed: 30 steps, 200 degrees (#1326).
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND)
+            val later = logo()
+            assertFalse("the record has turned", recordOf(first).sameAs(recordOf(later)))
+            assertEquals("composed again", composed, counts.composed)
+            assertEquals("drawn again", drawn, counts.drawn)
         }
     }
 
