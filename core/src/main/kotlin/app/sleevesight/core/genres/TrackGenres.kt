@@ -337,12 +337,12 @@ data class TrackGenres(
      * too, whose line says more, else few votes; null when it is not weak, or no chip has it.
      */
     fun weakEvidence(identity: String): WeakEvidence? {
-        val main = chips().firstOrNull { it.label.genre.identity == identity && it.weak }
+        val chip = chips().firstOrNull { it.label.genre.identity == identity && it.weak }
         // A genre past the rows' cap (#1281) is weak only as Instrumental is, never for its votes.
-        val extra = extraChips().firstOrNull { it.label.genre.identity == identity && it.weak }
-        val chip = main ?: extra
-        if (chip == null) return null
-        val few = main != null && fewVotes(chip, otherLevels())
+        if (chip == null) {
+            return extraChips().firstOrNull { it.label.genre.identity == identity }?.let { pastCapWeakness(it) }
+        }
+        val few = fewVotes(chip, otherLevels())
         val mark: WeakEvidence? = if (few) null else statedAlone(chip) ?: libraryMark(chip)
         return signOfVocals(chip) ?: artistHint(chip) ?: mark ?: fewVotesOf(chip.label)
     }
@@ -669,7 +669,7 @@ internal fun TrackGenres.libraryMark(placed: PlacedLabel): WeakEvidence.LibraryM
  * instrumental by MusicBrainz nor found so by the check of its vocals ([Singing.lifted]),
  * [WeakEvidence.WikidataStatement]. Null for any other chip, or where another source backs it.
  */
-private fun TrackGenres.statedAlone(placed: PlacedLabel): WeakEvidence? {
+internal fun TrackGenres.statedAlone(placed: PlacedLabel): WeakEvidence? {
     val instrumental = rows.flatMap { it.labels }.filter { it.genre.identity == TrackGenres.INSTRUMENTAL }
     val othersGive =
         given.any { (source, labels) ->

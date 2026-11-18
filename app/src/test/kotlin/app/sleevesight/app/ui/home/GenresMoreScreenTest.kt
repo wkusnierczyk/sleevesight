@@ -20,6 +20,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.pipeline.AiSearch
+import app.sleevesight.app.pipeline.AiSearchFeed
+import app.sleevesight.app.pipeline.DefinitionState
+import app.sleevesight.app.pipeline.GenreNotes
+import app.sleevesight.app.pipeline.GenreReason
+import app.sleevesight.app.pipeline.genresWithNoDefinition
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.GenreLevel
@@ -32,6 +38,10 @@ import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.SearchFacts
+import app.sleevesight.core.synthesis.SearchKind
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -99,15 +109,67 @@ class GenresMoreScreenTest {
     // Every row with five or fewer: nothing past them.
     private val plain = TrackGenres(listOf(trackRow.copy(extras = emptyList()), artistRow.copy(extras = emptyList())))
 
+    // No definition from Wikipedia for any genre, and *Search with AI* offered for one, asking nothing.
+    private val noDefinitions =
+        object : GenreNotes {
+            override fun definition(genre: String): Flow<DefinitionState?> = flowOf(DefinitionState.NotFound)
+
+            override fun reason(
+                track: TrackState,
+                genre: String,
+            ): Flow<GenreReason> = flowOf(GenreReason.Offered)
+
+            override fun explain(
+                track: TrackState,
+                genre: String,
+            ) = Unit
+        }
+
+    private val feed =
+        object : AiSearchFeed {
+            override fun search(
+                track: TrackState,
+                kind: SearchKind,
+                genre: String?,
+            ): Flow<AiSearch> = flowOf(if (kind == SearchKind.DEFINITION) AiSearch.Offered else AiSearch.None)
+
+            override fun ask(
+                track: TrackState,
+                kind: SearchKind,
+                facts: SearchFacts,
+                automatic: Boolean,
+                genre: String?,
+            ) = false
+
+            override fun stop(
+                track: TrackState,
+                kind: SearchKind,
+                genre: String?,
+            ) = Unit
+        }
+
     private fun show(
         genres: TrackGenres,
         playing: MutableState<TrackState> = mutableStateOf(track().copy(genres = genres)),
+        searching: Boolean = false,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) { GenresContent(playing.value, Settings()) }
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        val now = playing.value
+                        if (searching) {
+                            GenresContent(
+                                now,
+                                Settings(),
+                                PanelNotes(noDefinitions),
+                                search = PanelSearch(feed, now, now.nowPlaying),
+                            )
+                        } else {
+                            GenresContent(now, Settings())
+                        }
+                    }
                 }
             }
             compose.waitForIdle()
@@ -276,4 +338,43 @@ class GenresMoreScreenTest {
                 assertTrue(tag, node(tag).fetchSemanticsNode().boundsInRoot.right <= width)
             }
         }
+
+    @Test
+    fun noDefinitionSearchWithAiForAGenreOnlyMusicBrainzGivesOfTheFiveOrPastThem() {
+        // The track's Rock only MusicBrainz gives, among the five; Psychedelic Rock past them.
+        val mbRock = label("rock", GenreLevel.TRACK, LabelSource.MUSICBRAINZ)
+        val row = trackRow.copy(labels = trackRow.labels.map { if (it.genre.identity == "rock") mbRock else it })
+        val genres =
+            TrackGenres(
+                listOf(
+                    row,
+                    artistRow.copy(
+                        labels =
+                            artistRow.labels.filter {
+                                it.genre.identity !=
+                                    "rock"
+                            },
+                    ),
+                ),
+            )
+        show(genres, searching = true) {
+            tap(GENRES_MORE_TAG)
+            // A Last.fm extra: offered.
+            tap(chip(row, "britpop"))
+            assertTrue(exists(AI_SEARCH_TAG))
+            // MusicBrainz's alone: none, of the five or past them.
+            tap(chip(row, "psychedelicrock"))
+            assertTrue(exists(GENRE_NO_DEFINITION_TAG))
+            assertFalse(exists(AI_SEARCH_TAG))
+            tap(chip(row, "rock"))
+            assertTrue(exists(GENRE_NO_DEFINITION_TAG))
+            assertFalse(exists(AI_SEARCH_TAG))
+        }
+        // Nor searched by itself: only the genres that may reach a prompt.
+        val playing = track().copy(genres = genres)
+        assertEquals(
+            setOf("alternativerock", "artrock", "progressiverock", "experimental", "electronic"),
+            genresWithNoDefinition(playing) { _, _ -> true },
+        )
+    }
 }

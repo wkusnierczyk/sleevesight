@@ -121,4 +121,44 @@ class GenreExtrasTest {
         assertEquals(listOf("Rock", "Pop", "Jazz", "Blues", "Folk"), dropped.labels.map { it.genre.label })
         assertTrue(dropped.extras.isEmpty())
     }
+
+    @Test
+    fun `an extra Instrumental backed only by an artist's extra is weak for the featured artist`() {
+        val tags = listOf("rock", "pop", "jazz", "blues", "folk", "instrumental")
+        val bySource =
+            mapOf(
+                LabelSource.LASTFM to
+                    vocabulary.labelsFor(tags, level = GenreLevel.TRACK, capped = false) +
+                    vocabulary.labelsFor(tags, level = GenreLevel.ARTIST, artist = "A", capped = false),
+            )
+        val genres = combineGenres(bySource, listOf("A", "B"))
+        val chip = genres.extraChips().single()
+        // Placed on the track's row; the artist's extra backs it, and B, featured, has no Instrumental.
+        assertEquals(GenreLevel.TRACK, chip.row.level)
+        assertTrue(chip.weak)
+        assertEquals(WeakEvidence.Featured("B"), genres.weakEvidence(TrackGenres.INSTRUMENTAL))
+    }
+
+    @Test
+    fun `an extra Instrumental only Wikidata states is weak, and says so`() {
+        val five = listOf("rock", "pop", "jazz", "blues", "folk")
+        val bySource =
+            mapOf(
+                LabelSource.LASTFM to vocabulary.labelsFor(five, level = GenreLevel.TRACK),
+                LabelSource.WIKIDATA to
+                    vocabulary.labelsFor(five + "instrumental", level = GenreLevel.TRACK, capped = false),
+            )
+        val genres = combineGenres(bySource, listOf("A"))
+        assertEquals(
+            listOf("Instrumental"),
+            genres.rows
+                .single()
+                .extras
+                .map { it.genre.label },
+        )
+        assertTrue(genres.extraChips().single().weak)
+        assertEquals(WeakEvidence.WikidataStatement, genres.weakEvidence(TrackGenres.INSTRUMENTAL))
+        // Nothing past the cap starts the check of the track's vocals.
+        assertEquals(false, genres.wantsVocalsCheck())
+    }
 }
