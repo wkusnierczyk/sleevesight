@@ -70,9 +70,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * A button at the end of a panel's line ends where the panel's *Close* ends (#1068): in the *Lyrics*
  * panel while the song is read about, *Stop*'s text ends where *Close*'s does, within a pixel, at the
- * default font size and twice it, and *Stop* is still at least 48 dp to touch, to its end. An
- * outlined *Retry*, whose edge is its outline, and any *Retry* in a panel without *Close* keep to
- * the line's end, as the panel's rule does. With
+ * default font size and twice it, and *Stop* is still at least 48 dp to touch, to its end. Both are
+ * pills (#1387, #1404), so *Retry* in a panel with *Close* ends where *Close* does, and in a panel
+ * without *Close* keeps to the line's end. With
  * `SLEEVESIGHT_PICTURES` set, the panel is also saved there as a picture, as
  * `RewrittenNotePicturesTest` saves its own.
  */
@@ -199,14 +199,14 @@ class PanelLineButtonEdgeTest {
         compose.onNode(matcher).fetchSemanticsNode().let { it.positionInRoot.x + it.size.width }
 
     @Test
-    fun anOutlinedRetryOrOneInAPanelWithoutCloseKeepsToTheLinesEnd() {
+    fun retryEndsWhereCloseDoesOrWithoutCloseAtTheLinesEnd() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
                     SleevesightTheme(darkTheme = false) {
                         Column(Modifier.padding(16.dp)) {
                             Panel(AnnotatedString("Closable"), "closable", onClose = {}) {
-                                RetryLine("Failed.", "Wikipedia", {}, Modifier.testTag(OUTLINED), outlined = true)
+                                RetryLine("Failed.", "Wikipedia", {}, Modifier.testTag(CLOSABLE))
                             }
                             Panel(AnnotatedString("Unclosable"), "unclosable", onClose = null) {
                                 RetryLine("Failed.", "MusicBrainz", {}, Modifier.testTag(PLAIN))
@@ -216,19 +216,23 @@ class PanelLineButtonEdgeTest {
                 }
             }
             compose.waitForIdle()
-            for (line in listOf(OUTLINED, PLAIN)) {
-                assertEquals(
-                    "$line: Retry ends where its line does",
-                    end(hasTestTag(line)),
-                    end(hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(line))),
-                    1f,
-                )
-            }
+            assertEquals(
+                "Retry ends where Close does",
+                end(hasTestTag("closable:close")),
+                end(hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(CLOSABLE))),
+                1f,
+            )
+            assertEquals(
+                "Without Close, Retry ends where its line does",
+                end(hasTestTag(PLAIN)),
+                end(hasTestTag(RETRY_TAG) and hasAnyAncestor(hasTestTag(PLAIN))),
+                1f,
+            )
         }
     }
 
     private companion object {
-        const val OUTLINED = "outlined"
+        const val CLOSABLE = "closable-line"
         const val PLAIN = "plain"
         const val MIN_TOUCH = 48
         const val END = "end"

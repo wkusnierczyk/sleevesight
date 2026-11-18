@@ -17,7 +17,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.PillButton
 import kotlin.math.min
 
 /**
@@ -99,7 +99,7 @@ internal fun GuideMagnified(
         Surface(Modifier.fillMaxSize().testTag(GUIDE_MAGNIFIED_TAG)) {
             Column(Modifier.safeDrawingPadding()) {
                 Row(
-                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -107,9 +107,11 @@ internal fun GuideMagnified(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f).semantics { heading() },
                     )
-                    TextButton(onClick = onClose, modifier = Modifier.testTag(GUIDE_MAGNIFIED_CLOSE_TAG)) {
-                        Text(stringResource(R.string.page_close))
-                    }
+                    PillButton(
+                        stringResource(R.string.page_close),
+                        onClose,
+                        Modifier.testTag(GUIDE_MAGNIFIED_CLOSE_TAG),
+                    )
                 }
                 Zoomed(zoom, Modifier.weight(1f).fillMaxWidth())
             }

@@ -114,7 +114,7 @@ internal fun Panel(
         Column(modifier = Modifier.padding(end = CONTENT_END), verticalArrangement = Arrangement.spacedBy(spacing)) {
             PanelRule()
             // Only where there is *Close* to line up with.
-            CompositionLocalProvider(LocalPanelEndReach provides if (onClose != null) CLOSE_LABEL_REACH else 0.dp) {
+            CompositionLocalProvider(LocalPanelEndReach provides if (onClose != null) CONTENT_END else 0.dp) {
                 content()
             }
         }
@@ -193,12 +193,10 @@ private fun PanelClose(
  * A button at the end of a panel's line (`LineButton`: *Retry*, *Search with AI*'s *Stop*) reaching
  * past the content's end into the panel's own end padding, as the heading's *Close* does (#1068):
  * the content ends [CONTENT_END] short of where the heading's row does, so that its text lines up
- * with the title's on the left; a button's label already stands its own padding in from the button's
- * edge, and *Close*, a pill since #1387, stands its label further in, behind its outline. The button
- * keeps its size (and its touch target), and is laid out as [reach] narrower, or, where [reach] is
- * below zero (as it is with the pill's *Close*), that much wider, so its label ends where *Close*'s
- * does. [reach] is [LocalPanelEndReach]'s, or none for an outlined button, whose edge is its outline;
- * outside a panel, or in one without *Close*, none, and nothing changes.
+ * with the title's on the left. Both pills since #1404, as *Close* is since #1387, so the button
+ * ends where *Close* does, and its label where *Close*'s does. The button keeps its size (and its
+ * touch target), and is laid out [reach] narrower, so it runs that far past its line's end. [reach]
+ * is [LocalPanelEndReach]'s: outside a panel, or in one without *Close*, none, and nothing changes.
  */
 internal fun Modifier.reachPanelEnd(reach: Dp): Modifier =
     if (reach == 0.dp) {
@@ -234,11 +232,6 @@ internal fun PanelRule(modifier: Modifier = Modifier) {
 // How much further in from the panel's end its content ends than its heading's row (where *Close*
 // is): the content's text then ends as far in from the edge as it starts.
 private val CONTENT_END = 8.dp
-
-// How far a line's button reaches to end its label where *Close* ends its own (#1068): past the
-// content's end to the row's, less how much further in the pill's label stands (Material's button
-// padding, 24 dp) than a line button's (12 dp, `LineButton`). Below zero: drawn further in.
-private val CLOSE_LABEL_REACH = CONTENT_END - (24.dp - 12.dp)
 
 // Above and below a panel's title.
 private val HEADING_PADDING = 10.dp

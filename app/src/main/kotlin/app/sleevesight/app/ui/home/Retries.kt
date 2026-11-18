@@ -1,32 +1,22 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.theme.LocalPanelEndReach
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.reachPanelEnd
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -130,9 +120,8 @@ internal fun insightUnanswered(track: TrackState?): List<SourceId> =
  *
  * [action] names *Retry*'s action otherwise, and [color] colours the message: *Search with AI*'s
  * failure (#773), "ask your AI service again, a paid call", in the error colour. [style] sets the
- * message otherwise, and [outlined] draws *Retry* outlined: a genre's definition that Wikipedia did
- * not give (#786), in the panel's quiet note style. [ai] gives *Retry* the **AI** mark, where it
- * calls the AI service ([LineButton]).
+ * message otherwise: a genre's definition that Wikipedia did not give (#786), in the panel's quiet
+ * note style. [ai] gives *Retry* the **AI** mark, where it calls the AI service ([LineButton]).
  *
  * [tag] is *Retry*'s test tag ([RETRY_TAG] unless given).
  *
@@ -151,7 +140,6 @@ internal fun RetryLine(
     action: String = stringResource(R.string.home_retry_action, source),
     color: Color = Color.Unspecified,
     style: TextStyle = MaterialTheme.typography.bodyLarge,
-    outlined: Boolean = false,
     ai: Boolean = false,
     tag: String = RETRY_TAG,
 ) {
@@ -166,7 +154,6 @@ internal fun RetryLine(
                 stringResource(R.string.home_retry),
                 action,
                 Modifier.testTag(tag),
-                outlined,
                 ai,
             ) {
                 onRetry()
@@ -178,47 +165,23 @@ internal fun RetryLine(
 
 /**
  * A button at the end of a line, as *Retry* is ([RetryLine]) and *Search with AI*'s *Stop* (#773):
- * a text button's look, [text] in the primary colour, with the action named for a screen reader
- * ([action]: "Double-tap to …"), which a Material `TextButton` cannot be given; at least 48 dp to
- * touch; in a panel with *Close*, it ends its label where *Close* ends its own ([reachPanelEnd],
- * #1068). [modifier] goes on the button (a test tag, a focus requester). [outlined], with an
- * outline, as *Search with AI* is (#786: *Retry* under a genre's failed definition), whose edge is
- * the outline, so it keeps to the line's end, with the panel's rule. [ai], with the
- * **AI** mark ([AiLabel]), for a tap that calls the AI service (#624: *Retry* under a song's, an
- * artist's or an album's insight that failed, #522).
+ * the pill ([PillButton], #1404), with the action named for a screen reader ([action]: "Double-tap
+ * to …"); at least 48 dp to touch; in a panel with *Close*, it ends where *Close* ends, its label
+ * too ([reachPanelEnd], #1068). [modifier] goes on the button (a test tag, a focus requester). [ai],
+ * with the **AI** mark ([AiLabel]), for a tap that calls the AI service (#624: *Retry* under a
+ * song's, an artist's or an album's insight that failed, #522).
  */
-@Suppress("LongParameterList") // The label, its action, how it looks, and its tap.
 @Composable
 internal fun LineButton(
     text: String,
     action: String,
     modifier: Modifier = Modifier,
-    outlined: Boolean = false,
     ai: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val edge = MaterialTheme.colorScheme.outline
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .reachPanelEnd(if (outlined) 0.dp else LocalPanelEndReach.current)
-                .then(modifier)
-                .minimumInteractiveComponentSize()
-                .clip(CircleShape)
-                .let { if (outlined) it.border(1.dp, edge, CircleShape) else it }
-                .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = if (outlined) 6.dp else 8.dp),
-    ) {
-        if (ai) {
-            // A tap that calls the AI service (#624): the mark after the label, read "Retry, uses AI".
-            CompositionLocalProvider(
-                LocalContentColor provides MaterialTheme.colorScheme.primary,
-                LocalTextStyle provides MaterialTheme.typography.labelLarge,
-            ) { AiLabel(text) }
-        } else {
-            Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        }
+    PillButton(onClick, Modifier.reachPanelEnd(LocalPanelEndReach.current).then(modifier), action = action) {
+        // A tap that calls the AI service (#624): the mark after the label, read "Retry, uses AI".
+        if (ai) AiLabel(text) else Text(text)
     }
 }
 

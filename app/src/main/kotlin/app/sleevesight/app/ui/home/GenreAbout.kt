@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -229,7 +230,6 @@ internal fun GenreDefinitionNote(
                     afterRetry = afterRetry,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    outlined = true,
                 )
             DefinitionState.NotFound ->
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -290,6 +290,8 @@ internal fun WhyButton(
         Modifier.testTag(GENRE_WHY_TAG).heightIn(min = HEIGHT),
         enabled = enabled,
         shape = RoundedCornerShape(CORNER),
+        // The controls' colour, as the pill's (#1404), not the accent; the chip's shape kept.
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
         contentPadding = PADDING,
     ) { AiLabel(question) }
 }
