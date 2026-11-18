@@ -67,8 +67,12 @@ import kotlin.time.Duration.Companion.seconds
  * and is removed once the player has passed it or its session ends. Nothing else of an unfollowed
  * player's session is read, nothing of its metadata is kept, and a player seen has nothing more read.
  *
- * **The player shown** is the first followed session that is playing (or buffering, or seeking),
- * else the first followed session: the system lists the most recently active first. When none plays
+ * **The player shown** is the player chosen in Home's player menu ([follow], #1409), while it has a
+ * session and no other followed player has started playing since; else the first followed session
+ * that is playing (or buffering, or seeking), else the first followed session: the system lists the
+ * most recently active first. The choice is held in memory only, never saved: it lasts while its
+ * player's session does, and ends when another followed player starts to play. Of the chosen
+ * player's sessions, the one that plays is shown, else the one already shown, else the first. When none plays
  * and the first is of the player already shown, that player's session already shown stays (#595): a
  * pause on another device does not hand the row to the player's other, idle session. Every report
  * of every followed session publishes again, so a session of the same player that starts playing
@@ -96,8 +100,11 @@ import kotlin.time.Duration.Companion.seconds
  * a change. All callbacks and [scope] run on the main thread; [scope]'s dispatcher is the main
  * one, or a test dispatcher whose virtual time runs the [SETTLE] window.
  *
- * Transport controls and handoff to the player are Phase 2; the player's own screen opens from the
- * home screen ([playerActivity]).
+ * **Controls** ([send], #1409, #1209): Play, Pause, Previous and Next go to the shown session's
+ * transport controls, only those its state advertises ([PlaybackInfo.allows]), never to a call. A
+ * track change that follows a Previous or Next sent from here, or the switch to a player chosen in
+ * the menu, within [USER_CHANGE_WINDOW], is the user's action ([ChangeCause.USER_ACTION]), not put
+ * through skip detection (D5). The player's own screen opens from the home screen ([playerActivity]).
  */
 @Suppress("LongParameterList", "TooManyFunctions") // What it follows and does; the clock and the judge are seams.
 class SessionRepository(
@@ -123,6 +130,7 @@ class SessionRepository(
     private var carried: CarriedCause? = null
     private val playingState = MutableStateFlow<NowPlaying?>(null)
     private val seenState = MutableStateFlow<Set<String>>(emptySet())
+    private val followedState = MutableStateFlow<Map<String, PlaybackStatus>>(emptyMap())
 
     /**
      * The track shown, for the UI at once and for the pipeline, which debounces it; null when no
@@ -189,6 +197,12 @@ class SessionRepository(
     /** The shown player's playback state; [PlaybackInfo.NONE] when there is no followed session. */
     val playback: StateFlow<PlaybackInfo> = playbackState.asStateFlow()
 
+    /**
+     * Each followed player with a session now, in the system's order, with its state: its session
+     * that plays, else its first (#1409: Home's player menu). Never a call's.
+     */
+    val followedStates: StateFlow<Map<String, PlaybackStatus>> = followedState.asStateFlow()
+
     /** The shown player's queue, when it publishes one. */
     val queue: StateFlow<SessionQueue?> = queueState.asStateFlow()
 
@@ -225,6 +239,31 @@ class SessionRepository(
         seenState.update { it - player }
     }
 
+    /**
+     * Shows [player] (#1409: chosen in Home's player menu) while it has a session and no other
+     * followed player starts to play; nothing when it has no session. The switch to it is the user's
+     * action (D5). On the main thread, as every change of the layer's state.
+     */
+    fun follow(player: String) {
+        val eligible = eligible()
+        if (eligible.none { it.gate.player == player }) return
+        chosen = Chosen(player, activeOthers(eligible, player))
+        if (shownNow?.gate?.player != player) userChange = UserChange(player, clock())
+        publish()
+    }
+
+    /**
+     * Sends [control] to the shown session (#1409, #1209), when its state advertises it
+     * ([PlaybackInfo.allows]); nothing otherwise, and nothing to a call. A Previous or Next makes the
+     * change that follows the user's action (D5). On the main thread.
+     */
+    fun send(control: Transport) {
+        val shown = shownNow ?: return
+        if (!playbackState.value.allows(control)) return
+        if (control.skips) userChange = UserChange(shown.gate.player, clock())
+        shown.gate.send(shown::asCall, control)
+    }
+
     private var gate: Job? = null
     private var listening = false
     private var followedPlayers: Set<String> = emptySet()
@@ -253,6 +292,15 @@ class SessionRepository(
     private var artSources: List<ArtSource> = emptyList()
     private var artJob: Job? = null
     private var lastShown: Attached? = null
+
+    /** The session whose state [playback] publishes: the one [send] controls. */
+    private var shownNow: Attached? = null
+
+    /** The player chosen in Home's player menu ([follow]), while the choice holds. */
+    private var chosen: Chosen? = null
+
+    /** The last control or choice made here that changes the track ([send], [follow]), until a change takes it. */
+    private var userChange: UserChange? = null
 
     /** Starts following, once [acknowledged] is true; calling it again while started does nothing. */
     fun start() {
@@ -293,6 +341,8 @@ class SessionRepository(
         afterCall.values.forEach { it?.cancel() }
         afterCall.clear()
         ignored = emptySet()
+        chosen = null
+        userChange = null
         publish()
         // Not replayed to a collector after the next start; `publish` has cleared `lastShown`.
         changeState.value = null
@@ -449,9 +499,10 @@ class SessionRepository(
 
     /** Publishes the shown player's state; [settled] is the session whose settle triggered it, if one did. */
     private fun publish(settled: Attached? = null) {
-        // A session seen as a call is not shown until it is read again ([afterCall]).
-        val eligible = attached.values.filter { it.gate.key !in afterCall }
+        val eligible = eligible()
         val shown = choose(eligible)
+        shownNow = shown
+        followedState.value = statesOf(eligible)
         playbackState.value =
             shown?.let { SessionMapping.playbackInfo(it.gate.player, it.state) } ?: PlaybackInfo.NONE
         queueState.value = shown?.let { SessionMapping.queue(it.queue, it.queueTitle) }
@@ -475,14 +526,8 @@ class SessionRepository(
             // Whatever order the sessions settle in, the times never go back: a change that began
             // before the last one published (a hidden player's, shown once the other paused) is
             // timed now, as a switch. Judged once, as published.
-            val judged =
-                classify(
-                    if (last != null && change.changedAt < last.changedAt) {
-                        SessionChange(track, clock(), null, from = previous)
-                    } else {
-                        change
-                    },
-                )
+            val timed = change.takeUnless { last != null && it.changedAt < last.changedAt }
+            val judged = judge(timed ?: SessionChange(track, clock(), null, from = previous), shown)
             changeState.value = judged
             judgedCause = judged.cause
         }
@@ -529,14 +574,80 @@ class SessionRepository(
      * `PAUSED` at a speed above 0 plays (Spotify Connect); a local one's speed plays no part, since
      * many players report `PAUSED` at speed 1.
      */
-    private fun choose(eligible: List<Attached>): Attached? {
-        eligible.firstOrNull { SessionMapping.isActive(it.state) }?.let { return it }
-        val first = eligible.firstOrNull()
-        val stays =
-            lastShown?.takeIf { shown ->
-                first != null && shown.gate.player == first.gate.player && eligible.any { it === shown }
+    private fun choose(eligible: List<Attached>): Attached? =
+        chosenOf(eligible) ?: eligible.firstOrNull { SessionMapping.isActive(it.state) } ?: run {
+            val first = eligible.firstOrNull()
+            val stays =
+                lastShown?.takeIf { shown ->
+                    first != null && shown.gate.player == first.gate.player && eligible.any { it === shown }
+                }
+            stays ?: first
+        }
+
+    /**
+     * [change] judged: one made here (#1409, [madeHere]) is known to be the user's, with no detection
+     * and nothing learned from it; any other by skip detection ([classify]).
+     */
+    private fun judge(
+        change: SessionChange,
+        shown: Attached?,
+    ): SessionChange = if (madeHere(change, shown)) change.copy(cause = ChangeCause.USER_ACTION) else classify(change)
+
+    /** The sessions that may be shown: a session seen as a call is not, until it is read again ([afterCall]). */
+    private fun eligible(): List<Attached> = attached.values.filter { it.gate.key !in afterCall }
+
+    /** The keys of [eligible]'s sessions that play, other than [player]'s. */
+    private fun activeOthers(
+        eligible: List<Attached>,
+        player: String,
+    ): Set<Any> =
+        eligible
+            .filter { it.gate.player != player && SessionMapping.isActive(it.state) }
+            .map { it.gate.key }
+            .toSet()
+
+    /**
+     * The session of the [chosen] player to show, while the choice holds: its player has a session,
+     * and no session of another player has started to play since (one that played when it was
+     * chosen may go on, and once it stops, starting again ends the choice). Its session that plays,
+     * else the one shown, else its first.
+     */
+    private fun chosenOf(eligible: List<Attached>): Attached? {
+        val pick = chosen ?: return null
+        val own = eligible.filter { it.gate.player == pick.player }
+        val others = activeOthers(eligible, pick.player)
+        val holds = own.isNotEmpty() && pick.othersActive.containsAll(others)
+        chosen = if (holds) pick.copy(othersActive = others) else null
+        return if (holds) {
+            own.firstOrNull { SessionMapping.isActive(it.state) } ?: own.firstOrNull { it === lastShown } ?: own.first()
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Each player of [eligible] with its state, in their order: its session that plays, else its first.
+     */
+    private fun statesOf(eligible: List<Attached>): Map<String, PlaybackStatus> =
+        eligible
+            .groupBy { it.gate.player }
+            .mapValues { (player, sessions) ->
+                val session = sessions.firstOrNull { SessionMapping.isActive(it.state) } ?: sessions.first()
+                SessionMapping.playbackInfo(player, session.state).status
             }
-        return stays ?: first
+
+    /**
+     * Whether [change], to [shown]'s track, follows a control or choice made here ([userChange]) for
+     * that player within [USER_CHANGE_WINDOW]. The first change after it takes it, whoever made it.
+     */
+    private fun madeHere(
+        change: SessionChange,
+        shown: Attached?,
+    ): Boolean {
+        val made = userChange?.takeIf { change.changedAt >= it.at } ?: return false
+        userChange = null
+        return shown?.gate?.player == made.player &&
+            change.changedAt - made.at <= USER_CHANGE_WINDOW.inWholeMilliseconds
     }
 
     /** Publishes [trackChanges]: [track], published after [previous], with the cause it carries. */
@@ -1214,7 +1325,26 @@ class SessionRepository(
         }
     }
 
+    /** The player chosen in Home's player menu, and the other sessions that played as it was chosen. */
+    private data class Chosen(
+        val player: String,
+        val othersActive: Set<Any>,
+    )
+
+    /** A control or choice made here that changes [player]'s track, [at] on the [clock]. */
+    private data class UserChange(
+        val player: String,
+        val at: Long,
+    )
+
     companion object {
+        /**
+         * How long after a Previous or Next sent from Sleevesight, or a player chosen in its menu,
+         * the change that follows is still taken as the user's (D5): longer than a player takes to
+         * answer, short beside a track's length.
+         */
+        val USER_CHANGE_WINDOW: Duration = 5.seconds
+
         /**
          * How long a session's metadata and playback state are left to settle before a track is
          * mapped from them: longer than the gap between a new track's first state and its
@@ -1309,6 +1439,14 @@ private class CallGate(
     fun register(callback: MediaController.Callback) = session.register(callback)
 
     fun unregister(callback: MediaController.Callback) = session.unregister(callback)
+
+    /** Sends [control] to the session ([PlayerSession.send]), unless it is a call: then [onCall]. */
+    fun send(
+        onCall: () -> Unit,
+        control: Transport,
+    ) {
+        if (isCall) onCall() else session.send(control)
+    }
 
     /** [read] of the session, unless it is a call before or after it: then [onCall], and null. */
     fun <T> read(

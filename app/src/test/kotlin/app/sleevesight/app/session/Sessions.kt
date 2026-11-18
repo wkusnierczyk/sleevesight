@@ -55,17 +55,20 @@ internal object Sessions {
         flag: Long = 1,
     ): MediaMetadata = MediaMetadata.Builder(metadata).putLong(AdDetection.KEY_ADVERTISEMENT, flag).build()
 
+    @Suppress("LongParameterList") // One parameter per part of the state the tests set.
     fun state(
         state: Int = PlaybackState.STATE_PLAYING,
         positionMs: Long = 0,
         speed: Float = 1f,
         updatedAt: Long = 0,
         queueItem: Long = MediaSession.QueueItem.UNKNOWN_ID.toLong(),
+        actions: Long = 0,
     ): PlaybackState =
         PlaybackState
             .Builder()
             .setState(state, positionMs, speed, updatedAt)
             .setActiveQueueItemId(queueItem)
+            .setActions(actions)
             .build()
 
     fun queueItem(
@@ -142,6 +145,13 @@ internal class FakeSession(
 
     override fun unregister(callback: MediaController.Callback) {
         callbacks -= callback
+    }
+
+    /** The controls sent to the player ([PlayerSession.send]), in order. */
+    val sent = mutableListOf<Transport>()
+
+    override fun send(control: Transport) {
+        sent += control
     }
 
     fun send(metadata: MediaMetadata) {

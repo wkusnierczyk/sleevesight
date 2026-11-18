@@ -65,6 +65,7 @@ import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SkipDetector
 import app.sleevesight.app.session.SkipDetectorLearning
 import app.sleevesight.app.session.SystemActiveSessions
+import app.sleevesight.app.session.Transport
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
@@ -1061,6 +1062,29 @@ class AppGraph internal constructor(
             // Not installed, or not visible to this app (package visibility, Android 11 and later):
             // a player with neither a launcher icon nor a media browser service.
             KNOWN_PLAYERS[packageName] ?: packageName
+        }
+    }
+
+    /**
+     * Sends [control] to the shown player (#1409, #1209: Home's record and player menu), when it
+     * advertises it, as the user's action: its time is kept for the track changes' features (D15).
+     * On the main thread.
+     */
+    val sendToPlayer: (Transport) -> Unit = { control ->
+        if (sessions.playback.value.allows(control)) {
+            userActions.acted()
+            sessions.send(control)
+        }
+    }
+
+    /**
+     * Shows [player] on Home (#1409: chosen in Home's player menu) while it has a session, as the
+     * user's action ([SessionRepository.follow]). On the main thread.
+     */
+    val followPlayer: (String) -> Unit = { player ->
+        if (player in sessions.followedStates.value) {
+            userActions.acted()
+            sessions.follow(player)
         }
     }
 
