@@ -44,8 +44,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The line under Home's album (#729): the release's tracklist looked up with no flip of the cover;
- * while it is, the line held back, its height kept, then filled once with the label and the year;
- * with no answer in [NAMING_WAIT], the year alone, the label added once it comes; MusicBrainz off, the
+ * while it is, the line held back, its room kept at the bottom of the key data (#1407), then filled
+ * once with the label and the year; with no answer in [NAMING_WAIT], the year alone, the label added
+ * once it comes; MusicBrainz off, the
  * player's year alone at once, nothing looked up. On virtual time: the clock advances only as a test
  * says.
  */
@@ -150,6 +151,12 @@ class RecordLabelScreenTest {
             .config[SemanticsProperties.Text]
             .joinToString { it.text }
 
+    private fun buttonsTop(): Float =
+        compose
+            .onNodeWithTag(DATES_CHIP_TAG)
+            .fetchSemanticsNode()
+            .boundsInRoot.top
+
     private fun assertHeld() {
         compose.onNodeWithTag(RELEASE_HELD_TAG, useUnmergedTree = true).assertExists()
         compose.onNodeWithTag(RELEASE_LINE_TAG, useUnmergedTree = true).assertDoesNotExist()
@@ -160,17 +167,21 @@ class RecordLabelScreenTest {
         show(state(resolved)) {
             assertEquals(listOf(key), feed.asked.distinct())
             assertHeld()
+            // No blank line under the album (#1407): the mark that it is held back takes no room.
             val height =
                 compose
                     .onNodeWithTag(RELEASE_HELD_TAG, useUnmergedTree = true)
                     .fetchSemanticsNode()
                     .size.height
-            assertEquals(true, height > 0)
+            assertEquals(0, height)
+            val buttons = buttonsTop()
             after(3_000)
             assertHeld()
             answer("Reprise")
             compose.onNodeWithTag(RELEASE_HELD_TAG, useUnmergedTree = true).assertDoesNotExist()
             assertEquals("Reprise · 1974", line())
+            // Its room kept at the bottom of the key data's block: the buttons under it stay.
+            assertEquals(buttons, buttonsTop())
         }
 
     @Test

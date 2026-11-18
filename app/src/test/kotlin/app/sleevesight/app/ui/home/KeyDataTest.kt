@@ -150,12 +150,13 @@ class KeyDataTest {
         }
 
     @Test
-    fun whileTheLabelIsHeldBackAnEmptyLineKeepsItsHeightAndTheYearWaits() =
+    fun whileTheLabelIsHeldBackNoLineShowsAndTheYearWaits() =
         show(gold, HeaderYears(album = "1975"), labels = AlbumLabels.Looking, labelHeld = true) {
             compose.onNodeWithTag(RELEASE_LINE_TAG, useUnmergedTree = true).assertDoesNotExist()
             compose.onNodeWithText("1975", substring = true).assertDoesNotExist()
             val held = compose.onNodeWithTag(RELEASE_HELD_TAG, useUnmergedTree = true).fetchSemanticsNode()
-            assertEquals(true, held.size.height > 0)
+            // No blank line under the album (#1407): the mark that it is held back takes no room.
+            assertEquals(0, held.size.height)
             assertEquals(
                 false,
                 compose

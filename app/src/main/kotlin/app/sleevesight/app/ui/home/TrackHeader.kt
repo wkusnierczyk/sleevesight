@@ -23,9 +23,10 @@ import app.sleevesight.core.settings.Settings
 /**
  * The key data of [header] ([KeyData]: the title, the artists, the album, and under it its record
  * label and year), then under it the line of buttons that open in place ([UnderAlbum]), each a child
- * of Home's column. The artists under the title are held back, their line's space kept, until the
- * track's people are [named] ([peopleNamed], #1355); the line under the album likewise until the
- * release's labels are known ([releaseLabels], #729), as [line]'s memory keeps the wait.
+ * of Home's column. The artists under the title are held back until the track's people are [named]
+ * ([peopleNamed], #1355); the line under the album likewise until the release's labels are known
+ * ([releaseLabels], #729), as [line]'s memory keeps the wait. Their room is kept at the bottom of the
+ * key data's block, so the buttons do not move when they come in (#1407).
  */
 @Composable
 internal fun TrackHeader(
