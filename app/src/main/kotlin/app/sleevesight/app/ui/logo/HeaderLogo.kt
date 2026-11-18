@@ -49,7 +49,8 @@ import kotlin.math.floor
  * button's bug takes the record's place ([drawRecordPlace]), as in the intro's landed logo, which
  * reads the same [LOGO_BUG].
  *
- * It says nothing itself: its caller names it (Home's header: "Sleevesight, scroll to top"). If
+ * It says nothing itself and takes no taps: its caller names it (Home's header: "Sleevesight, scroll
+ * to top"), and puts the record's own button over it ([headerRecordCentre], #1409). If
  * its box is narrower than the logo, the logo shrinks to fit. While the intro plays
  * ([LocalLogoIntro]), it tells the intro where it is, and draws nothing: the intro draws the
  * logo flying onto it and landed, and this one takes over when the intro ends.
@@ -221,6 +222,16 @@ private fun DrawScope.drawCrawlingBug(
     clipRect(box.left, box.top, box.right, box.bottom) {
         at(line) { drawRecordPlace(colors, bug, RecordPose(centre + offset)) }
     }
+}
+
+/**
+ * The centre of the record, or of the debug build's bug in its place, in a header logo drawn in a box
+ * of [size] ([HeaderLogo]), in that box's pixels: where Home's header puts the record's own button
+ * (#1409), as the logo shrinks to fit too.
+ */
+internal fun headerRecordCentre(size: Size): Offset {
+    val line = linePlace(size)
+    return line.at + (RecordCentre + LineShift) * line.scale
 }
 
 /**

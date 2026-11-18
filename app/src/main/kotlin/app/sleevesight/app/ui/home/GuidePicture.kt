@@ -287,10 +287,11 @@ private class PictureBox {
  * to the width it is given, at the default font size whatever the phone's, with a fixed example
  * track. The header's logo and the key data are Home's own ([HeaderLogo], [KeyData]); the rest are
  * plain copies of Home's parts, since Home's own need a run's state, take taps and carry their own
- * semantics: the player row, a fixed cover (beige, with no blue, so the pen's arrows stand out), the
- * position, *Key insights* with its citation and the Write button; the *Dates* and *Genres* buttons
- * (#724, #772) and *Sources*' chip are Home's own [ChipFrame], without a click. Each part the notes
- * name tells [report] where it is, the cover among them (#994).
+ * semantics: the player's icon in the header (#1209; a plain stand-in, not any player's own), a
+ * fixed cover (beige, with no blue, so the pen's arrows stand out), the position, *Key insights*
+ * with its citation and the Write button; the *Dates* and *Genres* buttons (#724, #772) and
+ * *Sources*' chip are Home's own [ChipFrame], without a click. Each part the notes name tells
+ * [report] where it is, the cover among them (#994).
  * Left to right whatever the phone's language: a picture of Home as the notes, on its right, name it.
  */
 @Composable
@@ -329,8 +330,7 @@ internal fun MiniHome(
                 Modifier.padding(start = 16.dp, end = 16.dp, bottom = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                MiniHeader(at(GuidePart.SETTINGS))
-                MiniPlayer(at(GuidePart.PLAYER))
+                MiniHeader(at(GuidePart.PLAYER), at(GuidePart.SETTINGS))
                 MiniCover(at(GuidePart.COVER))
                 KeyData(EXAMPLE_NORMALIZED, EXAMPLE_TRACK, HeaderYears(album = EXAMPLE_YEAR))
                 MiniLine(at(GuidePart.GENRES))
@@ -345,15 +345,22 @@ internal fun MiniHome(
     }
 }
 
-// Home's header: the logo, Home's own, and the cogwheel ([cogwheel] where it is).
+// Home's header: the logo, Home's own; the player's icon after it (#1209), [player] where it is;
+// and the cogwheel, [cogwheel] where it is.
 @Composable
-private fun MiniHeader(cogwheel: Modifier) {
+private fun MiniHeader(
+    player: Modifier,
+    cogwheel: Modifier,
+) {
     Row(
         Modifier.fillMaxWidth().padding(top = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HeaderLogo()
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            HeaderLogo()
+            MiniPlayer(player)
+        }
         Icon(
             painterResource(R.drawable.ic_settings),
             contentDescription = null,
@@ -377,19 +384,18 @@ private fun MiniSources(modifier: Modifier) {
     }
 }
 
-// The player row, as [PlayerRow] draws it: the player's name and state, and the open-in-new icon.
+// The player's icon in the header (#1209), as a plain stand-in: no player's own icon, and the letter
+// of the example player on a rounded square, as Home draws a player whose icon it has not got.
 @Composable
 private fun MiniPlayer(modifier: Modifier) {
-    Row(
-        modifier.padding(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Box(
+        modifier
+            .size(26.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = MINI_PLAYER_FILL)),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            stringResource(R.string.home_player_state, EXAMPLE_PLAYER, stringResource(R.string.home_state_playing)),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, modifier = Modifier.size(16.dp))
+        Text(EXAMPLE_PLAYER.take(1), style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -533,6 +539,9 @@ private const val PANEL_AFTER_NOTE = 0.5f
 
 // The example track.
 private const val EXAMPLE_PLAYER = "Spotify"
+
+/** How much of the text's colour fills the player's stand-in icon, as Home's stand-in. */
+private const val MINI_PLAYER_FILL = 0.12f
 private const val EXAMPLE_TITLE = "Blue in Green"
 private const val EXAMPLE_ARTIST = "Miles Davis"
 private const val EXAMPLE_ALBUM = "Kind of Blue"

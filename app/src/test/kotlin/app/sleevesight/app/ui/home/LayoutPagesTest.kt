@@ -229,7 +229,6 @@ class LayoutPagesTest {
                 settings = MutableStateFlow(settings),
                 normalizer = normalizer,
                 playerLabel = { it },
-                playerActivity = { null },
                 write = { _, _ -> writes++ },
                 stop = {},
             )

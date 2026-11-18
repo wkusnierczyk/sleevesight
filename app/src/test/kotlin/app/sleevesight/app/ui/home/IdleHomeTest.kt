@@ -166,7 +166,6 @@ class IdleHomeTest {
         settings = settings,
         normalizer = normalizer,
         playerLabel = { names[it] ?: it },
-        playerActivity = { null },
         write = { _, _ -> },
         stop = {},
         guideHidden = hiding.hidden,
