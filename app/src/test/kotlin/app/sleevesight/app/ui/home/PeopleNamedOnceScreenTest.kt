@@ -198,7 +198,8 @@ class PeopleNamedOnceScreenTest {
             after(1_000)
             compose.onNodeWithTag(ARTISTS_HELD_TAG).assertDoesNotExist()
             assertEquals("Song, $TITLE", said(InsightItem.SONG))
-            assertEquals("Artist, $BEETHOVEN", said(InsightItem.ARTIST))
+            // No roles, several credited: the Artists row (#1168).
+            assertEquals("Artists, $BEETHOVEN, others", said(InsightItem.ARTIST))
             compose.onNodeWithTag(itemRowTag(InsightItem.COMPOSER)).assertDoesNotExist()
         }
 
