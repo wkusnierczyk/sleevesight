@@ -14,13 +14,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 // The pill (#1387): every button in Settings and the prompt lab, a panel's *Close*, and Home's
-// text actions (#1404).
+// buttons (#1404) but the key insight's *Write insight*: a line's *Retry* and *Stop* (`LineButton`,
+// through the content overload), *Change*, *Look up again*, a page's *Close*.
 
 /**
- * The app's small outlined button, a pill (#1126, #1365, #1387, #1404), for every button in Settings
- * and the prompt lab, a panel's *Close* ([Panel]), and Home's actions (*Retry*, *Stop*, *Change*):
- * [label] on it, read by it, or by [named] where the label alone would not say what it does out of
- * context.
+ * The app's small outlined button, a pill (#1126, #1365, #1387, #1404), with a plain [label]: in
+ * Settings and the prompt lab, a panel's *Close* ([Panel]), and Home's *Change*, *Look up again* or
+ * a page's *Close*; [label] on it, read by it, or by [named] where the label alone would not say what
+ * it does out of context.
  */
 @Composable
 internal fun PillButton(

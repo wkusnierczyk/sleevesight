@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -43,7 +42,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
-import kotlin.math.abs
 
 /**
  * Home's buttons drawn in the controls' colour, as the pill's (#1404), not the theme's accent, in
@@ -92,26 +90,6 @@ class HomePillsTest {
             song = "Eyes Without a Face",
         )
 
-    // How many of [bitmap]'s pixels are within a small distance of [colour].
-    private fun near(
-        bitmap: Bitmap,
-        colour: Color,
-    ): Int {
-        val want = colour.toArgb()
-        var count = 0
-        for (x in 0 until bitmap.width) {
-            for (y in 0 until bitmap.height) {
-                val got = bitmap.getPixel(x, y)
-                val distance =
-                    abs(android.graphics.Color.red(got) - android.graphics.Color.red(want)) +
-                        abs(android.graphics.Color.green(got) - android.graphics.Color.green(want)) +
-                        abs(android.graphics.Color.blue(got) - android.graphics.Color.blue(want))
-                if (distance < NEAR) count++
-            }
-        }
-        return count
-    }
-
     // [content] in [dark] or light, saved as [name]; then each of [tags] is in the controls' colour.
     private fun check(
         name: String,
@@ -139,8 +117,8 @@ class HomePillsTest {
             }
             for (tag in tags) {
                 val button = compose.onNodeWithTag(tag).captureToImage().asAndroidBitmap()
-                assertTrue("$name $mode: $tag is in the controls' colour", near(button, ink) >= MIN_INK)
-                assertTrue("$name $mode: $tag is not in the accent", near(button, accent) < MIN_INK)
+                assertTrue("$name $mode: $tag is in the controls' colour", pixelsNear(button, ink) >= MIN_INK)
+                assertTrue("$name $mode: $tag is not in the accent", pixelsNear(button, accent) < MIN_INK)
             }
         }
     }
@@ -195,11 +173,5 @@ class HomePillsTest {
         check("home-pills", dark = true, buttons) { Buttons() }
         check("albums-opened", dark = true, listOf(ALBUMS_ALL_TAG, ALBUMS_SELECT_TAG)) { Albums("g-2001") }
         check("albums-list", dark = true, listOf(ALBUMS_DECIDE_TAG)) { Albums(null, chosen = "g-2006") }
-    }
-
-    private companion object {
-        // A colour's pixels, allowing for the edges' smoothing.
-        const val NEAR = 60
-        const val MIN_INK = 20
     }
 }

@@ -11,7 +11,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -45,7 +44,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
-import kotlin.math.abs
 
 /**
  * *Retry* under a failed *Ask AI* (#1404) is the pill, as every button in Settings is (#1387): its
@@ -101,26 +99,6 @@ class RetryPillTest {
         return NowPlayingState(PipelineView(track, aiReady = true), track.nowPlaying, playback, settings = Settings())
     }
 
-    // How many of [bitmap]'s pixels are within a small distance of [colour].
-    private fun near(
-        bitmap: Bitmap,
-        colour: Color,
-    ): Int {
-        val want = colour.toArgb()
-        var count = 0
-        for (x in 0 until bitmap.width) {
-            for (y in 0 until bitmap.height) {
-                val got = bitmap.getPixel(x, y)
-                val distance =
-                    abs(android.graphics.Color.red(got) - android.graphics.Color.red(want)) +
-                        abs(android.graphics.Color.green(got) - android.graphics.Color.green(want)) +
-                        abs(android.graphics.Color.blue(got) - android.graphics.Color.blue(want))
-                if (distance < NEAR) count++
-            }
-        }
-        return count
-    }
-
     private fun check(dark: Boolean) {
         var ink = Color.Unspecified
         var accent = Color.Unspecified
@@ -149,8 +127,8 @@ class RetryPillTest {
                 File(dir, "$name.png").outputStream().use { screen.compress(Bitmap.CompressFormat.PNG, 100, it) }
             }
             val button = retry.captureToImage().asAndroidBitmap()
-            assertTrue("$name: Retry's label is in the controls' colour", near(button, ink) >= MIN_INK)
-            assertTrue("$name: Retry's label is not in the accent", near(button, accent) < MIN_INK)
+            assertTrue("$name: Retry's label is in the controls' colour", pixelsNear(button, ink) >= MIN_INK)
+            assertTrue("$name: Retry's label is not in the accent", pixelsNear(button, accent) < MIN_INK)
         }
     }
 
@@ -159,10 +137,4 @@ class RetryPillTest {
 
     @Test
     fun retryUnderAFailedAskAiIsThePillInDark() = check(dark = true)
-
-    private companion object {
-        // A colour's pixels, allowing for the edges' smoothing.
-        const val NEAR = 60
-        const val MIN_INK = 20
-    }
 }
