@@ -23,6 +23,7 @@ import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.pipeline.TrackState
 
 // The genre chosen in *Genres*' panel, and the genres past the rows' cap shown on a tap (#1281).
 
@@ -59,6 +60,13 @@ internal fun Choice.open(
     val has = { genre: String -> genres.openable.any { it.genre.identity == genre } }
     return chosen.value?.takeIf { has(it) && (more.value || !extra) }
 }
+
+// Whether [track]'s genres are in, every source asked, with no genre past the rows' cap (#1281):
+// what folds the extras for good, as `GenresContent` drops a chosen genre no row has.
+internal fun settled(
+    track: TrackState,
+    extras: List<PlacedLabel>,
+) = track.gathered && track.genresAssembled && extras.isEmpty()
 
 /**
  * Shows or folds the genres past the rows' cap ([Choice.more], #1281); folded with them, one of the

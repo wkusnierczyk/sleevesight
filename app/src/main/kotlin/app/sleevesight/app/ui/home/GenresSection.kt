@@ -330,9 +330,10 @@ private fun GenresBox(
     val extras = track.genres.extraChips(order)
     val more = choice.more.value && extras.isNotEmpty()
     val open = choice.open(track.genres, order, extras)
-    // None left past the cap (a later row's labels took the last of them): folded, so the next ones,
-    // if any come, start folded and *Genre tags* shows no extras meanwhile.
-    SideEffect { if (extras.isEmpty()) choice.more.value = false }
+    // None left past the cap once the genres are in (a later row's labels took the last of them):
+    // folded, so the next ones, if any come, start folded. Not while the sources are asked again, as
+    // [GenresContent]'s chosen genre is kept: the extras shown come back as they were.
+    SideEffect { if (settled(track, extras)) choice.more.value = false }
     val handoff = rememberFocusHandoff()
     // A requester per chip shown, by its genre's identity, and the genre of the chip last tapped:
     // plain, read only by the moves. By genre, not by the chip's tag, which names its row: a genre
@@ -416,7 +417,7 @@ private fun EveryGenre(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         panels(track.genres.chips(order))
         // The genres past the rows' cap (#1281), each in a panel of its own once *Show more* shows them.
-        SideEffect { if (extras.isEmpty()) more.value = false }
+        SideEffect { if (settled(track, extras)) more.value = false }
         MoreGenres(extras, shown, handoff, { panels(extras) }) { more.value = !shown }
     }
 }

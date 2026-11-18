@@ -35,7 +35,9 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.GenreReasons
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.SearchFacts
@@ -432,5 +434,23 @@ class GenresMoreScreenTest {
         assertTrue(GenreReasons.prompted(after, "psychedelicrock"))
         // What *Search with AI* lists stays the five.
         assertEquals(searchFacts(before, before.nowPlaying), searchFacts(after, after.nowPlaying))
+    }
+
+    @Test
+    fun whileTheSourcesAreAskedAgainTheExtrasShownStayShown() {
+        val playing = mutableStateOf(track().copy(genres = rich))
+        show(rich, playing) {
+            tap(GENRES_MORE_TAG)
+            // *Retry* asks a source again: its genres gone meanwhile, no extra left.
+            val asking = playing.value.sources + (SourceId.MUSICBRAINZ to SourceState.Pending)
+            compose.runOnUiThread { playing.value = playing.value.copy(sources = asking, genres = plain) }
+            compose.waitForIdle()
+            assertFalse(exists(GENRES_LESS_TAG))
+            // Back with them: shown as before, not folded.
+            compose.runOnUiThread { playing.value = track().copy(genres = rich) }
+            compose.waitForIdle()
+            assertTrue(exists(GENRES_LESS_TAG))
+            assertTrue(exists(chip(trackRow, "britpop")))
+        }
     }
 }
