@@ -1524,7 +1524,7 @@ class ItemInsights(
             when (event) {
                 is CompletionEvent.Delta -> {
                     text.append(event.text)
-                    pace.next(text.toString(), event.text) { show(InsightState.Writing(it, model = key.model), now()) }
+                    pace.next(text, event.text) { show(InsightState.Writing(it, model = key.model), now()) }
                 }
 
                 // Done or Error: no tools are sent, so never a tool call.

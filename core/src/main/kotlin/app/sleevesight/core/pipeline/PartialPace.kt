@@ -30,20 +30,27 @@ internal class PartialPace(
     // Whether the reply revised itself: what was shown stays until the check decides.
     private var frozen = false
 
+    // Whether the reply can no longer be `NO_EVIDENCE`: once it diverges from the marker, it stays so.
+    private var diverged = false
+
     /**
      * [show]s [partial], the reply so far, [piece] just added to it, when it is read now: not while it
      * may still be `NO_EVIDENCE`, or is, as the check reads it, since the marker is no prose for the
-     * card; nor once it revises itself, as the card would show it (#798).
+     * card; nor once it revises itself, as the card would show it (#798). [partial] is made a string
+     * only when it is weighed, not for each piece.
      */
     fun next(
-        partial: String,
+        partial: CharSequence,
         piece: String,
         show: (String) -> Unit,
     ) {
-        if (frozen || GroundingCheck.mayBeNoEvidence(partial)) return
+        if (frozen) return
+        if (!diverged) diverged = !GroundingCheck.mayBeNoEvidence(partial.toString())
+        if (!diverged) return
         read(piece) {
-            frozen = SelfRevision.ofStreamed(partial).any { it.freezes() }
-            if (!frozen) show(partial)
+            val text = partial.toString()
+            frozen = SelfRevision.ofStreamed(text).any { it.freezes() }
+            if (!frozen) show(text)
         }
     }
 

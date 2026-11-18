@@ -289,7 +289,7 @@ internal class InsightWriter(
                             // the marker is no prose for the card; nor once it revises itself, as
                             // the card would show it (#798): the draft shown so far stays until the
                             // check decides. Read and shown at a pace (#1351).
-                            pace.next(text.toString(), event.text) { show(InsightState.Writing(it, sent.held, model)) }
+                            pace.next(text, event.text) { show(InsightState.Writing(it, sent.held, model)) }
                         }
 
                         // Done or Error: no tools are sent, so never a tool call.
