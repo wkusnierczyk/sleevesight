@@ -1,7 +1,12 @@
 package app.sleevesight.app.ui.logo
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.graphics.Bitmap
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -15,12 +20,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.ui.HomeScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
@@ -34,6 +42,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
@@ -43,7 +52,8 @@ import kotlin.math.abs
  * The header logo's record turning while music plays (#848), on the test's clock: it gets up to
  * speed in 1 s and comes to rest in 2 s, where it stops; it waits for the intro to end; it stands
  * still where it is under *Remove animations* and off screen, and goes on from there; it moves 30
- * times a second, not on every frame (#963); and turning,
+ * times a second, not on every frame (#963), turning only its layer, with no composing or drawing
+ * again, nor telling accessibility of a change (#1326); and turning,
  * it is drawn with the header's larger label, light and dark (kept as PNGs when
  * `SLEEVESIGHT_PICTURES` names a directory).
  */
@@ -267,6 +277,59 @@ class HeaderSpinTest {
                 compose.mainClock.advanceTimeBy(2 * HALF_SECOND)
                 keep("home-header-turning-${if (dark) "dark" else "light"}")
             }
+        }
+    }
+
+    @Test
+    fun turningItNeitherComposesNorDrawsTheRecordAgain() {
+        val counts = RecordCounts()
+        show(content = {
+            HeaderLogo(
+                bug = false,
+                Modifier.testTag("logo"),
+                height = HEADER_LOGO_HEIGHT * 3,
+                spin = spin,
+                counts = counts,
+            )
+        }) {
+            val logo = { compose.onNodeWithTag("logo").captureToImage().asAndroidBitmap() }
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND + SLACK)
+            val first = logo()
+            val composed = counts.composed
+            val drawn = counts.drawn
+            assertTrue("drawn once at least: $drawn", drawn > 0)
+            // A second at full speed: 30 steps, 200 degrees (#1326).
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND)
+            val later = logo()
+            assertFalse("the record has turned", recordOf(first).sameAs(recordOf(later)))
+            assertEquals("composed again", composed, counts.composed)
+            assertEquals("drawn again", drawn, counts.drawn)
+        }
+    }
+
+    @Test
+    fun turningItTellsAccessibilityOfNoChange() {
+        val manager = getApplicationContext<Context>().getSystemService(AccessibilityManager::class.java)
+        shadowOf(manager).apply {
+            setEnabled(true)
+            setTouchExplorationEnabled(true)
+            setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        }
+        val changes = {
+            shadowOf(manager).sentAccessibilityEvents.count {
+                it.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+            }
+        }
+        show(content = {
+            Box(Modifier.semantics { contentDescription = "Sleevesight" }) {
+                HeaderLogo(bug = false, height = HEADER_LOGO_HEIGHT * 3, spin = spin)
+            }
+        }) {
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND + SLACK)
+            val before = changes()
+            // A second at full speed, 30 steps (#1326): no layout changes, so nothing to tell.
+            compose.mainClock.advanceTimeBy(2 * HALF_SECOND)
+            assertEquals("content changes told", before, changes())
         }
     }
 
