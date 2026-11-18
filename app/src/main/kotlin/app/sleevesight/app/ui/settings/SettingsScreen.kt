@@ -258,6 +258,7 @@ fun SettingsScreen(
                 onDismiss = close,
                 refused = refused[shown.provider].orEmpty(),
                 gone = goneModel(shown.provider, settings.orDefaults(), unavailable),
+                onRetry = { model -> modelCheck?.retry(shown.provider, model) },
             )
         }
     }

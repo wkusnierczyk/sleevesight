@@ -128,6 +128,9 @@ internal class ModelMarks(
     private val readOrder = HashMap<ProviderId, Long>()
     private val keyRevisions = HashMap<ProviderId, Long>()
 
+    // The services whose stored key could not be read before any was (#970).
+    private val unread = HashSet<ProviderId>()
+
     /** The revisions now, for a request about to be issued. */
     fun ticket(): Ticket = Ticket(keyRevisions.toMap(), selectionRevisions.toMap())
 
@@ -168,17 +171,40 @@ internal class ModelMarks(
         order: Long,
         stored: Boolean,
     ) {
-        // A read that failed for now says nothing, and must not stand in for the reads issued before it.
-        if (print == null && stored) return
+        // A read that failed for now says nothing, and must not stand in for the reads issued before
+        // it; but the key it could not read may be replaced before one is read (#970).
+        if (print == null && stored) {
+            if (provider !in prints) unread += provider
+            return
+        }
         if (order <= (readOrder[provider] ?: 0L)) return
         readOrder[provider] = order
-        val moved = provider in prints && prints[provider] != print
+        val known = provider in prints
+        val moved = known && prints[provider] != print
         if (moved) keyRevisions[provider] = (keyRevisions[provider] ?: 0L) + 1
         prints[provider] = print
-        keyMarks(provider, print, moved)
+        // The first key read after the one stored could not be: maybe the same, maybe one saved in its
+        // place; what was refused is cleared rather than kept for a key it may not belong to.
+        val unknown = !known && unread.remove(provider)
+        keyMarks(provider, print, moved || unknown)
         // Another key saved for the service, or none: what the old one was refused says nothing of
         // the next (#970).
-        if (moved || print == null) refused = refused - provider
+        if (moved || unknown || print == null) refused = refused - provider
+    }
+
+    /**
+     * [provider]'s [model] chosen again from the list to try it (#970), whether or not it was the
+     * selected model already: a refusal's mark of it is lifted, so the next call tries it, as a
+     * fresh selection; it stays among [refused] until a call with it answers.
+     */
+    fun retry(
+        provider: ProviderId,
+        model: String,
+    ) {
+        val mark = marks[provider] ?: return
+        if (mark.model != model || mark.why != UnavailableReason.REFUSED) return
+        marks = marks - provider
+        selectionRevisions[provider] = (selectionRevisions[provider] ?: 0L) + 1
     }
 
     // [provider]'s marks once its key is read as [print]: those made with another go. A mark

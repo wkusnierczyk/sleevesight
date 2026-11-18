@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -60,8 +61,19 @@ class RefusedModelsTest {
     private val kept = Kept()
     private var saved: Secret? = OLD_KEY
 
+    /** Whether a key is stored, readable or not. */
+    private var stored = false
+
     private fun TestScope.check() =
-        ModelCheck(mapOf(ProviderId.ANTHROPIC to Anthropic), { saved }, backgroundScope, kept) { false }
+        ModelCheck(mapOf(ProviderId.ANTHROPIC to Anthropic), { saved }, backgroundScope, kept) { stored }
+
+    /** Anthropic's client, which refuses every call as a model it does not know. */
+    private object Refusing : AiProvider by Anthropic {
+        override fun stream(
+            request: CompletionRequest,
+            key: Secret,
+        ): Flow<CompletionEvent> = flowOf(NOT_FOUND)
+    }
 
     private suspend fun ModelCheck.ended(
         event: CompletionEvent,
@@ -210,6 +222,67 @@ class RefusedModelsTest {
             check.answered(ticket, ProviderId.ANTHROPIC, OPUS, OLD_KEY, NOT_FOUND)
             check.ticket()
             assertNull(check.anthropic())
+            job.cancel()
+        }
+
+    @Test
+    fun theSelectedRefusedModelChosenAgainIsTriedAndStaysRefusedUntilACallAnswers() =
+        runTest {
+            kept.models = mapOf(ProviderId.ANTHROPIC to mapOf(OPUS to ModelRefusal.NOT_SERVED))
+            val check = check()
+            val job = launch { check.run(flowOf(opus), flowOf(Unit), MutableStateFlow(false)) }
+            runCurrent()
+            check.ticket()
+            assertTrue(check.blocks(opus))
+
+            // Chosen again from the list, though selected already: no selection change, a retry.
+            check.retry(ProviderId.ANTHROPIC, OPUS)
+            check.ticket()
+            assertFalse("tried again", check.blocks(opus))
+            assertEquals(mapOf(OPUS to ModelRefusal.NOT_SERVED), check.anthropic())
+
+            check.ended(DONE, OPUS)
+            assertNull(check.anthropic())
+            job.cancel()
+        }
+
+    @Test
+    fun aKeyUnreadableAtStartThenReplacedClearsWhatWasRefused() =
+        runTest {
+            kept.models = mapOf(ProviderId.ANTHROPIC to mapOf(OPUS to ModelRefusal.ACCOUNT))
+            saved = null
+            stored = true
+            val check = check()
+            val keyChanges = MutableStateFlow(0)
+            val job = launch { check.run(flowOf(opus), keyChanges.map {}, MutableStateFlow(false)) }
+            runCurrent()
+            check.ticket()
+            assertEquals("a failed read clears nothing", mapOf(OPUS to ModelRefusal.ACCOUNT), check.anthropic())
+
+            // Another key saved in place of the one that could not be read.
+            saved = NEW_KEY
+            stored = false
+            keyChanges.value++
+            runCurrent()
+            check.ticket()
+            assertNull(check.anthropic())
+            assertFalse(check.blocks(opus))
+            job.cancel()
+        }
+
+    @Test
+    fun aCallWithANewKeyBeforeTheKeyStoreSaysItChangedCounts() =
+        runTest {
+            val check = check()
+            val job = launch { check.run(flowOf(anthropic), flowOf(Unit), MutableStateFlow(false)) }
+            runCurrent()
+            check.ticket()
+
+            // The new key saved; the pipeline calls with it before the store's change is heard.
+            saved = NEW_KEY
+            check.watching(Refusing).stream(CompletionRequest(OPUS, "prompt"), NEW_KEY).toList()
+            check.ticket()
+            assertEquals(mapOf(OPUS to ModelRefusal.NOT_SERVED), check.anthropic())
             job.cancel()
         }
 

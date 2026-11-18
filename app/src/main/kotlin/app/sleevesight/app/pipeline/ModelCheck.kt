@@ -110,6 +110,11 @@ class ModelCheck(
         class Ask(
             val ticket: CompletableDeferred<Ticket>,
         ) : Event
+
+        class Retry(
+            val provider: ProviderId,
+            val model: String,
+        ) : Event
     }
 
     // A ticket asked for and never taken by the loop (left in the queue when it ends, or handed to
@@ -132,6 +137,7 @@ class ModelCheck(
                         is Event.Listed -> with(event) { book.listed(provider, model, models, print, ticket) }
                         is Event.Answered -> with(event) { book.answered(provider, model, print, ticket, this.event) }
                         is Event.Ask -> event.ticket.complete(book.ticket())
+                        is Event.Retry -> book.retry(event.provider, event.model)
                     }
                     found.value = book.marks
                     if (book.refused != refusedNow.value) {
@@ -194,6 +200,18 @@ class ModelCheck(
         events.trySend(Event.Listed(provider, model, models, fingerprint(used), ticket))
     }
 
+    /**
+     * [provider]'s [model] chosen from the list's refused models, to try it again (#970): a mark of
+     * its refusal is lifted, so the next call tries it, though it was the selected model already
+     * ([ModelMarks.retry]).
+     */
+    fun retry(
+        provider: ProviderId,
+        model: String,
+    ) {
+        events.trySend(Event.Retry(provider, model))
+    }
+
     /** A call with [provider]'s [model], made with [used] under [ticket], ended as [event] ([ModelMarks.answered]). */
     fun answered(
         ticket: Ticket,
@@ -247,8 +265,10 @@ class ModelCheck(
     }
 
     /**
-     * [provider], as the pipeline calls it: each call takes a [ticket] as it starts, and its end is
-     * heard ([answered]) with it, the key and the model it was made with.
+     * [provider], as the pipeline calls it: each call reads the saved key ([readKey]), so the loop
+     * knows the key saved now before the call's answer comes, whenever the key store says it
+     * changed; takes a [ticket] after it; and its end is heard ([answered]) with it, the key and the
+     * model it was made with. A call made with a key since replaced counts for nothing.
      */
     fun watching(provider: AiProvider): AiProvider =
         object : AiProvider by provider {
@@ -257,6 +277,7 @@ class ModelCheck(
                 key: Secret,
             ): Flow<CompletionEvent> =
                 flow {
+                    readKey(provider.id)
                     val ticket = ticket()
                     emitAll(
                         provider.stream(request, key).onEach { answered(ticket, provider.id, request.model, key, it) },

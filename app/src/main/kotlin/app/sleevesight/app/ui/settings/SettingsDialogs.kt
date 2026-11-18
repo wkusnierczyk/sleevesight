@@ -436,8 +436,9 @@ internal fun ConfirmDialog(
  * a model chosen earlier stay offered, as nothing says they are not usable.
  *
  * The models a call with the saved key found refused ([refused], #970), the default too, go last,
- * under "Refused with your key. Select to try again.", each with why, and can still be chosen. The
- * selected model, found unavailable ([gone]), is said so over the list, as under its row.
+ * under "Refused with your key. Select to try again.", each with why, and can still be chosen,
+ * whether or not the list holds them; choosing one tries it again ([onRetry]), the selected one
+ * too. The selected model, found unavailable ([gone]), is said so over the list, as under its row.
  */
 @Suppress("LongParameterList") // The provider, its model, the list, and what the dialog does.
 @Composable
@@ -450,6 +451,7 @@ internal fun ModelDialog(
     onDismiss: () -> Unit,
     refused: Map<String, ModelRefusal> = emptyMap(),
     gone: UnavailableModel? = null,
+    onRetry: (String) -> Unit = {},
 ) {
     val loaded by produceState<ModelLoad>(ModelLoad.Loading, provider) { value = load() }
     val choice = modelChoice(provider, current, loaded, refused)
@@ -461,6 +463,7 @@ internal fun ModelDialog(
         gone?.takeIf { it.refusal != null }?.let { modelUnavailable(name, it, modelName) }
             ?: choice.gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) }
     val pick = { id: String ->
+        onRetry(id)
         onSelect(id.takeUnless { it == Settings.DEFAULT_MODELS[provider] })
         onDismiss()
     }
@@ -506,9 +509,9 @@ internal fun ModelDialog(
 
 /**
  * What [ModelDialog] offers for [provider] once [loaded]: the [default], if offered; the [others],
- * by id; the selected model, [gone], when the list was had without it; and, last, the models of
- * these a call with the saved key found [refused] (#970), the default first, which are not among
- * the others.
+ * by id; the selected model, [gone], when the list was had without it; and, last, every model a
+ * call with the saved key found [refused] (#970), those offered first, in their order, then those
+ * not offered, by id, none of them among the others.
  */
 internal class ModelChoice(
     val default: String?,
@@ -540,7 +543,9 @@ internal fun modelChoice(
         others = offered.others.filterNot { it in refused },
         gone = offered.gone,
         listed = offered.listed,
-        refused = all.filter { it in refused },
+        // Those offered, in their order; then those the list no longer holds, or closed to a new
+        // choice, by id: each can still be chosen to try it again.
+        refused = all.filter { it in refused } + (refused.keys - all.toSet()).sorted(),
     )
 }
 

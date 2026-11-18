@@ -43,6 +43,7 @@ class RefusedModelDialogTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val chosen = mutableListOf<String?>()
+    private val retried = mutableListOf<String>()
 
     private fun text(id: Int) = app.getString(id)
 
@@ -68,7 +69,7 @@ class RefusedModelDialogTest {
                             {},
                             refused,
                             gone,
-                        )
+                        ) { retried += it }
                     }
                 }
             }
@@ -180,6 +181,29 @@ class RefusedModelDialogTest {
         assertEquals(null, goneModel(ProviderId.GOOGLE, Settings().withModel(ProviderId.GOOGLE, FLASH), unavailable))
     }
 
+    @Test
+    fun aRefusedModelTheListNoLongerHoldsIsStillOfferedLastToTryAgain() =
+        showDialog(FLASH, mapOf(RETIRED to ModelRefusal.NOT_SERVED, PREVIEW to ModelRefusal.NOT_SERVED)) {
+            assertEquals(
+                listOf(defaultLabel, NAMES.getValue(FLASH), NAMES.getValue(PRO), NAMES.getValue(PREVIEW), RETIRED),
+                options(),
+            )
+            compose.onNodeWithText(RETIRED).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(listOf<String?>(RETIRED), chosen)
+            assertEquals(listOf(RETIRED), retried)
+        }
+
+    @Test
+    fun theSelectedRefusedModelChosenAgainIsTriedAgain() {
+        val gone = UnavailableModel(ProviderId.GOOGLE, PREVIEW, ModelRefusal.NOT_SERVED)
+        showDialog(PREVIEW, mapOf(PREVIEW to ModelRefusal.NOT_SERVED), gone) {
+            compose.onNodeWithText(NAMES.getValue(PREVIEW)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals(listOf(PREVIEW), retried)
+        }
+    }
+
     private companion object {
         val OPTION = SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)
         val DESCRIBED = SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription)
@@ -187,6 +211,7 @@ class RefusedModelDialogTest {
         const val PREVIEW = "gemini-3-pro-preview"
         const val FLASH = "gemini-3.5-flash"
         const val PRO = "gemini-3.5-pro"
+        const val RETIRED = "gemini-2-flash"
         val NAMES =
             mapOf(
                 DEFAULT to "Default Model",
