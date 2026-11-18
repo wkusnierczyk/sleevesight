@@ -23,6 +23,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
@@ -64,7 +65,8 @@ class ArtistWebSourceTest {
             var sent = 0
             val found = checkNotNull(source.search(artist, { sent++ }))
             assertEquals(1, sent)
-            assertEquals(setOf("mb:mb-sachdev"), kept.keys(ArtistWebSource.PART))
+            // With its mark of a search made (#1308).
+            assertEquals(setOf("mb:mb-sachdev", "mb:mb-sachdev#search"), kept.keys(ArtistWebSource.PART))
             assertEquals(found, source.kept(artist))
             // Found again with no search, its request not told.
             assertEquals(found, source.search(artist, { sent++ }))
@@ -80,7 +82,8 @@ class ArtistWebSourceTest {
         runTest {
             val now = MemoryArtistResults()
             val found = checkNotNull(ArtistWebSource(Web(), names, now).search(artist))
-            val key = now.keys(ArtistWebSource.PART).single()
+            // The lines' key, not their mark's (#1308).
+            val key = now.keys(ArtistWebSource.PART).single { '#' !in it }
             val value = checkNotNull(now.get(ArtistWebSource.PART, key)).value
             // Kept before #1165 (extraction 1) with no reference: the same lines, with no search, and
             // kept again under the part's version.
@@ -154,6 +157,58 @@ class ArtistWebSourceTest {
                 val other = ArtistWebQuery("Someone Else", null)
                 source.keep(other, emptyList())
                 assertFalse(source.unsearched(other))
+            }
+        }
+
+    // [store], whose rows [evict] drops, as a store's size limit would, until kept again.
+    private class Evicting(
+        private val store: MemoryArtistResults,
+    ) : ArtistResults by store {
+        private val evicted = mutableSetOf<String>()
+
+        fun evict(key: String) {
+            evicted += key
+        }
+
+        override suspend fun get(
+            part: ArtistPart,
+            key: String,
+        ): KeptPart? = if (key in evicted) null else store.get(part, key)
+
+        override suspend fun keep(
+            part: ArtistPart,
+            key: String,
+            value: String,
+        ) {
+            evicted -= key
+            store.keep(part, key, value)
+        }
+    }
+
+    @Test
+    fun `lines kept again under the same key replace the mark, whatever their lifetime`() =
+        runTest {
+            val clock = Moving()
+            for (lifetime in listOf(90.days, Duration.INFINITE)) {
+                val store = Evicting(MemoryArtistResults(clock, lifetime))
+                val source = ArtistWebSource(Web(lines = emptyList()), names, store)
+                source.keep(artist, emptyList(), searched = false)
+                assertTrue(source.unsearched(artist), "$lifetime")
+                // The lines' row gone, its mark left: not said, nor kept again by a renewal.
+                store.evict("mb:mb-sachdev")
+                assertFalse(source.unsearched(artist), "$lifetime")
+                source.renew(artist)
+                assertNull(source.kept(artist))
+                // The app's own search finds nothing: a search was made.
+                assertEquals(emptyList(), source.search(artist))
+                assertFalse(source.unsearched(artist), "$lifetime")
+                // Kept with no search made, then by the AI service's searches, then plainly.
+                source.keep(artist, emptyList(), searched = false)
+                source.keep(artist, emptyList(), searched = true)
+                assertFalse(source.unsearched(artist), "$lifetime")
+                source.keep(artist, emptyList(), searched = false)
+                source.keep(artist, emptyList())
+                assertFalse(source.unsearched(artist), "$lifetime")
             }
         }
 

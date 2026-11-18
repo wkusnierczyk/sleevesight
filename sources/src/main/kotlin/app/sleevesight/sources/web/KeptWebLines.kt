@@ -19,6 +19,7 @@ internal class KeptWebLines(
     private val part: ArtistPart,
     private val kept: ArtistResults,
     private val before: ArtistPart,
+    private val marked: Boolean = false,
 ) {
     // The web's lines by key, while [kept] keeps nothing.
     private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
@@ -41,55 +42,51 @@ internal class KeptWebLines(
     suspend fun keep(
         key: String,
         lines: List<EvidenceDraft>,
-    ) {
-        if (kept.persists) {
-            kept.keep(part, key, KeptDrafts.encode(lines))
-        } else {
-            remembered.put(key, lines)
-            unsearchedHere.put(key, false)
-        }
-    }
+    ) = keep(key, lines, searched = true)
 
     /**
-     * [lines] kept for [key], none included, and whether a search found them ([searched], #1308), in a
-     * mark beside them ([unsearched]), kept after them: it stands while it is as fresh as they are, so
-     * lines kept again later by the app's own search leave it behind.
+     * [lines] kept for [key], none included, and, when [marked] (the artist's), whether a search found
+     * them ([searched], #1308), in a mark beside them ([unsearched]), written with them at every keep, so
+     * lines kept again replace the mark of those they replace.
      */
     suspend fun keep(
         key: String,
         lines: List<EvidenceDraft>,
         searched: Boolean,
     ) {
-        keep(key, lines)
         if (kept.persists) {
-            kept.keep(part, markOf(key), if (searched) SEARCHED else UNSEARCHED)
+            kept.keep(part, key, KeptDrafts.encode(lines))
+            if (marked) kept.keep(part, markOf(key), if (searched) SEARCHED else UNSEARCHED)
         } else {
-            unsearchedHere.put(key, !searched)
+            remembered.put(key, lines)
+            if (marked) unsearchedHere.put(key, !searched)
         }
     }
 
     /** Whether the lines kept for [key] were kept with no search made ([keep] with `searched` false). */
     suspend fun unsearched(key: String): Boolean =
         if (kept.persists) {
-            val lines = kept.get(part, key)
-            val mark = kept.get(part, markOf(key))
-            lines != null && mark?.value == UNSEARCHED && mark.freshUntil >= lines.freshUntil
+            kept.get(part, key) != null && kept.get(part, markOf(key))?.value == UNSEARCHED
         } else {
-            unsearchedHere.get(key) == true
+            remembered.get(key) != null && unsearchedHere.get(key) == true
         }
 
-    /** What is kept for [key] kept again, from now, its mark after it; nothing when none is. */
+    /**
+     * What is kept for [key] kept again, from now, with its mark; nothing when none is: a mark whose
+     * lines are gone is not kept again.
+     */
     suspend fun renew(key: String) {
         if (kept.persists) {
-            kept.getCarried(part, before, key)?.let { kept.keep(part, key, it.value) }
-            kept.get(part, markOf(key))?.let { kept.keep(part, markOf(key), it.value) }
+            val lines = kept.getCarried(part, before, key) ?: return
+            kept.keep(part, key, lines.value)
+            if (marked) kept.get(part, markOf(key))?.let { kept.keep(part, markOf(key), it.value) }
         } else {
             remembered.get(key)?.let { remembered.put(key, it) }
         }
     }
 
-    // The key of [key]'s mark of lines kept with no search made.
-    private fun markOf(key: String): String = "$key$UNSEARCHED_SUFFIX"
+    // The key of [key]'s mark of whether its lines were found by a search.
+    private fun markOf(key: String): String = "$key$MARK_SUFFIX"
 
     /**
      * The lines kept for [key], else what [engine] finds, one at a time per key, kept, none included;
@@ -141,7 +138,7 @@ internal class KeptWebLines(
         const val REMEMBERED: Int = 256
 
         // A mark's key after its lines' (#1308), and its value.
-        private const val UNSEARCHED_SUFFIX = "#unsearched"
+        private const val MARK_SUFFIX = "#search"
         private const val UNSEARCHED = "unsearched"
         private const val SEARCHED = "searched"
     }
