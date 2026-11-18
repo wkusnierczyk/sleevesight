@@ -212,6 +212,17 @@ internal class ModelMarks(
     }
 
     /**
+     * [provider]'s models refused, [models], back after [keyChanging] forgot them, when that could
+     * not be kept where they are (#1425): the key is then not written, and they stay with it.
+     */
+    fun refusedAgain(
+        provider: ProviderId,
+        models: Map<String, ModelRefusal>,
+    ) {
+        refused = refused + (provider to models)
+    }
+
+    /**
      * [provider]'s key written, the write's end told as [order], in the order of the reads (#1425):
      * the key it holds now is [print] (null for none) when [written], which an answer must have
      * been made with to count; when not, it is not known, and no answer counts until a read issued

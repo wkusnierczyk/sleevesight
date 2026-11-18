@@ -10,8 +10,11 @@ import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -45,10 +49,14 @@ class RefusedModelsTest {
         /** Whether a save fails, keeping what was there, as a `commit` that could not write would. */
         var failing = false
 
+        /** Whether a save throws. */
+        var throwing = false
+
         override fun load(): RefusedModels = models
 
         override fun save(refused: RefusedModels): Boolean {
             saves++
+            check(!throwing) { "storage broke" }
             if (!failing) models = refused
             return !failing
         }
@@ -320,13 +328,29 @@ class RefusedModelsTest {
             kept.failing = true
             assertFalse("not kept forgotten", check.keyChanging(ProviderId.ANTHROPIC))
             check.keyChanged(ProviderId.ANTHROPIC, written = false, now = null)
-            assertNull("forgotten in memory", check.anthropic())
+            check.ticket()
+            assertEquals("the key stays, and so do its refusals", old.getValue(ProviderId.ANTHROPIC), check.anthropic())
             assertEquals("still on disk", old, kept.models)
+            val saves = kept.saves
+            check.ticket()
+            assertEquals("not saved again on an event that changes nothing", saves, kept.saves)
 
             // Tried again: written again, though memory has nothing of them.
             kept.failing = false
             assertTrue(check.keyChanging(ProviderId.ANTHROPIC))
             assertEquals(emptyMap<ProviderId, Map<String, ModelRefusal>>(), kept.models)
+        }
+
+    @Test
+    fun aSaveThatThrowsLeavesNoKeyWriteWaiting() =
+        runTest {
+            kept.models = mapOf(ProviderId.ANTHROPIC to mapOf(OPUS to ModelRefusal.ACCOUNT))
+            val quiet = CoroutineExceptionHandler { _, _ -> }
+            val loop = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler) + quiet)
+            val check = ModelCheck(mapOf(ProviderId.ANTHROPIC to client), { saved }, loop, kept)
+            kept.throwing = true
+            assertFalse(check.keyChanging(ProviderId.ANTHROPIC))
+            loop.cancel()
         }
 
     @Test

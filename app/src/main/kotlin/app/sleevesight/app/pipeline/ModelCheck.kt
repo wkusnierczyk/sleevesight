@@ -11,7 +11,9 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -71,6 +74,7 @@ import java.util.concurrent.atomic.AtomicLong
  * @param scope where the loop runs, as long as the process.
  * @param kept where the models refused for each service's key are kept across starts, read when
  *   the loop starts, and written as they change.
+ * @param io where [kept] is read and written once the loop has ended ([keyChanging]).
  * @param stored whether a key is stored for a service, readable or not, and true when that cannot
  *   be told (`SecretStore.isStored`): a read that found none while one may be stored failed for now,
  *   and drops no mark; only a confirmed absence does.
@@ -81,6 +85,7 @@ class ModelCheck(
     private val key: suspend (ProviderId) -> Secret?,
     scope: CoroutineScope,
     private val kept: RefusedModelStore = RefusedModelStore.NONE,
+    private val io: CoroutineDispatcher = Dispatchers.IO,
     private val stored: suspend (ProviderId) -> Boolean = { false },
 ) {
     private sealed interface Event {
@@ -153,35 +158,51 @@ class ModelCheck(
         val loop =
             scope.launch {
                 val book = ModelMarks(providers.keys, kept.load())
-                // A save of [refused] failed: the next event tries again.
-                var unsaved = false
                 refusedNow.value = book.refused
                 for (event in events) {
-                    when (event) {
-                        is Event.Selected -> book.selected(event.settings)
-                        is Event.KeyRead -> book.keyRead(event.provider, event.print, event.order, event.stored)
-                        is Event.KeyChanging -> book.keyChanging(event.provider)
-                        is Event.KeyChanged -> with(event) { book.keyChanged(provider, order, print, written) }
-                        is Event.Listed -> with(event) { book.listed(provider, model, models, print, ticket) }
-                        is Event.Answered -> with(event) { book.answered(provider, model, print, ticket, this.event) }
-                        is Event.Ask -> event.ticket.complete(book.ticket())
-                        is Event.Retry -> book.retry(event.provider, event.model)
-                    }
-                    found.value = book.marks
                     val changing = event as? Event.KeyChanging
-                    // Kept again before a key is written, whatever memory says: a save that failed
-                    // left what it should have replaced on disk (#1425).
-                    if (book.refused != refusedNow.value || unsaved || changing != null) {
-                        unsaved = !kept.save(book.refused)
-                        refusedNow.value = book.refused
+                    // What the service had refused before its key's change, should it not be kept.
+                    val before = changing?.let { book.refused[it.provider] }
+                    var forgotten = false
+                    try {
+                        apply(book, event)
+                        found.value = book.marks
+                        // Kept again before a key is written, whatever memory says: a save that
+                        // failed before left on disk what it should have replaced (#1425).
+                        if (book.refused != refusedNow.value || changing != null) {
+                            forgotten = kept.save(book.refused)
+                            // Not kept: the key is not written, so what it was refused stays with it.
+                            if (!forgotten && changing != null && before != null) {
+                                book.refusedAgain(changing.provider, before)
+                            }
+                            refusedNow.value = book.refused
+                        }
+                    } finally {
+                        // Kept, and then only, the key may be written; never left waiting.
+                        changing?.done?.complete(forgotten)
                     }
-                    // Kept, and then only, the key may be written.
-                    changing?.done?.complete(!unsaved)
                 }
             }
         // The loop ended (its scope cancelled, before it started too): nothing more is taken, and
         // what is left in the queue goes to the channel's handler of undelivered events.
         loop.invokeOnCompletion { events.cancel() }
+    }
+
+    // [event] applied to [book].
+    private fun apply(
+        book: ModelMarks,
+        event: Event,
+    ) {
+        when (event) {
+            is Event.Selected -> book.selected(event.settings)
+            is Event.KeyRead -> book.keyRead(event.provider, event.print, event.order, event.stored)
+            is Event.KeyChanging -> book.keyChanging(event.provider)
+            is Event.KeyChanged -> with(event) { book.keyChanged(provider, order, print, written) }
+            is Event.Listed -> with(event) { book.listed(provider, model, models, print, ticket) }
+            is Event.Answered -> with(event) { book.answered(provider, model, print, ticket, this.event) }
+            is Event.Ask -> event.ticket.complete(book.ticket())
+            is Event.Retry -> book.retry(event.provider, event.model)
+        }
     }
 
     /**
@@ -195,8 +216,8 @@ class ModelCheck(
     suspend fun keyChanging(provider: ProviderId): Boolean {
         val done = CompletableDeferred<Boolean?>()
         val sent = events.trySend(Event.KeyChanging(provider, done)).isSuccess
-        // Not taken by the loop (it ended): cleared here, from what is kept.
-        return (if (sent) done.await() else null) ?: kept.save(kept.load() - provider)
+        // Not taken by the loop (it ended): cleared here, from what is kept, off the caller's thread.
+        return (if (sent) done.await() else null) ?: withContext(io) { kept.save(kept.load() - provider) }
     }
 
     /**
