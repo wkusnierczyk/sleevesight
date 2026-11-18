@@ -193,10 +193,16 @@ private fun BoxScope.TurningRecord(
  * Asks for a frame after a change of a layer's property alone, as Compose does for its own layers
  * (`GraphicsLayerOwnerLayer`): [view]'s parents draw again, and [view] keeps its drawing, which holds
  * the layer, so the frame only takes up the property. A plain `invalidate()` would have [view] draw
- * all of itself again.
+ * all of itself again. That is what it does where [view] is drawn in software (not hardware
+ * accelerated, or a software layer of its own): its drawing is then a bitmap kept until [view] is
+ * invalidated, which the property alone would leave as it was, the record standing still.
  */
-private fun redraw(view: View) {
-    view.parent?.onDescendantInvalidated(view, view)
+internal fun redraw(view: View) {
+    if (view.isHardwareAccelerated && view.layerType != View.LAYER_TYPE_SOFTWARE) {
+        view.parent?.onDescendantInvalidated(view, view)
+    } else {
+        view.invalidate()
+    }
 }
 
 /**
