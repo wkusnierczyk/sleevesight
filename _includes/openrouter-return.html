@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Where OpenRouter returns after a sign-in from the app (#1396): an App Link, which Android opens
+     in the app once the site's `/.well-known/assetlinks.json` vouches for it, so this page shows only
+     when the link opens in a browser instead. It then says to go back to the app, and nothing more.
+     The address holds the one-time code, of no use without the verifier that stays on the phone; the
+     page records nothing, runs no script at all (`script-src 'none'`, not even the header's), and
+     sends the code nowhere: the policy below forbids any request but the site's own style sheets,
+     fonts and images, and `no-referrer` keeps the address out of them. In the documentation pages'
+     type, header and footer, without their intro, as `api-keys.html`; with no script, the header is
+     its no-script layout: in the page's flow rather than fixed at the top, the menu beside the logo,
+     or under it on a narrow screen. The release build returns to `/auth/openrouter/`, the debug
+     build to `/auth/openrouter/debug/`, each with this page (`include.source`, its file). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Back to Sleevesight | Sleevesight</title>
+<link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
+<link rel="stylesheet" href="{{ "/assets/css/style.css?v=" | append: site.github.build_revision | relative_url }}">
+<link rel="preload" href="{{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ '/assets/fonts/RobotoSlab-page.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ '/assets/site/chrome.css' | relative_url }}">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+{% include site-header.html home=true no_intro=true %}
+<div class="wrap">
+<main id="main" class="markdown-body">
+<h1 id="back-to-sleevesight">Back to Sleevesight</h1>
+<p>Return to the Sleevesight app on your phone.</p>
+</main>
+{% include site-footer.html source=include.source %}
+</div>
+</body>
+</html>

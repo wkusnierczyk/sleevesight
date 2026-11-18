@@ -277,6 +277,14 @@ internal fun KeyDialogs(
             )
         }
 
+        SettingsDialog.SignOut -> {
+            ConfirmDialog(
+                signOutConfirmation(),
+                onConfirm = { saves.async { store.clear(SecretId.OPENROUTER) }.await() },
+                onDismiss,
+            )
+        }
+
         is SettingsDialog.RemoveKey -> {
             ConfirmDialog(
                 removeKeyConfirmation(shown.id),
