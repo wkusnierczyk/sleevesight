@@ -74,7 +74,7 @@ internal enum class Refusal {
 
 /** *Load keys*' screens, in order (#765), each by its [title] and the [number] before it, if any. */
 @Suppress("MagicNumber") // The steps' numbers, as their titles show them.
-private enum class LoadStep(
+internal enum class LoadStep(
     @StringRes val title: Int?,
     val number: Int?,
 ) {
@@ -87,6 +87,9 @@ private enum class LoadStep(
     ENABLE(R.string.load_keys_enable_title, 4),
     SUMMARY(R.string.load_keys_summary_title, null),
 }
+
+/** *Load keys*' numbered steps, which a step's ring is split into ([stepRing], #1022). */
+internal val LOAD_KEYS_STEPS = LoadStep.entries.count { it.number != null }
 
 /** What ② has made of the codes it read: none yet or one refused, a sealed one being opened, or one read. */
 internal sealed interface ScanState {
