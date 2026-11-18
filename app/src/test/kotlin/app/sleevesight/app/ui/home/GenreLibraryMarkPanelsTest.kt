@@ -13,7 +13,6 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.SearchKind
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.minutes
@@ -44,7 +43,7 @@ class GenreLibraryMarkPanelsTest {
         assertTrue(SearchKind.GENRES in emptyPanels(track, Settings()))
         val shown = GenresShown.of(track, Settings())
         assertFalse(shown.none)
-        assertNull(GenresShown.of(track, Settings(labelSources = emptySet())).off)
+        assertFalse(GenresShown.of(track, Settings(labelSources = emptySet())).everyOff)
     }
 
     @Test

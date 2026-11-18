@@ -495,7 +495,7 @@ class GenresScreenTest {
             compose.onNodeWithText(text(R.string.home_genres_none)).assertExists()
         }
         show(TrackGenres(), Settings(labelSources = emptySet())) {
-            compose.onNodeWithText(text(R.string.home_genres_off)).assertExists()
+            compose.onNodeWithText("MusicBrainz, Last.fm and Wikidata genres are disabled.").assertExists()
             compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
         }
     }

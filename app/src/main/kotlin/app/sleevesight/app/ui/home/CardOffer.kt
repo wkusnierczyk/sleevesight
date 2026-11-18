@@ -161,5 +161,6 @@ internal fun insightActions(
         onLookUpAgain = { actions.lookUpAgain(playing) },
         onAiServices = { actions.openSettingsAt(SettingsTarget.aiServices) },
         onReport = onReport,
+        onSettingsAt = actions.openSettingsAt,
     )
 }

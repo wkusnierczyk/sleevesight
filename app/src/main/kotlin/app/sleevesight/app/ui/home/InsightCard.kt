@@ -23,6 +23,7 @@ import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.ui.lab.LabCompareUnder
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.report.ReportAction
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.pipeline.InsightState
@@ -93,11 +94,13 @@ internal fun InsightCard(
 }
 
 // Why the card shows no insight, in words that match the split button's label (#625): with Write
-// offered, why automatic writing left this track, where it did.
+// offered, why automatic writing left this track, where it did; with *Show insights* off or no AI
+// service ready, what is off, then a link to where it is switched on ([openSettingsAt], #766).
 @Composable
 private fun IdleNote(
     insight: InsightState.Idle,
     context: InsightContext,
+    openSettingsAt: (SettingsTarget) -> Unit,
 ) {
     val auto = automaticMode(context)
     val line =
@@ -112,6 +115,16 @@ private fun IdleNote(
             auto != null && runsByItself(context) -> stringResource(runningLine(auto))
             else -> null
         }
+    val off = if (line == null) insightOffPart(context.insightsOn, context.aiReady, context.provider) else null
+    if (off != null) {
+        OffLines(
+            listOf(off),
+            openSettingsAt,
+            MaterialTheme.typography.bodyMedium,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
     val reason = idleReason(context)
     // The evidence or the insight on its way, with the turning record before it (#785); one note in
     // every case, so its node lasts as the record comes and goes.
@@ -140,7 +153,7 @@ private fun InsightBody(
         return
     }
     when (insight) {
-        is InsightState.Idle -> IdleNote(insight, context)
+        is InsightState.Idle -> IdleNote(insight, context, actions.onSettingsAt)
 
         is InsightState.Writing -> {
             for (paragraph in paragraphsOf(insight.partial)) {
@@ -178,12 +191,13 @@ private fun InsightBody(
     }
 }
 
-/** Why no insight is offered: insights off, no AI service, the evidence still coming, or the pipeline not there yet. */
+/**
+ * Why no insight is offered, with insights on and an AI service ready (else [insightOffPart] says
+ * what is off, #766): the evidence still coming, or the pipeline not there yet.
+ */
 @StringRes
 private fun idleReason(context: InsightContext): Int =
     when {
-        !context.insightsOn -> R.string.home_insight_off
-        !context.aiReady -> R.string.home_insight_unavailable
         context.track?.gathered != true -> R.string.home_insight_gathering
         else -> R.string.home_insight_preparing
     }

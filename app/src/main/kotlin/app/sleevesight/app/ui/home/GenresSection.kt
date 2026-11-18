@@ -24,24 +24,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.ChipFrame
-import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.PanelRule
-import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.app.ui.theme.handoffTarget
-import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
@@ -56,8 +55,9 @@ import app.sleevesight.core.settings.Settings
 
 /**
  * *Genres* in the line under the album ([InPlaceLine], #772), beside *Dates*: its button, shown for
- * every track while *Show genres* is on in [settings] (with it off, #444, none, as no genres are
- * asked for; nor before the settings' first read), and its panel, which holds the genre labels
+ * every track once [settings] are read (not before their first read), and its panel, which, with
+ * *Show genres* off (#444), says so, on two lines, the second a link to *Settings → Genres* (#766),
+ * as no genres are asked for; else holds the genre labels
  * (#439, #558; `design/design.md`, *Genre labels*) of the track, its artists and its album
  * ([GenresContent]). [retries] asks a label source that could not be reached again, and
  * [openSettingsAt] opens the settings where the genre sources are switched on. Under *Separate
@@ -75,9 +75,9 @@ internal fun genresItem(
     openPage: (() -> Unit)? = null,
     search: PanelSearch = PanelSearch(),
 ): InPlaceItem? {
-    if (settings?.showGenres != true) return null
+    if (settings == null) return null
     // The check of the track's vocals started by itself (#998), whether the panel is open or not.
-    AutoVocalsCheck(track, settings, notes, search)
+    if (settings.showGenres) AutoVocalsCheck(track, settings, notes, search)
     return InPlaceItem(
         id = InPlace.GENRES,
         name = stringResource(R.string.home_genres),
@@ -85,7 +85,27 @@ internal fun genresItem(
         tag = if (openPage != null) GENRES_PAGE_LINK_TAG else GENRES_CHIP_TAG,
         panelTag = GENRES_PANEL_TAG,
         page = openPage,
-    ) { toClose -> GenresContent(track, settings, notes, retries::ofAll, openSettingsAt, toClose, search = search) }
+    ) { toClose ->
+        if (settings.showGenres) {
+            GenresContent(track, settings, notes, retries::ofAll, openSettingsAt, toClose, search = search)
+        } else {
+            GenresHidden(openSettingsAt, MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+/**
+ * What *Genres*' panel and page say with *Show genres* off (#766): "Show genres is off." then "See
+ * Settings → Genres.", the section a link that opens Settings there ([openSettingsAt]), in [style].
+ */
+@Composable
+internal fun GenresHidden(
+    openSettingsAt: (SettingsTarget) -> Unit,
+    style: TextStyle,
+    color: Color = Color.Unspecified,
+) {
+    val part = OffPart(listOf(stringResource(R.string.home_genres_hidden)), SettingsTarget.genres)
+    OffLines(listOf(part), openSettingsAt, style, color)
 }
 
 /**
@@ -98,9 +118,10 @@ internal fun genresItem(
  * sources still asked), the sources that could not be reached, on one line that says some genres may
  * be missing (#1121), with *Retry* beside it ([retry] of their [SourceId]s, which asks them again
  * together, [RetryLine], and then hands the focus to the panel's *Close*, [toClose]), "None
- * found."; and with every genre source off, two lines, the second a link to where they are switched
- * on ([openSettingsAt]: *Settings → Sources*, or *Settings → Genres* when the sources are on and
- * their genre switches are not). With [everyGenre] (the genres' page, #772), no chips: every
+ * found.", and under it, with some genre sources off, which ([GenresOff], #766); and with every genre
+ * source off, which, by name as Settings names them, then a link to where they are switched on
+ * ([openSettingsAt]: *Settings → Sources* for those off there or lacking their key, *Settings →
+ * Genres* for those whose genre switch is off; [OffLines]). With [everyGenre] (the genres' page, #772), no chips: every
  * genre of the chips, in their order, in a panel of its own titled with its name ([GenrePanel], with
  * no *Close*). With no genre and no source still asked (every genre source off, one not reached, none
  * found), *Search with AI* under the lines ([search], #773), whose genres show as chips that unfold
@@ -128,7 +149,7 @@ internal fun GenresContent(
     val composed = composedGenres(playing, notes, search)
     val track = composed.track
     GenresSettled(playing, track, settings, notes.notes)
-    val shown = GenresShown.of(track, settings)
+    val shown = GenresShown.of(track, settings, LocalKeyless.current)
     val style = MaterialTheme.typography.bodyLarge
     // The genre a tap opened, kept above the chips and the lines in their place (#772): while a run
     // asks again, the chips may go and come back, and the genre with them. Cleared on each new track;
@@ -150,19 +171,7 @@ internal fun GenresContent(
             GenresBox(track, notes, Choice(chosen, tapped), search)
         }
     }
-    shown.off?.let { target ->
-        Text(stringResource(R.string.home_genres_off), style = style)
-        val linkText =
-            if (target ==
-                SettingsTarget.sources
-            ) {
-                R.string.home_settings_sources_link
-            } else {
-                R.string.home_settings_genres_link
-            }
-        val link = TextPart.Action(stringResource(linkText), target.linkTag) { openSettingsAt(target) }
-        LinkedText(linkedParts(stringResource(R.string.home_genres_off_see), link), style = style)
-    }
+    if (shown.everyOff) OffLines(genresOffParts(shown.off), openSettingsAt, style)
     if (shown.looking.isNotEmpty()) {
         // Nothing asked for a track the last clear holds (#1112): it says so, without the record.
         Busy(
@@ -183,7 +192,11 @@ internal fun GenresContent(
         )
     }
     LibraryRetry(shown.libraryUnreachable, composed.libraryRetry, retry, toClose)
-    if (shown.none) Text(stringResource(R.string.home_genres_none), style = style)
+    if (shown.none) {
+        Text(stringResource(R.string.home_genres_none), style = style)
+        // Nothing to show, with some genre sources off: which (#766). Not while genres show.
+        OffLines(genresOffParts(shown.off), openSettingsAt, style)
+    }
     GenresSearch(track, shown, search, notes)
 }
 
@@ -205,8 +218,9 @@ private fun sourcesNamed(sources: List<LabelSource>): String {
 /**
  * What *Genres*' panel says besides its chips (#772), for a track and the settings: the label
  * sources still being asked while the genres are gathered, by name ([looking]); those that could
- * not be reached, on one line with *Retry* ([unreachable], #1121); with every genre source off and no genre, where
- * its link leads ([off]); whether it says none were found ([none]); and whether LRCLIB, asked about
+ * not be reached, on one line with *Retry* ([unreachable], #1121); the genre sources that are off
+ * ([off], #766), named with no genre when every one is ([everyOff]), or under "none found"; whether
+ * it says none were found ([none]); and whether LRCLIB, asked about
  * the track's Instrumental, could not be reached, with *Retry* ([libraryUnreachable], #997). The line
  * names the sources not reached ([notReached]): a label source's own, or, where the lookup that
  * brings its labels was not reached, that lookup's (#1098: Wikipedia's, for Wikidata's genres).
@@ -214,16 +228,17 @@ private fun sourcesNamed(sources: List<LabelSource>): String {
 internal data class GenresShown(
     val looking: List<LabelSource> = emptyList(),
     val unreachable: List<LabelSource> = emptyList(),
-    val off: SettingsTarget? = null,
+    val off: GenresOff = GenresOff(),
+    val everyOff: Boolean = false,
     val none: Boolean = false,
     val libraryUnreachable: Boolean = false,
     val notReached: List<SourceId> = unreachable.map { it.source },
 ) {
     companion object {
         /**
-         * What the panel says for [track] under [settings]. With no genre and every genre source off
-         * ([labelsOff]), the link: to *Sources* when every label source is switched off there, else to
-         * *Genres*, where their genre switches are ([Settings.givesLabels]). Until the genres are
+         * What the panel says for [track] under [settings]. A genre source is on when it gives genres
+         * ([gives]: [Settings.givesLabels], and not among [keyless], which lack their key, #766). With
+         * no genre and none on, every one is off ([everyOff]). Until the genres are
          * assembled with the evidence ([TrackState.gathered] and [TrackState.genresAssembled]: the
          * sources still asked, the last one's result being kept, or before the pipeline reaches the
          * track), the label sources on that are still pending, or, with none pending, all those on.
@@ -235,18 +250,17 @@ internal data class GenresShown(
         fun of(
             track: TrackState?,
             settings: Settings,
+            keyless: Set<SourceId> = emptySet(),
         ): GenresShown {
             val empty = track?.genres?.isEmpty ?: true
-            if (empty && labelsOff(settings)) {
-                val sourcesOff = LabelSource.entries.none { settings.isEnabled(it.source) }
-                return GenresShown(off = if (sourcesOff) SettingsTarget.sources else SettingsTarget.genres)
-            }
-            val on = LabelSource.entries.filter(settings::givesLabels)
+            val off = GenresOff.of(settings, keyless)
+            val on = LabelSource.entries.filter { gives(settings, keyless, it) }
+            if (empty && on.isEmpty()) return GenresShown(off = off, everyOff = true)
             return if (track == null || !track.gathered || !track.genresAssembled) {
                 val states = track?.sources.orEmpty()
-                GenresShown(looking = on.filter { states[it.lookup] is SourceState.Pending }.ifEmpty { on })
+                GenresShown(looking = on.filter { states[it.lookup] is SourceState.Pending }.ifEmpty { on }, off = off)
             } else {
-                gathered(track, on, empty)
+                gathered(track, on, empty).copy(off = off)
             }
         }
 
@@ -277,10 +291,6 @@ internal data class GenresShown(
                 (state is SourceState.Done && state.result.outcome == Outcome.Unreachable)
     }
 }
-
-/** Whether every label source is off in [settings], as read. */
-internal fun labelsOff(settings: Settings?): Boolean =
-    settings != null && LabelSource.entries.none { settings.givesLabels(it) }
 
 /**
  * The genre a tap on a chip chose in *Genres*' panel ([chosen], null when the tap folded it), and

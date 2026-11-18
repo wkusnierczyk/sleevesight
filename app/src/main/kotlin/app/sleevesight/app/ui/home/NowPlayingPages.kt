@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.session.TrackIdentity
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.evidence.EvidenceSet
@@ -66,7 +67,7 @@ internal fun NowPlayingPageContent(
                 return@PageFrame
             }
             // Nothing asked for a track the last clear holds (#1112): its fields say so.
-            CompositionLocalProvider(LocalTrackCleared provides shown.cleared) {
+            CompositionLocalProvider(LocalTrackCleared provides shown.cleared, LocalKeyless provides state.keyless) {
                 when (page) {
                     is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions) { handoff.moveTo(back) }
                     HomePage.Genres, is HomePage.GenresAt -> {
@@ -220,7 +221,9 @@ private fun SourcesPage(
     SideEffect { if (!current) citedOn.value = null }
     CitedLine(cite?.takeIf { current }, lines.evidence, focus, fold)
     val retries = Retries(shown.view, playing, actions.askAgain)
-    SourcesBody(shown.sources(lines, retries::ofAll), focus, fold, actions.openSettings, afterRetry)
+    // A source's key note links to *Settings → Sources* (#766).
+    val toSources = { actions.openSettingsAt(SettingsTarget.sources) }
+    SourcesBody(shown.sources(lines, retries::ofAll), focus, fold, toSources, afterRetry)
 }
 
 /**

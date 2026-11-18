@@ -38,13 +38,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.Busy
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.CHIP_PADDING
 import app.sleevesight.app.ui.theme.CHIP_SHAPE
 import app.sleevesight.app.ui.theme.ChipFrame
 import app.sleevesight.app.ui.theme.CompactChipFrame
 import app.sleevesight.app.ui.theme.DeveloperMark
-import app.sleevesight.app.ui.theme.LinkedText
-import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.chipColours
 import app.sleevesight.app.ui.theme.developerMarkInset
 import app.sleevesight.core.evidence.EvidenceDraft
@@ -144,9 +143,10 @@ internal fun PanelChip(
 }
 
 /**
- * What needs the listener, in one note (#440): each source that needs its key, "Last.fm needs your
- * key, in Settings.", the settings a link ([openSettings]); each one that could not be reached or
- * failed. Those that could not be reached in English are named together, in one sentence where the
+ * What needs the listener (#440): each source that needs its key, "Last.fm needs your key.", then
+ * "See Settings → Sources.", the section a link that opens Settings there ([openSettings], #766),
+ * as Home's items name what is off ([OffLines]); then, in one note, each one that could not be reached
+ * or failed. Those that could not be reached in English are named together, in one sentence where the
  * first was ("Last.fm and MusicBrainz could not be reached.", #1121), with *Retry* beside the note
  * ([retry] of them, null while it is not offered), which asks them again and then runs
  * [afterRetry]; a lookup in the track's language (#902), which *Retry* does not ask, keeps a
@@ -160,30 +160,39 @@ internal fun Notes(
     afterRetry: () -> Unit = {},
 ) {
     if (notes.isEmpty()) return
-    val settings = stringResource(R.string.home_source_note_settings)
-    val unreachable = notes.filter { it is SourceNote.Unreachable && it.language == null }.map { it.source }
+    val style = MaterialTheme.typography.bodySmall
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val keys = notes.filterIsInstance<SourceNote.NeedsKey>()
+    if (keys.isNotEmpty()) {
+        val lines = keys.map { stringResource(R.string.home_off_key, rowName(it.source, it.language)) }
+        Column(Modifier.testTag(SOURCES_KEY_NOTE_TAG)) {
+            OffLines(listOf(OffPart(lines, SettingsTarget.sources)), { openSettings() }, style, muted)
+        }
+    }
+    val rest = notes.filterNot { it is SourceNote.NeedsKey }
+    if (rest.isEmpty()) return
+    val unreachable = rest.filter { it is SourceNote.Unreachable && it.language == null }.map { it.source }
     val together =
         unreachable.takeIf { it.isNotEmpty() }?.let { sources ->
             namedTogether(sources.map { chipName(it) })
         }
     val sentences =
-        notes.mapNotNull { note ->
+        rest.mapNotNull { note ->
             if (note is SourceNote.Unreachable && note.language == null) {
                 // Once, where the first of them was.
                 together?.takeIf { note.source == unreachable.first() }?.let {
-                    stringResource(R.string.home_source_note_unreachable, it) to false
+                    stringResource(R.string.home_source_note_unreachable, it)
                 }
             } else {
-                noteSentence(note, settings) to (note is SourceNote.NeedsKey)
+                noteSentence(note)
             }
         }
-    val parts = linkedNote(sentences, settings, openSettings)
     val onRetry = together?.let { retry(unreachable) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LinkedText(
-            parts,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Text(
+            sentences.joinToString(" "),
+            style = style,
+            color = muted,
             modifier = Modifier.weight(1f).testTag(SOURCES_NOTE_TAG),
         )
         if (together != null && onRetry != null) {
@@ -199,40 +208,16 @@ internal fun Notes(
     }
 }
 
-// [note]'s sentence, naming its source, [settings] the words of the link in a key's.
+// [note]'s sentence, naming its source: one that failed, or one in the track's language not reached.
 @Composable
-private fun noteSentence(
-    note: SourceNote,
-    settings: String,
-): String {
+private fun noteSentence(note: SourceNote): String? {
     val name = rowName(note.source, note.language)
     return when (note) {
-        is SourceNote.NeedsKey -> stringResource(R.string.home_source_note_key, name, settings)
+        is SourceNote.NeedsKey -> null
         is SourceNote.Unreachable -> stringResource(R.string.home_source_note_unreachable, name)
         is SourceNote.Failed -> stringResource(R.string.home_source_note_failed, name)
     }
 }
-
-// The note's [sentences] one after another, in a sentence that is [linked] its [settings] a link.
-private fun linkedNote(
-    sentences: List<Pair<String, Boolean>>,
-    settings: String,
-    openSettings: () -> Unit,
-): List<TextPart> =
-    sentences.flatMapIndexed { index, (sentence, linked) ->
-        val gap = if (index > 0) listOf(TextPart.Words(" ")) else emptyList()
-        val at = sentence.lastIndexOf(settings)
-        gap +
-            if (!linked || at < 0) {
-                listOf(TextPart.Words(sentence))
-            } else {
-                listOf(
-                    TextPart.Words(sentence.substring(0, at)),
-                    TextPart.Action(settings, SETTINGS_LINK, openSettings),
-                    TextPart.Words(sentence.substring(at + settings.length)),
-                )
-            }
-    }
 
 /**
  * *Sources*' table (#662): a row for each of [rows], in two columns, so a citation's letter can be
@@ -482,13 +467,15 @@ private val COLUMN_GAP = 12.dp
 private val ROW_TARGET = 48.dp
 
 // The note's link to the settings.
-private const val SETTINGS_LINK = "settings"
 
 /** The test tag of *Sources*' chip on Home under *Expandable boxes*, which opens its panel. */
 const val SOURCES_CHIP_TAG: String = "sources-chip"
 
 /** The test tag of the note of what needs the listener. */
 const val SOURCES_NOTE_TAG: String = "sources-note"
+
+/** The test tag of *Sources*' note of the sources that need their key, and its link (#766). */
+const val SOURCES_KEY_NOTE_TAG: String = "sources-key-note"
 
 /** The test tag of *Retry* beside *Sources*' note, which asks the sources that could not be reached again (#1121). */
 const val SOURCES_RETRY_TAG: String = "sources-note:retry"
