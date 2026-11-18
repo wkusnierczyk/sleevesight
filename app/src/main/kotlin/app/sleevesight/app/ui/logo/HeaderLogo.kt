@@ -144,7 +144,7 @@ private fun BoxScope.TurningRecord(
     if (counts != null) SideEffect { counts.composed++ }
     val record = rememberGraphicsLayer()
     val view = LocalView.current
-    LaunchedEffect(record, view) {
+    LaunchedEffect(record, view, motion) {
         snapshotFlow { motion.value.degrees }.collect {
             record.rotationZ = it
             redraw(view)
@@ -169,6 +169,9 @@ private fun BoxScope.TurningRecord(
                 val box = recordAt.value
                 if (box != null && size.minDimension > 0f) {
                     record.pivotOffset = box.centre
+                    // Where the record is now, unobserved (the steps set it after), so a record
+                    // composed afresh, as Home is shown again, never shows upright for a frame.
+                    record.rotationZ = Snapshot.withoutReadObservation { motion.value.degrees }
                     record.record {
                         // The logo's own drawing, moved by the box's place: the same pixels.
                         translate(-box.topLeft.x.toFloat(), -box.topLeft.y.toFloat()) {
