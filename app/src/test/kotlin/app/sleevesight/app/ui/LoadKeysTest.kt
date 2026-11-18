@@ -39,6 +39,7 @@ import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.API_KEYS_URL
 import app.sleevesight.app.ui.settings.LOAD_KEYS_BUTTON_TAG
+import app.sleevesight.app.ui.settings.LOAD_KEYS_STEPS
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
@@ -184,7 +185,7 @@ class LoadKeysTest {
     private fun step(
         number: Int,
         title: Int,
-    ) = app.getString(R.string.load_keys_step, number, text(title))
+    ) = app.getString(R.string.load_keys_step, number, LOAD_KEYS_STEPS, text(title))
 
     /** What a screen reader says of the row of the key [name] in [group] on the keys to save, its [note]. */
     private fun row(
