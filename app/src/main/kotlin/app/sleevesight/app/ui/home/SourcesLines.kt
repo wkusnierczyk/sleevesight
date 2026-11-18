@@ -235,7 +235,7 @@ internal fun sourcesLines(
     val asked by remember(search, track?.normalized, track?.nowPlaying?.duration, track?.nowPlaying?.album) {
         track?.let { search.answered(it, SearchKind.GENRES) } ?: flowOf(AiSearch.None)
     }.collectAsState(AiSearch.None)
-    val reasoned = answeredGenrePages(asked).takeIf { track?.genres?.hasTags != true }.orEmpty()
+    val reasoned = answeredGenrePages(asked, track).takeIf { track?.genres?.hasTags != true }.orEmpty()
     return remember(genreLines, checked, explanation, reasoned) {
         val explained =
             withPages(withPages(genreLines, checked, LinePurpose.VOCALS_CHECK), explanation, LinePurpose.EXPLANATION)

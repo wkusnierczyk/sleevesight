@@ -174,11 +174,11 @@ private class LyricsFoundFeed(
 
     private fun withoutInstrumental(state: AiSearch): AiSearch {
         val answer = (state as? AiSearch.Answered)?.answer as? SearchAnswer.Genres ?: return state
-        val left = answer.genres.filter { it.identity != TrackGenres.INSTRUMENTAL }
-        return if (left.isEmpty()) {
+        val left = withoutInstrumental(answer)
+        return if (left.genres.isEmpty()) {
             AiSearch.NothingFound(state.model, state.way, state.keptAt)
         } else {
-            state.copy(answer = answer.copy(genres = left))
+            state.copy(answer = left)
         }
     }
 }
@@ -269,13 +269,32 @@ private fun AnswerReason(
 }
 
 /**
- * The pages the reasons of *Ask AI*'s genres in [search] cite (#952), each once, in the answer's
- * order, as web lines of *Sources* list them: each named by its site ([siteOf]), its title not kept;
- * none for no answer, or one from the model's knowledge.
+ * [answer] without Instrumental (#996, for a track with lyrics found), nor its reason (#952); its
+ * pages ([SearchAnswer.Genres.sources]) those the reasons left cite, so no page is listed that no chip
+ * cites. An answer with no reasons (none kept before #952) keeps its pages.
  */
-internal fun answeredGenrePages(search: AiSearch): List<WebPage> {
+internal fun withoutInstrumental(answer: SearchAnswer.Genres): SearchAnswer.Genres {
+    val left = answer.genres.filter { it.identity != TrackGenres.INSTRUMENTAL }
+    if (answer.reasons.isEmpty()) return answer.copy(genres = left)
+    val reasons = answer.reasons.filterKeys { it != TrackGenres.INSTRUMENTAL }
+    val pages = left.flatMap { reasons[it.identity]?.pages.orEmpty() }.map { it.url }.distinct()
+    return answer.copy(genres = left, sources = pages, reasons = reasons)
+}
+
+/**
+ * The pages the reasons of the genres *Ask AI* in [search] names for [track] cite (#952), as its
+ * panel shows them (without Instrumental for a track with lyrics found, #996, [withoutInstrumental]),
+ * each once, in the answer's order, as web lines of *Sources* list them: each named by its site
+ * ([siteOf]), its title not kept; none for no answer, or one from the model's knowledge.
+ */
+internal fun answeredGenrePages(
+    search: AiSearch,
+    track: TrackState?,
+): List<WebPage> {
     val answer = (search as? AiSearch.Answered)?.answer as? SearchAnswer.Genres ?: return emptyList()
-    return answer.sources.map { url -> WebPage(url, null, siteOf(url)) }
+    val drops = track?.genres?.singing?.dropsInstrumental == true
+    val shown = if (drops) withoutInstrumental(answer) else answer
+    return shown.sources.map { url -> WebPage(url, null, siteOf(url)) }
 }
 
 /** The test tags of the reason *Ask AI* gave with a genre (#952), and of its text. */

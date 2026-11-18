@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -41,6 +42,8 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.Singing
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.QuestionCost
@@ -336,6 +339,30 @@ class AiGenreReasonScreenTest {
             compose.waitForIdle()
             compose.onNodeWithTag(LINE_PREFIX + "W1").performScrollTo()
             assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "S2").fetchSemanticsNodes().size)
+        }
+    }
+
+    @Test
+    fun withLyricsFoundInstrumentalGoesWithItsReasonAndItsPage() {
+        // Lyrics found (#996): Instrumental is not shown, so its page is named neither under the chips
+        // nor in *Sources*.
+        val genius = "https://genius.com/sundown"
+        val track = empty.copy(genres = TrackGenres(singing = Singing(lyrics = true)))
+        current.value =
+            NowPlayingState(PipelineView(track, aiReady = true), track.nowPlaying, playback, settings = Settings())
+        show {
+            val reply =
+                "{\"genres\": [{\"name\": \"instrumental\", \"reason\": \"No one sings. [S1]\", " +
+                    "\"source\": \"$discogs\"}, {\"name\": \"electronic\", \"reason\": " +
+                    "\"Synthesisers throughout. [S1]\", \"source\": \"$genius\"}]}"
+            answered(reply, pages = listOf(discogs, genius))
+            val instrumental = vocabulary.labelsFor(listOf("instrumental"), level = GenreLevel.TRACK).single()
+            val none = compose.onAllNodesWithTag(GENRE_PREFIX + "track:" + instrumental.identity)
+            assertEquals(0, none.fetchSemanticsNodes().size)
+            compose.onNodeWithTag(AI_SEARCH_FROM_TAG).assertTextEquals("From\u00A0genius.com")
+            assertFalse(shows("discogs.com"))
+            val asked = feed.states.getValue(SearchKind.GENRES).value
+            assertEquals(listOf(genius), answeredGenrePages(asked, track).map { it.url })
         }
     }
 }
