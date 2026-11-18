@@ -86,6 +86,41 @@ internal object MarkdownMarks {
             (start until end - 1).all { t[it] in '0'..'9' }
     }
 
+    /**
+     * Where a line's mark that starts [t] at [at] ends, or null for none: a heading's one to six
+     * `#`s, a list's `-`, `*`, `+` or number (`1.`, `12)`), before a space, a tab, a line break or
+     * the end; or a quotation's `>`. Read by its characters, as
+     * `(?:#{1,6}|[-*+]|[0-9]{1,2}[.)])(?=[ \t\n]|$)|>` matched there on the JVM reads it, not
+     * with a regex at each line's start (#1351): one that found no mark there searched on to the
+     * next one in the reply, or its end, so a reply of many short unmarked lines took time growing
+     * with the square of its length. `SelfRevision`'s plain view reads a reply's lines with it as
+     * written, before spaces and tabs collapse (#798).
+     */
+    fun lineMarkEnd(
+        t: CharSequence,
+        at: Int,
+    ): Int? {
+        var hashes = 0
+        while (at + hashes < t.length && t[at + hashes] == '#') hashes++
+        var digits = 0
+        while (at + digits < t.length && t[at + digits] in '0'..'9') digits++
+        val c = t.getOrNull(at)
+        return when {
+            c == '>' -> at + 1
+            hashes in 1..HEADING_LEVELS -> (at + hashes).takeIf { endsMark(t, it) }
+            c != null && c in "-*+" -> (at + 1).takeIf { endsMark(t, it) }
+            digits in 1..LIST_DIGITS && t.getOrNull(at + digits)?.let { it in ".)" } == true ->
+                (at + digits + 1).takeIf { endsMark(t, it) }
+            else -> null
+        }
+    }
+
+    // Whether a line's mark may end at [at] in [t]: `(?=[ \t\n]|$)`.
+    private fun endsMark(
+        t: CharSequence,
+        at: Int,
+    ): Boolean = t.getOrNull(at) == '\t' || endsLine(t, at)
+
     /** How many digits a list's number may have. */
     private const val LIST_DIGITS = 2
 

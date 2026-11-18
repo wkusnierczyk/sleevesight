@@ -19,6 +19,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -233,6 +234,22 @@ class PipelineSelfRevisionTest {
 
             assertEquals(1, provider.requests.size)
             assertEquals(QUOTED_WAIT, assertIs<InsightState.Written>(state.insight).grounded.text)
+        }
+
+    @Test
+    fun `a sign in a piece not read still stops the stream when a quotation opens after it`() =
+        runTest {
+            // Read at 0 ms and at 210 ms only (#1351): at 210 ms a quotation is open at the end, which
+            // may yet set aside what it holds, but the sign before it stays found.
+            val pipeline = pipeline(PacedProvider(REVISED_THEN_QUOTED))
+            val shown = mutableListOf<InsightState?>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                pipeline.state.collect { shown += it?.insight }
+            }
+            pipeline.run(sundown, granted())
+            val partials = shown.filterIsInstance<InsightState.Writing>().map { it.partial }
+            assertTrue(partials.any { it.startsWith("It came out in 1975") }, partials.toString())
+            assertTrue(partials.none { "Wait" in it }, partials.toString())
         }
 
     @Test
