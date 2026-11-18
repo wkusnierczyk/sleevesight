@@ -97,7 +97,8 @@ class ModelCheck(
 
         class KeyChanging(
             val provider: ProviderId,
-            val done: CompletableDeferred<Boolean>,
+            // Whether what was refused is kept forgotten; null when the loop did not take it.
+            val done: CompletableDeferred<Boolean?>,
         ) : Event
 
         class KeyChanged(
@@ -139,7 +140,7 @@ class ModelCheck(
     private val events =
         Channel<Event>(Channel.UNLIMITED) { left ->
             (left as? Event.Ask)?.ticket?.complete(Ticket.NEVER)
-            (left as? Event.KeyChanging)?.done?.complete(false)
+            (left as? Event.KeyChanging)?.done?.complete(null)
         }
     private val found = MutableStateFlow<Map<ProviderId, UnavailableMark>>(emptyMap())
     private val refusedNow = MutableStateFlow<RefusedModels>(emptyMap())
@@ -152,6 +153,8 @@ class ModelCheck(
         val loop =
             scope.launch {
                 val book = ModelMarks(providers.keys, kept.load())
+                // A save of [refused] failed: the next event tries again.
+                var unsaved = false
                 refusedNow.value = book.refused
                 for (event in events) {
                     when (event) {
@@ -165,12 +168,15 @@ class ModelCheck(
                         is Event.Retry -> book.retry(event.provider, event.model)
                     }
                     found.value = book.marks
-                    if (book.refused != refusedNow.value) {
-                        kept.save(book.refused)
+                    val changing = event as? Event.KeyChanging
+                    // Kept again before a key is written, whatever memory says: a save that failed
+                    // left what it should have replaced on disk (#1425).
+                    if (book.refused != refusedNow.value || unsaved || changing != null) {
+                        unsaved = !kept.save(book.refused)
                         refusedNow.value = book.refused
                     }
                     // Kept, and then only, the key may be written.
-                    (event as? Event.KeyChanging)?.done?.complete(true)
+                    changing?.done?.complete(!unsaved)
                 }
             }
         // The loop ended (its scope cancelled, before it started too): nothing more is taken, and
@@ -183,15 +189,14 @@ class ModelCheck(
      * key store before it writes: what was refused with the key is forgotten, in [kept] too, before
      * this returns, so a key written is never followed by it, even across a crash; and no read or
      * answer counts for the service until the write ends ([keyChanged]) ([ModelMarks.keyChanging]).
-     * With the loop ended, [kept] is cleared here.
+     * With the loop ended, [kept] is cleared here. False when what is kept could not be written:
+     * the key is then not saved.
      */
-    suspend fun keyChanging(provider: ProviderId) {
-        val done = CompletableDeferred<Boolean>()
+    suspend fun keyChanging(provider: ProviderId): Boolean {
+        val done = CompletableDeferred<Boolean?>()
         val sent = events.trySend(Event.KeyChanging(provider, done)).isSuccess
-        if (!sent || !done.await()) {
-            val now = kept.load()
-            if (provider in now) kept.save(now - provider)
-        }
+        // Not taken by the loop (it ended): cleared here, from what is kept.
+        return (if (sent) done.await() else null) ?: kept.save(kept.load() - provider)
     }
 
     /**
@@ -384,8 +389,11 @@ interface RefusedModelStore {
     /** The models kept, read once as the check starts. */
     fun load(): RefusedModels
 
-    /** Keeps [refused] in place of what was kept, durably before it returns (#1425). */
-    fun save(refused: RefusedModels)
+    /**
+     * Keeps [refused] in place of what was kept, durably before it returns (#1425): false when it
+     * could not, and what was kept before may still be there.
+     */
+    fun save(refused: RefusedModels): Boolean
 
     companion object {
         /** Keeps nothing: for previews and tests. */
@@ -393,7 +401,7 @@ interface RefusedModelStore {
             object : RefusedModelStore {
                 override fun load(): RefusedModels = emptyMap()
 
-                override fun save(refused: RefusedModels) = Unit
+                override fun save(refused: RefusedModels) = true
             }
     }
 }

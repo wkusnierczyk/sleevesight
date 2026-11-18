@@ -42,11 +42,15 @@ class RefusedModelsTest {
     ) : RefusedModelStore {
         var saves = 0
 
+        /** Whether a save fails, keeping what was there, as a `commit` that could not write would. */
+        var failing = false
+
         override fun load(): RefusedModels = models
 
-        override fun save(refused: RefusedModels) {
+        override fun save(refused: RefusedModels): Boolean {
             saves++
-            models = refused
+            if (!failing) models = refused
+            return !failing
         }
     }
 
@@ -304,6 +308,46 @@ class RefusedModelsTest {
             check.watching(Refusing).stream(CompletionRequest(OPUS, "prompt"), NEW_KEY).toList()
             check.ticket()
             assertEquals(mapOf(OPUS to ModelRefusal.NOT_SERVED), check.anthropic())
+            job.cancel()
+        }
+
+    @Test
+    fun whileWhatWasRefusedCannotBeForgottenWhereItIsKeptTheKeyMayNotBeWritten() =
+        runTest {
+            val old = mapOf(ProviderId.ANTHROPIC to mapOf(OPUS to ModelRefusal.ACCOUNT))
+            kept.models = old
+            val check = check()
+            kept.failing = true
+            assertFalse("not kept forgotten", check.keyChanging(ProviderId.ANTHROPIC))
+            check.keyChanged(ProviderId.ANTHROPIC, written = false, now = null)
+            assertNull("forgotten in memory", check.anthropic())
+            assertEquals("still on disk", old, kept.models)
+
+            // Tried again: written again, though memory has nothing of them.
+            kept.failing = false
+            assertTrue(check.keyChanging(ProviderId.ANTHROPIC))
+            assertEquals(emptyMap<ProviderId, Map<String, ModelRefusal>>(), kept.models)
+        }
+
+    @Test
+    fun afterAPurgeAnAnswerWithTheOldKeyCountsForNothing() =
+        runTest {
+            val check = check()
+            val job = launch { check.run(flowOf(anthropic), flowOf(Unit), MutableStateFlow(false)) }
+            runCurrent()
+            check.ticket()
+
+            // While the entries go and the Keystore key is deleted, the old key's call ends.
+            check.keyChanging(ProviderId.ANTHROPIC)
+            check.ended(NOT_FOUND, OPUS)
+            assertNull(check.anthropic())
+            // The entries could not be removed, but no longer open: no key.
+            check.keyChanged(ProviderId.ANTHROPIC, written = true, now = null)
+            saved = null
+            stored = true
+            check.watching(Refusing).stream(CompletionRequest(OPUS, "prompt"), OLD_KEY).toList()
+            check.ticket()
+            assertNull(check.anthropic())
             job.cancel()
         }
 

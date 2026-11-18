@@ -3,13 +3,15 @@ package app.sleevesight.app.secrets
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import app.sleevesight.app.MemoryStore
+import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.softwareKey
-import app.sleevesight.app.testCipher
 import app.sleevesight.core.Secret
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 
@@ -22,15 +24,20 @@ import java.io.IOException
 class SecretEditsTest {
     private val data = MemoryStore()
     private val key = softwareKey()
+    private val keystore = SoftwareKeySource(key)
 
     /** What the store told, in order, with what [SecretStore.get] read for each key at [before]. */
     private class Told : KeyEdits {
         lateinit var store: SecretStore
         val heard = mutableListOf<String>()
 
-        override suspend fun before(ids: Set<SecretId>) {
+        /** What [before] says: whether what was learnt with the keys is kept forgotten. */
+        var forgets = true
+
+        override suspend fun before(ids: Set<SecretId>): Boolean {
             val held = ids.map { "${it.name}=${store.get(it)?.reveal()}" }
             heard += "before ${held.joinToString()}"
+            return forgets
         }
 
         override fun after(
@@ -45,7 +52,8 @@ class SecretEditsTest {
     private val told = Told()
 
     private fun store(dataStore: DataStore<Preferences> = data) =
-        SecretStore(dataStore, testCipher(key), false, Dispatchers.Unconfined, edits = told).also { told.store = it }
+        SecretStore(dataStore, SecretCipher(keystore), false, Dispatchers.Unconfined, edits = told)
+            .also { told.store = it }
 
     @Test
     fun aSaveAReplacementAndARemovalAreEachToldBeforeAndAfterTheWrite() =
@@ -64,6 +72,54 @@ class SecretEditsTest {
                     "after ANTHROPIC=null",
                 )
             assertEquals(expected, told.heard)
+        }
+
+    @Test
+    fun aKeyIsNotSavedWhileWhatWasLearntWithTheOneItReplacesCannotBeForgotten() =
+        runTest {
+            val store = store()
+            store.set(SecretId.ANTHROPIC, Secret("sk-old"))
+            told.forgets = false
+            assertEquals(SaveResult.NOT_WRITTEN, store.set(SecretId.ANTHROPIC, Secret("sk-new")))
+            assertEquals("sk-old", store.get(SecretId.ANTHROPIC)?.reveal())
+            assertEquals(listOf("before ANTHROPIC=sk-old", "after ANTHROPIC?"), told.heard.drop(2))
+
+            // A removal goes ahead: what is kept then belongs to no key, and the next save forgets it.
+            assertTrue(store.clear(SecretId.ANTHROPIC))
+            assertNull(store.get(SecretId.ANTHROPIC))
+        }
+
+    @Test
+    fun aPurgeThatCannotRemoveTheEntriesIsToldEndedOnlyOnceTheKeystoreKeyIsDeleted() =
+        runTest {
+            store().set(SecretId.ANTHROPIC, Secret("sk-old"))
+            val failing =
+                object : DataStore<Preferences> by data {
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+                        throw IOException("disk full")
+                }
+            told.heard.clear()
+            val deletionsAtEnd = mutableListOf<Int>()
+            val watching =
+                object : KeyEdits by told {
+                    override fun after(
+                        ids: Set<SecretId>,
+                        now: Map<SecretId, Secret?>,
+                    ) {
+                        deletionsAtEnd += keystore.deletions
+                        told.after(ids, now)
+                    }
+                }
+            val store =
+                SecretStore(failing, SecretCipher(keystore), false, Dispatchers.Unconfined, edits = watching)
+                    .also { told.store = it }
+            val result = store.reset()
+            assertFalse(result.removed)
+            assertTrue(result.sealDeleted)
+            assertEquals("the Keystore key was deleted before the end was told", listOf(1), deletionsAtEnd)
+            val none = SecretId.entries.joinToString { "${it.name}=null" }
+            assertEquals("unreadable, the keys hold none", "after $none", told.heard.last())
+            assertNull(store.get(SecretId.ANTHROPIC))
         }
 
     @Test
@@ -86,7 +142,7 @@ class SecretEditsTest {
     @Test
     fun readsTellNothingAndAFailedWriteTellsItsKeyNotWritten() =
         runTest {
-            SecretStore(data, testCipher(key), legacyKeystore = false, dispatcher = Dispatchers.Unconfined)
+            SecretStore(data, SecretCipher(keystore), legacyKeystore = false, dispatcher = Dispatchers.Unconfined)
                 .set(SecretId.ANTHROPIC, Secret("sk-old"))
             val failing =
                 object : DataStore<Preferences> by data {

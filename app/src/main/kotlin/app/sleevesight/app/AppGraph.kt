@@ -196,8 +196,9 @@ class AppGraph internal constructor(
             // What was refused with an AI service's key is forgotten before the key is written (#1425).
             edits =
                 object : KeyEdits {
+                    // Each service's, every one tried, even after one failed.
                     override suspend fun before(ids: Set<SecretId>) =
-                        ids.forEach { id -> id.provider?.let { modelCheck.keyChanging(it) } }
+                        ids.mapNotNull { it.provider }.map { modelCheck.keyChanging(it) }.all { it }
 
                     override fun after(
                         ids: Set<SecretId>,
