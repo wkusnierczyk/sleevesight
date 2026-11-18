@@ -17,10 +17,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -67,6 +64,9 @@ enum class SecretId(
     EXA("source.exa", KeyName.EXA),
     ;
 
+    /** The AI service this key is for, or null for a source's. */
+    val provider: ProviderId? get() = ProviderId.entries.firstOrNull { forProvider(it) == this }
+
     companion object {
         /** The key a setup code names [name]. */
         fun of(name: KeyName): SecretId = entries.first { it.keyName == name }
@@ -98,6 +98,42 @@ enum class SecretId(
         fun forEngine(engine: WebEngine): SecretId =
             when (engine) {
                 WebEngine.EXA -> EXA
+            }
+    }
+}
+
+/**
+ * Told of each change of a key made through [SecretStore] (#1425), in its write lock, so one change
+ * at a time: [before] the key is written, and [after], whether or not it was. These are the only
+ * ways a key changes; a read never tells anything.
+ */
+interface KeyEdits {
+    /**
+     * The keys [ids] are about to be written: what was learnt with the keys they hold is forgotten,
+     * durably, before this returns, so a write that lands is never followed by it, even across a
+     * crash. A write that then fails has forgotten it all the same, which costs nothing.
+     */
+    suspend fun before(ids: Set<SecretId>)
+
+    /**
+     * The write of [ids] ended: [now] holds each key written, with what it holds now (null for none);
+     * one of [ids] not in it was not written, or it is not known whether it was.
+     */
+    fun after(
+        ids: Set<SecretId>,
+        now: Map<SecretId, Secret?>,
+    )
+
+    companion object {
+        /** Tells no one: for tests and previews. */
+        val NONE: KeyEdits =
+            object : KeyEdits {
+                override suspend fun before(ids: Set<SecretId>) = Unit
+
+                override fun after(
+                    ids: Set<SecretId>,
+                    now: Map<SecretId, Secret?>,
+                ) = Unit
             }
     }
 }
@@ -168,7 +204,8 @@ enum class SecretState {
  * the caller's (the screen's main thread); so do DataStore's reads and writes (#1107), whose first
  * read from DataStore 1.3 would otherwise take the store's init lock on the caller's dispatcher.
  * Saves, removals and resets run one at a time. One that fails, in the key store or in DataStore,
- * says so in what it returns rather than throwing.
+ * says so in what it returns rather than throwing. Each write of a key is told to [edits], before
+ * and after it (#1425).
  */
 class SecretStore(
     private val dataStore: DataStore<Preferences>,
@@ -176,6 +213,7 @@ class SecretStore(
     private val legacyKeystore: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val servicesOff: suspend (Set<SecretId>) -> Boolean = { true },
+    private val edits: KeyEdits = KeyEdits.NONE,
 ) {
     private val data: Flow<Preferences> =
         dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -187,17 +225,6 @@ class SecretStore(
      * the Keystore key deleted, what is left no longer opens.
      */
     private val resets = MutableStateFlow(0)
-
-    private val edited = MutableSharedFlow<SecretId>(extraBufferCapacity = SecretId.entries.size)
-
-    /**
-     * Each key saved, replaced or removed here, as it happens, once the file is written (#1425):
-     * by [set] when it saves, [clear] when it writes, and [reset] for every key, when it removed
-     * the entries or deleted the Keystore key that sealed them. Only changes made through the app,
-     * which is the only way a key changes: never a read, one that fails included. Nothing is
-     * replayed: a collector hears the changes made after it subscribed.
-     */
-    val edits: SharedFlow<SecretId> = edited.asSharedFlow()
 
     /** Each key's state, as the settings screen shows it. */
     val states: Flow<Map<SecretId, SecretState>> =
@@ -305,14 +332,16 @@ class SecretStore(
                 // No key found, and none may be made because the file could not be read: storage.
                 sealed == null && stored == null -> SaveResult.NOT_WRITTEN
                 sealed == null -> SaveResult.NOT_SEALED
-                write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) } -> SaveResult.SAVED
+                edits.around(setOf(id), secret) {
+                    write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) }
+                } -> SaveResult.SAVED
                 else -> SaveResult.NOT_WRITTEN
-            }.also { if (it == SaveResult.SAVED) edited.emit(id) }
+            }
         }
 
     /** Removes the key [id]. False when DataStore could not write. */
     suspend fun clear(id: SecretId): Boolean =
-        writes.withLock { write { it.remove(keyOf(id)) }.also { if (it) edited.emit(id) } }
+        writes.withLock { edits.around(setOf(id), null) { write { it.remove(keyOf(id)) } } }
 
     /**
      * *Purge keys*: removes every saved key and deletes the Keystore
@@ -338,10 +367,10 @@ class SecretStore(
     suspend fun reset(): ResetResult =
         writes.withLock {
             try {
-                val removed = write { prefs -> SecretId.entries.forEach { prefs.remove(keyOf(it)) } }
+                val all = SecretId.entries.toSet()
+                val removed = edits.around(all, null) { write { prefs -> all.forEach { prefs.remove(keyOf(it)) } } }
                 val deleted = withContext(dispatcher) { cipher.deleteKey() }
                 if (deleted) servicesOff(SecretId.entries.toSet())
-                if (removed || deleted) SecretId.entries.forEach { edited.emit(it) }
                 ResetResult(removed, deleted, statesNow())
             } finally {
                 resets.update { it + 1 }
@@ -423,4 +452,23 @@ class SecretStore(
         /** Binds a sealed value to its entry: one copied to another entry does not open. */
         private fun associated(id: SecretId): ByteArray = "sleevesight:${id.storageName}".encodeToByteArray()
     }
+}
+
+/**
+ * [change], a write of the keys [ids] that says whether it was written, told [KeyEdits.before] and
+ * [KeyEdits.after] it, whatever happens; each key written then holds [key] (null for none).
+ */
+private suspend fun KeyEdits.around(
+    ids: Set<SecretId>,
+    key: Secret?,
+    change: suspend () -> Boolean,
+): Boolean {
+    var written = false
+    try {
+        before(ids)
+        written = change()
+    } finally {
+        after(ids, if (written) ids.associateWith { key } else emptyMap())
+    }
+    return written
 }

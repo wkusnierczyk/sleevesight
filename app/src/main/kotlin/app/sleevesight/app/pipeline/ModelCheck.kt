@@ -12,7 +12,6 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -24,11 +23,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicLong
 
@@ -46,7 +45,7 @@ import java.util.concurrent.atomic.AtomicLong
  *   succeeds does.
  * - Either is dropped when the service's selected model changes, when another service is switched
  *   on, and when another key is read for the service ([run]), or one is saved, replaced or removed
- *   (`keyEdits`, #1425).
+ *   ([keyChanging], #1425).
  *
  * The selection, the keys' fingerprints and the marks are kept by one loop, launched in [scope],
  * which takes one event at a time ([ModelMarks]); nothing else changes them. The keys are read
@@ -63,27 +62,25 @@ import java.util.concurrent.atomic.AtomicLong
  * Each service's models a call found refused with its saved key, whichever is selected ([refused],
  * #970), are kept across starts in [kept] (the models' ids and how each was refused only; nothing of
  * the key): the list of models puts them last, still to be chosen, and a selected model kept so is
- * marked again at start. One leaves them once a call with it answers, and they all go once the
- * service's key is saved, replaced or removed through the app (`keyEdits`, #1425), never on a read
- * of it: a read that fails for now, at start or later, keeps them.
+ * marked again at start. One leaves them once a call with it answers, and they all go, from [kept]
+ * too, before the service's key is saved, replaced or removed through the app ([keyChanging],
+ * #1425), never on a read of it: a read that fails for now, at start or later, keeps them.
  *
  * @param providers the services' clients, as the pipeline and the settings use them.
  * @param key the saved key of a service, or null when none is saved or it cannot be read.
  * @param scope where the loop runs, as long as the process.
  * @param kept where the models refused for each service's key are kept across starts, read when
  *   the loop starts, and written as they change.
- * @param keyEdits each service whose key is saved, replaced or removed through the app, as it
- *   happens (`SecretStore.edits`, #1425): collected from the start, in [scope] ([ModelMarks.keyChanged]).
  * @param stored whether a key is stored for a service, readable or not, and true when that cannot
  *   be told (`SecretStore.isStored`): a read that found none while one may be stored failed for now,
  *   and drops no mark; only a confirmed absence does.
  */
+@Suppress("TooManyFunctions") // What the loop is told, one function each, and the check that asks.
 class ModelCheck(
     private val providers: Map<ProviderId, AiProvider>,
     private val key: suspend (ProviderId) -> Secret?,
     scope: CoroutineScope,
     private val kept: RefusedModelStore = RefusedModelStore.NONE,
-    keyEdits: Flow<ProviderId> = emptyFlow(),
     private val stored: suspend (ProviderId) -> Boolean = { false },
 ) {
     private sealed interface Event {
@@ -98,9 +95,16 @@ class ModelCheck(
             val stored: Boolean,
         ) : Event
 
+        class KeyChanging(
+            val provider: ProviderId,
+            val done: CompletableDeferred<Boolean>,
+        ) : Event
+
         class KeyChanged(
             val provider: ProviderId,
             val order: Long,
+            val print: String?,
+            val written: Boolean,
         ) : Event
 
         class Listed(
@@ -130,12 +134,19 @@ class ModelCheck(
     }
 
     // A ticket asked for and never taken by the loop (left in the queue when it ends, or handed to
-    // it as it was cancelled) is answered with one under which nothing counts, so no one waits.
+    // it as it was cancelled) is answered with one under which nothing counts, so no one waits; a
+    // key change, with the loop's part not done, which its caller then does itself.
     private val events =
-        Channel<Event>(Channel.UNLIMITED) { left -> (left as? Event.Ask)?.ticket?.complete(Ticket.NEVER) }
+        Channel<Event>(Channel.UNLIMITED) { left ->
+            (left as? Event.Ask)?.ticket?.complete(Ticket.NEVER)
+            (left as? Event.KeyChanging)?.done?.complete(false)
+        }
     private val found = MutableStateFlow<Map<ProviderId, UnavailableMark>>(emptyMap())
     private val refusedNow = MutableStateFlow<RefusedModels>(emptyMap())
     private val reads = AtomicLong()
+
+    // Counts the keys' writes ended ([keyChanged]): each one checks the selected model again ([run]).
+    private val edits = MutableStateFlow(0L)
 
     init {
         val loop =
@@ -146,7 +157,8 @@ class ModelCheck(
                     when (event) {
                         is Event.Selected -> book.selected(event.settings)
                         is Event.KeyRead -> book.keyRead(event.provider, event.print, event.order, event.stored)
-                        is Event.KeyChanged -> book.keyChanged(event.provider, event.order)
+                        is Event.KeyChanging -> book.keyChanging(event.provider)
+                        is Event.KeyChanged -> with(event) { book.keyChanged(provider, order, print, written) }
                         is Event.Listed -> with(event) { book.listed(provider, model, models, print, ticket) }
                         is Event.Answered -> with(event) { book.answered(provider, model, print, ticket, this.event) }
                         is Event.Ask -> event.ticket.complete(book.ticket())
@@ -157,19 +169,45 @@ class ModelCheck(
                         kept.save(book.refused)
                         refusedNow.value = book.refused
                     }
+                    // Kept, and then only, the key may be written.
+                    (event as? Event.KeyChanging)?.done?.complete(true)
                 }
             }
         // The loop ended (its scope cancelled, before it started too): nothing more is taken, and
         // what is left in the queue goes to the channel's handler of undelivered events.
         loop.invokeOnCompletion { events.cancel() }
-        // Each service's key saved, replaced or removed through the app (#1425): what was refused
-        // with the key before is forgotten, and an answer made with it counts for nothing
-        // ([ModelMarks.keyChanged]). Told in the order of the reads, so a read issued before it,
-        // which may have found the key replaced, is dropped. Subscribed before the constructor
-        // returns, so no change made after it is missed.
-        scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            keyEdits.collect { events.trySend(Event.KeyChanged(it, reads.incrementAndGet())) }
+    }
+
+    /**
+     * [provider]'s key about to be saved, replaced or removed through the app (#1425), told by the
+     * key store before it writes: what was refused with the key is forgotten, in [kept] too, before
+     * this returns, so a key written is never followed by it, even across a crash; and no read or
+     * answer counts for the service until the write ends ([keyChanged]) ([ModelMarks.keyChanging]).
+     * With the loop ended, [kept] is cleared here.
+     */
+    suspend fun keyChanging(provider: ProviderId) {
+        val done = CompletableDeferred<Boolean>()
+        val sent = events.trySend(Event.KeyChanging(provider, done)).isSuccess
+        if (!sent || !done.await()) {
+            val now = kept.load()
+            if (provider in now) kept.save(now - provider)
         }
+    }
+
+    /**
+     * [provider]'s key write ended (#1425): the key holds [now] (null for none) when [written];
+     * when not, what it holds is not known ([ModelMarks.keyChanged]). Told in the order of the
+     * reads, so a read issued before it, which may have found the key replaced, is dropped; the
+     * selected model is checked again after it ([run]).
+     */
+    fun keyChanged(
+        provider: ProviderId,
+        written: Boolean,
+        now: Secret?,
+    ) {
+        val print = now?.takeIf { written }?.let(::fingerprint)
+        events.trySend(Event.KeyChanged(provider, reads.incrementAndGet(), print, written))
+        edits.update { it + 1 }
     }
 
     /** Each service's model found unavailable, by service, as the loop keeps them. */
@@ -262,9 +300,10 @@ class ModelCheck(
      * The check at start (#540): once [allowed] (the pipeline's D6 gate: after the first-run
      * acknowledgement, while the app is visible or looks up in the background), the service
      * switched on in [settings] has its model checked ([check]), and again whenever that service,
-     * its model or a saved key ([keyChanges]) changes; not while *Show insights* is off, when no
-     * insight is written either way. Hands the loop each selection, before the check it leads to,
-     * and each service's key after each change. Runs until cancelled.
+     * its model or a saved key ([keyChanges], and the end of each key write, [keyChanged]) changes;
+     * not while *Show insights* is off, when no insight is written either way. Hands the loop each
+     * selection, before the check it leads to, and each service's key after each change. Runs until
+     * cancelled.
      */
     suspend fun run(
         settings: Flow<Settings>,
@@ -277,7 +316,7 @@ class ModelCheck(
                 .onEach { events.trySend(Event.Selected(it)) }
                 .map { s -> s.aiProvider?.takeIf { s.writeInsights }?.let { p -> s.model(p)?.let { p to it } } }
                 .distinctUntilChanged()
-        combine(target, keyChanges) { chosen, _ -> chosen }
+        combine(target, keyChanges, edits) { chosen, _, _ -> chosen }
             .collectLatest { chosen ->
                 chosen ?: return@collectLatest
                 allowed.first { it }
@@ -345,7 +384,7 @@ interface RefusedModelStore {
     /** The models kept, read once as the check starts. */
     fun load(): RefusedModels
 
-    /** Keeps [refused] in place of what was kept. */
+    /** Keeps [refused] in place of what was kept, durably before it returns (#1425). */
     fun save(refused: RefusedModels)
 
     companion object {

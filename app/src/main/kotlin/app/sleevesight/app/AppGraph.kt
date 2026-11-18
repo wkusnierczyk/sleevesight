@@ -51,6 +51,7 @@ import app.sleevesight.app.pipeline.samePlay
 import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.pipeline.vocalsWanted
 import app.sleevesight.app.secrets.AndroidKeystoreKey
+import app.sleevesight.app.secrets.KeyEdits
 import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.OpenRouterLogin
 import app.sleevesight.app.secrets.SecretCipher
@@ -88,6 +89,7 @@ import app.sleevesight.app.speech.screenReaderOn
 import app.sleevesight.app.ui.home.GuideHiding
 import app.sleevesight.app.ui.home.SpokenWords
 import app.sleevesight.app.ui.logo.LogoSpin
+import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -133,7 +135,6 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -186,12 +187,23 @@ class AppGraph internal constructor(
     val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS, settingsDispatcher)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
-    val secrets =
+    val secrets: SecretStore =
         SecretStore(
             preferences(appContext, SECRETS_FILE),
             secretCipher,
             // A key saved where none was, or after a purge, never finds its service stored on (#667).
             servicesOff = settings::servicesOff,
+            // What was refused with an AI service's key is forgotten before the key is written (#1425).
+            edits =
+                object : KeyEdits {
+                    override suspend fun before(ids: Set<SecretId>) =
+                        ids.forEach { id -> id.provider?.let { modelCheck.keyChanging(it) } }
+
+                    override fun after(
+                        ids: Set<SecretId>,
+                        now: Map<SecretId, Secret?>,
+                    ) = ids.forEach { id -> id.provider?.let { modelCheck.keyChanged(it, id in now, now[id]) } }
+                },
         )
 
     /**
@@ -403,16 +415,13 @@ class AppGraph internal constructor(
      * settings and Home say so. The models a call found refused are kept for the saved key across
      * starts (#970), for the model list to put last.
      */
-    val modelCheck =
+    val modelCheck: ModelCheck =
         ModelCheck(
             aiProviders,
             key = { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } },
             scope = pipelineScope,
             kept = RefusedModelPrefs(appContext),
             stored = { provider -> SecretId.forProvider(provider)?.let { secrets.isStored(it) } == true },
-            // What was refused is forgotten only when the key is saved, replaced or removed (#1425).
-            keyEdits =
-                secrets.edits.mapNotNull { id -> ProviderId.entries.firstOrNull { SecretId.forProvider(it) == id } },
         )
 
     /** The guide to Home's *Hide once* (#627, #759), held in memory, never stored. */

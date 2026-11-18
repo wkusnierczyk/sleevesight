@@ -30,8 +30,10 @@ class RefusedModelPrefs(
                 kept.takeIf { it.isNotEmpty() }?.let { provider to it }
             }.toMap()
 
+    // Written to the file before it returns (`commit`): a key is written only once what was refused
+    // with the one it replaces is gone from here (#1425).
     override fun save(refused: RefusedModels) {
-        prefs.edit {
+        prefs.edit(commit = true) {
             clear()
             for ((provider, models) in refused) {
                 val entries = models.map { (id, how) -> "${how.name}$SEP$id" }.toSet()

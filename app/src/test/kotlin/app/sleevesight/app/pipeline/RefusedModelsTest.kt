@@ -10,8 +10,9 @@ import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -66,15 +67,24 @@ class RefusedModelsTest {
     /** Whether a key is stored, readable or not. */
     private var stored = false
 
-    /** The key store's changes (#1425): each service whose key was saved, replaced or removed. */
-    private val edits = MutableSharedFlow<ProviderId>(extraBufferCapacity = 8)
+    /** Anthropic's model lists asked for. */
+    private var lists = 0
+
+    private val client =
+        object : AiProvider by Anthropic {
+            override suspend fun models(key: Secret): ModelList = Anthropic.models(key).also { lists++ }
+        }
 
     private fun TestScope.check() =
-        ModelCheck(mapOf(ProviderId.ANTHROPIC to Anthropic), { saved }, backgroundScope, kept, edits) { stored }
+        ModelCheck(mapOf(ProviderId.ANTHROPIC to client), { saved }, backgroundScope, kept) { stored }
 
-    /** [provider]'s key saved, replaced or removed through the app, as the key store tells it. */
+    /**
+     * [provider]'s key saved as [saved] (or removed, when null) through the app, as the key store
+     * tells it: before the write, and after it.
+     */
     private suspend fun ModelCheck.edited(provider: ProviderId = ProviderId.ANTHROPIC) {
-        edits.emit(provider)
+        keyChanging(provider)
+        keyChanged(provider, written = true, now = saved)
         ticket()
     }
 
@@ -263,6 +273,79 @@ class RefusedModelsTest {
             check.answered(ticket, ProviderId.ANTHROPIC, OPUS, OLD_KEY, NOT_FOUND)
             check.ticket()
             assertNull(check.anthropic())
+            job.cancel()
+        }
+
+    @Test
+    fun aCheckAndACallAfterTheKeyStoreShowsTheNewKeyCountAndTheModelIsCheckedAgain() =
+        runTest {
+            val check = check()
+            val keyChanges = MutableStateFlow(0)
+            val job = launch { check.run(flowOf(anthropic), keyChanges.map {}, MutableStateFlow(true)) }
+            runCurrent()
+            check.ticket()
+
+            // The new key written: the store shows it, and its check runs, before the write is told
+            // ended; that check counts for nothing, so another runs after.
+            check.keyChanging(ProviderId.ANTHROPIC)
+            saved = NEW_KEY
+            keyChanges.value++
+            runCurrent()
+            check.ticket()
+            val during = check.unavailable.value[ProviderId.ANTHROPIC]
+            assertNull("made while the key was written, it counts for nothing", during)
+            val before = lists
+            check.keyChanged(ProviderId.ANTHROPIC, written = true, now = NEW_KEY)
+            runCurrent()
+            check.ticket()
+            assertEquals("checked again once the write ended", before + 1, lists)
+            assertEquals(UnavailableReason.LISTED_ABSENT, check.unavailable.value[ProviderId.ANTHROPIC]?.why)
+
+            check.watching(Refusing).stream(CompletionRequest(OPUS, "prompt"), NEW_KEY).toList()
+            check.ticket()
+            assertEquals(mapOf(OPUS to ModelRefusal.NOT_SERVED), check.anthropic())
+            job.cancel()
+        }
+
+    @Test
+    fun theyAreGoneFromWhereTheyAreKeptBeforeTheKeyIsWritten() =
+        runTest {
+            kept.models = mapOf(ProviderId.ANTHROPIC to mapOf(OPUS to ModelRefusal.ACCOUNT))
+            check().keyChanging(ProviderId.ANTHROPIC)
+            assertEquals(emptyMap<ProviderId, Map<String, ModelRefusal>>(), kept.models)
+
+            // The process ends with the key written, its end never told: the next start keeps none.
+            val next = check()
+            next.ticket()
+            assertNull(next.anthropic())
+        }
+
+    @Test
+    fun withTheLoopEndedTheyAreStillForgottenBeforeTheKeyIsWritten() =
+        runTest {
+            kept.models = mapOf(ProviderId.ANTHROPIC to mapOf(OPUS to ModelRefusal.ACCOUNT))
+            val ended = CoroutineScope(Job().apply { cancel() })
+            ModelCheck(mapOf(ProviderId.ANTHROPIC to client), { saved }, ended, kept).keyChanging(ProviderId.ANTHROPIC)
+            assertEquals(emptyMap<ProviderId, Map<String, ModelRefusal>>(), kept.models)
+        }
+
+    @Test
+    fun afterAWriteThatFailedNothingCountsUntilTheKeyIsReadAgain() =
+        runTest {
+            val check = check()
+            val job = launch { check.run(flowOf(anthropic), flowOf(Unit), MutableStateFlow(false)) }
+            runCurrent()
+            check.ticket()
+
+            check.keyChanging(ProviderId.ANTHROPIC)
+            check.keyChanged(ProviderId.ANTHROPIC, written = false, now = null)
+            check.ended(NOT_FOUND, OPUS)
+            assertNull("what the key holds is not known", check.anthropic())
+
+            // A call reads the key first: the one kept, which then counts.
+            check.watching(Refusing).stream(CompletionRequest(OPUS, "prompt"), OLD_KEY).toList()
+            check.ticket()
+            assertEquals(mapOf(OPUS to ModelRefusal.NOT_SERVED), check.anthropic())
             job.cancel()
         }
 
