@@ -968,7 +968,7 @@ class ItemInsights(
                 dates(),
             )
         // The song's web search is the track's own too, so whether the AI service searched is not kept.
-        return question to { lines, _ -> lookup.keep(query, lines) }
+        return question to { found, _ -> lookup.keep(query, found) }
     }
 
     // What [writeSearching] was asked to write: the item on its track, under its settings, from its
