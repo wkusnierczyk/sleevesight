@@ -52,7 +52,7 @@ internal fun ColumnScope.ScanStep(
     val style = MaterialTheme.typography.bodyMedium
     GuidedScan(
         above = {
-            KeyScreenTitle(R.string.load_keys_scan_title, step = 2)
+            KeyScreenTitle(R.string.load_keys_scan_title, step = LoadStep.SCAN.number)
             Text(stringResource(R.string.load_keys_scan_how), style = style)
         },
         camera = { ScanCamera(scan, scanner, onScanned) },

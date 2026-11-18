@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.settings
 
+import android.content.Context
 import android.graphics.Bitmap
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -17,6 +18,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.typographyOf
@@ -28,6 +30,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.sqrt
 
 /**
  * A *Load keys* step's number sits in the middle of its circle (#1012), for each step, in either
@@ -72,13 +77,26 @@ class KeyScreenTitleTest {
                 }
             }
             val image = compose.onNodeWithTag(TAG).captureToImage().asAndroidBitmap()
-            val circle = ink(image) { r, g, b -> r > 200 && g < 120 && b < 120 }
-            val number = ink(image, circle) { r, g, b -> b > 150 && r < 120 && g < 120 }
+            // The ring: its unfilled quarters red, its filled ones blue as the number (#1022).
+            val circle = ink(image) { r, g, b -> (r > 200 || b > 200) && g < 120 }
+            val number = ink(image, inside(circle)) { r, g, b -> b > 150 && r < 120 && g < 120 }
             val case = "step $step, $font, font scale $fontScale"
             val across = balanceAcross(image, number, circle)
             assertEquals("$case: horizontal centre", centre(circle[0], circle[2]), across, 1.0)
             assertEquals("$case: vertical centre", centre(circle[1], circle[3]), centre(number[1], number[3]), 1.0)
         }
+    }
+
+    /**
+     * The number's room: the square inside [circle]'s ring, less a pixel each side, clear of the
+     * filled quarters' blue (#1022), which a square inset by the ring's width alone would reach.
+     */
+    private fun inside(circle: IntArray): IntArray {
+        val radius = (circle[2] - circle[0] + 1) / 2.0 - ceil(RING_DP * density())
+        val half = floor(radius / sqrt(2.0)).toInt() - 1
+        val x = (circle[0] + circle[2]) / 2
+        val y = (circle[1] + circle[3]) / 2
+        return intArrayOf(x - half, y - half, x + half, y + half)
     }
 
     /** The bounds (left, top, right, bottom) of the pixels [matching], within [area] if given. */
@@ -126,6 +144,11 @@ class KeyScreenTitleTest {
         return moment / weight
     }
 
+    private fun density() =
+        ApplicationProvider
+            .getApplicationContext<Context>()
+            .resources.displayMetrics.density
+
     private fun centre(
         from: Int,
         to: Int,
@@ -133,6 +156,9 @@ class KeyScreenTitleTest {
 
     private companion object {
         const val TAG = "title"
+
+        /** The ring's width, in dp. */
+        const val RING_DP = 2.0
 
         /** *Load keys*' steps. */
         const val STEPS = 4
