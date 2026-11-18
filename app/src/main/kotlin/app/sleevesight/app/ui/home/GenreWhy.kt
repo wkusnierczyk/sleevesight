@@ -226,7 +226,6 @@ internal fun ReasonShown(
                 action = stringResource(R.string.home_ai_retry_action),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                outlined = true,
             )
 
         // Neither comes from a reason: not offered, and not stopped.

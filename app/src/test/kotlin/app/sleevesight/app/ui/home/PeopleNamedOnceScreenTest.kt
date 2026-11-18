@@ -52,7 +52,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * A track's people named once (#1355): while MusicBrainz has not answered, the rows under *Key
- * insights* are held back and the line under the title is empty, its height kept; they come in when
+ * insights* are held back and the line under the title left out (#1407); they come in when
  * it answers, named by its roles, or after [NAMING_WAIT] named by the title, renamed once if it
  * answers later, a screen recreated meanwhile waiting only what was left. A title leading with its
  * composer, MusicBrainz switched off (with or without a run of the track yet) or unreachable, and a
@@ -146,6 +146,12 @@ class PeopleNamedOnceScreenTest {
             .single()
             .removeSuffix(", uses AI")
 
+    private fun buttonsTop(): Float =
+        compose
+            .onNodeWithTag(DATES_CHIP_TAG)
+            .fetchSemanticsNode()
+            .boundsInRoot.top
+
     private fun assertHeld() {
         for (item in listOf(InsightItem.SONG, InsightItem.COMPOSER, InsightItem.ARTIST, InsightItem.ALBUM)) {
             compose.onNodeWithTag(itemRowTag(item)).assertDoesNotExist()
@@ -158,24 +164,27 @@ class PeopleNamedOnceScreenTest {
     fun whileMusicBrainzHasNotAnsweredTheRowsAndTheLineUnderTheTitleAreHeldBack() =
         show(beethoven(answered = false)) {
             assertHeld()
-            // The line's height kept: as tall as a line of the artists.
+            // No blank line in its place (#1407): the mark that it is held back takes no room.
             val held =
                 compose
                     .onNodeWithTag(ARTISTS_HELD_TAG)
                     .fetchSemanticsNode()
                     .size.height
-            assertEquals(true, held > 0)
+            assertEquals(0, held)
         }
 
     @Test
     fun whenMusicBrainzAnswersTheRowsComeInNamedByItsRoles() =
         show(beethoven(answered = false)) { current ->
             assertHeld()
+            val buttons = buttonsTop()
             after(3_000)
             assertHeld()
             current.value = state(beethoven(answered = true))
             frames()
             compose.onNodeWithTag(ARTISTS_HELD_TAG).assertDoesNotExist()
+            // The artists come into the room kept for them (#1407): the buttons under them stay.
+            assertEquals(buttons, buttonsTop())
             assertEquals("Music, $TITLE", said(InsightItem.SONG))
             assertEquals("Composer, $BEETHOVEN", said(InsightItem.COMPOSER))
             assertEquals(true, said(InsightItem.ARTIST).startsWith("Performer, "))

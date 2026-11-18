@@ -417,8 +417,9 @@ closing.
 The rows are named once (#1355, the mock-up's pick, 2026-11-17). Before MusicBrainz answers, only a
 title leading with its composer tells one, so a classical title without that lead would read *Song*
 and *Artist* first, then *Music*, *Composer* and *Performer*. Home therefore holds back the rows
-under *Key insights* and the artists' line under the title (its height kept, so the album's line
-does not move) until the track's roles are known (`rolesKnown` in `RowsNaming.kt`): the title leads
+under *Key insights* and the artists' line under the title (no blank line in its place: the album
+sits under the title, and the room is kept at the bottom of the key data's block, so the buttons
+under it do not move, #1407) until the track's roles are known (`rolesKnown` in `RowsNaming.kt`): the title leads
 with its composer, or the run has MusicBrainz's answer (its resolution, or its source landed: kept
 from a track played before, off, failed, unreachable). With no answer within 10 seconds
 (`NAMING_WAIT`) they are named by the title; an answer after that renames them once. Once named, a

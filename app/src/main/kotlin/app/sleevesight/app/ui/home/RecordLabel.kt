@@ -8,10 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.TracklistKey
@@ -129,28 +127,23 @@ internal fun releaseLine(
 
 /**
  * The album in italics, alone on its line, and under it, quieter, [line]: the release's labels, all
- * of them joined by commas, then the year (#729); with none, nothing under it, unless [held], when an
- * empty line keeps its height. One stop for a screen reader, read as a sentence ([releaseSaid]).
+ * of them joined by commas, then the year (#729); with none (or while the labels are held back),
+ * nothing under it (#1407). One stop for a screen reader, read as a sentence ([releaseSaid]).
  */
 @Composable
 internal fun ReleaseAbout(
     album: String,
     line: ReleaseLine?,
-    held: Boolean,
 ) {
     val said = line?.let { releaseSaid(album, it) }
     Column(
         Modifier.semantics(mergeDescendants = true) { said?.let { contentDescription = it } },
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(KEY_LINE_GAP),
     ) {
         Text(withAlbum(ALBUM_MARK, album), style = MaterialTheme.typography.bodyLarge)
         val quiet = MaterialTheme.typography.bodyMedium
         val color = MaterialTheme.colorScheme.onSurfaceVariant
-        when {
-            line != null -> Text(releaseShown(line), Modifier.testTag(RELEASE_LINE_TAG), style = quiet, color = color)
-            // Held back until the label is known: a line's height kept, nothing a screen reader stops on.
-            held -> Text(" ", Modifier.testTag(RELEASE_HELD_TAG).clearAndSetSemantics {}, style = quiet)
-        }
+        line?.let { Text(releaseShown(it), Modifier.testTag(RELEASE_LINE_TAG), style = quiet, color = color) }
     }
 }
 

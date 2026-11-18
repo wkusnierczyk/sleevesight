@@ -17,7 +17,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.PillButton
 
 /**
  * A page of Home's (#447), or another page opened from somewhere, such as the credits and the
@@ -123,11 +123,9 @@ internal fun PageCloseButton(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Outlined: it only closes the page, and a filled button above it (the first-run screen's
+    // The pill (#1404): it only closes the page, and a filled button above it (the first-run screen's
     // *Open notification access*) stays the one that stands out.
-    OutlinedButton(onClick = onClose, modifier = modifier.fillMaxWidth().testTag(PAGE_CLOSE_TAG)) {
-        Text(stringResource(R.string.page_close))
-    }
+    PillButton(stringResource(R.string.page_close), onClose, modifier.fillMaxWidth().testTag(PAGE_CLOSE_TAG))
 }
 
 /**

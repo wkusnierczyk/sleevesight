@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -54,7 +55,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -288,8 +288,8 @@ private fun Progress(
  * No year when the album's name gives its
  * edition's ([albumLineYear], #1116: "Material Girl (2024 Remaster)"). When the recording first came out is
  * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place. While
- * [labelHeld], the labels still looked up on MusicBrainz, an empty line under the album, its height
- * kept, rather than the year alone and the label after it.
+ * [labelHeld], the labels still looked up on MusicBrainz, no line under the album, rather than the
+ * year alone and the label after it.
  *
  * With [split], the roles telling the composer apart (#1199), the performers on one line (an arranger
  * the title names is in the title), then the composer, or every author, on a line of its own, after a quieter label
@@ -297,13 +297,19 @@ private fun Progress(
  * anyone the player does not credit (#1298), MusicBrainz's line on the work among [notes]' lines as a
  * citation chip at its end ([authorsCite]), a tap on which goes where [notes]' citations go.
  *
- * While [held] (#1355, [peopleNamed]), neither: an empty line in the artists' place, its height kept.
+ * While [held] (#1355, [peopleNamed]), neither: no line in the artists' place.
  *
  * With the sources asked in another spelling ([foundAs], #1293), a quiet line under the title says
  * it ("Found as “Nessun dorma”", [foundAsLine]), read after the title as shown; the title stays the
  * player's.
+ *
+ * The lines sit in a block at least as tall as the title, the artists, the album and the release line
+ * would be on one line each, at the font size shown ([keyDataMinimum], #1407): the lines known are
+ * packed at its top in their order, a line held back leaving no gap between the others, and the room
+ * it would take kept at the bottom, so what is under the block does not move when the artists or the
+ * labels come in. Lines that wrap, and the lines besides the four (*Found as*, the source work and
+ * variant, the composer), take more room; past the minimum the block grows with them.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Suppress("LongParameterList") // The track, its years and labels, its people, and where the authors' mark goes.
 @Composable
 internal fun KeyData(
@@ -317,7 +323,32 @@ internal fun KeyData(
     labels: AlbumLabels = AlbumLabels.Known(),
     labelHeld: Boolean = false,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    val album = header.album?.takeIf(String::isNotBlank)
+    Box(Modifier.heightIn(min = keyDataMinimum())) {
+        // What a test finds while a line is held back: no height, nothing a screen reader stops on.
+        if (held) Box(Modifier.testTag(ARTISTS_HELD_TAG))
+        if (labelHeld && album != null) Box(Modifier.testTag(RELEASE_HELD_TAG))
+        KeyLines(normalized, header, years, split, held, notes, foundAs, labels, labelHeld, album)
+    }
+}
+
+/** [KeyData]'s lines, packed one under another in their order. */
+@OptIn(ExperimentalLayoutApi::class)
+@Suppress("LongParameterList") // KeyData's, and the album it read.
+@Composable
+private fun KeyLines(
+    normalized: NormalizedTrack,
+    header: NowPlaying,
+    years: HeaderYears,
+    split: ArtistSplit?,
+    held: Boolean,
+    notes: PanelNotes,
+    foundAs: FoundAs?,
+    labels: AlbumLabels,
+    labelHeld: Boolean,
+    album: String?,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(KEY_LINE_GAP)) {
         Text(
             normalized.title.ifEmpty { header.title },
             style = MaterialTheme.typography.headlineMedium,
@@ -335,15 +366,9 @@ internal fun KeyData(
         val about =
             listOfNotNull(normalized.from?.let { stringResource(R.string.home_title_from, it) }, normalized.variant)
         if (about.isNotEmpty()) Small(about.joinToString(" · "))
-        if (held) {
-            // Held back until the people are named (#1355): a line's height kept, so the album's
-            // line does not move when it fills; nothing a screen reader stops on.
-            Text(
-                " ",
-                Modifier.testTag(ARTISTS_HELD_TAG).clearAndSetSemantics {},
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        } else {
+        // Held back until the people are named (#1355): no line, the album directly under the title,
+        // the room kept at the bottom of the block (#1407).
+        if (!held) {
             val credited = normalized.artists.ifEmpty { listOf(header.artists).filter(String::isNotBlank) }
             val artists = split?.performers ?: credited
             FlowRow {
@@ -356,13 +381,12 @@ internal fun KeyData(
                 AuthorsLine(it, cite, notes.onCite)
             }
         }
-        val album = header.album?.takeIf(String::isNotBlank)
         if (album == null) {
             Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
         } else {
             // Read once per album, year and labels, not at every recomposition (#1147).
             val line = remember(album, years.album, labels) { releaseLine(album, years.album, labels) }
-            ReleaseAbout(album, line.takeUnless { labelHeld }, labelHeld)
+            ReleaseAbout(album, line.takeUnless { labelHeld })
         }
     }
 }
@@ -410,10 +434,10 @@ const val FOUND_AS_TAG: String = "found-as"
 /** The test tag of the line under the album: the release's labels and the album's year (#729). */
 const val RELEASE_LINE_TAG: String = "release-line"
 
-/** The test tag of the line under the album while the release's labels are held back (#729). */
+/** The test tag of the mark, of no height, that the release's labels are held back (#729, #1407). */
 const val RELEASE_HELD_TAG: String = "release-held"
 
-/** The test tag of the line under the title while its artists are held back (#1355). */
+/** The test tag of the mark, of no height, that the artists are held back (#1355, #1407). */
 const val ARTISTS_HELD_TAG: String = "artists-held"
 
 /** The test tag of the player row. */
