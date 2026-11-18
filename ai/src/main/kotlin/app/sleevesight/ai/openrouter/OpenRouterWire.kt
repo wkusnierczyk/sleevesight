@@ -80,3 +80,9 @@ internal data class WireArchitecture(
     @SerialName("input_modalities") val inputModalities: List<String>? = null,
     @SerialName("output_modalities") val outputModalities: List<String>? = null,
 )
+
+/** The key-exchange answer (`POST /api/v1/auth/keys`): the key. */
+@Serializable
+internal data class WireKey(
+    val key: String? = null,
+)

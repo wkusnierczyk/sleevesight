@@ -100,12 +100,32 @@
         android:usesCleartextTraffic="false"
         tools:ignore="DataExtractionRules">
 
+        <!-- singleTop: OpenRouter's answer to a sign-in (#1157) comes back to the activity that
+             opened it, through onNewIntent, rather than starting a second one. -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- The callback of a sign-in with OpenRouter (#1157), an App Link on the app's site
+                 (#1396; `OpenRouterSignIn.CALLBACK`): the browser opens it with the one-time code,
+                 which is worth nothing without the verifier the app keeps. `autoVerify`: Android
+                 checks the site's `/.well-known/assetlinks.json`, which names this app and its
+                 signing certificates, and then opens the link here rather than in the browser;
+                 that page (`auth/openrouter/index.html`) is for when it does not. Exactly that
+                 path, so no other page of the site opens the app; the debug build's path is its own
+                 (`openRouterCallbackPath`, `app/build.gradle.kts`), so with both builds installed
+                 each sign-in returns to the build that began it. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="sleevesight.app" />
+                <data android:path="${openRouterCallbackPath}" />
             </intent-filter>
         </activity>
 
