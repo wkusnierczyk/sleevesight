@@ -222,9 +222,13 @@ private fun ItemRowLine(
     button: Modifier,
     onClick: () -> Unit,
 ) {
-    val side = with(LocalDensity.current) { RECORD_SIZE.toDp() }
-    // What the line gives before the name: the button, the gap after it, and the record while it turns.
-    val reserved = look.width + COLUMN_GAP + if (look.writing) side + RECORD_GAP else 0.dp
+    // What the line gives before the name, in the pixels its layout measures: the button, as wide as
+    // its width says, the gap after it, and the record while it turns, as wide as its size says.
+    val reserved =
+        with(LocalDensity.current) {
+            val record = RECORD_SIZE.toDp().roundToPx().takeIf { look.writing }
+            nameStart(look.width.roundToPx(), COLUMN_GAP.roundToPx(), record, RECORD_GAP.roundToPx())
+        }
     FittedName(row, reserved) { shown ->
         val action = stringResource(if (look.pages) R.string.home_page_open else row.action)
         val named = "$kind, $shown"
@@ -253,7 +257,7 @@ private fun ItemRowLine(
             val loose = constraints.copy(minWidth = 0, minHeight = 0)
             val chip = measurables.first().measure(loose)
             val record = measurables.takeIf { look.writing }?.get(1)?.measure(loose)
-            val start = chip.width + COLUMN_GAP.roundToPx() + (record?.let { it.width + RECORD_GAP.roundToPx() } ?: 0)
+            val start = nameStart(chip.width, COLUMN_GAP.roundToPx(), record?.width, RECORD_GAP.roundToPx())
             val width = (constraints.maxWidth - start).coerceAtLeast(0)
             val least = max(NAME_CELL.roundToPx(), chip.height)
             val cell = measurables.last().measure(Constraints(width, width, least, Constraints.Infinity))

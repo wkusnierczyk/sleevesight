@@ -10,13 +10,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.core.model.NormalizedTrack
@@ -52,9 +50,13 @@ internal fun artistRow(normalized: NormalizedTrack): ItemRow? {
  * resolution compares names, none blank. Empty for a track crediting one.
  */
 internal fun alsoOnTrack(normalized: NormalizedTrack): List<String> {
-    val seen = mutableSetOf(ARTIST_NAMES.key(normalized.primary))
-    return normalized.artists.map(String::trim).filter { it.isNotEmpty() && seen.add(ARTIST_NAMES.key(it)) }
+    val seen = mutableSetOf(artistKey(normalized.primary))
+    return normalized.artists.map(String::trim).filter { it.isNotEmpty() && seen.add(artistKey(it)) }
 }
+
+// [name]'s key as the resolution compares names; for a name of symbols alone, which that key leaves
+// empty (`!!!`, `†††`), the name itself, lowercased, so it is not taken for another such name.
+private fun artistKey(name: String): String = ARTIST_NAMES.key(name).ifEmpty { name.trim().lowercase() }
 
 /**
  * What [row] reads beside its button, and as its panel's subtitle and its page's name: its name; for
@@ -65,15 +67,16 @@ internal fun rowName(row: ItemRow): String =
     if (row.others.isEmpty()) row.name else stringResource(R.string.home_item_name_others, row.name)
 
 /**
- * [content] with the name [row] shows beside its button, its line giving [reserved] to what comes
- * before the name: the row's name; for an *Artists* row ([ItemRow.others], #1168) "{first}, others"
- * ([rowName]) where that fits on the name's one line, else the first artist alone (clipped as any
- * name), never a list of names cut short.
+ * [content] with the name [row] shows beside its button, its line giving [reserved] pixels to what
+ * comes before the name ([nameStart], as the row's layout places it): the row's name; for an
+ * *Artists* row ([ItemRow.others], #1168) "{first}, others" ([rowName]) where that fits on the
+ * name's one line, else the first artist alone (clipped as any name), never a list of names cut
+ * short.
  */
 @Composable
 internal fun FittedName(
     row: ItemRow,
-    reserved: Dp,
+    reserved: Int,
     content: @Composable (String) -> Unit,
 ) {
     if (row.others.isEmpty()) {
@@ -83,11 +86,10 @@ internal fun FittedName(
     val full = rowName(row)
     val style = MaterialTheme.typography.bodyLarge
     val measurer = rememberTextMeasurer()
-    val density = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wide = measurer.measure(full, style, maxLines = 1, softWrap = false).size.width
-        val room = with(density) { (maxWidth - reserved).roundToPx() }
-        content(if (wide <= room) full else row.name)
+        // In whole pixels, as the row's layout gives the name its cell.
+        content(if (wide <= constraints.maxWidth - reserved) full else row.name)
     }
 }
 
@@ -122,6 +124,19 @@ internal fun AlsoOnTrack(
 const val ALSO_ON_TRACK_TAG: String = "also-on-track"
 
 fun alsoOnTrackTag(name: String): String = "also-on-track:$name"
+
+/**
+ * Where a row's name starts on its line, in pixels: after its button, [chip] wide, the [gap] after
+ * it, and while the insight is written the turning record, [record] wide, and the [recordGap] after
+ * it. The row's layout places the name by it, and [FittedName] reserves it, so both agree to the
+ * pixel (#1168).
+ */
+internal fun nameStart(
+    chip: Int,
+    gap: Int,
+    record: Int?,
+    recordGap: Int,
+): Int = chip + gap + (record?.let { it + recordGap } ?: 0)
 
 // Names compared as the resolution compares them.
 private val ARTIST_NAMES = NameMatcher(JvmAccentFolder)
