@@ -38,6 +38,7 @@ import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.API_KEYS_URL
 import app.sleevesight.app.ui.settings.LOAD_KEYS_BUTTON_TAG
+import app.sleevesight.app.ui.settings.LOAD_KEYS_STEPS
 import app.sleevesight.app.ui.settings.LOAD_KEYS_WORD_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
@@ -230,7 +231,8 @@ class LoadKeysWordsTest {
     @Test
     fun theWordsStepIsNumberedAndCountsDownTheirTime() =
         show {
-            val title = app.getString(R.string.load_keys_step, 1, text(R.string.load_keys_words_title))
+            val title =
+                app.getString(R.string.load_keys_step, 1, LOAD_KEYS_STEPS, text(R.string.load_keys_words_title))
             compose.onNode(hasText(title) and isHeading()).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.load_keys_words_secret)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.load_keys_words_give)).assertIsDisplayed()
