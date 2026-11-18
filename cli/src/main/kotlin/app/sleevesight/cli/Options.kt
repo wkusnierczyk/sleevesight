@@ -74,9 +74,10 @@ data class Options(
                                   .dev/cli/cache.db for live; none for record); each start
                                   deletes its expired entries, and its insights older than the
                                   app's default Keep history for (90 days)
-              --provider <name>   the AI service: anthropic, openai or google (default: the one
-                                  --record names, else anthropic); openai only for live, since
-                                  only Anthropic's and Google's replies are recorded and replayed
+              --provider <name>   the AI service: anthropic, openai, google or openrouter (default:
+                                  the one --record names, else anthropic); openai and openrouter
+                                  only for live, since only Anthropic's and Google's replies are
+                                  recorded and replayed
               --model <id>        the provider's model (default: the app's default for it)
               --repeat <n>        run the tracks n times (default 1), each pass a listening session of
                                   its own, every insight written afresh, none read from the cache;
