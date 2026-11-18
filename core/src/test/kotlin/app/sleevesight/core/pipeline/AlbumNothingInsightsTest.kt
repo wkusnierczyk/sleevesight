@@ -158,6 +158,20 @@ class AlbumNothingInsightsTest {
         }
 
     @Test
+    fun `an album with no release group is looked up by its name, which its search keeps`() =
+        runTest {
+            // Its group known: Last.fm is asked about it.
+            assertFalse(evidence().byName)
+            // None: looked up by its name, Last.fm not asked, as its empty panel says (#1308).
+            albums.web = emptyList()
+            val track = track(done(Outcome.Unreachable))
+            val evidence = evidence(track)
+            assertTrue(evidence.byName)
+            val searched = assertIs<ItemSearch.Found>(items.search(InsightItem.ALBUM, track, settings, evidence))
+            assertTrue(searched.evidence.byName)
+        }
+
+    @Test
     fun `with every source answered and no line, nothing is named`() =
         runTest {
             val evidence = evidence()

@@ -19,9 +19,17 @@ internal class KeptWebLines(
     private val part: ArtistPart,
     private val kept: ArtistResults,
     private val before: ArtistPart,
+    private val marked: Boolean = false,
 ) {
-    // The web's lines by key, while [kept] keeps nothing.
-    private val remembered = Lru<String, List<EvidenceDraft>>(REMEMBERED)
+    // The web's lines by key, with whether they were kept with no search made (#1308), while [kept]
+    // keeps nothing: one entry, so the mark goes with its lines.
+    private val remembered = Lru<String, Remembered>(REMEMBERED)
+
+    // Lines remembered, and whether they were kept with no search made.
+    private class Remembered(
+        val lines: List<EvidenceDraft>,
+        val unsearched: Boolean,
+    )
 
     // The searches under way, by key.
     private val searching = OneSearchAtATime<List<EvidenceDraft>>()
@@ -31,25 +39,57 @@ internal class KeptWebLines(
         if (kept.persists) {
             kept.getCarried(part, before, key)?.let { KeptDrafts.decode(it.value) }
         } else {
-            remembered.get(key)
+            remembered.get(key)?.lines
         }
 
-    /** [lines] kept for [key], none included. */
+    /** [lines] kept for [key], none included, found by a search. */
     suspend fun keep(
         key: String,
         lines: List<EvidenceDraft>,
+    ) = keep(key, lines, searched = true)
+
+    /**
+     * [lines] kept for [key], none included, and, when [marked] (the artist's), whether a search found
+     * them ([searched], #1308), in a mark beside them ([unsearched]), written with them at every keep, so
+     * lines kept again replace the mark of those they replace.
+     */
+    suspend fun keep(
+        key: String,
+        lines: List<EvidenceDraft>,
+        searched: Boolean,
     ) {
-        if (kept.persists) kept.keep(part, key, KeptDrafts.encode(lines)) else remembered.put(key, lines)
+        if (kept.persists) {
+            kept.keep(part, key, KeptDrafts.encode(lines))
+            if (marked) kept.keep(part, markOf(key), if (searched) SEARCHED else UNSEARCHED)
+        } else {
+            remembered.put(key, Remembered(lines, marked && !searched))
+        }
     }
 
-    /** What is kept for [key] kept again, from now; nothing when none is. */
+    /** Whether the lines kept for [key] were kept with no search made ([keep] with `searched` false). */
+    suspend fun unsearched(key: String): Boolean =
+        if (kept.persists) {
+            kept.get(part, key) != null && kept.get(part, markOf(key))?.value == UNSEARCHED
+        } else {
+            remembered.get(key)?.unsearched == true
+        }
+
+    /**
+     * What is kept for [key] kept again, from now, with its mark; nothing when none is: a mark whose
+     * lines are gone is not kept again.
+     */
     suspend fun renew(key: String) {
         if (kept.persists) {
-            kept.getCarried(part, before, key)?.let { kept.keep(part, key, it.value) }
+            val lines = kept.getCarried(part, before, key) ?: return
+            kept.keep(part, key, lines.value)
+            if (marked) kept.get(part, markOf(key))?.let { kept.keep(part, markOf(key), it.value) }
         } else {
             remembered.get(key)?.let { remembered.put(key, it) }
         }
     }
+
+    // The key of [key]'s mark of whether its lines were found by a search.
+    private fun markOf(key: String): String = "$key$MARK_SUFFIX"
 
     /**
      * The lines kept for [key], else what [engine] finds, one at a time per key, kept, none included;
@@ -99,5 +139,10 @@ internal class KeptWebLines(
     companion object {
         /** The most recent keys whose lines are kept in memory, without a [kept] that keeps them. */
         const val REMEMBERED: Int = 256
+
+        // A mark's key after its lines' (#1308), and its value.
+        private const val MARK_SUFFIX = "#search"
+        private const val UNSEARCHED = "unsearched"
+        private const val SEARCHED = "searched"
     }
 }

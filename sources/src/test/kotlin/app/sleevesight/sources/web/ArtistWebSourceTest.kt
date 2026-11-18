@@ -19,9 +19,11 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
@@ -63,7 +65,8 @@ class ArtistWebSourceTest {
             var sent = 0
             val found = checkNotNull(source.search(artist, { sent++ }))
             assertEquals(1, sent)
-            assertEquals(setOf("mb:mb-sachdev"), kept.keys(ArtistWebSource.PART))
+            // With its mark of a search made (#1308).
+            assertEquals(setOf("mb:mb-sachdev", "mb:mb-sachdev#search"), kept.keys(ArtistWebSource.PART))
             assertEquals(found, source.kept(artist))
             // Found again with no search, its request not told.
             assertEquals(found, source.search(artist, { sent++ }))
@@ -79,7 +82,8 @@ class ArtistWebSourceTest {
         runTest {
             val now = MemoryArtistResults()
             val found = checkNotNull(ArtistWebSource(Web(), names, now).search(artist))
-            val key = now.keys(ArtistWebSource.PART).single()
+            // The lines' key, not their mark's (#1308).
+            val key = now.keys(ArtistWebSource.PART).single { '#' !in it }
             val value = checkNotNull(now.get(ArtistWebSource.PART, key)).value
             // Kept before #1165 (extraction 1) with no reference: the same lines, with no search, and
             // kept again under the part's version.
@@ -124,6 +128,102 @@ class ArtistWebSourceTest {
             }
             // No engine: no search, nothing kept.
             assertNull(ArtistWebSource(null, names).search(ArtistWebQuery("Someone Else", null)))
+        }
+
+    @Test
+    fun `found nothing kept with no search made says so, until lines are kept again by a search`() =
+        runTest {
+            val clock = Moving()
+            for (store in listOf(MemoryArtistResults(clock, 90.days), null)) {
+                val source = if (store == null) ArtistWebSource(Web(), names) else ArtistWebSource(Web(), names, store)
+                // The AI service wrote with no search made (#1308).
+                source.keep(artist, emptyList(), searched = false)
+                assertEquals(emptyList(), source.kept(artist))
+                assertTrue(source.unsearched(artist))
+                source.renew(artist)
+                assertTrue(source.unsearched(artist))
+                // Its own searches found nothing: a search was made.
+                source.keep(artist, emptyList(), searched = true)
+                assertFalse(source.unsearched(artist))
+                // Kept with no search made, then gone: none said, nor after the app's own search.
+                source.keep(artist, emptyList(), searched = false)
+                store?.let {
+                    clock.now += 91.days
+                    assertFalse(source.unsearched(artist))
+                    assertTrue(checkNotNull(source.search(artist)).isNotEmpty())
+                    assertFalse(source.unsearched(artist))
+                }
+                // Kept the way [keep] always did: no mark, none said.
+                val other = ArtistWebQuery("Someone Else", null)
+                source.keep(other, emptyList())
+                assertFalse(source.unsearched(other))
+            }
+        }
+
+    // [store], whose rows [evict] drops, as a store's size limit would, until kept again.
+    private class Evicting(
+        private val store: MemoryArtistResults,
+    ) : ArtistResults by store {
+        private val evicted = mutableSetOf<String>()
+
+        fun evict(key: String) {
+            evicted += key
+        }
+
+        override suspend fun get(
+            part: ArtistPart,
+            key: String,
+        ): KeptPart? = if (key in evicted) null else store.get(part, key)
+
+        override suspend fun keep(
+            part: ArtistPart,
+            key: String,
+            value: String,
+        ) {
+            evicted -= key
+            store.keep(part, key, value)
+        }
+    }
+
+    @Test
+    fun `lines kept again under the same key replace the mark, whatever their lifetime`() =
+        runTest {
+            val clock = Moving()
+            for (lifetime in listOf(90.days, Duration.INFINITE)) {
+                val store = Evicting(MemoryArtistResults(clock, lifetime))
+                val source = ArtistWebSource(Web(lines = emptyList()), names, store)
+                source.keep(artist, emptyList(), searched = false)
+                assertTrue(source.unsearched(artist), "$lifetime")
+                // The lines' row gone, its mark left: not said, nor kept again by a renewal.
+                store.evict("mb:mb-sachdev")
+                assertFalse(source.unsearched(artist), "$lifetime")
+                source.renew(artist)
+                assertNull(source.kept(artist))
+                // The app's own search finds nothing: a search was made.
+                assertEquals(emptyList(), source.search(artist))
+                assertFalse(source.unsearched(artist), "$lifetime")
+                // Kept with no search made, then by the AI service's searches, then plainly.
+                source.keep(artist, emptyList(), searched = false)
+                source.keep(artist, emptyList(), searched = true)
+                assertFalse(source.unsearched(artist), "$lifetime")
+                source.keep(artist, emptyList(), searched = false)
+                source.keep(artist, emptyList())
+                assertFalse(source.unsearched(artist), "$lifetime")
+            }
+        }
+
+    @Test
+    fun `in memory the mark goes with its lines`() =
+        runTest {
+            val source = ArtistWebSource(Web(), names)
+            source.keep(artist, emptyList(), searched = false)
+            // Other artists push the rest out, the artist's lines renewed meanwhile: its mark with them.
+            repeat(KeptWebLines.REMEMBERED) {
+                source.keep(ArtistWebQuery("Artist $it", null), emptyList())
+                if (it % 16 == 0) source.renew(artist)
+            }
+            assertEquals(emptyList(), source.kept(artist))
+            assertTrue(source.unsearched(artist))
         }
 
     @Test

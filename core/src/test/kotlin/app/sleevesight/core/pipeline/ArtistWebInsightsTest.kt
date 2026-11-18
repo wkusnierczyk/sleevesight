@@ -99,6 +99,20 @@ class ArtistWebInsightsTest {
             kept[artist] = lines
         }
 
+        // The artists whose lines were kept with no search made (#1308).
+        val unsearched = mutableSetOf<ArtistWebQuery>()
+
+        override suspend fun keep(
+            artist: ArtistWebQuery,
+            lines: List<EvidenceDraft>,
+            searched: Boolean,
+        ) {
+            keep(artist, lines)
+            if (searched) unsearched -= artist else unsearched += artist
+        }
+
+        override suspend fun unsearched(artist: ArtistWebQuery): Boolean = artist in unsearched
+
         override suspend fun renew(artist: ArtistWebQuery) {
             renewed += artist
         }
@@ -468,7 +482,11 @@ class ArtistWebInsightsTest {
             val result = checkNotNull(items.writeSearching(first, InsightItem.ARTIST, track, settings, gathered))
             assertEquals(InsightState.NoEvidence, result.state)
             assertEquals(emptyList(), artistWeb.kept.values.single())
-            assertFalse(checkNotNull(items.evidence(InsightItem.ARTIST, track, settings)).webDue)
+            val again = checkNotNull(items.evidence(InsightItem.ARTIST, track, settings))
+            assertFalse(again.webDue)
+            // Searched, found nothing: its empty panel names the web search (#1308).
+            assertFalse(result.evidence.webSkipped)
+            assertFalse(again.webSkipped)
         }
 
     @Test
@@ -551,9 +569,12 @@ class ArtistWebInsightsTest {
             assertEquals(listOf(emptyList<EvidenceDraft>()), artistWeb.kept.values.toList())
             assertNotNull(cache.cards[first])
 
+            // No search made, so its empty panel names none (#1308), now and gathered again.
+            assertTrue(result.evidence.webSkipped)
             // Gathered again: no search due, nothing to write from, found kept with no call.
             val again = checkNotNull(items.evidence(InsightItem.ARTIST, track("Jaiye Sajana"), upTo))
             assertFalse(again.webDue)
+            assertTrue(again.webSkipped)
             assertFalse(items.searchesItself(InsightItem.ARTIST, again, upTo))
             assertEquals(InsightState.NoEvidence, items.kept(first, again)?.state)
             assertEquals(1, provider.requests.size)
