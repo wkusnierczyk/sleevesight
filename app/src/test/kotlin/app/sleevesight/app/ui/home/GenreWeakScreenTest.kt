@@ -277,7 +277,8 @@ class GenreWeakScreenTest {
             listOf(
                 DefinitionState.Looking to listOf(GENRE_DEFINITION_LOOKING_TAG),
                 DefinitionState.Failed to listOf(GENRE_DEFINITION_FAILED_TAG),
-                DefinitionState.NotFound to listOf(GENRE_NO_DEFINITION_TAG, AI_SEARCH_TAG),
+                // Country only MusicBrainz gives: no *Search with AI* for its definition (D12, #1281).
+                DefinitionState.NotFound to listOf(GENRE_NO_DEFINITION_TAG),
                 null to emptyList(),
             )
         for ((state, above) in states) {

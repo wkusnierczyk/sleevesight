@@ -4,6 +4,7 @@ import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreDefinitions
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.ClearEpoch
+import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
@@ -341,7 +342,9 @@ private const val DEFINITIONS_KEPT = GenreDefinitions.DEFAULT_CAPACITY
 /**
  * The genres of [track]'s table with no definition from Wikipedia, settled on its play ([settled],
  * `AppGenreDefinitions.settledNoDefinition`, #786): those *Search with AI*, the setting, searches by
- * itself (`AutoSearches`); not one shown as not found while this play checks it again.
+ * itself (`AutoSearches`); not one shown as not found while this play checks it again, nor one that
+ * may not reach a prompt ([GenreReasons.prompted]: only MusicBrainz gives it, D12, so not even its name
+ * is sent).
  */
 internal fun genresWithNoDefinition(
     track: TrackState,
@@ -349,4 +352,4 @@ internal fun genresWithNoDefinition(
 ): Set<String> =
     track.genres.all
         .map { it.genre.identity }
-        .filterTo(LinkedHashSet()) { settled(track, it) }
+        .filterTo(LinkedHashSet()) { settled(track, it) && GenreReasons.prompted(track, it) }

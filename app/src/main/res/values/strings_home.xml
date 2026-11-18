@@ -538,6 +538,25 @@
          chosen genre's chip: %1$s is the tag ("Rock, selected"). The row reads as one item: "Track,
          Rock, selected, Pop". -->
     <string name="home_genre_tag_selected">%1$s, selected</string>
+    <!-- A row's tags past its five (#1281), once Show more shows them: outlined cells after the five,
+         read after the five ("Track, Rock, Pop; weaker evidence: Britpop, Indie Rock"); %1$s, the tags. -->
+    <string name="home_genre_tags_weaker">weaker evidence: %1$s</string>
+    <!-- Under Genres' chips (#1281): a pill that shows the genres past each row's five, the same
+         sources' tags with weaker evidence, under the line home_genres_weaker; then, under them, a pill
+         that folds them again. -->
+    <string name="home_genres_show_more">Show more</string>
+    <string name="home_genres_show_less">Show less</string>
+    <string name="home_genres_weaker">Weaker evidence</string>
+    <!-- How a screen reader reads Show more (#1281): %1$s is home_genres_show_more, %2$s
+         home_genres_more_count ("Show more, 9 genres with weaker evidence"); then its state, collapsed. -->
+    <string name="home_genres_more_named">%1$s, %2$s</string>
+    <plurals name="home_genres_more_count">
+        <item quantity="one">%d genre with weaker evidence</item>
+        <item quantity="other">%d genres with weaker evidence</item>
+    </plurals>
+    <!-- The pills' actions, as a screen reader names them ("Double-tap to expand", "Double-tap to collapse"). -->
+    <string name="home_genres_expand">expand</string>
+    <string name="home_genres_collapse">collapse</string>
     <!-- The rows' names, on the left of the tags and of their sources: the track's tags, the artist's,
          the album's. -->
     <string name="home_genres_track">Track</string>

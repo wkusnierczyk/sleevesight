@@ -1064,7 +1064,7 @@ class AppGenreNotes private constructor(
     ) {
         val fresh = settled.value?.takeIf { samePlay(it, track) } ?: track
         val run = playing()?.takeIf { samePlay(it, track) } ?: fresh
-        val shows = fresh.genres.everyLabel.any { it.genre.identity == genre }
+        val shows = fresh.genres.openable.any { it.genre.identity == genre }
         if (shows && !settledSince(run, track)) explainNow(fresh, genre)
     }
 
@@ -1193,10 +1193,10 @@ class AppGenreNotes private constructor(
             }
         // A broader genre (#1127) as the vocabulary names it.
         val broader =
-            track.genres.everyLabel.firstNotNullOfOrNull { label ->
+            track.genres.openable.firstNotNullOfOrNull { label ->
                 vocabulary.broader(label.genre.identity)?.takeIf { it.identity == genre }
             }
-        return (track.genres.everyLabel.map { it.genre } + list?.genres.orEmpty() + listOfNotNull(broader))
+        return (track.genres.openable.map { it.genre } + list?.genres.orEmpty() + listOfNotNull(broader))
             .firstOrNull { it.identity == genre }
             ?.label ?: genre
     }

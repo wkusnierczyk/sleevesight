@@ -37,6 +37,7 @@ import app.sleevesight.core.genres.GenreDefinition
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.describedIn
+import app.sleevesight.core.pipeline.GenreReasons
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.pipeline.VocalsState
@@ -100,7 +101,7 @@ internal fun GenreAbout(
         notes.reason(asked, genre)
     }.collectAsState(GenreReason.None)
     val named =
-        track.genres.everyLabel
+        track.genres.openable
             .firstOrNull { it.genre.identity == genre }
             ?.genre ?: return
     // Its broader genre (#1127), opened in its place by the line under the definition, until *Back*;
@@ -119,7 +120,10 @@ internal fun GenreAbout(
     }
     // The check of the track's vocals (#998), for Instrumental: its line under the weak genre's.
     val vocals = vocalsOf(track, notes).takeIf { genre == TrackGenres.INSTRUMENTAL }
-    GenreDefinitionNote(named, notes, search, afterRetry)
+    // *Search with AI* for a definition Wikipedia lacks only where the genre may reach a prompt: never
+    // for one only MusicBrainz gives (D12), not even its name, of the five or past them (#1281).
+    val defining = search.takeIf { GenreReasons.prompted(track, genre) } ?: PanelSearch()
+    GenreDefinitionNote(named, notes, defining, afterRetry)
     if (broader != null) {
         BroaderLine(named, broader, Modifier.handoffTarget(handoff, line)) {
             opened = true
