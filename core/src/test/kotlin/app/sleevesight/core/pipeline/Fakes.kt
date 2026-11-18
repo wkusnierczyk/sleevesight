@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 val RETRIEVED: Instant = Instant.parse("2026-10-14T12:00:00Z")
@@ -127,6 +128,41 @@ class FakeProvider(
         ): List<CompletionEvent> = text.chunked(8).map { CompletionEvent.Delta(it) } + CompletionEvent.Done(USAGE, stop)
     }
 }
+
+/** A provider that streams [pieces], each after its wait, then ends, recording each request. */
+class PacedProvider(
+    private val pieces: List<Pair<Duration, String>>,
+) : AiProvider {
+    override val id: ProviderId = ProviderId.ANTHROPIC
+    val requests = mutableListOf<CompletionRequest>()
+
+    override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
+
+    override fun stream(
+        request: CompletionRequest,
+        key: Secret,
+    ): Flow<CompletionEvent> =
+        flow {
+            requests += request
+            for ((wait, piece) in pieces) {
+                delay(wait)
+                emit(CompletionEvent.Delta(piece))
+            }
+            emit(CompletionEvent.Done(FakeProvider.USAGE, StopReason.END))
+        }
+}
+
+/**
+ * A reply that revises itself in its second piece, 10 ms after the first, and opens a quotation in its
+ * third, 200 ms later (#1351): read at a pace, the second piece is not read on its own.
+ */
+val REVISED_THEN_QUOTED: List<Pair<Duration, String>> =
+    listOf(
+        Duration.ZERO to "It came out in 1975 [MB1]. ",
+        10.milliseconds to "Wait, I need to correct that [MB1]. ",
+        200.milliseconds to "\"Sundown",
+        10.milliseconds to "\" is the song [MB1].",
+    )
 
 /** A cache in memory, as the store's would answer, counting reads and writes. */
 class MemoryCache : PipelineCache {
