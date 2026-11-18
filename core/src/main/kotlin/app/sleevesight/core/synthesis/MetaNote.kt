@@ -2,6 +2,8 @@ package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.text.JS_WHITESPACE_CLASS
 import app.sleevesight.core.text.isJsWhitespace
+import app.sleevesight.core.text.rangesIn
+import app.sleevesight.core.text.replaceRanges
 import app.sleevesight.core.text.trimJs
 
 /**
@@ -140,9 +142,8 @@ data class MetaNote(
             at: Int,
         ): Int =
             PARAGRAPH_BREAK
-                .findAll(text.substring(0, at))
+                .rangesIn(text.substring(0, at))
                 .lastOrNull()
-                ?.range
                 ?.last
                 ?.plus(1) ?: 0
 
@@ -155,15 +156,17 @@ data class MetaNote(
             end: Int,
         ): Boolean {
             val open = ArrayDeque<String>()
-            for (run in EMPHASIS_RUN.findAll(text.substring(0, end), from)) {
-                val before = text.getOrNull(run.range.first - 1)
-                val after = text.getOrNull(run.range.last + 1)
+            for (run in EMPHASIS_RUN.rangesIn(text.substring(from, end))) {
+                val first = from + run.first
+                val value = text.substring(first, from + run.last + 1)
+                val before = text.getOrNull(first - 1)
+                val after = text.getOrNull(from + run.last + 1)
                 val inWord = before?.isLetterOrDigit() == true && after?.isLetterOrDigit() == true
                 val alone = (before == null || isJsWhitespace(before)) && (after == null || isJsWhitespace(after))
                 when {
                     inWord || alone -> Unit
-                    open.lastOrNull() == run.value -> open.removeLast()
-                    else -> open.addLast(run.value)
+                    open.lastOrNull() == value -> open.removeLast()
+                    else -> open.addLast(value)
                 }
             }
             return open.isNotEmpty()
@@ -177,10 +180,11 @@ data class MetaNote(
         // emphases, as each is weighed against the whole sentence (#1247): no note's sentence has so many.
         private fun readOf(sentence: String): String? {
             val read = Quotations.of(sentence).takeIf { !it.open && !it.stray }?.outside
-            return read?.takeIf { EMPHASIS_SPAN.findAll(it).take(MAX_SPANS + 1).count() <= MAX_SPANS }?.let {
-                EMPHASIS_SPAN.replace(it) { span ->
-                    val around = it.removeRange(span.range).replace(BRACKET, " ")
-                    if (CONTENT.containsMatchIn(around)) "…" else span.value
+            val spans = read?.let { EMPHASIS_SPAN.rangesIn(it) }.orEmpty()
+            return read?.takeIf { spans.size <= MAX_SPANS }?.let {
+                replaceRanges(it, spans) { span ->
+                    val around = it.removeRange(span).replace(BRACKET, " ")
+                    if (CONTENT.containsMatchIn(around)) "…" else it.substring(span.first, span.last + 1)
                 }
             }
         }

@@ -1,7 +1,9 @@
 package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.text.isJsWhitespace
+import app.sleevesight.core.text.rangesIn
 import app.sleevesight.core.text.trimJs
+import app.sleevesight.core.text.valuesIn
 
 /**
  * A sign that a reply still revises itself in the text a card would show (#798): the model's
@@ -241,12 +243,12 @@ enum class SelfRevision(
         // [this] without what a sentence may open with before its aside: brackets and spaces.
         private fun String.lead(): String = trimStart { it in "([ " }
 
-        // The words of [text], lower case, in order, without citations.
+        // The words of [text], lower case, in order, without citations; found with one start of the
+        // regex engine ([valuesIn], #1351).
         private fun words(text: String): List<String> =
             WORD
-                .findAll(CITATION.replace(text, " "))
-                .map { it.value.lowercase() }
-                .toList()
+                .valuesIn(CITATION.replace(text, " "))
+                .map { it.lowercase() }
 
         /** The words of an aside, as it may open a sentence or stand alone in emphasis. */
         internal const val ASIDE_WORDS: String =
@@ -314,12 +316,15 @@ enum class SelfRevision(
 // with an odd number of runs of a mark, its first run, which then opens nothing.
 private fun balanced(text: String): String {
     var t = text
-    for (mark in "*_") {
-        val runs = Regex("\\$mark+").findAll(t).toList()
-        if (runs.size % 2 == 1) t = t.removeRange(runs.first().range).trimJs()
+    for (runs in MARK_RUNS) {
+        val found = runs.rangesIn(t)
+        if (found.size % 2 == 1) t = t.removeRange(found.first()).trimJs()
     }
     return t
 }
+
+// The runs of each emphasis mark, `*` and `_`.
+private val MARK_RUNS = listOf(Regex("\\*+"), Regex("_+"))
 
 /**
  * A reply as plain text (#798): its [text] without Markdown's marks (a line's heading, list or
@@ -366,17 +371,21 @@ private class PlainView(
         end: Int,
     ): Int = if (at < sources.size) sources[at] else end
 
-    /** Where each sentence is, paragraph by paragraph, as the grounding check splits a reply. */
+    /**
+     * Where each sentence is, paragraph by paragraph, as the grounding check splits a reply. The
+     * blank lines between paragraphs are found with one start of the regex engine (`rangesIn`, #1351).
+     */
     fun sentences(): List<IntRange> {
         val spans = mutableListOf<IntRange>()
         var start = 0
-        for (end in PARAGRAPH_BREAK.findAll(text).map { it.range.first } + text.length) {
+        for (gap in PARAGRAPH_BREAK.rangesIn(text) + listOf(text.length until text.length)) {
+            val end = gap.first
             if (end > start) {
                 val offset = start
                 spans +=
                     sentenceSpans(text.substring(start, end)).map { it.first + offset..it.last + offset }
             }
-            start = PARAGRAPH_BREAK.find(text, end)?.range?.let { it.last + 1 } ?: text.length
+            start = gap.last + 1
         }
         return spans
     }
@@ -510,8 +519,7 @@ private class Reading(
         var i = from
         while (true) {
             while (i < reply.length && reply[i] != '\n' && isJsWhitespace(reply[i])) i++
-            val mark = LINE_MARK.find(reply, i)?.takeIf { it.range.first == i } ?: return i
-            i = mark.range.last + 1
+            i = MarkdownMarks.lineMarkEnd(reply, i) ?: return i
         }
     }
 
@@ -550,8 +558,5 @@ private class Reading(
 
     private companion object {
         const val EMPHASIS_MARKS = "*_"
-
-        /** A line's mark: a heading's, a list's, a quotation's, before a space or the line's end. */
-        val LINE_MARK = Regex("(?:#{1,6}|[-*+]|[0-9]{1,2}[.)])(?=[ \\t\\n]|$)|>")
     }
 }
