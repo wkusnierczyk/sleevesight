@@ -170,6 +170,7 @@ class LoadKeysTest {
     private val notScanning: QrScanner = { }
 
     private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
+    private val openRouterKey = "sk-or-v1-" + "0123456789abcdef".repeat(4)
     private val exaKey = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
     private val lastFmKey = "0123456789abcdef0123456789abcdef"
 
@@ -335,6 +336,30 @@ class LoadKeysTest {
             waitForText(text(R.string.load_keys_saved_title_one))
             assertEquals(anthropicKey, stored(SecretId.ANTHROPIC))
             assertNull(stored(SecretId.LASTFM))
+        }
+
+    @Test
+    fun anOpenRouterKeyIsListedAndSavedAsOpenRoutersAndRefusedAsOpenAis() =
+        show(scanner = scanning("sleevesight-keys:v1\nopenrouter=$openRouterKey\nopenai=$openRouterKey")) {
+            toKeys()
+            waitForText(text(R.string.load_keys_not_scanned))
+            val openRouter =
+                row(
+                    R.string.settings_ai_provider_openrouter,
+                    R.string.key_group_ai,
+                    openRouterKey,
+                    R.string.key_save_as_new,
+                )
+            compose.onNodeWithText(openRouter).assertIsDisplayed()
+            // OpenRouter's `sk-or-` key under OpenAI's name has the wrong shape: refused, by its ending.
+            val openAi = text(R.string.settings_ai_provider_openai)
+            compose.onNodeWithText("\u2022\u00A0$openAi, ending ${ending(openRouterKey)}").assertIsDisplayed()
+
+            toServices()
+            complete()
+            waitForText(text(R.string.load_keys_saved_title_one))
+            assertEquals(openRouterKey, stored(SecretId.OPENROUTER))
+            assertNull(stored(SecretId.OPENAI))
         }
 
     @Test
