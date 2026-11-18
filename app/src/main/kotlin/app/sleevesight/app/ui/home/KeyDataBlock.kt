@@ -29,7 +29,9 @@ internal fun keyDataMinimum(): Dp {
         )
     return remember(measurer, styles, density) {
         val lines = styles.sumOf { measurer.measure(ONE_LINE, it, maxLines = 1).size.height }
-        with(density) { lines.toDp() } + KEY_LINE_GAP * (styles.size - 1)
+        // In whole pixels, each gap rounded on its own as the column lays it out, so the minimum is the
+        // lines' exact height at any density.
+        with(density) { (lines + KEY_LINE_GAP.roundToPx() * (styles.size - 1)).toDp() }
     }
 }
 

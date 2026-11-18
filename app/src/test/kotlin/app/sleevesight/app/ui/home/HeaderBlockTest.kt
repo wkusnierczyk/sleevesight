@@ -41,7 +41,9 @@ import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.sources.ArtistRoles
 import app.sleevesight.core.sources.Resolution
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,7 +52,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
-import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * The block of the track's key data between the cover and the buttons (#1407): at least as tall as
@@ -60,11 +62,16 @@ import kotlin.math.abs
  * keeps its gap above them. Native graphics, for the lines' real heights and wrapping; drawn as on a
  * phone, light and dark, at the default font size and twice it, the artists held back and named; with
  * `SLEEVESIGHT_PICTURES` set, saved there as pictures, as `MusicRowPicturesTest` saves its own.
+ * Positions are checked to the pixel, at 420 dpi here and at 440 dpi in `HeaderBlock440dpiTest`,
+ * where a gap of 2 dp is 5.5 px and rounding shows.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h2200dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class HeaderBlockTest {
+open class HeaderBlockTest {
+    /** Whether this class draws the pictures: once, at one density, is enough. */
+    protected open val draws: Boolean = true
+
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -125,17 +132,20 @@ class HeaderBlockTest {
 
     private fun buttons(): Float = bounds(BUTTONS).top
 
+    // [dp] in whole pixels, rounded as layout rounds a gap.
     private fun px(dp: Float): Float =
-        dp *
-            RuntimeEnvironment
-                .getApplication()
-                .resources.displayMetrics.density
+        (
+            dp *
+                RuntimeEnvironment
+                    .getApplication()
+                    .resources.displayMetrics.density
+        ).roundToInt().toFloat()
 
-    private fun assertNear(
+    private fun assertAt(
         what: String,
         expected: Float,
         actual: Float,
-    ) = assertTrue("$what: $expected, was $actual", abs(expected - actual) <= 1f)
+    ) = assertEquals(what, expected, actual, 0f)
 
     private fun arrive(
         current: MutableState<Shown>,
@@ -151,7 +161,7 @@ class HeaderBlockTest {
             compose.onNodeWithTag(ARTISTS_HELD_TAG).assertExists()
             val title = text(sundown.title)
             val album = text(ALBUM)
-            assertNear("the album one line gap under the title", title.bottom + px(KEY_LINE_GAP.value), album.top)
+            assertAt("the album one line gap under the title", title.bottom + px(KEY_LINE_GAP.value), album.top)
         }
 
     @Test
@@ -160,12 +170,12 @@ class HeaderBlockTest {
             val before = buttons()
             arrive(current, Shown(held = false, labelHeld = true))
             compose.onNodeWithText(sundown.artists).assertExists()
-            assertNear("the buttons after the artists", before, buttons())
+            assertAt("the buttons after the artists", before, buttons())
             arrive(current, Shown(held = false, labelHeld = false, AlbumLabels.Known(listOf(LABEL))))
             compose.onNodeWithTag(RELEASE_LINE_TAG, useUnmergedTree = true).assertExists()
-            assertNear("the buttons after the labels", before, buttons())
+            assertAt("the buttons after the labels", before, buttons())
             // The four lines on one line each fill the minimum: the gap above the buttons alone under them.
-            assertNear(
+            assertAt(
                 "the buttons a gap under the release line",
                 bounds(RELEASE_LINE_TAG, unmerged = true).bottom + px(HOME_GAP.value),
                 buttons(),
@@ -178,7 +188,12 @@ class HeaderBlockTest {
         show(sundown.copy(title = "Sun", album = "Sun"), Shown(held = true, labelHeld = true)) { current ->
             val before = buttons()
             arrive(current, Shown(held = false, labelHeld = false, AlbumLabels.Known(listOf(LABEL))))
-            assertNear("the buttons after the artists and labels", before, buttons())
+            assertAt("the buttons after the artists and labels", before, buttons())
+            assertAt(
+                "the buttons a gap under the release line",
+                bounds(RELEASE_LINE_TAG, unmerged = true).bottom + px(HOME_GAP.value),
+                buttons(),
+            )
         }
     }
 
@@ -195,10 +210,10 @@ class HeaderBlockTest {
             val held = buttons()
             assertTrue("past the minimum: $held, the minimum's $least", held > least + 1f)
             // The wrapped title pushes the album down, packed under it; the block keeps its gap above.
-            assertNear("the album one line gap under the title", text(LONG_TITLE).bottom + px(2f), text(ALBUM).top)
+            assertAt("the album one line gap under the title", text(LONG_TITLE).bottom + px(2f), text(ALBUM).top)
             arrive(current, Shown(held = false, labelHeld = false, AlbumLabels.Known(listOf(LABEL))))
             val release = bounds(RELEASE_LINE_TAG, unmerged = true)
-            assertNear("the buttons a gap under the release line", release.bottom + px(HOME_GAP.value), buttons())
+            assertAt("the buttons a gap under the release line", release.bottom + px(HOME_GAP.value), buttons())
             assertTrue("the buttons pushed down as the lines arrive past the minimum", buttons() > held + 1f)
         }
     }
@@ -239,6 +254,7 @@ class HeaderBlockTest {
 
     @Test
     fun pictures() {
+        assumeTrue(draws)
         for (scale in listOf(1f, 2f)) {
             RuntimeEnvironment.setFontScale(scale)
             val size = if (scale == 1f) "font100" else "font200"
