@@ -41,7 +41,7 @@ import kotlin.time.Instant
  * /api/v1/chat/completions` with `stream: true`, OpenAI's chat-completions shape, read as
  * server-sent events ([ChatStream]); and the model list, `GET /api/v1/models`. OpenRouter passes
  * each request on to the company whose model it names (`anthropic/…`, `openai/…`, `google/…`). The
- * key, pasted, goes in `Authorization: Bearer`, through `NetSecrets`, so it is
+ * key, from the sign-in or pasted, goes in `Authorization: Bearer`, through `NetSecrets`, so it is
  * never logged. No `HTTP-Referer` or `X-Title`: they would list the app in OpenRouter's rankings.
  *
  * No tools ([usesTools] false): *AI web search*'s *Up to 3 times* is asked as *Once*, as with
