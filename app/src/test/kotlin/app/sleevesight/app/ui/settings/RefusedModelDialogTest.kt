@@ -93,6 +93,11 @@ class RefusedModelDialogTest {
                     .text
             }
 
+    /** The option labelled [label], as a screen reader takes it: the merged row. */
+    private fun row(label: String) = compose.onNode(hasText(label) and OPTION).fetchSemanticsNode()
+
+    private fun spoken(label: String) = row(label).config.getOrNull(SemanticsProperties.ContentDescription)
+
     private val defaultLabel get() = app.getString(R.string.settings_ai_model_default, NAMES.getValue(DEFAULT))
 
     @Test
@@ -104,16 +109,14 @@ class RefusedModelDialogTest {
             )
             compose.onNodeWithText("Refused with your key. Select to try again.").assertExists()
             assertEquals("Refused with your key. Select to try again.", text(R.string.settings_model_refused_heading))
-            // Shown "id · why"; read "id, why".
+            // Shown "id · why"; read, on the row as one, "name, id, why", and a normal row "name, id".
             compose.onNodeWithText("$PREVIEW · No longer served", useUnmergedTree = true).assertExists()
             compose.onNodeWithText("$DEFAULT · Refused for your account", useUnmergedTree = true).assertExists()
-            val spoken =
-                compose
-                    .onAllNodes(DESCRIBED, useUnmergedTree = true)
-                    .fetchSemanticsNodes()
-                    .flatMap { it.config[SemanticsProperties.ContentDescription] }
-            assertTrue(spoken.toString(), "$PREVIEW, No longer served" in spoken)
-            assertTrue(spoken.toString(), "$DEFAULT, Refused for your account" in spoken)
+            assertEquals(listOf("Gemini 3 Pro Preview, $PREVIEW, No longer served"), spoken(NAMES.getValue(PREVIEW)))
+            assertEquals(listOf("$defaultLabel, $DEFAULT, Refused for your account"), spoken(defaultLabel))
+            val flash = row(NAMES.getValue(FLASH))
+            assertEquals(null, flash.config.getOrNull(SemanticsProperties.ContentDescription))
+            assertEquals(listOf(NAMES.getValue(FLASH), FLASH), flash.config[SemanticsProperties.Text].map { it.text })
         }
 
     @Test
@@ -206,7 +209,6 @@ class RefusedModelDialogTest {
 
     private companion object {
         val OPTION = SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)
-        val DESCRIBED = SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription)
         val DEFAULT = Settings.DEFAULT_MODELS.getValue(ProviderId.GOOGLE)
         const val PREVIEW = "gemini-3-pro-preview"
         const val FLASH = "gemini-3.5-flash"

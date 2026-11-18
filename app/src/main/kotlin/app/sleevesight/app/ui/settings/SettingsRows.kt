@@ -455,8 +455,9 @@ private fun <T> ChoiceDetails(
 /**
  * One option in a dialog's list; the whole row selects it. [detail], when given, goes under the
  * label, smaller and muted: a model's id under its name; and after it, [reason], why the option
- * may not work (#970: a model refused), "id · reason", which a screen reader reads "id, reason".
- * The row is one selectable node, so a screen reader reads the detail with its label.
+ * may not work (#970: a model refused), "id · reason". The row is one selectable node, so a
+ * screen reader reads the detail with its label; with a reason, the row says it all, "label, id,
+ * reason", so the dot is not read and the name is never left out.
  */
 @Composable
 internal fun RadioRow(
@@ -467,11 +468,13 @@ internal fun RadioRow(
     onClick: () -> Unit,
 ) {
     val under = listOfNotNull(detail, reason)
+    val spoken = reason?.let { listOfNotNull(label, detail, it).joinToString(", ") }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+                .then(if (spoken != null) Modifier.semantics { contentDescription = spoken } else Modifier)
                 .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -483,7 +486,6 @@ internal fun RadioRow(
                     under.joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.semantics { contentDescription = under.joinToString(", ") },
                 )
             }
         }
