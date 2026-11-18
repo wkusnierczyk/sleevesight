@@ -5,9 +5,9 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.8.0
+docs_version: 0.9.0
 nav:
-  - id: results-for-080
+  - id: results-for-090
     label: Results
   - id: what-is-checked
     label: Checks
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.8.0
+## Results for 0.9.0
 
-Checked on 17 November 2026, on the code of release 0.8.0.
+Checked on 18 November 2026, on the code of release 0.9.0.
 
-- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app; none of them changed since 0.7.2.
+- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app; none of them changed since 0.8.0.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing, in the app or in the modules beside it.
-- **Security review:** no way found to reach your keys or your data in the new code. The new spelling check is one more paid web search and AI request, and only for a track MusicBrainz cannot find; the privacy policy names it. Two slowdowns on unusual text are left: one when showing an unusual AI reply, one on an unusual artist name. None of these reaches keys or data.
+- **Security review:** no way found to reach your keys or your data in the new code. Signing in with OpenRouter is back: OpenRouter now returns to an address on sleevesight.app, which Android opens in the app, and the code it brings back is of no use without a one-time secret that stays on the phone; if a browser opens that address instead, the page there runs nothing and sends the code nowhere. An insight for a track's further artists is a request of its own, made only when you tap it, and the privacy policy names it. A genre's reason comes in the same AI request as the genres, and a genre that only MusicBrainz gives never reaches the AI. The slowdown found in 0.7.2 on long AI replies is fixed. The two slowdowns found in 0.8.0 on unusual text are still left: one when showing an unusual AI reply, one on an unusual artist name. One nuisance is also left: another app on the phone can cancel a sign-in while it is under way. None of these reaches keys or data.
 
 ## What is checked
 

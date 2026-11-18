@@ -1,0 +1,7 @@
+What's new in 0.9.0:
+- Tap the record at the top to play or pause; the player's icon opens its controls and your players.
+- Every artist on a track gets an insight of their own.
+- Genres: a genre AI names says why; more genres behind Show more.
+- Home names the services to switch on, and the sources asked when nothing is found.
+- Sign in with OpenRouter is back.
+- Calmer buttons: small black outlines throughout.
