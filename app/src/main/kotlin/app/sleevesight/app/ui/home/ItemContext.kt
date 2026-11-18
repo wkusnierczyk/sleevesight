@@ -48,7 +48,9 @@ import app.sleevesight.core.settings.WriteAutomatically
  * the [notes] it is written by, where
  * a citation goes on the track's evidence ([cite]), where a report goes ([onReport]), *Read aloud*,
  * the note of a model found unavailable ([unavailable], [onModelSettings]), and *Retry* beside the
- * sources an item's lines come from that could not be reached ([retries], #1163).
+ * sources an item's lines come from that could not be reached ([retries], #1163). With *Show
+ * insights* off or no AI service ready, an item says what is off, with a link to where it is
+ * switched on ([openSettingsAt], #766).
  */
 @Suppress("LongParameterList") // What an item reads and where its taps go, each on its own.
 internal class ItemContext(
@@ -293,8 +295,13 @@ private fun ItemShownContent(
     }
     when (val now = shown) {
         ItemShown.Gathering -> Gathering()
-        ItemShown.Off -> ItemQuiet(stringResource(R.string.home_insight_off))
-        ItemShown.NoService -> ItemQuiet(stringResource(R.string.home_insight_unavailable))
+        // What is off, as the key insight says it, with its link (#766).
+        ItemShown.Off ->
+            ItemOff(insightOffPart(insightsOn = false, aiReady = false, provider = null), context.openSettingsAt)
+        ItemShown.NoService -> {
+            val part = insightOffPart(insightsOn = true, aiReady = false, provider = context.settings.aiProvider)
+            ItemOff(part, context.openSettingsAt)
+        }
         // Nothing written and nothing under way: *Write insight*, whatever the mode, so an automatic
         // write the gates refused never shows as writing; the plain line, whatever held it back.
         ItemShown.Offered ->

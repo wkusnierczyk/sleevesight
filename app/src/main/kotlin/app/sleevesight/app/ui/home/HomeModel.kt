@@ -4,6 +4,7 @@ import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.pipeline.RewriteOffer
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.session.TrackIdentity
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
@@ -106,6 +107,8 @@ internal class InsightActions(
     // OpenRouter's key refused (#1157): *AI services*, to sign in again.
     val onAiServices: () -> Unit = {},
     val onReport: (TrackState, InsightState.Written) -> Unit,
+    // *Show insights* off, or no AI service ready (#766): the section of Settings where it is switched on.
+    val onSettingsAt: (SettingsTarget) -> Unit = {},
 )
 
 /** A run of a sentence's text, or a citation in it. */

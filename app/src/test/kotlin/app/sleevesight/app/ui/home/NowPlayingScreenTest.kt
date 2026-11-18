@@ -206,7 +206,7 @@ class NowPlayingScreenTest {
             compose.onNodeWithText(text(R.string.home_insight_off)).assertExists()
         }
         show(state(PipelineView(idle, aiReady = false))) {
-            compose.onNodeWithText(text(R.string.home_insight_unavailable)).assertExists()
+            compose.onNodeWithText(text(R.string.home_off_no_ai)).assertExists()
             assertEquals(0, compose.onAllNodesWithTag(WRITE_TAG).fetchSemanticsNodes().size)
         }
         val gathering = idle.copy(sources = mapOf(SourceId.MUSICBRAINZ to SourceState.Pending), evidence = null)

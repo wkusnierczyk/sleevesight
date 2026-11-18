@@ -313,7 +313,7 @@
     <string name="home_settings_ai_services_link">Settings\u00A0→\u00A0AI services</string>
     <!-- A link that opens Settings at a key under Secrets (#1308). -->
     <string name="home_settings_secrets_link">Settings\u00A0→\u00A0Secrets</string>
-    <!-- A link that opens Settings at AI web search under Insights (#1308). -->
+    <!-- A link that opens Settings at AI web search under Insights (#1308), or at Insights itself (#766). -->
     <string name="home_settings_insights_link">Settings\u00A0→\u00A0Insights</string>
     <!-- MusicBrainz could not be reached; Retry (home_retry) beside it asks it again. -->
     <string name="home_musicbrainz_unreachable">MusicBrainz could not be reached.</string>
@@ -489,11 +489,21 @@
     <string name="home_genre_source_unreachable">%1$s could not be reached.</string>
     <!-- No genre from any source (#801's pick): the line above Ask AI and the genres it finds. -->
     <string name="home_genres_none">The sources give no genres.</string>
-    <!-- Every genre source off: this line, then home_genres_off_see on its own line. -->
-    <string name="home_genres_off">Genre sources are disabled.</string>
-    <!-- %1$s is home_settings_sources_link when the sources are off in Settings, home_settings_genres_link
-         when they are on but their genre switches are off; a link that opens Settings there. -->
-    <string name="home_genres_off_see">See %1$s.</string>
+    <!-- What an item on Home cannot be shown without (#766), in two lines, the second a link to where it
+         is switched on (home_off_see): what is off, by name as Settings names it. One service, then several
+         (%1$s named together: "MusicBrainz, Last.fm, Wikipedia and Wikidata"). Genres with every genre source
+         off; under home_genres_none, the genre sources that are off; with MusicBrainz switched off under
+         Sources, Wikipedia's and Wikidata's genres both off, "Wikipedia and Wikidata". -->
+    <string name="home_off_one">%1$s is disabled.</string>
+    <string name="home_off_many">%1$s are disabled.</string>
+    <!-- A service on Home that cannot be used for want of its key (#766): Last.fm, web search, the AI service. -->
+    <string name="home_off_key">%1$s needs your key.</string>
+    <!-- The AI service: none switched on (#766), above home_off_see with home_settings_ai_services_link. -->
+    <string name="home_off_no_ai">No AI service is enabled.</string>
+    <!-- The second line (#766): %1$s is a link that opens Settings at the section where the service is
+         switched on (home_settings_sources_link, home_settings_genres_link, home_settings_ai_services_link,
+         home_settings_insights_link). -->
+    <string name="home_off_see">See %1$s.</string>
     <!-- A link that opens Settings at Genres; its spaces never break, so it stays on one line. -->
     <string name="home_settings_genres_link">Settings\u00A0→\u00A0Genres</string>
     <!-- The disclosure triangles of the settings' sections: folded, unfolded. -->
@@ -509,8 +519,8 @@
     <!-- Under Layout's Separate pages (#447): the action of a chip on Home that opens a page (Sources,
          a genre), as a screen reader names it ("Double-tap to open page"). -->
     <string name="home_page_open">open page</string>
-    <!-- The genres' page, with Show genres off. -->
-    <string name="home_genres_hidden">Show genres is off in Settings.</string>
+    <!-- Genres' panel and page with Show genres off (#766), above home_off_see with home_settings_genres_link. -->
+    <string name="home_genres_hidden">Show genres is off.</string>
     <!-- Sources' chip on Home, as a screen reader says its state (#623): its panel opens in its place,
          so the chip is only ever collapsed. -->
     <string name="home_fold_collapsed">collapsed</string>
@@ -707,8 +717,10 @@
     <string name="home_insight_writing">Writing…</string>
     <!-- While the insight is written and Stop writing can end the call (#615, #625). -->
     <string name="home_insight_writing_stop">Stop writing ends the call at once. If the request has reached your AI service, it still charges for what it has read and written so far.</string>
-    <string name="home_insight_off">Insights are off. Turn them on in Settings.</string>
-    <string name="home_insight_unavailable">Choose an AI service and save its key in Settings to have insights written.</string>
+    <!-- Key insights, and the song's, the artist's and the album's, with Show insights off (#766), above
+         home_off_see with home_settings_insights_link. With no AI service ready: home_off_no_ai, or
+         home_off_key naming the service switched on. -->
+    <string name="home_insight_off">Show insights is off.</string>
     <!-- The switched-on AI service's model is not listed for the key, or the service refused it
          (#540): the service, the model's name, and home_model_unavailable_place, a link to the
          settings. -->
@@ -902,10 +914,8 @@
     <string name="home_sources_legend_none">No results from this source</string>
     <string name="home_sources_legend_tap">Tap a source to show or hide its results.</string>
     <string name="home_sources_offline">Offline. The sources that could not be reached are asked again when the phone is back online.</string>
-    <!-- What needs the listener, under the chips: a source's name, then what it needs or what went wrong. -->
-    <string name="home_source_note_key">%1$s needs your key, in %2$s.</string>
-    <!-- The link to the settings in the sentence above. -->
-    <string name="home_source_note_settings">Settings</string>
+    <!-- What needs the listener, under the chips: a source that needs its key says so as home_off_key,
+         then home_off_see with home_settings_sources_link (#766); what went wrong, as below. -->
     <!-- The sources that could not be reached, on a line of their own with Retry (home_retry) beside it,
          which asks them again (#1121). %1$s is the source, or two (home_sources_two), or more
          (home_sources_list). -->

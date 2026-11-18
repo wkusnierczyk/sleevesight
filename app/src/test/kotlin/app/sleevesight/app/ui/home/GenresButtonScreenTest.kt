@@ -184,9 +184,9 @@ class GenresButtonScreenTest {
                 ),
             )
         for (case in cases) show(case) { assertEquals(1, count(GENRES_CHIP_TAG)) }
-        // *Show genres* off: no button, and no chip, as *Lyrics* has none with its setting off.
+        // *Show genres* off: the button still, and no chip (#766); its panel: `ServicesOffScreenTest`.
         show(state(settings = Settings(showGenres = false))) {
-            assertEquals(0, count(GENRES_CHIP_TAG))
+            assertEquals(1, count(GENRES_CHIP_TAG))
             assertEquals(0, count(FOLK))
             assertEquals(1, count(DATES_CHIP_TAG))
         }
@@ -552,9 +552,9 @@ class GenresButtonScreenTest {
                     Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ - SourceSwitch.LASTFM - SourceSwitch.WIKIPEDIA,
             )
         show(state(labelled(TrackGenres()), off)) {
-            assertEquals("Genre sources are disabled.", text(R.string.home_genres_off))
-            opensTo(text(R.string.home_genres_off))
-            val see = app.getString(R.string.home_genres_off_see, text(R.string.home_settings_sources_link))
+            // Each named as Settings names it (#766), Wikidata's genres with Wikipedia's switch.
+            opensTo("MusicBrainz, Last.fm, Wikipedia and Wikidata are disabled.")
+            val see = app.getString(R.string.home_off_see, text(R.string.home_settings_sources_link))
             assertEquals("See Settings → Sources.", see)
             compose.onNodeWithText(see).performFirstLinkClick {
                 (it.item as? LinkAnnotation.Clickable)?.tag == SettingsTarget.sources.linkTag
@@ -573,9 +573,11 @@ class GenresButtonScreenTest {
                 labelSources = setOf(LabelSource.LASTFM),
             )
         show(state(labelled(TrackGenres()), off)) {
-            opensTo(text(R.string.home_genres_off))
+            // Last.fm off under *Sources*, linked there; MusicBrainz's and Wikidata's genres under *Genres* (#766).
+            opensTo("Last.fm is disabled.")
+            compose.onNodeWithText("MusicBrainz and Wikidata genres are disabled.").assertExists()
             assertEquals("Settings → Genres", text(R.string.home_settings_genres_link))
-            val see = app.getString(R.string.home_genres_off_see, text(R.string.home_settings_genres_link))
+            val see = app.getString(R.string.home_off_see, text(R.string.home_settings_genres_link))
             assertEquals("See Settings → Genres.", see)
             compose.onNodeWithText(see).performFirstLinkClick {
                 (it.item as? LinkAnnotation.Clickable)?.tag == SettingsTarget.genres.linkTag

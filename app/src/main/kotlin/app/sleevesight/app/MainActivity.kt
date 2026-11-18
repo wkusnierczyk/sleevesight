@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
             // The album's release group's first release, for Dates (#1099).
             releaseGroups = graph.releaseGroups,
             // The keys' states, never a key: an item's insight no source has names a source not asked
-            // for want of its key (#1308).
+            // for want of its key (#1308); a service Home names as needing its key (#766).
             keys = graph.secrets.states,
         )
     }

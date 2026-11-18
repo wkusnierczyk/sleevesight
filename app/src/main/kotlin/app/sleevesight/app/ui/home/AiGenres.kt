@@ -42,20 +42,21 @@ import kotlinx.coroutines.flow.map
 // its genre under them, which shows what the genre is and nothing else.
 
 /**
- * *Search with AI* in *Genres*' panel or page (#773, [GenresContent]) for [track], under no genre and
- * no source still asked ([shown]: every genre source off, one not reached, none found), its genres
- * as chips ([AiGenres]) under which what [notes] say the genre is unfolds.
+ * What *Search with AI* in *Genres*' panel or page (#773) works from, for [track], under no genre and
+ * no source still asked ([shown]: every genre source off, one not reached, none found); null where it
+ * is not offered. Its [feed] drops Instrumental with lyrics found (#996), for what it shows and for
+ * whether it names a genre ([aiGenresShown], #766), and [weighed] is the track with LRCLIB's answer.
  */
 @Composable
-internal fun GenresSearch(
+internal fun genresAsk(
     track: TrackState?,
     shown: GenresShown,
     search: PanelSearch,
     notes: PanelNotes,
-) {
+): GenresAsk? {
     // Under the genres an artist's description names too (#1000), and LRCLIB's Instrumental alone
     // (#1024): they are no source's tags.
-    if (track != null && track.genres.hasTags || shown.looking.isNotEmpty()) return
+    if (track != null && track.genres.hasTags || shown.looking.isNotEmpty()) return null
     // An Instrumental among them weighed with LRCLIB's answer (#997, #998), as the rows' is.
     val weighed = withSearchLibrary(track, search, notes.notes)
     // With lyrics found, never Instrumental (#996), as in the rows; with no other genre, nothing found.
@@ -65,7 +66,30 @@ internal fun GenresSearch(
             ?.singing
             ?.dropsInstrumental == true
     val feed = remember(search.feed, drops) { if (drops) LyricsFoundFeed(search.feed) else search.feed }
-    AiSearchBlock(PanelSearch(feed, search.track, search.header), SearchKind.GENRES) { answer, model ->
+    return GenresAsk(weighed, feed)
+}
+
+/** [genresAsk]'s: the track weighed with LRCLIB's answer, and the feed its genres are read from. */
+internal class GenresAsk(
+    val weighed: LibraryWeighed,
+    val feed: AiSearchFeed,
+)
+
+/**
+ * *Search with AI* in *Genres*' panel or page (#773, [GenresContent]), from [ask] ([genresAsk]; none
+ * where it is not offered), its genres as chips ([AiGenres]) under which what [notes] say the genre
+ * is unfolds.
+ */
+@Composable
+internal fun GenresSearch(
+    ask: GenresAsk?,
+    shown: GenresShown,
+    search: PanelSearch,
+    notes: PanelNotes,
+) {
+    ask ?: return
+    val weighed = ask.weighed
+    AiSearchBlock(PanelSearch(ask.feed, search.track, search.header), SearchKind.GENRES) { answer, model ->
         val asked = weighed.track
         if (answer is SearchAnswer.Genres && asked != null) {
             AiGenres(asked, answer.genres, notes.notes, search, model)
@@ -133,6 +157,12 @@ private class LyricsFoundFeed(
         kind: SearchKind,
         genre: String?,
     ): Flow<AiSearch> = feed.search(track, kind, genre).map(::withoutInstrumental)
+
+    // Read only, as [search] gives it (#766: whether the panel shows a genre).
+    override fun answered(
+        track: TrackState,
+        kind: SearchKind,
+    ): Flow<AiSearch> = feed.answered(track, kind).map(::withoutInstrumental)
 
     private fun withoutInstrumental(state: AiSearch): AiSearch {
         val answer = (state as? AiSearch.Answered)?.answer as? SearchAnswer.Genres ?: return state

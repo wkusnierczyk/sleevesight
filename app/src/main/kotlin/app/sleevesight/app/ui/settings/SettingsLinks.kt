@@ -111,9 +111,12 @@ data class SettingsTarget(
 
         /**
          * The section *Genres* itself, its panel's heading, from *Genres* on Home when the label
-         * sources are on but their genre switches are off (#772).
+         * sources are on but their genre switches are off (#772), or *Show genres* is off (#766).
          */
         internal val genres: SettingsTarget = SettingsTarget(SettingsSection.GENRES)
+
+        /** The section *Insights* itself, its panel's heading, from Home with *Show insights* off (#766). */
+        internal val insights: SettingsTarget = SettingsTarget(SettingsSection.INSIGHTS)
 
         /**
          * The target [section] (a [SettingsSection]'s name) and [row] name, as a route or a saved

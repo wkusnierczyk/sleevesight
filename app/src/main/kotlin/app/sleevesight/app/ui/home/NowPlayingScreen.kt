@@ -100,7 +100,8 @@ import kotlinx.coroutines.flow.flowOf
  * @property ad the ad the player plays in place of a track (#880), which Home shows as such
  *   ([AdHome]); null while it plays none.
  * @property keys the keys' states (never a key), for an item's insight no source has, whose line says
- *   a source was not asked for want of its key (#1308); none known by default.
+ *   a source was not asked for want of its key (#1308), and a service Home names as needing its key
+ *   (#766); none known by default.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -155,7 +156,7 @@ fun NowPlayingHome(
 /**
  * A page of Home's ([page], #447), from the same [feed] as Home, for the track playing; [onBack]
  * goes back, and the page's links go where Home's do: to a setting, [openSettingsAt] (#1308, an item's
- * page naming a source not asked).
+ * page naming a source not asked; #766, what is off).
  */
 @Suppress("LongParameterList") // The page, what it reads, and where its taps go.
 @Composable
@@ -192,6 +193,7 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
 private fun HomeFeed.actions(
     openSettings: () -> Unit,
     openPage: (HomePage) -> Unit,
+    // Where a note links to a setting: a model found unavailable (#581), what is off (#766).
     openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 ) = NowPlayingActions(
     normalize = normalizer::normalize,
@@ -235,7 +237,11 @@ internal class NowPlayingState(
     val guideHidden: Boolean = false,
     val ad: AdPlaying? = null,
     val keys: Map<SecretId, SecretState>? = emptyMap(),
-)
+) {
+    /** The sources Home's items name as lacking their key (#766, [keylessSources]); none until the keys' first read. */
+    val keyless: Set<SourceId>
+        get() = keylessSources(view.needsKey, keys.orEmpty().filterValues { it == SecretState.ABSENT }.keys)
+}
 
 /**
  * How the screen names what it shows, and where its taps go. The idle Home's rows open
@@ -362,7 +368,7 @@ internal fun NowPlayingContent(
     // parts drawn in its roles (the position bar, the chips, the buttons), not a ground of its own.
     // A track the last clear holds (#1112): every field says it was cleared rather than wait.
     ArtTheme(state.art) {
-        CompositionLocalProvider(LocalTrackCleared provides shown.cleared) {
+        CompositionLocalProvider(LocalTrackCleared provides shown.cleared, LocalKeyless provides state.keyless) {
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 TrackCover(state, header, coverTurn(shown, header, settings, actions, back))
                 val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
@@ -427,7 +433,9 @@ private fun SourcesItem(
             actions.openPage(HomePage.Sources())
         }
     } else {
-        SourcesSection(shown, focus, fold, actions.openSettings, width, elsewhere.modifier)
+        // A source's key note links to *Settings → Sources* (#766).
+        val toSources = { actions.openSettingsAt(SettingsTarget.sources) }
+        SourcesSection(shown, focus, fold, toSources, width, elsewhere.modifier)
     }
 }
 

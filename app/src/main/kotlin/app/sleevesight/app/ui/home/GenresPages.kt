@@ -4,8 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import app.sleevesight.app.R
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.TrackState
@@ -22,7 +20,8 @@ import app.sleevesight.core.settings.Settings
  * *Genres*' panel does ([GenresContent]): still looking, a source not reached with *Retry*, none
  * found, or every genre source off with a link to the settings ([ways]), and under it *Search with
  * AI* ([search], #773). With *Show genres* off in
- * [settings], it says so; before the settings' first read, nothing.
+ * [settings], it says so, with a link to where it is switched on (#766); before the settings' first
+ * read, nothing.
  */
 @Composable
 internal fun GenresPage(
@@ -34,7 +33,8 @@ internal fun GenresPage(
 ) {
     when {
         settings == null -> Unit
-        !settings.showGenres -> QuietLine(stringResource(R.string.home_genres_hidden))
+        // As *Genres*' panel (#766): two lines, the second a link to *Settings → Genres*.
+        !settings.showGenres -> GenresHidden(ways.openSettingsAt, MaterialTheme.typography.bodyLarge)
         else ->
             GenresContent(
                 track,

@@ -577,16 +577,14 @@ class SourcesTableScreenTest {
     fun aSourceThatNeedsItsKeySaysSoWithALinkToTheSettings() =
         show(mixed) {
             // Folded: no note.
-            assertEquals(0, count(SOURCES_NOTE_TAG))
+            assertEquals(0, count(SOURCES_KEY_NOTE_TAG))
             unfold()
-            val lastFm = text(R.string.settings_source_lastfm)
-            compose
-                .onNodeWithTag(SOURCES_NOTE_TAG)
-                .assertTextEquals(
-                    text(R.string.home_source_note_key, lastFm, text(R.string.home_source_note_settings)),
-                )
+            // Two lines (#766): what it needs, then where it is switched on, a link.
+            compose.onNodeWithText("Last.fm needs your key.").assertExists()
+            val see = app.getString(R.string.home_off_see, text(R.string.home_settings_sources_link))
+            compose.onNodeWithText(see).assertExists()
             settingsOpened = 0
-            compose.onNodeWithTag(SOURCES_NOTE_TAG).performScrollTo().performFirstLinkClick()
+            compose.onNodeWithText(see).performScrollTo().performFirstLinkClick()
             compose.waitForIdle()
             assertEquals(1, settingsOpened)
         }
@@ -655,7 +653,7 @@ class SourcesTableScreenTest {
             val web = text(R.string.home_source_name_web)
             compose.onNodeWithText(text(R.string.home_rejected, web, "another song")).assertExists()
             // The note of the key stays, with its link.
-            compose.onNodeWithTag(SOURCES_NOTE_TAG).assertExists()
+            compose.onNodeWithTag(SOURCES_KEY_NOTE_TAG).assertExists()
         }
 
     @Test
@@ -664,7 +662,7 @@ class SourcesTableScreenTest {
             assertEquals(0, count(SOURCES_TABLE_TAG))
             for (tag in listOf("MB", "W", "S", "L", "AI")) assertEquals(tag, 0, count(CHIP_PREFIX + tag))
             assertEquals(0, countText(text(R.string.home_rejected_title)))
-            assertEquals(0, count(SOURCES_NOTE_TAG))
+            assertEquals(0, count(SOURCES_KEY_NOTE_TAG))
         }
 
     // The closed legend's words (#951); the open legend's are in `SourcesLegendScreenTest`.
@@ -689,7 +687,7 @@ class SourcesTableScreenTest {
             assertEquals(1, count(SOURCES_LEGEND_ASK_TAG))
             val (_, tableBottom) = bounds(SOURCES_TABLE_TAG)
             val (legendTop, legendBottom) = bounds(SOURCES_LEGEND_TAG)
-            val (noteTop, _) = bounds(SOURCES_NOTE_TAG)
+            val (noteTop, _) = bounds(SOURCES_KEY_NOTE_TAG)
             assertTrue("legend at $legendTop, table ends at $tableBottom", legendTop >= tableBottom)
             assertTrue("legend ends at $legendBottom, note at $noteTop", legendBottom <= noteTop)
         }

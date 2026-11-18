@@ -521,14 +521,15 @@ class AiSearchScreenTest {
                     ),
             )
         for ((shown, line) in listOf(
-            state(empty()) to R.string.home_genres_none,
-            state(empty(), off) to R.string.home_genres_off,
+            state(empty()) to text(R.string.home_genres_none),
+            // The line that links to where the sources are switched on (#766), the last above it.
+            state(empty(), off) to app.getString(R.string.home_off_see, text(R.string.home_settings_sources_link)),
             state(unreachable) to null,
         )) {
             show(shown) {
                 tap(GENRES_CHIP_TAG)
                 assertEquals(1, count(AI_SEARCH_TAG))
-                line?.let { assertTrue(bounds(AI_SEARCH_TAG).top >= boundsOf(text(it)).bottom) }
+                line?.let { assertTrue(bounds(AI_SEARCH_TAG).top >= boundsOf(it).bottom) }
             }
         }
         show(state(empty(SourceState.Pending))) {
