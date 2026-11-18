@@ -466,8 +466,6 @@ private val ROW_GAP = 6.dp
 private val COLUMN_GAP = 12.dp
 private val ROW_TARGET = 48.dp
 
-// The note's link to the settings.
-
 /** The test tag of *Sources*' chip on Home under *Expandable boxes*, which opens its panel. */
 const val SOURCES_CHIP_TAG: String = "sources-chip"
 

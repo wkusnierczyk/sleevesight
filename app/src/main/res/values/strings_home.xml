@@ -313,7 +313,7 @@
     <string name="home_settings_ai_services_link">Settings\u00A0→\u00A0AI services</string>
     <!-- A link that opens Settings at a key under Secrets (#1308). -->
     <string name="home_settings_secrets_link">Settings\u00A0→\u00A0Secrets</string>
-    <!-- A link that opens Settings at AI web search under Insights (#1308). -->
+    <!-- A link that opens Settings at AI web search under Insights (#1308), or at Insights itself (#766). -->
     <string name="home_settings_insights_link">Settings\u00A0→\u00A0Insights</string>
     <!-- MusicBrainz could not be reached; Retry (home_retry) beside it asks it again. -->
     <string name="home_musicbrainz_unreachable">MusicBrainz could not be reached.</string>
@@ -506,8 +506,6 @@
     <string name="home_off_see">See %1$s.</string>
     <!-- A link that opens Settings at Genres; its spaces never break, so it stays on one line. -->
     <string name="home_settings_genres_link">Settings\u00A0→\u00A0Genres</string>
-    <!-- A link that opens Settings at Insights (#766); its spaces never break. -->
-    <string name="home_settings_insights_link">Settings\u00A0→\u00A0Insights</string>
     <!-- The disclosure triangles of the settings' sections: folded, unfolded. -->
     <string name="home_fold_folded">▸</string>
     <string name="home_fold_unfolded">▾</string>

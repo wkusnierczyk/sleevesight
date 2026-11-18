@@ -492,7 +492,6 @@ internal fun itemContext(
     onModelSettings = {
         state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) } ?: actions.openSettings()
     },
-    openSettingsAt = actions.openSettingsAt,
 )
 
 /**
