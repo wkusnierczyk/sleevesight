@@ -239,7 +239,7 @@
     <string name="settings_intro">Logo intro at start</string>
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
     <string name="settings_spin_logo">Spin the logo while music plays</string>
-    <string name="settings_spin_logo_summary">The record in the logo at the top of Home turns while your player is playing, and comes to rest when it pauses or stops. It stands still while your phone’s Remove animations is on.</string>
+    <string name="settings_spin_logo_summary">The record in the logo at the top of Home turns while your player is playing, and comes to rest when it pauses or stops. It stands still while your phone’s Remove animations is on. Turning, it uses more battery while Sleevesight is open on screen.</string>
     <string name="settings_logo_speed">Logo speed</string>
     <string name="settings_logo_speed_summary">How fast the logo’s record turns while music plays.</string>
     <string name="settings_logo_speed_33">33⅓ rpm</string>
