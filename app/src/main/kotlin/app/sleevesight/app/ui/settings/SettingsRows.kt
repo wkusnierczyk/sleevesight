@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -453,16 +454,19 @@ private fun <T> ChoiceDetails(
 
 /**
  * One option in a dialog's list; the whole row selects it. [detail], when given, goes under the
- * label, smaller and muted: a model's id under its name. The row is one selectable node, so a
- * screen reader reads the detail with its label.
+ * label, smaller and muted: a model's id under its name; and after it, [reason], why the option
+ * may not work (#970: a model refused), "id · reason", which a screen reader reads "id, reason".
+ * The row is one selectable node, so a screen reader reads the detail with its label.
  */
 @Composable
 internal fun RadioRow(
     label: String,
     selected: Boolean,
     detail: String? = null,
+    reason: String? = null,
     onClick: () -> Unit,
 ) {
+    val under = listOfNotNull(detail, reason)
     Row(
         modifier =
             Modifier
@@ -474,8 +478,13 @@ internal fun RadioRow(
         RadioButton(selected = selected, onClick = null)
         Column(modifier = Modifier.padding(start = 12.dp)) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
-            detail?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (under.isNotEmpty()) {
+                Text(
+                    under.joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { contentDescription = under.joinToString(", ") },
+                )
             }
         }
     }

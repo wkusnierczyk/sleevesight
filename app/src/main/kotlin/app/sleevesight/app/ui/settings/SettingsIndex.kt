@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 
@@ -24,7 +25,7 @@ internal fun settingsIndex(
     keys: KeysShown,
     players: List<String>,
     modelName: (String) -> String,
-    unavailable: Map<ProviderId, String> = emptyMap(),
+    unavailable: Map<ProviderId, UnavailableModel> = emptyMap(),
 ): List<IndexedSection> =
     listOfNotNull(
         indexed(SettingsSection.PLAYERS, players.map { indexRow(it) } + playerRows(settings)),

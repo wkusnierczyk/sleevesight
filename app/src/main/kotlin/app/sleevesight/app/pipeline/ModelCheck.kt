@@ -55,11 +55,19 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * While the switched-on service's model is marked, no other model is used in its place, and the
  * pipeline writes no insight with it ([blocks]); the settings, under the service, and Home say so.
- * Kept in memory only: each start checks again.
+ * The marks are kept in memory only: each start checks again.
+ *
+ * Each service's models a call found refused with its saved key, whichever is selected ([refused],
+ * #970), are kept across starts in [kept] (the models' ids and how each was refused only; nothing of
+ * the key): the list of models puts them last, still to be chosen, and a selected model kept so is
+ * marked again at start. One leaves them once a call with it answers, and they all go once another
+ * key is saved for the service.
  *
  * @param providers the services' clients, as the pipeline and the settings use them.
  * @param key the saved key of a service, or null when none is saved or it cannot be read.
  * @param scope where the loop runs, as long as the process.
+ * @param kept where the models refused for each service's key are kept across starts, read when
+ *   the loop starts, and written as they change.
  * @param stored whether a key is stored for a service, readable or not, and true when that cannot
  *   be told (`SecretStore.isStored`): a read that found none while one may be stored failed for now,
  *   and drops no mark; only a confirmed absence does.
@@ -68,6 +76,7 @@ class ModelCheck(
     private val providers: Map<ProviderId, AiProvider>,
     private val key: suspend (ProviderId) -> Secret?,
     scope: CoroutineScope,
+    private val kept: RefusedModelStore = RefusedModelStore.NONE,
     private val stored: suspend (ProviderId) -> Boolean = { false },
 ) {
     private sealed interface Event {
@@ -108,12 +117,14 @@ class ModelCheck(
     private val events =
         Channel<Event>(Channel.UNLIMITED) { left -> (left as? Event.Ask)?.ticket?.complete(Ticket.NEVER) }
     private val found = MutableStateFlow<Map<ProviderId, UnavailableMark>>(emptyMap())
+    private val refusedNow = MutableStateFlow<RefusedModels>(emptyMap())
     private val reads = AtomicLong()
 
     init {
         val loop =
             scope.launch {
-                val book = ModelMarks(providers.keys)
+                val book = ModelMarks(providers.keys, kept.load())
+                refusedNow.value = book.refused
                 for (event in events) {
                     when (event) {
                         is Event.Selected -> book.selected(event.settings)
@@ -123,6 +134,10 @@ class ModelCheck(
                         is Event.Ask -> event.ticket.complete(book.ticket())
                     }
                     found.value = book.marks
+                    if (book.refused != refusedNow.value) {
+                        kept.save(book.refused)
+                        refusedNow.value = book.refused
+                    }
                 }
             }
         // The loop ended (its scope cancelled, before it started too): nothing more is taken, and
@@ -133,15 +148,23 @@ class ModelCheck(
     /** Each service's model found unavailable, by service, as the loop keeps them. */
     val unavailable: StateFlow<Map<ProviderId, UnavailableMark>> = found.asStateFlow()
 
-    /** [provider]'s selected model in [settings], if it was found unavailable. */
+    /**
+     * Each service's models a call found refused with its saved key (#970), by service, as the loop
+     * keeps them: the list of models puts them last.
+     */
+    val refused: StateFlow<RefusedModels> = refusedNow.asStateFlow()
+
+    /** [provider]'s selected model in [settings], if it was found unavailable, with how it was refused. */
     fun of(
         settings: Settings,
         provider: ProviderId,
-    ): UnavailableModel? =
-        settings
+    ): UnavailableModel? {
+        val mark = found.value[provider]
+        return settings
             .model(provider)
-            ?.takeIf { found.value[provider]?.model == it }
-            ?.let { UnavailableModel(provider, it) }
+            ?.takeIf { mark?.model == it }
+            ?.let { UnavailableModel(provider, it, mark?.refusal) }
+    }
 
     /** Whether the service switched on in [settings] has its selected model found unavailable. */
     fun blocks(settings: Settings): Boolean = settings.aiProvider?.let { of(settings, it) } != null
@@ -271,3 +294,25 @@ fun ModelCheck.shown(settings: Flow<Settings?>): Flow<UnavailableModel?> =
  * Not at first: the first build reads the marks itself.
  */
 fun ModelCheck.rebuilds(settings: Flow<Settings?>): Flow<Unit> = shown(settings).drop(1).map {}
+
+/**
+ * Where [ModelCheck] keeps the models refused for each service's saved key across starts (#970):
+ * their ids and how each was refused, nothing of the key.
+ */
+interface RefusedModelStore {
+    /** The models kept, read once as the check starts. */
+    fun load(): RefusedModels
+
+    /** Keeps [refused] in place of what was kept. */
+    fun save(refused: RefusedModels)
+
+    companion object {
+        /** Keeps nothing: for previews and tests. */
+        val NONE: RefusedModelStore =
+            object : RefusedModelStore {
+                override fun load(): RefusedModels = emptyMap()
+
+                override fun save(refused: RefusedModels) = Unit
+            }
+    }
+}

@@ -44,6 +44,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sleevesight.app.R
 import app.sleevesight.app.keyboard.KeyboardSession
 import app.sleevesight.app.keyboard.SessionLedger
+import app.sleevesight.app.pipeline.ModelRefusal
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
@@ -432,6 +434,10 @@ internal fun ConfirmDialog(
  * (a deprecated one too, which still answers for an account that uses it). The selected model, if not
  * listed, is said to be unavailable, and not offered. When the list cannot be had, the default and
  * a model chosen earlier stay offered, as nothing says they are not usable.
+ *
+ * The models a call with the saved key found refused ([refused], #970), the default too, go last,
+ * under "Refused with your key. Select to try again.", each with why, and can still be chosen. The
+ * selected model, found unavailable ([gone]), is said so over the list, as under its row.
  */
 @Suppress("LongParameterList") // The provider, its model, the list, and what the dialog does.
 @Composable
@@ -442,27 +448,30 @@ internal fun ModelDialog(
     modelName: (String) -> String,
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit,
+    refused: Map<String, ModelRefusal> = emptyMap(),
+    gone: UnavailableModel? = null,
 ) {
     val loaded by produceState<ModelLoad>(ModelLoad.Loading, provider) { value = load() }
-    val choice = modelChoice(provider, current, loaded)
+    val choice = modelChoice(provider, current, loaded, refused)
     val named = choice.named(modelName)
     val default = choice.default
+    val name = stringResource(providerName(provider))
+    // Said over the list as under the row: how a call refused it, else that the list lacks it.
+    val top =
+        gone?.takeIf { it.refusal != null }?.let { modelUnavailable(name, it, modelName) }
+            ?: choice.gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) }
+    val pick = { id: String ->
+        onSelect(id.takeUnless { it == Settings.DEFAULT_MODELS[provider] })
+        onDismiss()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_ai_model_of, stringResource(providerName(provider)))) },
         text = {
             Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
-                choice.gone?.let {
-                    Text(
-                        stringResource(
-                            R.string.settings_model_not_available,
-                            stringResource(providerName(provider)),
-                            modelName(it),
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
+                top?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
                 }
                 modelStatus(loaded)?.let {
                     // The list on its way, with the turning record before it (#785); once loaded, the
@@ -488,6 +497,7 @@ internal fun ModelDialog(
                         onDismiss()
                     }
                 }
+                RefusedModels(provider, current, choice, refused, named, pick)
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
@@ -496,21 +506,46 @@ internal fun ModelDialog(
 
 /**
  * What [ModelDialog] offers for [provider] once [loaded]: the [default], if offered; the [others],
- * by id; and the selected model, [gone], when the list was had without it.
+ * by id; the selected model, [gone], when the list was had without it; and, last, the models of
+ * these a call with the saved key found [refused] (#970), the default first, which are not among
+ * the others.
  */
 internal class ModelChoice(
     val default: String?,
     val others: List<String>,
     val gone: String?,
-    private val listed: List<ModelInfo>,
+    internal val listed: List<ModelInfo>,
+    val refused: List<String> = emptyList(),
 ) {
     /** A model's name: as the list gives it, else [modelName]'s. */
     fun named(modelName: (String) -> String): (String) -> String =
         { id -> listed.firstOrNull { it.id == id }?.displayName ?: modelName(id) }
 }
 
-/** The models [ModelDialog] offers for [provider], whose model is [current] (null, the default), from [loaded]. */
+/**
+ * The models [ModelDialog] offers for [provider], whose model is [current] (null, the default), from
+ * [loaded], those a call found [refused] (#970) put last.
+ */
 internal fun modelChoice(
+    provider: ProviderId,
+    current: String?,
+    loaded: ModelLoad,
+    refused: Map<String, ModelRefusal> = emptyMap(),
+): ModelChoice {
+    val offered = offeredModels(provider, current, loaded)
+    if (refused.isEmpty()) return offered
+    val all = listOfNotNull(offered.default) + offered.others
+    return ModelChoice(
+        default = offered.default?.takeUnless { it in refused },
+        others = offered.others.filterNot { it in refused },
+        gone = offered.gone,
+        listed = offered.listed,
+        refused = all.filter { it in refused },
+    )
+}
+
+// The models offered, as [modelChoice] has them before those refused are put last.
+private fun offeredModels(
     provider: ProviderId,
     current: String?,
     loaded: ModelLoad,

@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.ModelRefusal
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.ui.settings.providerName
@@ -46,7 +47,8 @@ private val MODEL_REFUSALS: Set<String> =
  * The switched-on service's model is found unavailable (#540): "The currently selected Anthropic
  * model Claude Haiku 5.5 is not available. Please select another model or provider in AI
  * services.", with *AI services* a link to the settings ([onSettings]), which Home opens at the
- * service's model row (#581).
+ * service's model row (#581). A model a call found refused says how (#970): "is no longer served",
+ * or "is refused for your account".
  */
 @Composable
 internal fun ModelUnavailable(
@@ -58,7 +60,11 @@ internal fun ModelUnavailable(
     val place = stringResource(R.string.home_model_unavailable_place)
     val sentence =
         stringResource(
-            R.string.home_model_unavailable,
+            when (unavailable.refusal) {
+                ModelRefusal.NOT_SERVED -> R.string.home_model_no_longer_served
+                ModelRefusal.ACCOUNT -> R.string.home_model_refused_account
+                null -> R.string.home_model_unavailable
+            },
             stringResource(providerName(unavailable.provider)),
             names.of(unavailable.model),
             place,
