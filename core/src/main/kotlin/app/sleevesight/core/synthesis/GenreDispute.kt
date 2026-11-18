@@ -1,5 +1,7 @@
 package app.sleevesight.core.synthesis
 
+import app.sleevesight.core.text.valuesIn
+
 /**
  * Whether a reply to *Why is this …?* disputes the label it was asked to explain (#853): a sentence
  * saying the track is not of the genre ("Americana, not Folk", "isn't really folk", "not classified
@@ -94,7 +96,7 @@ object GenreDispute {
     ): Boolean =
         forms.isNotEmpty() &&
             withoutNames(reply.replace(CITATION, " "), names).split(SENTENCE_END).any { sentence ->
-                val tokens = TOKEN.findAll(sentence.lowercase()).map { it.value }.toList()
+                val tokens = TOKEN.valuesIn(sentence.lowercase())
                 tokens.indices.any { start ->
                     ends(tokens, start, forms).any { end ->
                         (endsPhrase(tokens, end) && negatedBefore(tokens, start)) || deniedAfter(tokens, end)
@@ -103,7 +105,7 @@ object GenreDispute {
             }
 
     /** [name] folded as a genre's identity is: its letters and digits, lowercased. */
-    fun fold(name: String): String = WORD.findAll(name.lowercase()).joinToString("") { it.value }
+    fun fold(name: String): String = WORD.valuesIn(name.lowercase()).joinToString("")
 
     private fun words(text: String): Set<String> = text.split(" ").toSet()
 

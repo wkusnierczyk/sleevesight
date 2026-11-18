@@ -270,7 +270,7 @@ internal class InsightWriter(
         val prompt = userMessage(sent.evidence)
         val request = request(model, prompt, effort, card)
         val text = StringBuilder()
-        var frozen = false
+        val pace = PartialPace(time.timeSource)
         var end: CompletionEvent? = null
         var started: TimeMark? = null
         // The request goes out only if no Stop came first. The stream is read to its end, as the
@@ -288,11 +288,8 @@ internal class InsightWriter(
                             // Not while it may still be `NO_EVIDENCE`, or is, as the check reads it:
                             // the marker is no prose for the card; nor once it revises itself, as
                             // the card would show it (#798): the draft shown so far stays until the
-                            // check decides.
-                            frozen = frozen || SelfRevision.ofPartial(text.toString()).freezes()
-                            if (!GroundingCheck.mayBeNoEvidence(text.toString()) && !frozen) {
-                                show(InsightState.Writing(text.toString(), sent.held, model))
-                            }
+                            // check decides. Read and shown at a pace (#1351).
+                            pace.next(text, event.text) { show(InsightState.Writing(it, sent.held, model)) }
                         }
 
                         // Done or Error: no tools are sent, so never a tool call.

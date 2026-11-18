@@ -1,7 +1,9 @@
 package app.sleevesight.core.synthesis
 
 import app.sleevesight.core.text.isJsWhitespace
+import app.sleevesight.core.text.rangesIn
 import app.sleevesight.core.text.trimJs
+import app.sleevesight.core.text.valuesIn
 
 /**
  * A sign that a reply still revises itself in the text a card would show (#798): the model's
@@ -103,6 +105,20 @@ enum class SelfRevision(
             val shown = (SelfCorrection.of(partial)?.kept ?: partial).trimJs()
             val view = PlainView.of(shown)
             return if (view.open || Quotations.of(view.masked).open) null else find(shown)?.sign
+        }
+
+        /**
+         * The signs in [partial], a reply still streaming, that tell whether it is shown any further
+         * (#798): read, as [ofPartial] reads it, on what the card would show and on the reply as written,
+         * each up to where a quotation or an emphasis still open at its end opened, not past it. So a
+         * sign in the text before stays found whatever opens after it, and whichever earlier pieces of
+         * the reply were read: it is read at a pace, not at every piece (`PartialPace`, #1351), and a
+         * correction [SelfCorrection] takes out once its version comes, or a quotation opened after
+         * the sign, would otherwise hide a sign a piece read in between showed. Empty when none.
+         */
+        fun ofStreamed(partial: String): List<SelfRevision> {
+            val shown = (SelfCorrection.of(partial)?.kept ?: partial).trimJs()
+            return listOf(shown, partial.trimJs()).distinct().mapNotNull { closedSign(it) }
         }
 
         /**
@@ -238,15 +254,12 @@ enum class SelfRevision(
             return read.substring(at(span.first), at(span.last + 1))
         }
 
-        // [this] without what a sentence may open with before its aside: brackets and spaces.
-        private fun String.lead(): String = trimStart { it in "([ " }
-
-        // The words of [text], lower case, in order, without citations.
+        // The words of [text], lower case, in order, without citations; found with one start of the
+        // regex engine ([valuesIn], #1351).
         private fun words(text: String): List<String> =
             WORD
-                .findAll(CITATION.replace(text, " "))
-                .map { it.value.lowercase() }
-                .toList()
+                .valuesIn(CITATION.replace(text, " "))
+                .map { it.lowercase() }
 
         /** The words of an aside, as it may open a sentence or stand alone in emphasis. */
         internal const val ASIDE_WORDS: String =
@@ -309,17 +322,37 @@ enum class SelfRevision(
     }
 }
 
+// [this] without what a sentence may open with before its aside: brackets and spaces.
+private fun String.lead(): String = trimStart { it in "([ " }
+
+// The sign in [text] up to where a quotation or an emphasis still open at its end opened
+// ([SelfRevision.ofStreamed]).
+private fun closedSign(text: String): SelfRevision? {
+    val view = PlainView.of(text)
+    val quotation =
+        Quotations
+            .of(view.masked)
+            .openedAt
+            .takeIf { it >= 0 }
+            ?.let { view.source(it, text.length) }
+    val cut = listOfNotNull(view.openedAt.takeIf { it >= 0 }, quotation).minOrNull() ?: text.length
+    return SelfRevision.find(text.substring(0, cut))?.sign
+}
+
 // [text] without the run of emphasis marks that closed an emphasis a cut went into
 // (`**Correction: It came out in 1975 [MB1].**`, `*Correction: It came out in 1975* [MB1].`):
 // with an odd number of runs of a mark, its first run, which then opens nothing.
 private fun balanced(text: String): String {
     var t = text
-    for (mark in "*_") {
-        val runs = Regex("\\$mark+").findAll(t).toList()
-        if (runs.size % 2 == 1) t = t.removeRange(runs.first().range).trimJs()
+    for (runs in MARK_RUNS) {
+        val found = runs.rangesIn(t)
+        if (found.size % 2 == 1) t = t.removeRange(found.first()).trimJs()
     }
     return t
 }
+
+// The runs of each emphasis mark, `*` and `_`.
+private val MARK_RUNS = listOf(Regex("\\*+"), Regex("_+"))
 
 /**
  * A reply as plain text (#798): its [text] without Markdown's marks (a line's heading, list or
@@ -329,6 +362,8 @@ private fun balanced(text: String): String {
  * emphasised title or lyric set aside, character for character (`*Wait, Let Me Fix It*`), and
  * [headers] where an emphasis holds an aside or a label alone, as a header (`**Correction:**`,
  * `*Wait,*`, `**Corrected insight:**`, or `**Correction**:` with its colon after the marks).
+ * [open] when an emphasis is still open at its end, [openedAt] where in the reply the first such
+ * opened (-1 for none).
  */
 private class PlainView(
     val text: String,
@@ -336,6 +371,7 @@ private class PlainView(
     val sources: IntArray,
     val headers: List<IntRange>,
     val open: Boolean = false,
+    val openedAt: Int = -1,
 ) {
     /**
      * Where the header that starts at [start] ends ([headers]), with a comma, colon or dash right
@@ -366,17 +402,21 @@ private class PlainView(
         end: Int,
     ): Int = if (at < sources.size) sources[at] else end
 
-    /** Where each sentence is, paragraph by paragraph, as the grounding check splits a reply. */
+    /**
+     * Where each sentence is, paragraph by paragraph, as the grounding check splits a reply. The
+     * blank lines between paragraphs are found with one start of the regex engine (`rangesIn`, #1351).
+     */
     fun sentences(): List<IntRange> {
         val spans = mutableListOf<IntRange>()
         var start = 0
-        for (end in PARAGRAPH_BREAK.findAll(text).map { it.range.first } + text.length) {
+        for (gap in PARAGRAPH_BREAK.rangesIn(text) + listOf(text.length until text.length)) {
+            val end = gap.first
             if (end > start) {
                 val offset = start
                 spans +=
                     sentenceSpans(text.substring(start, end)).map { it.first + offset..it.last + offset }
             }
-            start = PARAGRAPH_BREAK.find(text, end)?.range?.let { it.last + 1 } ?: text.length
+            start = gap.last + 1
         }
         return spans
     }
@@ -407,6 +447,7 @@ private class PlainView(
                 reading.sources.toIntArray(),
                 headers,
                 open = reading.unclosed,
+                openedAt = reading.firstOpen,
             )
         }
 
@@ -474,8 +515,14 @@ private class Reading(
     // The emphasis marks opened and not yet closed: the mark, how many, where in [out].
     private val open = ArrayDeque<Triple<Char, Int, Int>>()
 
+    // Where in the reply the marks of each emphasis in [open] are.
+    private val openAt = ArrayDeque<Int>()
+
     /** Whether an emphasis is still open at the end. */
     val unclosed: Boolean get() = open.isNotEmpty()
+
+    /** Where in the reply the first emphasis still open at the end opened, -1 for none. */
+    val firstOpen: Int get() = openAt.firstOrNull() ?: -1
 
     fun read() {
         var i = 0
@@ -510,8 +557,7 @@ private class Reading(
         var i = from
         while (true) {
             while (i < reply.length && reply[i] != '\n' && isJsWhitespace(reply[i])) i++
-            val mark = LINE_MARK.find(reply, i)?.takeIf { it.range.first == i } ?: return i
-            i = mark.range.last + 1
+            i = MarkdownMarks.lineMarkEnd(reply, i) ?: return i
         }
     }
 
@@ -534,9 +580,11 @@ private class Reading(
         val last = open.lastOrNull()
         if (last != null && last.first == reply[at] && last.second == count) {
             open.removeLast()
+            openAt.removeLast()
             if (out.length > last.third) emphases += Emphasis(last.third until out.length, end, count)
         } else {
             open.addLast(Triple(reply[at], count, out.length))
+            openAt.addLast(at)
         }
         return end
     }
@@ -550,8 +598,5 @@ private class Reading(
 
     private companion object {
         const val EMPHASIS_MARKS = "*_"
-
-        /** A line's mark: a heading's, a list's, a quotation's, before a space or the line's end. */
-        val LINE_MARK = Regex("(?:#{1,6}|[-*+]|[0-9]{1,2}[.)])(?=[ \\t\\n]|$)|>")
     }
 }

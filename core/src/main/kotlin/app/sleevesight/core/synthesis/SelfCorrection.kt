@@ -289,12 +289,14 @@ data class SelfCorrection(
  * quotation is still [open] at its end; and whether a closing `”` came with none open ([stray]).
  * [sources] gives, for each character of [outside], where in the text it came from: an ellipsis,
  * where its quotation opened (#798, so a sentence read without its quotations is found in the text).
+ * [openedAt] is where in the text the quotation still open at its end opened, -1 for none.
  */
 internal class Quotations(
     val outside: String,
     val open: Boolean,
     val stray: Boolean,
     val sources: IntArray = IntArray(0),
+    val openedAt: Int = -1,
 ) {
     companion object {
         /**
@@ -403,6 +405,7 @@ internal class Quotations(
         private val out = StringBuilder()
         private val sources = IntArray(end)
         private var close: Char? = null
+        private var opened = -1
         private var stray = false
         private var at = 0
         private val ahead = Lookahead(text)
@@ -418,7 +421,8 @@ internal class Quotations(
         }
 
         /** What has been read so far. */
-        fun quotations(): Quotations = Quotations(out.toString(), open, stray, sources.copyOf(out.length))
+        fun quotations(): Quotations =
+            Quotations(out.toString(), open, stray, sources.copyOf(out.length), if (open) opened else -1)
 
         private fun step(i: Int) {
             val c = text[i]
@@ -433,6 +437,7 @@ internal class Quotations(
                 c == '”' -> stray = true
                 isQuoteMark(text, i) || startsSingle(i) -> {
                     close = partner(c)
+                    opened = i
                     out.append('…')
                 }
                 else -> out.append(c)

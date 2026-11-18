@@ -35,11 +35,11 @@ import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.ItemPrompt
 import app.sleevesight.core.synthesis.PromptChoices
-import app.sleevesight.core.synthesis.SelfRevision
 import app.sleevesight.core.text.DateForm
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlin.time.TimeSource
 
 /**
  * The evidence an item is written from ([ItemInsights.evidence]): [evidence], and of its ids those
@@ -209,7 +209,9 @@ data class KeptItem(
  * is shown with (#643). Each kept under its own model: one written with another AI service, model or
  * effort is never served as [key]'s, but is found apart ([keptByOther], #911), for a row to show it
  * with *Rewrite insight* beside it, and a rewrite keeps both. Each prompt asks for dates in the form
- * [dates] gives as it is built (#957: the phone's, read anew for each write), which no key holds.
+ * [dates] gives as it is built (#957: the phone's, read anew for each write), which no key holds. A
+ * reply still streaming is read for a sign of revision and shown at [timeSource]'s pace
+ * (`PartialPace`, #1351).
  */
 @Suppress(
     "LongParameterList", // Where items are written, kept, and gathered, and the time.
@@ -229,6 +231,7 @@ class ItemInsights(
     private val dates: () -> DateForm = { DateForm.APP },
     private val languageLines: ItemLanguageLines? = null,
     private val songWeb: SongWebLookup? = null,
+    private val timeSource: TimeSource = TimeSource.Monotonic,
 ) {
     /**
      * The name [item] goes by on [track]'s row: the title the player gives, the artist it is about
@@ -1506,8 +1509,8 @@ class ItemInsights(
         if (lines != null && evidence.lines.any { it.found != null }) attempt { lines.renew(subject) }
     }
 
-    // One call of [request]: its text, each piece shown as it comes while it may not be `NO_EVIDENCE`
-    // and has not revised itself (#798), and its end.
+    // One call of [request]: its text, shown as it comes, at a pace (`PartialPace`, #1351), while it may
+    // not be `NO_EVIDENCE` and has not revised itself (#798), and its end.
     private suspend fun stream(
         access: AiAccess,
         request: CompletionRequest,
@@ -1516,16 +1519,12 @@ class ItemInsights(
     ): Pair<String, CompletionEvent?> {
         val text = StringBuilder()
         var end: CompletionEvent? = null
-        var frozen = false
+        val pace = PartialPace(timeSource)
         access.provider.stream(request, access.key).collect { event ->
             when (event) {
                 is CompletionEvent.Delta -> {
                     text.append(event.text)
-                    val now = text.toString()
-                    frozen = frozen || SelfRevision.ofPartial(now).freezes()
-                    if (!GroundingCheck.mayBeNoEvidence(now) && !frozen) {
-                        show(InsightState.Writing(now, model = key.model), now())
-                    }
+                    pace.next(text, event.text) { show(InsightState.Writing(it, model = key.model), now()) }
                 }
 
                 // Done or Error: no tools are sent, so never a tool call.

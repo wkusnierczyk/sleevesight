@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.text.JS_WHITESPACE_CLASS
 import app.sleevesight.core.text.isJsWhitespace
+import app.sleevesight.core.text.replaceOnce
 import app.sleevesight.core.text.trimJs
 
 /** How the grounding check classifies one sentence (`design/design.md`, *Synthesis*). */
@@ -286,15 +287,15 @@ object GroundingCheck {
     }
 
     // [text] without the marker after prose ([MARKER_AFTER_PROSE]): a line of its own goes with its
-    // line, and one ending the text leaves the stop before it.
+    // line, and one ending the text leaves the stop before it. Found with one start of the regex engine
+    // (`replaceOnce`, #1351), not one for each line that holds the marker.
     private fun withoutMarker(text: String): String =
-        MARKER_AFTER_PROSE
-            .replace(text) { found ->
-                found.value
-                    .first()
-                    .takeIf { it in ".!?" }
-                    ?.toString() ?: "\n"
-            }.trimJs()
+        replaceOnce(text, MARKER_AFTER_PROSE) { found ->
+            text
+                .getOrNull(found.first)
+                ?.takeIf { it in ".!?" }
+                ?.toString() ?: "\n"
+        }.trimJs()
 
     /**
      * Splits [text] into sentences, as the simulator does: spaces and tabs collapse to one space,
