@@ -70,14 +70,22 @@ internal fun PeopleBefore(
  * several at once. The tap is its consent, so it is written at once, in every mode (#948). The ones
  * open are kept while [context]'s track plays, and the focus goes to a panel's *Close* when it opens
  * and back to its chip when it closes.
+ *
+ * With no split, on a track crediting several artists (#1168), the *Artists* panel or page shows
+ * under the first artist's insight [others], the further artists ([alsoOnTrack]): *Also on this
+ * track*, then a section for each in the credit's order ([AlsoOnTrack]).
  */
 @Composable
 internal fun PeopleAfter(
     item: InsightItem,
     split: ArtistSplit?,
     context: ItemContext,
+    others: List<String> = emptyList(),
 ) {
-    if (split == null) return
+    if (split == null) {
+        if (item == InsightItem.ARTIST && others.isNotEmpty()) AlsoOnTrack(others, context)
+        return
+    }
     val groups =
         when (item) {
             InsightItem.ARTIST ->
@@ -161,7 +169,7 @@ private class PeopleGroup(
 
 // A heading over a group of chips, or over the composer's insight in the Authors panel.
 @Composable
-private fun PeopleHeading(text: String) {
+internal fun PeopleHeading(text: String) {
     Text(
         text,
         Modifier.padding(top = 4.dp).semantics { heading() },

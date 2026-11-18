@@ -55,17 +55,20 @@ internal object Sessions {
         flag: Long = 1,
     ): MediaMetadata = MediaMetadata.Builder(metadata).putLong(AdDetection.KEY_ADVERTISEMENT, flag).build()
 
+    @Suppress("LongParameterList") // One parameter per part of the state the tests set.
     fun state(
         state: Int = PlaybackState.STATE_PLAYING,
         positionMs: Long = 0,
         speed: Float = 1f,
         updatedAt: Long = 0,
         queueItem: Long = MediaSession.QueueItem.UNKNOWN_ID.toLong(),
+        actions: Long = 0,
     ): PlaybackState =
         PlaybackState
             .Builder()
             .setState(state, positionMs, speed, updatedAt)
             .setActiveQueueItemId(queueItem)
+            .setActions(actions)
             .build()
 
     fun queueItem(
@@ -142,6 +145,18 @@ internal class FakeSession(
 
     override fun unregister(callback: MediaController.Callback) {
         callbacks -= callback
+    }
+
+    /** The controls sent to the player ([PlayerSession.send]), in order. */
+    val sent = mutableListOf<Transport>()
+
+    /** Whether the controller fails as a control is sent, as a dead binder's does. */
+    var sendThrows = false
+
+    override fun send(control: Transport): Boolean {
+        check(!sendThrows) { "dead binder" }
+        sent += control
+        return true
     }
 
     fun send(metadata: MediaMetadata) {

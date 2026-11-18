@@ -218,16 +218,11 @@ class HomeSplitScreenTest {
             // As large as the height lets it be: the cover and the position fill the pane's height,
             // less its margins.
             assertEquals(12f, dp(root.bottom - position.bottom).value, 2f)
-            // The header over the right side only, the player row first under it, then the title,
-            // on the screen at once.
+            // The header over the right side only, the title under it (the player row went into the
+            // header's player menu, #1209), on the screen at once.
             val header = bounds(HOME_HEADER_TAG)
             assertTrue("header right of the cover: $header", header.left >= pane.right && header.top <= root.top + 1f)
-            val player = bounds(PLAYER_TAG)
-            assertTrue(
-                "player row right of the cover, under the header",
-                player.left >= pane.right && player.top >= header.bottom,
-            )
-            assertTrue("title under the player row", title.top >= player.bottom && title.left >= pane.right)
+            assertTrue("title under the header", title.top >= header.bottom && title.left >= pane.right)
             compose.onNodeWithText(playing.title).assertIsDisplayed()
         }
 
@@ -277,7 +272,7 @@ class HomeSplitScreenTest {
         }
 
     @Test
-    fun aScreenReaderReadsTheHeaderThePlayerRowThePositionThenTheTitle() {
+    fun aScreenReaderReadsTheHeaderThePositionThenTheTitle() {
         accessibility.setEnabled(true)
         accessibility.setTouchExplorationEnabled(true)
         accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
@@ -285,7 +280,6 @@ class HomeSplitScreenTest {
             val nodes =
                 listOf(
                     compose.onNodeWithContentDescription(text(R.string.home_scroll_to_top, text(R.string.app_name))),
-                    compose.onNodeWithTag(PLAYER_TAG),
                     // The cover's side: the position's bar, then its times. The cover itself is not in
                     // the order Compose reports, here or in portrait (a node under it, of the art's
                     // clip, makes it no leaf): a screen reader meets it where it is, before the position.
@@ -327,9 +321,9 @@ class HomeSplitScreenTest {
         width = 599.dp
         show {
             assertEquals(0, count(COVER_PANE_TAG))
-            val player = laidOut(PLAYER_TAG)
+            val header = laidOut(HOME_HEADER_TAG)
             val cover = laidOut(COVER_TAG)
-            assertTrue("cover under the player row: $cover", cover.top >= player.bottom)
+            assertTrue("cover under the header: $cover", cover.top >= header.bottom)
             assertTrue("title under the cover", titleLaidOut.top >= cover.bottom)
         }
     }
@@ -347,8 +341,8 @@ class HomeSplitScreenTest {
             assertEquals(1, count(DATES_PANEL_TAG))
             compose.onNodeWithContentDescription(text(R.string.home_tracklist)).assertExists()
             assertTrue(
-                "scrolled: the player row out of view",
-                playerOutOfView(header.fetchSemanticsNode().boundsInRoot),
+                "scrolled: the cover's top out of view",
+                coverScrolled(header.fetchSemanticsNode().boundsInRoot),
             )
             // And back sideways.
             turn(wide = true)
@@ -375,8 +369,8 @@ class HomeSplitScreenTest {
     private fun turned() =
         compose.onAllNodesWithContentDescription(text(R.string.home_tracklist)).fetchSemanticsNodes().isNotEmpty()
 
-    // Whether the player row has scrolled up under [header], as it has only on a Home scrolled.
-    private fun playerOutOfView(header: Rect): Boolean = laidOut(PLAYER_TAG).bottom <= header.bottom
+    // Whether the cover's top has scrolled up under [header], as it has only on a Home scrolled.
+    private fun coverScrolled(header: Rect): Boolean = laidOut(COVER_TAG).top < header.bottom
 
     // The nodes as a screen reader goes through them, from [first]: each node's next, as Compose
     // reports it to an accessibility service.

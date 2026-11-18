@@ -177,6 +177,7 @@ object SessionMapping {
             position = state.position.takeIf { it >= 0 }?.milliseconds,
             updatedAt = state.lastPositionUpdateTime,
             speed = state.playbackSpeed,
+            actions = state.actions,
         )
     }
 

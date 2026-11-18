@@ -9,21 +9,17 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.SystemClock
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,11 +45,9 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -77,48 +70,9 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * The player's name and state; a tap opens the player's own screen (its session activity), else
- * the player from its launcher entry (#596), and says so only when there is neither.
- */
-@Composable
-internal fun PlayerRow(
-    player: String,
-    playback: PlaybackInfo,
-    actions: NowPlayingActions,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val name = remember(player) { actions.playerLabel(player) }
-    // As the header logo's record goes by it, so it turns while this says *Playing* (#848).
-    val state = stateText(playbackStatus(player, playback))
-    val open = stringResource(R.string.home_open_player, name)
-    val none = stringResource(R.string.home_player_no_screen, name)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier =
-            modifier
-                .testTag(PLAYER_TAG)
-                .minimumInteractiveComponentSize()
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClickLabel = open, role = Role.Button) {
-                    if (!openPlayer(context, actions.playerActivity(), actions.playerLaunch(player))) {
-                        Toast.makeText(context, none, Toast.LENGTH_SHORT).show()
-                    }
-                }.padding(4.dp),
-    ) {
-        Text(
-            if (state == null) name else stringResource(R.string.home_player_state, name, state),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, modifier = Modifier.size(16.dp))
-    }
-}
-
-/**
  * Opens the player: its session's screen ([activity], [openPlayerScreen]), else its launcher entry
- * ([launch]), for a session that names no screen or whose intent the player has cancelled (#596).
- * False when neither opens.
+ * ([launch]), for a session that names no screen or whose intent the player has cancelled (#596): the
+ * player menu's *Open <player>* (#1209) and the idle Home's rows. False when neither opens.
  */
 internal fun openPlayer(
     context: Context,
@@ -439,9 +393,6 @@ const val RELEASE_HELD_TAG: String = "release-held"
 
 /** The test tag of the mark, of no height, that the artists are held back (#1355, #1407). */
 const val ARTISTS_HELD_TAG: String = "artists-held"
-
-/** The test tag of the player row. */
-const val PLAYER_TAG: String = "player"
 
 private val ART_WIDTH = 360.dp
 

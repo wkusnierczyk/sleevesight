@@ -30,7 +30,7 @@
     <string name="home_guide_part_sources">Sources</string>
     <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
-    <string name="home_guide_note_player">tap to open</string>
+    <string name="home_guide_note_player">tap for controls</string>
     <string name="home_guide_note_cover">tap to see contents</string>
     <string name="home_guide_note_genres">tap to see the genres</string>
     <string name="home_guide_note_insight">read about what’s playing</string>
@@ -40,7 +40,7 @@
     <!-- A note's panel (#673), opened by a tap on the note: the part's fuller description, under its
          name (home_guide_part_…). Each says what the app does; keep them in step with it. -->
     <string name="home_guide_about_settings">Opens Settings: the players Sleevesight follows, which sources it looks up, your AI service and the API keys, genres, when insights are written, history, and how the app looks (theme, font, layout).</string>
-    <string name="home_guide_about_player">The player Sleevesight follows, and whether it is playing. A tap opens the player.</string>
+    <string name="home_guide_about_player">The icon of the player Sleevesight follows. A tap opens its menu: whether it is playing, Previous, Play or Pause and Next, Open the player, and the players to choose from. A tap on the record after the logo plays or pauses.</string>
     <string name="home_guide_about_cover">The album’s cover. A tap turns it over to show the album’s tracklist from MusicBrainz: each track with its length, the playing song marked. An album of several discs has a page for each, swiped sideways, with the disc’s number at the top. A tap anywhere on the back turns it back. When there is no tracklist, the back says why: MusicBrainz is still looking, has no tracklist for the album, has several albums of that name, could not be reached, or is disabled.</string>
     <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
@@ -80,7 +80,26 @@
     <!-- The header's name (the logo, once it lands), as a screen reader says it; %1$s is the app's name. -->
     <string name="home_scroll_to_top">%1$s, scroll to top</string>
 
-    <!-- Player row. -->
+    <!-- The header's record (#1409), a button while the followed player takes Play and Pause: what
+         a tap does, as a screen reader says it. -->
+    <string name="home_record_play">Play</string>
+    <string name="home_record_pause">Pause</string>
+    <!-- The followed player's own icon in the header (#1209), which opens the player menu, as a screen
+         reader says it: %1$s is the player's name, %2$s its state (home_state_…). -->
+    <string name="home_player_menu">%1$s, %2$s. Player menu</string>
+    <!-- The same, with no state to say. -->
+    <string name="home_player_menu_no_state">%1$s. Player menu</string>
+    <!-- The player menu's controls, as a screen reader says them (Play and Pause: home_record_…). -->
+    <string name="home_previous">Previous</string>
+    <string name="home_next">Next</string>
+    <!-- Under the menu's controls, dimmed, when the player advertises none of them: %1$s is its name. -->
+    <string name="home_player_no_controls">%1$s takes no controls from other apps.</string>
+    <!-- The heading of the menu's list of players, each followed by its state or home_player_open_app. -->
+    <string name="home_players">Players</string>
+    <!-- A player in the menu with no session: a tap opens its app. -->
+    <string name="home_player_open_app">Open the app ↗</string>
+
+    <!-- The followed player's state: the player menu's first line (#1209). -->
     <string name="home_player_state">%1$s · %2$s</string>
     <string name="home_state_playing">Playing</string>
     <string name="home_state_paused">Paused</string>
@@ -553,6 +572,17 @@
     <string name="home_item_song_classical">Music</string>
     <string name="home_item_artist">Artist</string>
     <string name="home_item_album">Album</string>
+    <!-- The artist's row on a track crediting more than one artist (#1168), featured ones too: its
+         button and its panel's title, and its page's. Its panel holds the first artist's insight,
+         then a section for each of the others. -->
+    <string name="home_item_artists">Artists</string>
+    <!-- Beside the Artists row (#1168), where it fits on one line, and as its panel's subtitle and
+         its page's name; %1$s: the first artist, "Gotye, others". Where it does not fit, the first
+         artist alone. -->
+    <string name="home_item_name_others">%1$s, others</string>
+    <!-- In the Artists panel (#1168), above a section for each further artist on the track, each
+         with its own Write insight. -->
+    <string name="home_item_also_on_track">Also on this track</string>
     <!-- On a track whose roles tell the composer apart from the performers (#1199), the row before
          the artist's, about the composer: Composer for one composer whose work has no words or
          words of their own; Author for one who is not a classical composer; Authors for more than
@@ -589,6 +619,7 @@
     <string name="home_item_show_album">show the album’s insight</string>
     <string name="home_item_show_composer">show the composer’s insight</string>
     <string name="home_item_show_performer">show the performer’s insight</string>
+    <string name="home_item_show_artists">show the artists’ insights</string>
     <string name="home_item_show_author">show the author’s insight</string>
     <string name="home_item_show_authors">show the authors’ insight</string>
     <!-- A chip of another performer or an author (#1199), which gives way to that artist's insight

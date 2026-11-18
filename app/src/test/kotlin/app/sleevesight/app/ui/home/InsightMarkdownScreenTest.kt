@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.home
 
-import android.app.PendingIntent
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -63,7 +62,6 @@ class InsightMarkdownScreenTest {
             NowPlayingActions(
                 normalizer::normalize,
                 { "Spotify" },
-                { null as PendingIntent? },
                 write = { _, _ -> },
                 stop = {},
             )

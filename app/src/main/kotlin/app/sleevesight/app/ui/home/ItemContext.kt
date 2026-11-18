@@ -160,7 +160,9 @@ internal class OpeningWrite(
  *
  * On a track whose roles tell the composer apart (#1199), the artist's and the composer's show the
  * track's other people around it ([PeopleBefore], [PeopleAfter]): the other performers, the other
- * authors, each a chip opening their own insight in place.
+ * authors, each a chip opening their own insight in place. On a track crediting several artists with
+ * no such split (#1168), the artist's shows a section for each of the others under it ([PeopleAfter]),
+ * each [ItemContent] with [byItself] false: nothing about them is written but on a tap, in any mode.
  */
 @Suppress("LongParameterList") // The item, what it is shown with, and how it was opened.
 @Composable
@@ -170,6 +172,7 @@ internal fun ItemContent(
     tapped: Boolean,
     shown: ItemShown? = null,
     opening: OpeningWrite = OpeningWrite.NONE,
+    byItself: Boolean = true,
     afterRetry: () -> Unit = {},
 ) {
     val track = context.track
@@ -180,11 +183,22 @@ internal fun ItemContent(
     val now = shown ?: itemShown(item, context)
     // The composer's and the artist's with the other people of the track (#1199).
     val split = remember(track, item) { pageSplit(track, item) }
+    // The other artists credited, with no split (#1168).
+    val others =
+        remember(track, item, split) {
+            if (item == InsightItem.ARTIST &&
+                split == null
+            ) {
+                alsoOnTrack(track.played)
+            } else {
+                emptyList()
+            }
+        }
     PeopleBefore(item, split)
     WritesOnTap(item, track, context, now, opening)
     val writingDue = opening.due && !context.automatic
-    ItemShownContent(item, track, context, tapped, now, ItemShowing(writingDue, afterRetry))
-    PeopleAfter(item, split, context)
+    ItemShownContent(item, track, context, tapped, now, ItemShowing(writingDue, afterRetry, byItself))
+    PeopleAfter(item, split, context, others)
 }
 
 /**
@@ -249,11 +263,13 @@ internal fun itemShown(
 }
 
 // How [ItemContent] shows an item: *Writing…* for one offered while its tap's write is due
-// ([writingDue], #948); and where the focus goes after *Retry* beside sources not reached
-// ([afterRetry], #1163).
+// ([writingDue], #948); where the focus goes after *Retry* beside sources not reached
+// ([afterRetry], #1163); and whether an automatic mode writes it by itself ([byItself]; not a further
+// artist's section, #1168, written only on its tap).
 private class ItemShowing(
     val writingDue: Boolean,
     val afterRetry: () -> Unit,
+    val byItself: Boolean = true,
 )
 
 // [ItemContent] of [track], [shown] as followed, as [showing] says: *Writing…* for one offered while
@@ -268,7 +284,7 @@ private fun ItemShownContent(
     shown: ItemShown,
     showing: ItemShowing,
 ) {
-    WritesAtOnce(item, track, context, tapped)
+    if (showing.byItself) WritesAtOnce(item, track, context, tapped)
     val unavailable = context.unavailable
     val state = (shown as? ItemShown.Shown)?.state
     if (unavailable != null && state !is InsightState.Written && state !is InsightState.Writing) {
