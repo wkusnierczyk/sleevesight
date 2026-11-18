@@ -17,7 +17,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,6 +45,7 @@ import app.sleevesight.app.pipeline.AlbumChoice
 import app.sleevesight.app.pipeline.AlbumsKey
 import app.sleevesight.app.pipeline.AlbumsState
 import app.sleevesight.app.pipeline.NamedAlbum
+import app.sleevesight.app.ui.theme.PillButton
 
 // Several albums of one name on the back of Home's cover (#1080): the list of them, each opening its
 // tracklist with *Select*, and the line above a tracklist picked among them, with *Change*; and the
@@ -100,7 +100,7 @@ internal fun PickedLine(
             PickedBy.DATE -> stringResource(R.string.home_albums_by_date, count)
         }
     Row(
-        Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp).testTag(ALBUMS_LINE_TAG),
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp).testTag(ALBUMS_LINE_TAG),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -109,9 +109,7 @@ internal fun PickedLine(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        TextButton(onClick = change, modifier = Modifier.testTag(ALBUMS_CHANGE_TAG)) {
-            Text(stringResource(R.string.home_albums_change))
-        }
+        PillButton(stringResource(R.string.home_albums_change), change, Modifier.testTag(ALBUMS_CHANGE_TAG))
     }
 }
 
@@ -178,13 +176,14 @@ private fun AlbumList(
             }
             if (albums.chosen != null) {
                 item {
-                    TextButton(
+                    PillButton(
+                        stringResource(R.string.home_albums_decide),
                         onClick = {
                             choosing.choose(albums.name, null)
                             done()
                         },
-                        modifier = Modifier.padding(horizontal = 8.dp).testTag(ALBUMS_DECIDE_TAG),
-                    ) { Text(stringResource(R.string.home_albums_decide)) }
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag(ALBUMS_DECIDE_TAG),
+                    )
                 }
             }
         }
@@ -297,7 +296,7 @@ private fun OpenedAlbum(
             Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = back, modifier = Modifier.testTag(ALBUMS_ALL_TAG)) {
+            PillButton(back, Modifier.padding(start = 12.dp).testTag(ALBUMS_ALL_TAG)) {
                 Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = null, Modifier.size(18.dp))
                 Spacer(Modifier.size(4.dp))
                 Text(stringResource(R.string.home_albums_all))

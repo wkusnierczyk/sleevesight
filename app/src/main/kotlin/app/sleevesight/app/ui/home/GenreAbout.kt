@@ -229,7 +229,6 @@ internal fun GenreDefinitionNote(
                     afterRetry = afterRetry,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    outlined = true,
                 )
             DefinitionState.NotFound ->
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

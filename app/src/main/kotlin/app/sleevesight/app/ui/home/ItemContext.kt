@@ -389,7 +389,6 @@ private fun Shown(
                 action = stringResource(R.string.home_ai_retry_action),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
-                outlined = true,
                 // It starts another call: the AI mark, read as "Retry, uses AI" (#624).
                 ai = true,
             )

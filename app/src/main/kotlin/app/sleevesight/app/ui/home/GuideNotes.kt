@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkLook
+import app.sleevesight.app.ui.theme.PillButton
 
 // The guide's notes as buttons, each opening a panel about its part (#673), and the pen's marks.
 
@@ -98,10 +98,9 @@ internal fun GuideNotePanel(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 3.dp,
     ) {
-        Column(Modifier.padding(start = 12.dp, top = 10.dp, end = 4.dp, bottom = 2.dp)) {
+        Column(Modifier.padding(start = 12.dp, top = 10.dp, end = 12.dp, bottom = 6.dp)) {
             Column(
                 Modifier
-                    .padding(end = 8.dp)
                     .testTag(GUIDE_NOTE_PANEL_TEXT_TAG)
                     .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -114,10 +113,11 @@ internal fun GuideNotePanel(
                 )
                 Text(stringResource(part.about), style = MaterialTheme.typography.bodyMedium)
             }
-            TextButton(
+            PillButton(
+                stringResource(R.string.home_guide_note_close),
                 onClick = onClose,
                 modifier = closeModifier.align(Alignment.End).testTag(GUIDE_NOTE_CLOSE_TAG),
-            ) { Text(stringResource(R.string.home_guide_note_close)) }
+            )
         }
     }
 }

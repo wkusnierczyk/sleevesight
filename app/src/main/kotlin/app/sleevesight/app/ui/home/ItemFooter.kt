@@ -66,7 +66,6 @@ internal fun WrittenFooter(
             action = stringResource(R.string.home_ai_retry_action),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodyMedium,
-            outlined = true,
             ai = true,
         )
     }

@@ -2,7 +2,6 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -14,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ItemNotes
 import app.sleevesight.app.ui.logo.Busy
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.ItemEvidence
@@ -34,9 +34,7 @@ internal fun WritingItem(
 ) {
     Writing()
     // No AI mark: it makes no call.
-    OutlinedButton(onClick = onStop, modifier = Modifier.testTag(itemStopTag(item))) {
-        Text(stringResource(R.string.home_stop))
-    }
+    PillButton(stringResource(R.string.home_stop), onStop, Modifier.testTag(itemStopTag(item)))
     ItemQuiet(stringResource(R.string.home_insight_writing_stop))
 }
 
