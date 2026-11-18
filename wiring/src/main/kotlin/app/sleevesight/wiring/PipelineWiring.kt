@@ -290,8 +290,12 @@ class PipelineWiring internal constructor(
             ProviderId.OPENROUTER to OpenRouterProvider(net),
         ).mapValues { aiThrough(it.value) }
 
-    /** Signing in with OpenRouter (#1157), for its key: the app's *AI services*. */
-    val openRouterSignIn: KeySignIn = OpenRouterSignIn(net, JvmHasher, JvmKeyCrypto::random)
+    /**
+     * Signing in with OpenRouter (#1157), for its key: the app's *AI services*; returning to [callback]
+     * (#1396), the build's own App Link (`OpenRouterSignIn.CALLBACK` or `DEBUG_CALLBACK`).
+     */
+    fun openRouterSignIn(callback: String): KeySignIn =
+        OpenRouterSignIn(net, JvmHasher, JvmKeyCrypto::random, callback = callback)
 
     /**
      * The adapters for `PipelineParts.adapters`: MusicBrainz and Wikipedia (with Wikidata), which

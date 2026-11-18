@@ -116,14 +116,16 @@
                  checks the site's `/.well-known/assetlinks.json`, which names this app and its
                  signing certificates, and then opens the link here rather than in the browser;
                  that page (`auth/openrouter/index.html`) is for when it does not. Exactly that
-                 path, so no other page of the site opens the app. -->
+                 path, so no other page of the site opens the app; the debug build's path is its own
+                 (`openRouterCallbackPath`, `app/build.gradle.kts`), so with both builds installed
+                 each sign-in returns to the build that began it. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
                 <data android:host="sleevesight.app" />
-                <data android:path="/auth/openrouter/" />
+                <data android:path="${openRouterCallbackPath}" />
             </intent-filter>
         </activity>
 

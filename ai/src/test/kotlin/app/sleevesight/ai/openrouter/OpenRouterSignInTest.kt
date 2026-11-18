@@ -72,6 +72,21 @@ class OpenRouterSignInTest {
     }
 
     @Test
+    fun `the debug build's sign-in returns to its own address, not the release's`() {
+        assertEquals("https://sleevesight.app/auth/openrouter/debug/", OpenRouterSignIn.DEBUG_CALLBACK)
+        val signIn =
+            OpenRouterSignIn(
+                ReplayNetClient { ok("") },
+                JvmHasher,
+                JvmKeyCrypto::random,
+                callback = OpenRouterSignIn.DEBUG_CALLBACK,
+            )
+        assertEquals(OpenRouterSignIn.DEBUG_CALLBACK, signIn.callback)
+        val start = signIn.begin()
+        assertEquals("${OpenRouterSignIn.DEBUG_CALLBACK}?s=${start.state}", query(start.url)["callback_url"])
+    }
+
+    @Test
     fun `each sign-in has a verifier of its own`() {
         val signIn = OpenRouterSignIn(ReplayNetClient { ok("") }, JvmHasher, JvmKeyCrypto::random)
         assertNotEquals(signIn.begin().verifier, signIn.begin().verifier)

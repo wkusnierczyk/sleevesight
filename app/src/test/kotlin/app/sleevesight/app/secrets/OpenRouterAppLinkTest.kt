@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.MainActivity
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
@@ -22,9 +23,18 @@ import javax.xml.parsers.DocumentBuilderFactory
  */
 @RunWith(RobolectricTestRunner::class)
 class OpenRouterAppLinkTest {
+    /**
+     * On the debug build's merged manifest, the build the unit tests run (there is no release unit
+     * test task): it takes its own callback and not the release's, so with both installed a sign-in
+     * returns to the build that began it, which holds its verifier. The release build's values are
+     * checked in the build script below ([theReleaseBuildHasTheReleaseCallback]).
+     */
     @Test
-    fun theCallbackOpensTheMainActivityAndNoOtherPageOfTheSiteDoes() {
+    fun theBuildsOwnCallbackOpensTheMainActivityAndNoOtherPageOfTheSiteDoes() {
         val context = ApplicationProvider.getApplicationContext<Context>()
+        val own = if (BuildConfig.DEBUG) DEBUG_CALLBACK else CALLBACK
+        val other = if (BuildConfig.DEBUG) CALLBACK else DEBUG_CALLBACK
+        assertEquals(own, BuildConfig.OPENROUTER_CALLBACK)
 
         fun handlers(url: String) =
             context.packageManager
@@ -35,13 +45,25 @@ class OpenRouterAppLinkTest {
                     0,
                 ).map { it.activityInfo.name }
 
-        assertEquals(listOf(MainActivity::class.java.name), handlers("$CALLBACK?s=state&code=code"))
-        assertEquals(listOf(MainActivity::class.java.name), handlers(CALLBACK))
+        assertEquals(listOf(MainActivity::class.java.name), handlers("$own?s=state&code=code"))
+        assertEquals(listOf(MainActivity::class.java.name), handlers(own))
+        assertEquals(emptyList<String>(), handlers("$other?s=state&code=code"))
         assertEquals(emptyList<String>(), handlers("https://sleevesight.app/"))
         assertEquals(emptyList<String>(), handlers("https://sleevesight.app/auth/openrouter/other"))
         assertEquals(emptyList<String>(), handlers("https://example.com/auth/openrouter/"))
         // The custom scheme OpenRouter never returned to (#1397) is gone.
         assertEquals(emptyList<String>(), handlers("app.sleevesight://openrouter?code=code"))
+    }
+
+    @Test
+    fun theReleaseBuildHasTheReleaseCallback() {
+        val script = File("build.gradle.kts").readText()
+        val release = script.substringAfter("        release {").substringBefore("        }")
+        val debug = script.substringAfter("        debug {").substringBefore("        }")
+        assertTrue(release, "\"OPENROUTER_CALLBACK\", \"\\\"$CALLBACK\\\"\")" in release)
+        assertTrue(release, "manifestPlaceholders[\"openRouterCallbackPath\"] = \"/auth/openrouter/\"" in release)
+        assertTrue(debug, "\"OPENROUTER_CALLBACK\", \"\\\"$DEBUG_CALLBACK\\\"\")" in debug)
+        assertTrue(debug, "manifestPlaceholders[\"openRouterCallbackPath\"] = \"/auth/openrouter/debug/\"" in debug)
     }
 
     @Test
@@ -57,7 +79,8 @@ class OpenRouterAppLinkTest {
         assertEquals("true", filter.getAttribute("android:autoVerify"))
         assertEquals(".MainActivity", (filter.parentNode as Element).getAttribute("android:name"))
         assertEquals(listOf("sleevesight.app"), filter.data("android:host"))
-        assertEquals(listOf("/auth/openrouter/"), filter.data("android:path"))
+        // Each build type's own path (`app/build.gradle.kts`); the test above checks what it becomes.
+        assertEquals(listOf("\${openRouterCallbackPath}"), filter.data("android:path"))
         assertEquals(listOf("https"), filter.data("android:scheme"))
     }
 
@@ -104,10 +127,16 @@ class OpenRouterAppLinkTest {
         val include = config.indexOf("include:")
         assertTrue("_config.yml has no include:", include >= 0)
         assertEquals("  - .well-known", config[include + 1])
-        // The page a browser shows when the link opens there, at the callback's path.
-        val page = File("../auth/openrouter/index.html").readText()
+        // The page a browser shows when the link opens there, at each build's callback path.
+        listOf("../auth/openrouter/index.html", "../auth/openrouter/debug/index.html").forEach { path ->
+            assertTrue(path, "{% include openrouter-return.html " in File(path).readText())
+        }
+        val page = File("../_includes/openrouter-return.html").readText()
         assertTrue("Return to the Sleevesight app on your phone." in page)
         assertTrue("<meta name=\"referrer\" content=\"no-referrer\">" in page)
+        // No script at all, not even the site header's.
+        assertTrue("script-src 'none'" in page)
+        assertTrue("<script" !in page)
     }
 
     private fun Element.data(attribute: String): List<String> =
@@ -125,6 +154,9 @@ class OpenRouterAppLinkTest {
     private companion object {
         // `OpenRouterSignIn.CALLBACK` (`:ai`, which `:app` reaches only through `:wiring`).
         const val CALLBACK = "https://sleevesight.app/auth/openrouter/"
+
+        // `OpenRouterSignIn.DEBUG_CALLBACK`.
+        const val DEBUG_CALLBACK = "https://sleevesight.app/auth/openrouter/debug/"
         val FINGERPRINT = Regex("[0-9A-F]{2}(:[0-9A-F]{2}){31}")
     }
 }

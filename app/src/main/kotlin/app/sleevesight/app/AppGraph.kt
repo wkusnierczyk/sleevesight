@@ -384,7 +384,8 @@ class AppGraph internal constructor(
      */
     val openRouterLogin =
         OpenRouterLogin(
-            wiring.openRouterSignIn,
+            // The build's own callback (#1396): the debug build's differs from the release's.
+            wiring.openRouterSignIn(BuildConfig.OPENROUTER_CALLBACK),
             save = { key ->
                 saveAndSwitchOn(secrets, key) { settings.update { it.copy(aiProvider = ProviderId.OPENROUTER) } }
             },

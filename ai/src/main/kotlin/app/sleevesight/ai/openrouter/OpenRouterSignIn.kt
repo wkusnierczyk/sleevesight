@@ -41,15 +41,17 @@ import kotlin.io.encoding.Base64
  * @param hasher SHA-256, for the challenge.
  * @param random that many random bytes, from a cryptographically strong source, for the verifier.
  * @param baseUrl OpenRouter's origin, for tests.
+ * @param callback where OpenRouter returns: [CALLBACK] for the release build, [DEBUG_CALLBACK] for the
+ *   debug build, so that with both installed each sign-in returns to the build that began it, the
+ *   one holding its verifier.
  */
 class OpenRouterSignIn(
     private val net: NetClient,
     private val hasher: Hasher,
     private val random: (Int) -> ByteArray,
     private val baseUrl: String = OpenRouterProvider.BASE_URL,
+    override val callback: String = CALLBACK,
 ) : KeySignIn {
-    override val callback: String = CALLBACK
-
     override fun begin(): SignInStart {
         val verifier = BASE64URL.encode(random(VERIFIER_BYTES))
         val state = BASE64URL.encode(random(STATE_BYTES))
@@ -101,6 +103,12 @@ class OpenRouterSignIn(
          * takes (the manifest's intent filter, `autoVerify`), with a page of its own for a browser.
          */
         const val CALLBACK: String = "https://sleevesight.app/auth/openrouter/"
+
+        /**
+         * The debug build's own callback (`app.sleevesight.debug`, which installs beside the release):
+         * an App Link of its own, so the two never claim the same address.
+         */
+        const val DEBUG_CALLBACK: String = "https://sleevesight.app/auth/openrouter/debug/"
 
         /** The callback's parameter that carries the sign-in's state back. */
         const val STATE: String = "s"
