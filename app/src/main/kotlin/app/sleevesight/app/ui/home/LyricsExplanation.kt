@@ -74,12 +74,13 @@ internal fun AiExplanation(
         val seeNote = stringResource(R.string.home_cite_see_note)
         val text =
             explanationText(runs, byId, ExplanationLooks(chips, flagged, note, marked)) { id -> byId[id]?.let(open) }
+        val exported = remember(text) { withoutIsolates(text) }
         Text(
             text,
             style = citedTextStyle(MaterialTheme.typography.bodyLarge),
             modifier =
                 Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
-                    this.text = withoutIsolates(text)
+                    this.text = exported
                     contentDescription = spoken
                     customActions =
                         byId.values.distinctBy { it.shown }.take(MAX_PAGE_ACTIONS).map { cited ->

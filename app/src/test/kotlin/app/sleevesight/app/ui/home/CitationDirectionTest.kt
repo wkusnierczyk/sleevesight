@@ -171,17 +171,17 @@ class CitationDirectionTest {
             compose.waitForIdle()
             val nodes =
                 listOf(
-                    compose.onNodeWithTag(LYRICS_EXPLANATION_TAG),
-                    compose.onAllNodes(hasText("song for the road", substring = true))[1],
-                    compose.onNodeWithTag(KEY_AUTHORS_TAG),
+                    compose.onNodeWithTag(LYRICS_EXPLANATION_TAG) to "S2",
+                    compose.onAllNodes(hasText("song for the road", substring = true))[1] to "S2",
+                    compose.onNodeWithTag(KEY_AUTHORS_TAG) to "MB2",
                 )
-            for (node in nodes) {
+            for ((node, id) in nodes) {
                 // Drawn with isolates round each chip's id; exported without them, the ids still there.
                 val drawn = layout(node).layoutInput.text.text
                 assertTrue(drawn, '\u2068' in drawn)
                 val said = exported(scenario, node)
                 assertFalse(said, '\u2068' in said || '\u2069' in said)
-                assertTrue(said, "S2" in said || "MB2" in said)
+                assertTrue(said, "\u2009$id\u2009" in said)
             }
         }
     }

@@ -31,7 +31,10 @@ internal fun citeLabel(shownAs: String): String = " $FIRST_STRONG_ISOLATE$show
 /**
  * [text] without its chips' isolates ([citeLabel]), its styles, links and annotations kept on the
  * same characters: the text a paragraph with chips exports to accessibility services (#1350), which
- * would otherwise hand them the drawn text, isolates and all.
+ * would otherwise hand them the drawn text, isolates and all. Its offsets are the drawn text's less
+ * the isolates before them, so a service that asks where a character is drawn (Select to Speak's
+ * word highlight, by the layout) is off by up to two characters for each chip before it; the screen
+ * reader itself reads the paragraph's content description.
  */
 internal fun withoutIsolates(text: AnnotatedString): AnnotatedString {
     if (text.none(::isIsolate)) return text
@@ -52,6 +55,8 @@ internal fun withoutIsolates(text: AnnotatedString): AnnotatedString {
             when (val link = range.item) {
                 is LinkAnnotation.Clickable -> addLink(link, start, end)
                 is LinkAnnotation.Url -> addLink(link, start, end)
+                // Compose (1.12.1) has no other kind; one added later would show here as no link.
+                else -> Unit
             }
             // A link's look as a span too, as the text's own semantics carry it.
             val look = range.item.styles?.style
