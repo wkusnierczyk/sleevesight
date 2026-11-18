@@ -83,9 +83,9 @@ class LegacyModelCitationTest {
                     .fetchSemanticsNode()
                     .config[SemanticsProperties.Text]
                     .first { "It is loved" in it.text }
-            val spans = prose.spanStyles.map { prose.text.substring(it.start, it.end) }
-            assertEquals("no M chip: $spans", 0, spans.count { it == citeLabel("M") })
-            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end) == citeLabel("AI") }
+            val spans = prose.spanStyles.map { prose.text.substring(it.start, it.end).trim() }
+            assertEquals("no M chip: $spans", 0, spans.count { it == "M" })
+            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "AI" }
             assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
             node.assert(
                 SemanticsMatcher.expectValue(
@@ -122,9 +122,9 @@ class LegacyModelCitationTest {
                     .fetchSemanticsNode()
                     .config[SemanticsProperties.Text]
                     .first { "It went gold" in it.text }
-            val spans = prose.spanStyles.map { prose.text.substring(it.start, it.end) }
-            assertEquals("no G1 chip: $spans", 0, spans.count { it == citeLabel("G1") })
-            assertEquals("one S1 chip: $spans", 1, spans.count { it == citeLabel("S1") })
+            val spans = prose.spanStyles.map { prose.text.substring(it.start, it.end).trim() }
+            assertEquals("no G1 chip: $spans", 0, spans.count { it == "G1" })
+            assertEquals("one S1 chip: $spans", 1, spans.count { it == "S1" })
             // Read as a line's citation, not as one of no line.
             node.assert(
                 SemanticsMatcher.expectValue(

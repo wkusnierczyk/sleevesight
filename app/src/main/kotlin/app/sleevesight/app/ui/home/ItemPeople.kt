@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -262,6 +263,7 @@ internal fun AuthorsLine(
         line,
         Modifier.testTag(KEY_AUTHORS_TAG).semantics {
             if (cite != null && source != null) {
+                text = withoutIsolates(line)
                 contentDescription = "$label $names ($source)"
                 customActions =
                     listOf(

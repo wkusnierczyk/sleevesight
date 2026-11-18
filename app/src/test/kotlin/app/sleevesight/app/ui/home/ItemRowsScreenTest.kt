@@ -418,7 +418,7 @@ class ItemRowsScreenTest {
             // Shown, and read, by the id Sources shows the line under: W2, not the insight's own W1.
             val prose = compose.onNodeWithText("tenth album", substring = true).performScrollTo().fetchSemanticsNode()
             val text = prose.config[SemanticsProperties.Text].joinToString { it.text }
-            assertTrue(text, citeLabel("W2") in text && "W1" !in text)
+            assertTrue(text, "\u2009W2\u2009" in text && "W1" !in text)
             val spoken = prose.config[SemanticsProperties.ContentDescription].single()
             assertTrue(spoken, app.getString(R.string.home_cite, "W2") in spoken)
             compose.onNodeWithText("tenth album", substring = true).performScrollTo().performFirstLinkClick {

@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -170,6 +171,7 @@ private fun Prose(
 ) {
     val resources = LocalResources.current
     val outlined = remember(prose.text) { outlinedChips(prose.text) }
+    val shown = remember(prose.text) { withoutIsolates(prose.text) }
     val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
     val ink = MaterialTheme.colorScheme.onSurfaceVariant
     Text(
@@ -178,6 +180,7 @@ private fun Prose(
         onTextLayout = { layout.value = it },
         modifier =
             Modifier.drawChipOutlines(outlined, layout, ink).semantics {
+                text = shown
                 contentDescription = prose.spoken
                 // Each line's, then the note's on the dimmed text (#954).
                 val note =

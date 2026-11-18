@@ -1,14 +1,16 @@
 package app.sleevesight.app.ui.home
 
+import android.view.View
+import android.view.ViewGroup
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -16,14 +18,19 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.children
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.core.pipeline.ArtistSplit
+import app.sleevesight.core.pipeline.AuthorsName
 import app.sleevesight.core.synthesis.CitedPage
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.SearchAnswer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -81,13 +88,8 @@ class CitationDirectionTest {
 
     // The text's full stop, on the line of the last chip, to the right of its id's last letter.
     private fun assertStopAfterLastChip(node: SemanticsNodeInteraction) {
-        val text =
-            node
-                .fetchSemanticsNode()
-                .config[SemanticsProperties.Text]
-                .first()
-                .text
         val layout = layout(node)
+        val text = layout.layoutInput.text.text
         val stop = text.lastIndexOf('.')
         val lastId = text.lastIndexOf("S2") + 1
         assertEquals(layout.getLineForOffset(lastId), layout.getLineForOffset(stop))
@@ -112,18 +114,85 @@ class CitationDirectionTest {
         }
     }
 
+    // The text [node] exports to accessibility services: its `AccessibilityNodeInfo`'s, as the
+    // Compose view's accessibility provider builds it.
+    private fun exported(
+        scenario: ActivityScenario<MainActivity>,
+        node: SemanticsNodeInteraction,
+    ): String {
+        val id = node.fetchSemanticsNode().id
+        var text: CharSequence? = null
+        scenario.onActivity { activity ->
+            val view = composeView(activity.window.decorView)
+            val provider = ViewCompat.getAccessibilityDelegate(view)!!.getAccessibilityNodeProvider(view)!!
+            text = provider.createAccessibilityNodeInfo(id)!!.text
+        }
+        return text.toString()
+    }
+
+    private fun composeView(view: View): View =
+        if (view is AbstractComposeView || view.javaClass.simpleName == "AndroidComposeView") {
+            if (view is ViewGroup &&
+                view.childCount > 0 &&
+                view is AbstractComposeView
+            ) {
+                composeView(view.getChildAt(0))
+            } else {
+                view
+            }
+        } else {
+            (view as ViewGroup).children.firstNotNullOf { child -> runCatching { composeView(child) }.getOrNull() }
+        }
+
+    @Test
+    fun accessibilityServicesGetTheTextWithoutTheChipsIsolates() {
+        val written = grounded(english)
+        val authors =
+            ArtistSplit(
+                listOf("Giacomo Puccini"),
+                emptyList(),
+                "Luciano Pavarotti",
+                emptyList(),
+                AuthorsName.COMPOSER,
+                true,
+            )
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    SleevesightTheme(darkTheme = false) {
+                        Column {
+                            AiExplanation(SearchAnswer.Explanation(written, pages))
+                            CheckedProse(written.paragraphs.single(), written, null, {})
+                            AuthorsLine(authors, cite = "MB2")
+                        }
+                    }
+                }
+            }
+            compose.waitForIdle()
+            val nodes =
+                listOf(
+                    compose.onNodeWithTag(LYRICS_EXPLANATION_TAG),
+                    compose.onAllNodes(hasText("song for the road", substring = true))[1],
+                    compose.onNodeWithTag(KEY_AUTHORS_TAG),
+                )
+            for (node in nodes) {
+                // Drawn with isolates round each chip's id; exported without them, the ids still there.
+                val drawn = layout(node).layoutInput.text.text
+                assertTrue(drawn, '\u2068' in drawn)
+                val said = exported(scenario, node)
+                assertFalse(said, '\u2068' in said || '\u2069' in said)
+                assertTrue(said, "S2" in said || "MB2" in said)
+            }
+        }
+    }
+
     @Test
     fun aRightToLeftExplanationKeepsItsChipsInItsReadingOrder() {
         val hebrew = grounded("השיר עוסק בדרך. [S1] [S2]")
         show(LayoutDirection.Ltr, { AiExplanation(SearchAnswer.Explanation(hebrew, pages)) }) {
             val node = compose.onNodeWithTag(LYRICS_EXPLANATION_TAG)
-            val text =
-                node
-                    .fetchSemanticsNode()
-                    .config[SemanticsProperties.Text]
-                    .first()
-                    .text
             val layout = layout(node)
+            val text = layout.layoutInput.text.text
             // Read right to left, the first chip comes first: to the right of the second.
             val first = layout.getBoundingBox(text.indexOf("S1")).left
             val second = layout.getBoundingBox(text.indexOf("S2")).right

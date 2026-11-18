@@ -58,7 +58,7 @@ class InsightLineBreaksTest {
     }
 
     // A citation's chip as the card's text holds it, its id between thin spaces.
-    private fun chip(id: String) = citeLabel(id)
+    private fun chip(id: String) = "\u2009$id\u2009"
 
     // The text of the paragraph that holds [part], its citations as their chips' labels.
     private fun paragraph(part: String): String =
@@ -74,7 +74,7 @@ class InsightLineBreaksTest {
             assertEquals(
                 // The uncited item ends with its `?` chip (#954).
                 "It was recorded ${chip("MB1")}.\nIt topped the charts ${chip("W1")}.\n" +
-                    "It is great\u2060\u00A0$UNBACKED_LABEL.",
+                    "It is great\u2060\u00A0${chip("?")}.",
                 paragraph("It was recorded"),
             )
         }

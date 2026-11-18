@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -71,11 +72,14 @@ internal fun AiExplanation(
     WithUnbackedNote {
         val note = LocalNoteFocus.current?.takeIf { dimmed }
         val seeNote = stringResource(R.string.home_cite_see_note)
+        val text =
+            explanationText(runs, byId, ExplanationLooks(chips, flagged, note, marked)) { id -> byId[id]?.let(open) }
         Text(
-            explanationText(runs, byId, ExplanationLooks(chips, flagged, note, marked)) { id -> byId[id]?.let(open) },
+            text,
             style = citedTextStyle(MaterialTheme.typography.bodyLarge),
             modifier =
                 Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
+                    this.text = withoutIsolates(text)
                     contentDescription = spoken
                     customActions =
                         byId.values.distinctBy { it.shown }.take(MAX_PAGE_ACTIONS).map { cited ->

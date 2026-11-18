@@ -1,6 +1,9 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDirection
 
 // Citation chips in text of either direction (#1350): the paragraph takes its own text's direction,
@@ -15,8 +18,8 @@ internal fun citedTextStyle(base: TextStyle): TextStyle = base.copy(textDirectio
 
 // A citation's id set apart from the text round it (#1350): its direction is its own first strong
 // letter's, and it takes no part in how the paragraph orders the text either side of it.
-private const val FIRST_STRONG_ISOLATE = "\u2068"
-private const val POP_DIRECTIONAL_ISOLATE = "\u2069"
+private const val FIRST_STRONG_ISOLATE = '\u2068'
+private const val POP_DIRECTIONAL_ISOLATE = '\u2069'
 
 /**
  * A citation chip's text: [shownAs] between thin spaces, isolated (#1350) with its spaces outside, so
@@ -24,3 +27,37 @@ private const val POP_DIRECTIONAL_ISOLATE = "\u2069"
  * chips side by side keep their order.
  */
 internal fun citeLabel(shownAs: String): String = " $FIRST_STRONG_ISOLATE$shownAs$POP_DIRECTIONAL_ISOLATE "
+
+/**
+ * [text] without its chips' isolates ([citeLabel]), its styles, links and annotations kept on the
+ * same characters: the text a paragraph with chips exports to accessibility services (#1350), which
+ * would otherwise hand them the drawn text, isolates and all.
+ */
+internal fun withoutIsolates(text: AnnotatedString): AnnotatedString {
+    if (text.none(::isIsolate)) return text
+    // Each offset of [text] as an offset of the text without them.
+    val at = IntArray(text.length + 1)
+    for (i in text.indices) at[i + 1] = at[i] + if (isIsolate(text[i])) 0 else 1
+    return buildAnnotatedString {
+        append(text.text.filterNot(::isIsolate))
+        text.spanStyles.forEach { addStyle(it.item, at[it.start], at[it.end]) }
+        text.paragraphStyles.forEach { addStyle(it.item, at[it.start], at[it.end]) }
+        text
+            .getStringAnnotations(
+                0,
+                text.length,
+            ).forEach { addStringAnnotation(it.tag, it.item, at[it.start], at[it.end]) }
+        text.getLinkAnnotations(0, text.length).forEach { range ->
+            val (start, end) = at[range.start] to at[range.end]
+            when (val link = range.item) {
+                is LinkAnnotation.Clickable -> addLink(link, start, end)
+                is LinkAnnotation.Url -> addLink(link, start, end)
+            }
+            // A link's look as a span too, as the text's own semantics carry it.
+            val look = range.item.styles?.style
+            if (look != null) addStyle(look, start, end)
+        }
+    }
+}
+
+private fun isIsolate(c: Char): Boolean = c == FIRST_STRONG_ISOLATE || c == POP_DIRECTIONAL_ISOLATE
