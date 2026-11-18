@@ -11,3 +11,9 @@ defaults:
       path: docs
     values:
       layout: docs
+# The App Links statement (#1396): Jekyll leaves out dot folders unless named here, and Android reads
+# `/.well-known/assetlinks.json` to open the OpenRouter sign-in's return
+# (`auth/openrouter/index.html`) in the app. GitHub Pages serves it as `application/json`, by its
+# extension, with no redirect, as Android requires.
+include:
+  - .well-known

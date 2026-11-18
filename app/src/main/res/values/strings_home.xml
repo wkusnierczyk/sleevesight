@@ -689,7 +689,7 @@
     <string name="home_insight_failed_retry">Writing failed: %1$s. Tap Write insight to try again, as a new call.</string>
     <!-- With OpenRouter on (#1157), in place of the lines above when it refused the key: %1$s is
          home_settings_ai_services_link, a link that opens Settings at AI services. -->
-    <string name="home_openrouter_unauthorized">Writing failed: OpenRouter did not accept the key; it may have been deleted there. Set a new key in %1$s.</string>
+    <string name="home_openrouter_unauthorized">Writing failed: OpenRouter did not accept the key; it may have been deleted there. Sign in again in %1$s.</string>
     <!-- With OpenRouter on (#1157), in place of the lines above when the account or key has no credit
          left: %1$s is home_openrouter_credit_link, a link that opens OpenRouter's credits page. -->
     <string name="home_openrouter_billing">Writing failed: your OpenRouter account needs credit, or the key has reached its spending limit. %1$s</string>
