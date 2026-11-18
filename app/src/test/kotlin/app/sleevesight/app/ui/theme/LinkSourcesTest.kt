@@ -8,7 +8,7 @@ import java.io.File
 /**
  * Every link in the app is made in `Accents.kt` (#442), by `LinkedText` or `LinkLabel`, so none
  * takes another look or loses its line: the app's sources make no link, link style or underline
- * anywhere else, the citations' chips aside. A line struck through (as a
+ * anywhere else, the citations' chips aside (and their copies without isolates, #1350). A line struck through (as a
  * hidden source's filter chip's name was, #623, before *Sources*' table, #662) is neither, and is
  * let through.
  */
@@ -31,6 +31,13 @@ class LinkSourcesTest {
                 .readLines()
                 .map(String::trim)
         assertEquals(emptyList<String>(), CITATIONS.filter { it !in citations })
+        val direction =
+            File("src/main/kotlin")
+                .walk()
+                .single { it.name == "CiteDirection.kt" }
+                .readLines()
+                .map(String::trim)
+        assertEquals(emptyList<String>(), CITE_DIRECTION.filter { it !in direction })
     }
 
     @Test
@@ -79,6 +86,7 @@ class LinkSourcesTest {
             )
         for (source in fine) assertEquals(source, emptyList<String>(), violations("Example.kt", source))
         for (line in CITATIONS) assertEquals(line, emptyList<String>(), violations("Citations.kt", line))
+        for (line in CITE_DIRECTION) assertEquals(line, emptyList<String>(), violations("CiteDirection.kt", line))
     }
 
     private companion object {
@@ -117,6 +125,17 @@ class LinkSourcesTest {
                 "withLink(link) { append(label) }",
             )
 
+        /**
+         * The lines that copy the chips' links, unchanged, into their text without isolates
+         * (`withoutIsolates`, #1350): these lines as they are, and no other.
+         */
+        val CITE_DIRECTION =
+            listOf(
+                "import androidx.compose.ui.text.LinkAnnotation",
+                "is LinkAnnotation.Clickable -> addLink(link, start, end)",
+                "is LinkAnnotation.Url -> addLink(link, start, end)",
+            )
+
         /** A strike-through, and the plain import of what makes it, which make no link (#623). */
         val STRUCK = Regex("""\bTextDecoration\.LineThrough\b""")
         const val DECORATION_IMPORT = "import androidx.compose.ui.text.style.TextDecoration"
@@ -129,7 +148,13 @@ class LinkSourcesTest {
             source.lines().withIndex().mapNotNull { (i, line) ->
                 val checked = if (line.trim() == DECORATION_IMPORT) "" else line.replace(STRUCK, "")
                 val made = MADE.containsMatchIn(checked) || IMPORTED.containsMatchIn(checked)
-                val excepted = name == "Citations.kt" && line.trim() in CITATIONS
+                val allowed =
+                    when (name) {
+                        "Citations.kt" -> CITATIONS
+                        "CiteDirection.kt" -> CITE_DIRECTION
+                        else -> emptyList()
+                    }
+                val excepted = line.trim() in allowed
                 "$name:${i + 1}: ${line.trim()}".takeIf { made && !excepted }
             }
     }
