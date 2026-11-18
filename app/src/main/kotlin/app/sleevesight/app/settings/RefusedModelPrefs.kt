@@ -1,7 +1,6 @@
 package app.sleevesight.app.settings
 
 import android.content.Context
-import androidx.core.content.edit
 import app.sleevesight.app.pipeline.ModelRefusal
 import app.sleevesight.app.pipeline.RefusedModelStore
 import app.sleevesight.app.pipeline.RefusedModels
@@ -30,15 +29,18 @@ class RefusedModelPrefs(
                 kept.takeIf { it.isNotEmpty() }?.let { provider to it }
             }.toMap()
 
-    override fun save(refused: RefusedModels) {
-        prefs.edit {
-            clear()
-            for ((provider, models) in refused) {
-                val entries = models.map { (id, how) -> "${how.name}$SEP$id" }.toSet()
-                if (entries.isNotEmpty()) putStringSet(provider.name, entries)
-            }
-        }
-    }
+    // Written to the file before it returns (`commit`), saying whether it was: a key is written
+    // only once what was refused with the one it replaces is gone from here (#1425).
+    override fun save(refused: RefusedModels): Boolean =
+        prefs
+            .edit()
+            .clear()
+            .apply {
+                for ((provider, models) in refused) {
+                    val entries = models.map { (id, how) -> "${how.name}$SEP$id" }.toSet()
+                    if (entries.isNotEmpty()) putStringSet(provider.name, entries)
+                }
+            }.commit()
 
     private companion object {
         const val PREFS = "refused_models"

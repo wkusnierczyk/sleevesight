@@ -64,6 +64,9 @@ enum class SecretId(
     EXA("source.exa", KeyName.EXA),
     ;
 
+    /** The AI service this key is for, or null for a source's. */
+    val provider: ProviderId? get() = ProviderId.entries.firstOrNull { forProvider(it) == this }
+
     companion object {
         /** The key a setup code names [name]. */
         fun of(name: KeyName): SecretId = entries.first { it.keyName == name }
@@ -95,6 +98,43 @@ enum class SecretId(
         fun forEngine(engine: WebEngine): SecretId =
             when (engine) {
                 WebEngine.EXA -> EXA
+            }
+    }
+}
+
+/**
+ * Told of each change of a key made through [SecretStore] (#1425), in its write lock, so one change
+ * at a time: [before] the key is written, and [after], whether or not it was. These are the only
+ * ways a key changes; a read never tells anything.
+ */
+interface KeyEdits {
+    /**
+     * The keys [ids] are about to be written: what was learnt with the keys they hold is forgotten,
+     * durably, before this returns, so a write that lands is never followed by it, even across a
+     * crash. A write that then fails has forgotten it all the same, which costs nothing. False when
+     * it could not be forgotten durably: a key saved is then not written ([SecretStore.set]).
+     */
+    suspend fun before(ids: Set<SecretId>): Boolean
+
+    /**
+     * The write of [ids] ended: [now] holds each key written, with what it holds now (null for none);
+     * one of [ids] not in it was not written, or it is not known whether it was.
+     */
+    fun after(
+        ids: Set<SecretId>,
+        now: Map<SecretId, Secret?>,
+    )
+
+    companion object {
+        /** Tells no one: for tests and previews. */
+        val NONE: KeyEdits =
+            object : KeyEdits {
+                override suspend fun before(ids: Set<SecretId>) = true
+
+                override fun after(
+                    ids: Set<SecretId>,
+                    now: Map<SecretId, Secret?>,
+                ) = Unit
             }
     }
 }
@@ -165,7 +205,8 @@ enum class SecretState {
  * the caller's (the screen's main thread); so do DataStore's reads and writes (#1107), whose first
  * read from DataStore 1.3 would otherwise take the store's init lock on the caller's dispatcher.
  * Saves, removals and resets run one at a time. One that fails, in the key store or in DataStore,
- * says so in what it returns rather than throwing.
+ * says so in what it returns rather than throwing. Each write of a key is told to [edits], before
+ * and after it (#1425).
  */
 class SecretStore(
     private val dataStore: DataStore<Preferences>,
@@ -173,6 +214,7 @@ class SecretStore(
     private val legacyKeystore: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val servicesOff: suspend (Set<SecretId>) -> Boolean = { true },
+    private val edits: KeyEdits = KeyEdits.NONE,
 ) {
     private val data: Flow<Preferences> =
         dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -291,13 +333,16 @@ class SecretStore(
                 // No key found, and none may be made because the file could not be read: storage.
                 sealed == null && stored == null -> SaveResult.NOT_WRITTEN
                 sealed == null -> SaveResult.NOT_SEALED
-                write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) } -> SaveResult.SAVED
+                edits.around(setOf(id), secret, required = true) {
+                    write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) }
+                } -> SaveResult.SAVED
                 else -> SaveResult.NOT_WRITTEN
             }
         }
 
     /** Removes the key [id]. False when DataStore could not write. */
-    suspend fun clear(id: SecretId): Boolean = writes.withLock { write { it.remove(keyOf(id)) } }
+    suspend fun clear(id: SecretId): Boolean =
+        writes.withLock { edits.around(setOf(id), null) { write { it.remove(keyOf(id)) } } }
 
     /**
      * *Purge keys*: removes every saved key and deletes the Keystore
@@ -323,9 +368,17 @@ class SecretStore(
     suspend fun reset(): ResetResult =
         writes.withLock {
             try {
-                val removed = write { prefs -> SecretId.entries.forEach { prefs.remove(keyOf(it)) } }
-                val deleted = withContext(dispatcher) { cipher.deleteKey() }
-                if (deleted) servicesOff(SecretId.entries.toSet())
+                val all = SecretId.entries.toSet()
+                var removed = false
+                var deleted = false
+                // Told ended only once both steps are done: until then, an old key may still read. A
+                // key left unreadable holds none, as one removed does.
+                edits.around(all, null) {
+                    removed = write { prefs -> all.forEach { prefs.remove(keyOf(it)) } }
+                    deleted = withContext(dispatcher) { cipher.deleteKey() }
+                    removed || deleted
+                }
+                if (deleted) servicesOff(all)
                 ResetResult(removed, deleted, statesNow())
             } finally {
                 resets.update { it + 1 }
@@ -407,4 +460,26 @@ class SecretStore(
         /** Binds a sealed value to its entry: one copied to another entry does not open. */
         private fun associated(id: SecretId): ByteArray = "sleevesight:${id.storageName}".encodeToByteArray()
     }
+}
+
+/**
+ * [change], a write of the keys [ids] that says whether it was written, told [KeyEdits.before] and
+ * [KeyEdits.after] it, whatever happens; each key written then holds [key] (null for none). When
+ * [required], nothing is written unless [KeyEdits.before] forgot what it must: a key saved must
+ * never find what was learnt with the one it replaced. A removal or a reset goes ahead all the
+ * same, since what is kept then belongs to no key, and the next save forgets it before it writes.
+ */
+private suspend fun KeyEdits.around(
+    ids: Set<SecretId>,
+    key: Secret?,
+    required: Boolean = false,
+    change: suspend () -> Boolean,
+): Boolean {
+    var written = false
+    try {
+        if (before(ids) || !required) written = change()
+    } finally {
+        after(ids, if (written) ids.associateWith { key } else emptyMap())
+    }
+    return written
 }
