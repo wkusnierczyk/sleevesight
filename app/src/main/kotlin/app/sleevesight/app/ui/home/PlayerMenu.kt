@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -132,6 +133,7 @@ private fun PlayersList(
     apps: PlayerApps,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val followed by feed.followed.collectAsState()
     val settings by feed.settings.collectAsState()
     val listed = settings?.let { menuPlayers(it, apps) }.orEmpty()
@@ -149,7 +151,7 @@ private fun PlayersList(
                 if (other.packageName in followed) {
                     feed.follow(other.packageName)
                 } else if (!openPlayer(context, null, other.launch)) {
-                    val none = context.getString(R.string.home_player_no_screen, other.name)
+                    val none = resources.getString(R.string.home_player_no_screen, other.name)
                     Toast.makeText(context, none, Toast.LENGTH_SHORT).show()
                 }
             }
