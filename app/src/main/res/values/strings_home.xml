@@ -713,6 +713,9 @@
          (#540): the service, the model's name, and home_model_unavailable_place, a link to the
          settings. -->
     <string name="home_model_unavailable">The currently selected %1$s model %2$s is not available. Please select another model or provider in %3$s.</string>
+    <!-- As home_model_unavailable, when a call found the model refused (#970). -->
+    <string name="home_model_no_longer_served">The currently selected %1$s model %2$s is no longer served. Please select another model or provider in %3$s.</string>
+    <string name="home_model_refused_account">The currently selected %1$s model %2$s is refused for your account. Please select another model or provider in %3$s.</string>
     <string name="home_model_unavailable_place">AI services</string>
     <string name="home_insight_no_evidence">The sources give nothing to write an insight from.</string>
     <!-- %1$s: why, as failureText says it. The second with Write insight offered again (#625). -->

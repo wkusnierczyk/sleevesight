@@ -18,6 +18,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.memorySettings
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
@@ -92,7 +93,7 @@ class SettingsIndexTest {
                             KeysShown(emptyMap(), offerReset = false),
                             emptyList(),
                             { "Model $it" },
-                            mapOf(ProviderId.ANTHROPIC to gone),
+                            mapOf(ProviderId.ANTHROPIC to UnavailableModel(ProviderId.ANTHROPIC, gone)),
                         )
                 }
             }
