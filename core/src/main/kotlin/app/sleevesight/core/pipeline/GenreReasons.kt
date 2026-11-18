@@ -154,7 +154,7 @@ class GenreReasons(
         asBroader: Boolean = false,
     ): ReasonPath {
         val key = key(track, genre, settings, listed)
-        val own = track.genres.everyLabel.any { it.genre.identity == genre }
+        val own = track.genres.openable.any { it.genre.identity == genre }
         // A broader genre (#1127), opened as one or the track's only through another genre: asked only
         // as a source other than MusicBrainz allows it, never through the AI's list.
         val guarded = asBroader || !own
@@ -182,14 +182,14 @@ class GenreReasons(
     ): Boolean {
         fun own(identity: String) = prompted(track, identity) || listed?.contains(identity) == true
         return own(genre) ||
-            track.genres.everyLabel.any { broader(it.genre.identity) == genre && own(it.genre.identity) }
+            track.genres.openable.any { broader(it.genre.identity) == genre && own(it.genre.identity) }
     }
 
     // Whether [genre] is the broader genre (#1127) of one of [track]'s genres.
     private fun broadens(
         track: TrackState,
         genre: String,
-    ): Boolean = track.genres.everyLabel.any { broader(it.genre.identity) == genre }
+    ): Boolean = track.genres.openable.any { broader(it.genre.identity) == genre }
 
     // The AI service, when one with a model is ready under [settings] and [track]'s evidence is in;
     // what [key] and [path] ask for besides the genre's sources.
@@ -576,7 +576,7 @@ class GenreReasons(
     ): Set<String> {
         val genre = alone(key).subject ?: return emptySet()
         val label =
-            track.genres.everyLabel
+            track.genres.openable
                 .firstOrNull { it.genre.identity == genre }
                 ?.genre
                 ?.label
@@ -654,7 +654,9 @@ class GenreReasons(
         ): Boolean =
             track.genres.described.any { row -> row.labels.any { it.genre.identity == genre } } ||
                 track.genres.rows
-                    .flatMap { it.labels }
+                    // A label past the row's cap (#1281) too, as the question's genre alone: what lists
+                    // the track's genres for a prompt reads the rows' labels, never their extras.
+                    .flatMap { it.labels + it.extras }
                     .any { label ->
                         label.genre.identity == genre &&
                             (

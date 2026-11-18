@@ -100,7 +100,7 @@ internal fun GenreAbout(
         notes.reason(asked, genre)
     }.collectAsState(GenreReason.None)
     val named =
-        track.genres.everyLabel
+        track.genres.openable
             .firstOrNull { it.genre.identity == genre }
             ?.genre ?: return
     // Its broader genre (#1127), opened in its place by the line under the definition, until *Back*;

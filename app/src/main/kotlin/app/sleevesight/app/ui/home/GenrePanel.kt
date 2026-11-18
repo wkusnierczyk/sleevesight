@@ -18,9 +18,10 @@ import app.sleevesight.core.pipeline.TrackState
 
 /**
  * The panel of [genre] on the genres' page under *Separate pages* (#558, #772): its name as a heading,
- * with no *Close* (the page's back arrow closes it), over its body ([GenreBody]). Nothing when no
- * row has [genre].
+ * with no *Close* (the page's back arrow closes it), over its body ([GenreBody]), with each row's
+ * [extras] while they show (#1281). Nothing when no row has [genre].
  */
+@Suppress("LongParameterList") // As [GenreBody]'s.
 @Composable
 internal fun GenrePanel(
     track: TrackState,
@@ -28,14 +29,15 @@ internal fun GenrePanel(
     notes: PanelNotes = PanelNotes(),
     search: PanelSearch = PanelSearch(),
     afterRetry: () -> Unit = {},
+    extras: Boolean = false,
 ) {
     val name =
-        track.genres.everyLabel
+        track.genres.openable
             .firstOrNull { it.genre.identity == genre }
             ?.genre
             ?.label ?: return
     Panel(AnnotatedString(name), GENRE_PANEL_TAG, onClose = null) {
-        GenreBody(track, genre, notes, search, afterRetry)
+        GenreBody(track, genre, notes, search, afterRetry, extras = extras)
     }
 }
 
@@ -45,7 +47,9 @@ internal fun GenrePanel(
  * ([search]; [GenreAbout], whose failed lookup's *Retry* hands the focus to [afterRetry]); then its
  * tags and their sources ([TagsGrid]). Unfolded under *Genres*' chips on Home ([GenresBox]), with no
  * heading of its own; in a panel titled with its name on the genres' page ([GenrePanel]). [modifier]
- * goes on its column (a test tag). Nothing when no row has [genre].
+ * goes on its column (a test tag). [extras]: whether the rows' genres past their cap show (#1281,
+ * *Show more*), each row's after its five in [TagsGrid]. Nothing when no row has [genre], within its
+ * cap or past it.
  */
 @Suppress("LongParameterList") // What the body shows, where its notes and search come from, and the focus.
 @Composable
@@ -56,12 +60,13 @@ internal fun GenreBody(
     search: PanelSearch,
     afterRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    extras: Boolean = false,
 ) {
-    if (track.genres.everyLabel.none { it.genre.identity == genre }) return
+    if (track.genres.openable.none { it.genre.identity == genre }) return
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // What the genre is, and *Why is this …?* (#523), above the tags.
         GenreAbout(track, genre, notes, search, afterRetry)
-        TagsGrid(track, genre, notes.onCite, notes.lines)
+        TagsGrid(track, genre, notes.onCite, notes.lines, extras)
     }
 }
 

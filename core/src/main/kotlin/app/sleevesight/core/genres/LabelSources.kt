@@ -129,7 +129,15 @@ val LABEL_TIE_ORDER: List<LabelSource> = listOf(LabelSource.LASTFM, LabelSource.
  * the sources switched on; the order it is given in does not matter.
  */
 
-fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel> {
+fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel> =
+    rankLabels(bySource).take(GenreVocabulary.MAX_LABELS)
+
+/**
+ * Every label of [bySource], combined and weighed as [combineLabels] weighs them, in that order, with
+ * no cap: the first [GenreVocabulary.MAX_LABELS] are a row's labels, the rest its extras, of weaker
+ * evidence (#1281, [GenreRow.extras]).
+ */
+fun rankLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel> {
     val combined = mutableListOf<TrackLabel>()
     val weights = mutableMapOf<String, Double>()
     for (source in LABEL_TIE_ORDER) {
@@ -155,7 +163,7 @@ fun combineLabels(bySource: Map<LabelSource, List<GenreLabel>>): List<TrackLabel
             val weight = weights.getValue(label.genre.identity)
             val share = if (label.credits.all { it.source == LabelSource.MUSICBRAINZ }) MUSICBRAINZ_ALONE else 1.0
             (weight * share * WEIGHT_STEPS).roundToLong()
-        }.take(GenreVocabulary.MAX_LABELS)
+        }
 }
 
 // The share of its weight a genre counts at when every credit on the row's label is MusicBrainz's

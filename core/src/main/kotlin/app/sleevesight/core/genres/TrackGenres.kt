@@ -18,13 +18,17 @@ enum class GenreLevel {
  * One row of a track's genres: the labels of one [level], combined over the label sources
  * ([combineLabels]), at most [GenreVocabulary.MAX_LABELS]. An artist's row names its [artist], as
  * the track credits it; the track's and the album's name none. [described]: an artist's row of the
- * genres their description names (#1000, [TrackGenres.described]), not of their tags.
+ * genres their description names (#1000, [TrackGenres.described]), not of their tags. [extras]: the
+ * row's labels past the cap, of weaker evidence, in the order they weigh ([rankLabels], #1281): kept
+ * apart from [labels], so that what reads the rows for a prompt (the genres sent with a question)
+ * keeps the five, and shown only on a tap ([extraChips]).
  */
 data class GenreRow(
     val level: GenreLevel,
     val artist: String?,
     val labels: List<TrackLabel>,
     val described: Boolean = false,
+    val extras: List<TrackLabel> = emptyList(),
 )
 
 /**
@@ -333,8 +337,10 @@ data class TrackGenres(
      * too, whose line says more, else few votes; null when it is not weak, or no chip has it.
      */
     fun weakEvidence(identity: String): WeakEvidence? {
-        val chip = chips().firstOrNull { it.label.genre.identity == identity && it.weak } ?: return null
-        val few = fewVotes(chip, otherLevels())
+        val main = chips().firstOrNull { it.label.genre.identity == identity && it.weak }
+        // A genre past the rows' cap (#1281) is weak only as Instrumental is, never for its votes.
+        val chip = main ?: extraChips().firstOrNull { it.label.genre.identity == identity && it.weak } ?: return null
+        val few = main != null && fewVotes(chip, otherLevels())
         val mark: WeakEvidence? = if (few) null else statedAlone(chip) ?: libraryMark(chip)
         return signOfVocals(chip) ?: artistHint(chip) ?: mark ?: fewVotesOf(chip.label)
     }
@@ -492,7 +498,8 @@ data class TrackGenres(
                 .map { aiLabel(it, model) }
         val track = marked.firstOrNull { it.level == GenreLevel.TRACK }
         val room = GenreVocabulary.MAX_LABELS - track?.labels.orEmpty().size
-        val row = GenreRow(GenreLevel.TRACK, null, track?.labels.orEmpty() + added.take(room.coerceAtLeast(0)))
+        val labels = track?.labels.orEmpty() + added.take(room.coerceAtLeast(0))
+        val row = track?.copy(labels = labels) ?: GenreRow(GenreLevel.TRACK, null, labels)
         return TrackGenres(
             when {
                 added.isEmpty() || room <= 0 -> marked
@@ -520,6 +527,24 @@ data class TrackGenres(
     val everyLabel: List<TrackLabel>
         get() = (all + described.flatMap { it.labels }).distinctBy { it.genre.identity }
 
+    /**
+     * The genres past the rows' cap (#1281, [GenreRow.extras]), of weaker evidence: every row's
+     * extras, each genre once, in row order, none that [everyLabel] has (a genre past one row's five
+     * but among another's, or an artist's description's, is a chip already).
+     */
+    val extraLabels: List<TrackLabel>
+        get() {
+            val shown = everyLabel.map { it.genre.identity }.toSet()
+            return rows.flatMap { it.extras }.distinctBy { it.genre.identity }.filter { it.genre.identity !in shown }
+        }
+
+    /**
+     * Every genre a panel may open (#1281): [everyLabel], then the [extraLabels], shown on a tap;
+     * what a genre's panel, its name and its *Why is this …?* are found among. What weighs the
+     * track's genres (the check of its vocals, LRCLIB's mark) reads [everyLabel] alone.
+     */
+    val openable: List<TrackLabel> get() = everyLabel + extraLabels
+
     companion object {
         // [genre] as a track's label the AI's genre list by [model] gives, and no source (#762).
         private fun aiLabel(
@@ -545,11 +570,16 @@ data class TrackGenres(
          */
         const val INSTRUMENTAL: String = "instrumental"
 
-        // [rows] without Instrumental, a row left with no label dropped (#996).
+        // [rows] without Instrumental, a row left with no label dropped (#996); its extras (#1281) without
+        // it too, the first of them taking the room it leaves.
         internal fun withoutInstrumental(rows: List<GenreRow>): List<GenreRow> =
             rows
-                .map { row -> row.copy(labels = row.labels.filter { it.genre.identity != INSTRUMENTAL }) }
-                .filter { it.labels.isNotEmpty() }
+                .map { row ->
+                    // A row has extras only when full, so the cap is where its labels end.
+                    val left = (row.labels + row.extras).filter { it.genre.identity != INSTRUMENTAL }
+                    val cap = GenreVocabulary.MAX_LABELS
+                    row.copy(labels = left.take(cap), extras = left.drop(cap))
+                }.filter { it.labels.isNotEmpty() }
 
         /**
          * The chips' order of names where no other is given ([chips], #875): alphabetical, case
@@ -619,7 +649,7 @@ private fun TrackGenres.otherLevels(): Set<String> =
  * chip, with the track marked instrumental by MusicBrainz or found so by the check of its vocals, or
  * where the mark lifts nothing (a source's Instrumental with no sign against it stands as before).
  */
-private fun TrackGenres.libraryMark(placed: PlacedLabel): WeakEvidence.LibraryMark? {
+internal fun TrackGenres.libraryMark(placed: PlacedLabel): WeakEvidence.LibraryMark? {
     val instrumental = placed.label.genre.identity == TrackGenres.INSTRUMENTAL
     val lifts =
         placed.label.markedBy != null ||
@@ -733,13 +763,17 @@ fun combineGenres(
         listOf(GenreLevel.TRACK to null) + order.map { GenreLevel.ARTIST to it } + listOf(GenreLevel.ALBUM to null)
     val rows =
         keys.mapNotNull { (level, artist) ->
+            // Every label, weighed: the first five the row's, the rest its extras (#1281).
             val combined =
-                combineLabels(
+                rankLabels(
                     given.mapValues { (_, labels) ->
                         labels.filter { it.level == level && (level != GenreLevel.ARTIST || it.artist == artist) }
                     },
                 )
-            combined.takeIf { it.isNotEmpty() }?.let { GenreRow(level, artist, it) }
+            val labels = combined.take(GenreVocabulary.MAX_LABELS)
+            labels.takeIf { it.isNotEmpty() }?.let {
+                GenreRow(level, artist, it, extras = combined.drop(GenreVocabulary.MAX_LABELS))
+            }
         }
     val instrumental =
         labels

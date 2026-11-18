@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
+import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.TrackState
 
 // A genre's tags and where they come from (#786): one grid of two columns, its first column shared.
@@ -72,6 +74,10 @@ import app.sleevesight.core.pipeline.TrackState
  * its own, which a screen reader reaches and opens; one with the pages' citations is one item in
  * their place, read "Track: Claude Haiku 5.5, AI. From: Source S7, Source S8", each citation and
  * each of its links offered as an action ([citedRow]).
+ *
+ * With [extras] (#1281, *Show more*), each row's genres past its cap ([GenreRow.extras]) follow its
+ * five as outlined cells, in the order of the chips past the cap, read after "weaker evidence:"
+ * ("Track, Rock, Pop; weaker evidence: Britpop"); its sources and MusicBrainz's credit count them too.
  */
 @Composable
 internal fun TagsGrid(
@@ -79,11 +85,14 @@ internal fun TagsGrid(
     genre: String,
     onCite: (String) -> Unit = {},
     lines: EvidenceSet? = null,
+    extras: Boolean = false,
 ) {
-    val rows = track.genres.table
+    val table = track.genres.table
     val order = rememberGenreOrder()
-    // The rows of tags in the chips' order (#1159); the sources' rows keep the rows' own.
-    val ordered = remember(track.genres, order) { inChipOrder(rows, track.genres.chips(order)) }
+    // The rows of tags in the chips' order (#1159), with their extras while they show (#1281); the
+    // sources' rows keep the rows' own order, and count the extras that show.
+    val ordered = remember(track.genres, order, extras) { inChipOrder(table, track.genres, order, extras) }
+    val rows = if (extras) table.map { it.copy(labels = it.labels + it.extras) } else table
     val credit = track.normalized.artists
     val several = credit.size > 1
     val names = rowNames(rows, several, credit)
@@ -95,8 +104,9 @@ internal fun TagsGrid(
         val selected = stringResource(R.string.home_genre_tag_selected)
         val added = stringResource(R.string.genre_ai_added)
         val described = stringResource(R.string.genre_described)
+        val weaker = stringResource(R.string.home_genre_tags_weaker)
         ordered.forEachIndexed { index, row ->
-            val reading = tagsReading(names[index], row, genre, selected, added, described)
+            val reading = tagsReading(names[index], row, genre, selected, added, described, weaker)
             val tagged = Modifier.testTag(GENRES_ROW_PREFIX + index).semantics { contentDescription = reading }
             GridRow(names[index], column, nameStyle, tagged, CHIP_INSET) { Cells(row, genre) }
         }
@@ -144,7 +154,8 @@ internal fun TagsGrid(
  * [selected] words it ("Rock, selected"), all one item: "Track, Pop, Rock, selected". A tag the AI's
  * genre list added (#762) reads with the model's name, as [added] words it ("Blues, from Claude
  * Haiku 5.5"). A genre an artist's description names (#1000) reads as [described] words it
- * ("Instrumental, from the artist’s bio").
+ * ("Instrumental, from the artist’s bio"). The row's [GenreRow.extras], while they show (#1281),
+ * follow, as [weaker] words them ("weaker evidence: Britpop").
  */
 @Suppress("LongParameterList") // The row and its name, the genre marked, and each way a tag is worded.
 internal fun tagsReading(
@@ -154,17 +165,19 @@ internal fun tagsReading(
     selected: String,
     added: String = "%1\$s",
     described: String = "%1\$s",
-): String =
-    (
-        listOf(name) +
-            row.labels.map { label ->
-                val named =
-                    label.aiModel?.takeIf { label.aiAdded }?.let { added.format(label.genre.label, it) }
-                        // On a *Bio* row, its name says it already.
-                        ?: label.describedIn?.takeIf { !row.described }?.let { described.format(label.genre.label) }
-                (named ?: label.genre.label).let { if (label.genre.identity == genre) selected.format(it) else it }
-            }
-    ).joinToString(", ")
+    weaker: String = "%1\$s",
+): String {
+    val read = { label: TrackLabel ->
+        val named =
+            label.aiModel?.takeIf { label.aiAdded }?.let { added.format(label.genre.label, it) }
+                // On a *Bio* row, its name says it already.
+                ?: label.describedIn?.takeIf { !row.described }?.let { described.format(label.genre.label) }
+        (named ?: label.genre.label).let { if (label.genre.identity == genre) selected.format(it) else it }
+    }
+    val five = (listOf(name) + row.labels.map(read)).joinToString(", ")
+    // Its genres past the cap (#1281), while they show: "; weaker evidence: Britpop, Indie Rock".
+    return if (row.extras.isEmpty()) five else five + "; " + weaker.format(row.extras.joinToString(", ") { read(it) })
+}
 
 // Each row's name: *Track*, *Album*, *Artist*, or with [several] credited artists *Artist 1*, *Artist
 // 2*, … by the artist's place in [credit], as the rows name it, whether or not the artists before it
@@ -269,6 +282,10 @@ private fun Cells(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         for (label in row.labels) Cell(PlacedLabel(row, label), marked = label.genre.identity == genre)
+        // Past the cap, while they show (#1281): outlined, with no fill.
+        for (label in row.extras) {
+            Cell(PlacedLabel(row, label), marked = label.genre.identity == genre, outlined = true)
+        }
     }
 }
 
@@ -282,14 +299,19 @@ private fun markStyle(
 
 // A label in the grid: a smaller chip, not a button, in the chips' fills; [marked], the panel's genre,
 // which its row's reading names as selected ([tagsReading]). One the AI's genre list added (#762)
-// carries the **AI** mark after its name, as its chip does.
+// carries the **AI** mark after its name, as its chip does. [outlined], one past its row's cap (#1281):
+// no fill, a thin line in the outline's colour; marked, filled as any.
 @Composable
 private fun Cell(
     placed: PlacedLabel,
     marked: Boolean,
+    outlined: Boolean = false,
 ) {
     val shape = RoundedCornerShape(14.dp)
-    val (fill, content) = chipColours(marked)
+    val (chipFill, content) = chipColours(marked)
+    val bare = outlined && !marked
+    val fill = if (bare) Color.Transparent else chipFill
+    val line = if (bare) Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape) else Modifier
     val mark = stringResource(R.string.home_ai_mark)
     val markStyle = markStyle(content, MaterialTheme.typography.labelSmall)
     val text =
@@ -309,6 +331,7 @@ private fun Cell(
                 .testTag(tagOf(GENRE_CELL_PREFIX, placed))
                 .clip(shape)
                 .background(fill, shape)
+                .then(line)
                 .padding(horizontal = 10.dp, vertical = 5.dp),
     )
 }

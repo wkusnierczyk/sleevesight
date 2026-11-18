@@ -5,6 +5,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.PlacedLabel
+import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.genres.extraChips
 import java.text.Collator
 import java.util.Locale
 
@@ -39,5 +42,21 @@ internal fun inChipOrder(
     chips: List<PlacedLabel>,
 ): List<GenreRow> {
     val place = chips.withIndex().associate { (index, chip) -> chip.label.genre.identity to index }
-    return rows.map { row -> row.copy(labels = row.labels.sortedBy { place[it.genre.identity] ?: Int.MAX_VALUE }) }
+    val placed = { label: TrackLabel -> place[label.genre.identity] ?: Int.MAX_VALUE }
+    // A row's genres past its cap (#1281) too, among themselves, after its five.
+    return rows.map { row -> row.copy(labels = row.labels.sortedBy(placed), extras = row.extras.sortedBy(placed)) }
 }
+
+/**
+ * [rows] of [genres] in the order of its chips in [order] ([inChipOrder]), each row's genres past its
+ * cap after the chips past the cap (#1281, `extraChips`), kept while [extras] show, else dropped.
+ */
+internal fun inChipOrder(
+    rows: List<GenreRow>,
+    genres: TrackGenres,
+    order: Comparator<String>,
+    extras: Boolean,
+): List<GenreRow> =
+    inChipOrder(rows, genres.chips(order) + genres.extraChips(order)).map {
+        if (extras) it else it.copy(extras = emptyList())
+    }

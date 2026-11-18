@@ -45,6 +45,7 @@ import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
+import app.sleevesight.core.genres.extraChips
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.LaterLabels
@@ -158,6 +159,8 @@ internal fun GenresContent(
     // shows the genre it opens on (#875, [GenresBox]).
     val chosen = rememberSaveable(track?.normalized?.lookupKey) { mutableStateOf<String?>(null) }
     val tapped = rememberSaveable(track?.normalized?.lookupKey) { mutableStateOf(false) }
+    // Whether the genres past the rows' cap show (#1281): folded on each new track.
+    val more = rememberSaveable(track?.normalized?.lookupKey) { mutableStateOf(false) }
     val gone =
         track != null &&
             track.gathered &&
@@ -166,9 +169,9 @@ internal fun GenresContent(
     SideEffect { if (gone) chosen.value = null }
     if (track != null && !track.genres.isEmpty) {
         if (everyGenre) {
-            EveryGenre(track, notes, search, toClose)
+            EveryGenre(track, notes, search, more, toClose)
         } else {
-            GenresBox(track, notes, Choice(chosen, tapped), search)
+            GenresBox(track, notes, Choice(chosen, tapped, more), search)
         }
     }
     // Not while *Ask AI*'s genres show under the lines (#766: nothing added while genres show).
@@ -296,16 +299,6 @@ internal data class GenresShown(
 }
 
 /**
- * The genre a tap on a chip chose in *Genres*' panel ([chosen], null when the tap folded it), and
- * whether a chip was tapped on the track ([tapped]): until one is, the panel shows the genre it
- * opens on (#875).
- */
-internal class Choice(
-    val chosen: MutableState<String?>,
-    val tapped: MutableState<Boolean>,
-)
-
-/**
  * In *Genres*' panel (#772): the chips ([TrackGenres.chips], #875), and under them the genre open,
  * if any, unfolded under a rule, with no heading or *Close* of its own (#786, [GenreBody]). Until a
  * chip is tapped on the track ([choice]), the genre open is the one the panel opens on
@@ -331,19 +324,12 @@ private fun GenresBox(
 ) {
     var chosen by choice.chosen
     var touched by choice.tapped
+    val more = choice.more.value
     val order = rememberGenreOrder()
     val labels = track.genres.chips(order)
-    // [GenresContent]'s: a genre no row has (yet, or any more) shows no panel.
-    val open =
-        if (touched) {
-            chosen?.takeIf { track.genres.has(it) }
-        } else {
-            track.genres
-                .opening(order)
-                ?.label
-                ?.genre
-                ?.identity
-        }
+    // The genres past the rows' cap (#1281), as chips once *Show more* shows them.
+    val extras = track.genres.extraChips(order)
+    val open = choice.open(track.genres, order, extras)
     val handoff = rememberFocusHandoff()
     // A requester per chip shown, by its genre's identity, and the genre of the chip last tapped:
     // plain, read only by the moves. By genre, not by the chip's tag, which names its row: a genre
@@ -354,7 +340,7 @@ private fun GenresBox(
     // The chip tapped, if still shown; else the open genre's (the one the panel opened on, #875);
     // else the first, when both went with the old track or the labels.
     val back = {
-        val genres = labels.map { it.label.genre.identity }
+        val genres = (labels + extras.takeIf { more }.orEmpty()).map { it.label.genre.identity }
         (tapped[0]?.takeIf { it in genres } ?: open?.takeIf { it in genres } ?: genres.firstOrNull())?.let(chipOf)
     }
     // Whether the input focus is in the panel, as last told: plain, read as the panel goes.
@@ -371,16 +357,18 @@ private fun GenresBox(
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         val target = { label: PlacedLabel -> Modifier.handoffTarget(handoff, chipOf(label.label.genre.identity)) }
-        Chips(labels, open, chipModifier = target) { label ->
+        val tap = { label: PlacedLabel ->
             val genre = label.label.genre.identity
             tapped[0] = genre
             // Unfolded, replaced or folded; the focus stays on the chip.
             chosen = if (genre == open) null else genre
             touched = true
         }
+        Chips(labels, open, chipModifier = target, tap = tap)
         // The pages the AI's genres came from, when from the web (#801), under the chips they marked,
         // on one line (#1204).
         if (labels.any { it.label.aiAdded }) FromSites(track.genres.aiSources)
+        MoreGenres(extras, more, handoff, { Chips(extras, open, target, tap) }) { choice.toggleMore(open, extras) }
         open?.let {
             PanelRule()
             Box(Modifier.onFocusChanged { state -> inside[0] = state.hasFocus }) {
@@ -389,6 +377,7 @@ private fun GenresBox(
                     it,
                     notes,
                     search,
+                    extras = more,
                     // To the genre's own chip, the one open, tapped or not.
                     afterRetry = { handoff.moveTo(chipOf(it)) },
                     modifier = Modifier.testTag(GENRE_PANEL_TAG),
@@ -406,16 +395,25 @@ private fun EveryGenre(
     track: TrackState,
     notes: PanelNotes,
     search: PanelSearch,
+    more: MutableState<Boolean>,
     afterRetry: () -> Unit,
 ) {
     val order = rememberGenreOrder()
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        for (label in track.genres.chips(order)) {
+    val handoff = rememberFocusHandoff()
+    val shown = more.value
+    val panels = @Composable { labels: List<PlacedLabel> ->
+        for (label in labels) {
             // Keyed by genre: a genre landing earlier in the order moves the panels, not their content.
             key(label.label.genre.identity) {
-                GenrePanel(track, label.label.genre.identity, notes, search, afterRetry)
+                GenrePanel(track, label.label.genre.identity, notes, search, afterRetry, extras = shown)
             }
         }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        panels(track.genres.chips(order))
+        // The genres past the rows' cap (#1281), each in a panel of its own once *Show more* shows them.
+        val extras = track.genres.extraChips(order)
+        MoreGenres(extras, shown, handoff, { panels(extras) }) { more.value = !shown }
     }
 }
 
@@ -500,14 +498,22 @@ private fun GenreChip(
     }
 }
 
-// Whether any row has [genre], of the tags or of a description (#1000).
-private fun TrackGenres.has(genre: String): Boolean = everyLabel.any { it.genre.identity == genre }
+// Whether any row has [genre], of the tags or of a description (#1000), or past its cap (#1281).
+private fun TrackGenres.has(genre: String): Boolean = openable.any { it.genre.identity == genre }
 
 /** The test tags of *Genres*' button and its panel (#772), the panel's heading and *Close* as [Panel] makes them. */
 const val GENRES_CHIP_TAG: String = "genres-chip"
 const val GENRES_PANEL_TAG: String = "genres-panel"
 const val GENRES_PANEL_HEADING_TAG: String = "genres-panel:heading"
 const val GENRES_PANEL_CLOSE_TAG: String = "genres-panel:close"
+
+/**
+ * The test tags of *Show more* under *Genres*' chips (#1281), the line over the genres it shows, and
+ * *Show less* under them.
+ */
+const val GENRES_MORE_TAG: String = "genres-more"
+const val GENRES_WEAKER_TAG: String = "genres-more:weaker"
+const val GENRES_LESS_TAG: String = "genres-more:less"
 
 /** The test tag of *Genres*' button under *Separate pages* (#772), which opens the genres' page. */
 const val GENRES_PAGE_LINK_TAG: String = "genres-page-link"
