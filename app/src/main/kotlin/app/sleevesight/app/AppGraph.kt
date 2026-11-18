@@ -1067,14 +1067,12 @@ class AppGraph internal constructor(
 
     /**
      * Sends [control] to the shown player (#1409, #1209: Home's record and player menu), when it
-     * advertises it, as the user's action: its time is kept for the track changes' features (D15).
+     * advertises it and it is sent, as the user's action: its time is kept for the track changes'
+     * features (D15).
      * On the main thread.
      */
     val sendToPlayer: (Transport) -> Unit = { control ->
-        if (sessions.playback.value.allows(control)) {
-            userActions.acted()
-            sessions.send(control)
-        }
+        if (sessions.send(control)) userActions.acted()
     }
 
     /**

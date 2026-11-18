@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import app.sleevesight.app.R
+import app.sleevesight.app.session.AdPlaying
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.session.Transport
@@ -58,6 +59,7 @@ import app.sleevesight.app.ui.logo.headerRecordCentre
 import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.PlayerApps
 import app.sleevesight.app.ui.settings.playerIcon
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.StateFlow
 
@@ -68,9 +70,11 @@ import kotlinx.coroutines.flow.StateFlow
  * What Home's header reads of the followed player, and where its taps go (#1409, #1209): the shown
  * player's state ([playback], with the controls it advertises), each followed player with a session
  * and its state ([followed]), the settings for the players *Settings → Players* lists ([settings]),
- * the players' names ([label]), icons ([installed]) and ways in ([activity], the shown player's own
- * screen; [launch], a player's launcher entry); [send] sends a control to the shown player, and
- * [follow] makes Home show another followed player with a session.
+ * the players' names ([label]), icons ([installed]) and ways in ([activity], a player's own screen,
+ * its session's; [launch], a player's launcher entry); [send] sends a control to the shown player, and
+ * [follow] makes Home show another followed player with a session. Home shows a track ([nowPlaying])
+ * or an ad ([ad]), or it is idle: then the header shows no player ([shownPlayback]), though a session
+ * be kept.
  */
 @Suppress("LongParameterList") // What the header reads, each published on its own, and its two actions.
 class HeaderPlayerFeed(
@@ -78,12 +82,27 @@ class HeaderPlayerFeed(
     val followed: StateFlow<Map<String, PlaybackStatus>>,
     val settings: StateFlow<Settings?>,
     val label: (String) -> String,
-    val activity: () -> PendingIntent?,
+    val activity: (String) -> PendingIntent?,
     val launch: (String) -> Intent?,
     val installed: InstalledPlayers?,
     val send: (Transport) -> Unit,
     val follow: (String) -> Unit,
+    val nowPlaying: StateFlow<NowPlaying?>,
+    val ad: StateFlow<AdPlaying?>,
 )
+
+/**
+ * The shown player's state as the header goes by it (#1409, #1209): [PlaybackInfo.NONE] while Home
+ * is idle, showing neither a track nor an ad (a session kept with no track, its metadata cleared), so
+ * the header then has no player icon and the record no button, as with no session at all.
+ */
+@Composable
+internal fun HeaderPlayerFeed.shownPlayback(): PlaybackInfo {
+    val state by playback.collectAsState()
+    val track by nowPlaying.collectAsState()
+    val playingAd by ad.collectAsState()
+    return if (track == null && playingAd == null) PlaybackInfo.NONE else state
+}
 
 /**
  * The record's own button in Home's header (#1409), [TARGET] square, its centre at [centre] in the
@@ -138,14 +157,14 @@ internal fun RecordButton(
 }
 
 /**
- * The followed player's own icon in Home's header (#1209), while a followed player has a session
- * ([HeaderPlayerFeed.playback]); nothing with none, when Home lists the players to start instead. A
+ * The followed player's own icon in Home's header (#1209), while Home shows its track or ad
+ * ([shownPlayback]); nothing while Home is idle, when it lists the players to start instead. A
  * screen reader reads it as "<player>, <state>. Player menu", a button, collapsed or expanded. A tap
  * opens the player menu under it ([PlayerMenu]), or closes it.
  */
 @Composable
 internal fun PlayerMenuButton(feed: HeaderPlayerFeed) {
-    val playback by feed.playback.collectAsState()
+    val playback = feed.shownPlayback()
     val player = playback.player ?: return
     var open by rememberSaveable { mutableStateOf(false) }
     val apps = remember(feed) { PlayerApps(feed.label, feed.launch, feed.installed) }
@@ -203,7 +222,7 @@ internal fun LogoAndRecord(
     // The record's centre in this box, from where the logo was last placed.
     var centre by remember { mutableStateOf<Offset?>(null) }
     val outer = remember { arrayOfNulls<LayoutCoordinates>(1) }
-    val playback = player?.playback?.collectAsState()?.value ?: PlaybackInfo.NONE
+    val playback = player?.shownPlayback() ?: PlaybackInfo.NONE
     // Room after the logo for the record's target, which reaches past its edge.
     Box(modifier.onPlaced { outer[0] = it }.padding(end = RECORD_ROOM)) {
         Box(

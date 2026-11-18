@@ -150,8 +150,13 @@ internal class FakeSession(
     /** The controls sent to the player ([PlayerSession.send]), in order. */
     val sent = mutableListOf<Transport>()
 
-    override fun send(control: Transport) {
+    /** Whether the controller fails as a control is sent, as a dead binder's does. */
+    var sendThrows = false
+
+    override fun send(control: Transport): Boolean {
+        check(!sendThrows) { "dead binder" }
         sent += control
+        return true
     }
 
     fun send(metadata: MediaMetadata) {

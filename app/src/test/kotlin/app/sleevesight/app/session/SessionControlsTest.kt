@@ -1,12 +1,18 @@
 package app.sleevesight.app.session
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.media.session.PlaybackState
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.core.pipeline.ChangeCause
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -187,5 +193,74 @@ internal class SessionControlsTest : SessionRepositoryFixture() {
         repository.follow(YOUTUBE_MUSIC)
         settle()
         assertEquals(SPOTIFY, repository.playback.value.player)
+    }
+
+    // Review of #1417: a player chosen while its reports still settle is shown once they have; the
+    // switch then is the user's, and the mark goes with it, so its own next change is judged again.
+    @Test
+    fun aPlayerChosenWhileItsReportsSettleMarksTheSwitchAlone() {
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        val spotify = FakeSession(SPOTIFY, playbackState = state(actions = all))
+        val youtube =
+            FakeSession(
+                YOUTUBE_MUSIC,
+                metadata = metadata(title = "Carefree Highway", durationMs = 200_000),
+                playbackState = state(PlaybackState.STATE_PAUSED, actions = all),
+            )
+        system.active = listOf(spotify, youtube)
+        repository.start()
+        settle()
+        at(1_000)
+        youtube.send(metadata(title = "Rainy Day People", durationMs = 200_000))
+        at(1_100)
+        repository.follow(YOUTUBE_MUSIC)
+        settle()
+        assertEquals("Rainy Day People", repository.nowPlaying.value?.title)
+        assertEquals(ChangeCause.USER_ACTION, repository.lastChange.value?.cause)
+
+        // Its own track ends by itself within the window: judged, not the user's.
+        at(3_000)
+        youtube.send(state(positionMs = 199_990, updatedAt = 3_000, actions = all))
+        at(3_100)
+        youtube.send(metadata(title = "Sundown", durationMs = 200_000))
+        settle()
+        assertEquals("Sundown", repository.nowPlaying.value?.title)
+        assertEquals(ChangeCause.NATURAL_END, repository.lastChange.value?.cause)
+    }
+
+    // Review of #1417: a controller that fails (a dead binder) sends nothing and marks nothing.
+    @Test
+    fun aControllerThatFailsSendsNothingAndMarksNothing() {
+        val spotify =
+            FakeSession(SPOTIFY, metadata = metadata(durationMs = 200_000), playbackState = state(actions = all))
+        system.active = listOf(spotify)
+        repository.start()
+        settle()
+        spotify.sendThrows = true
+        at(5_000)
+        spotify.send(state(positionMs = 199_990, updatedAt = 5_000, actions = all))
+        assertFalse(repository.send(Transport.NEXT))
+        at(5_100)
+        spotify.send(metadata(title = "Carefree Highway", durationMs = 200_000))
+        settle()
+        assertEquals(ChangeCause.NATURAL_END, repository.lastChange.value?.cause)
+    }
+
+    // Review of #1417: the menu's *Open <player>* gets that player's own screen, never another's.
+    @Test
+    fun aPlayersScreenIsItsOwn() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val first = PendingIntent.getActivity(context, 1, Intent(Intent.ACTION_MAIN), PendingIntent.FLAG_IMMUTABLE)
+        val second = PendingIntent.getActivity(context, 2, Intent(Intent.ACTION_VIEW), PendingIntent.FLAG_IMMUTABLE)
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        val spotify = FakeSession(SPOTIFY, playbackState = state(), sessionActivity = first)
+        val youtube =
+            FakeSession(YOUTUBE_MUSIC, playbackState = state(PlaybackState.STATE_PAUSED), sessionActivity = second)
+        system.active = listOf(spotify, youtube)
+        repository.start()
+        settle()
+        assertSame(first, repository.playerActivity(SPOTIFY))
+        assertSame(second, repository.playerActivity(YOUTUBE_MUSIC))
+        assertNull(repository.playerActivity("com.example.none"))
     }
 }

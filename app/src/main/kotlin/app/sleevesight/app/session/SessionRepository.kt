@@ -231,6 +231,19 @@ class SessionRepository(
             ?.let { shown -> shown.gate.read(shown::asCall) { it.sessionActivity } }
 
     /**
+     * The own screen of [player] (its session activity), for Home's player menu (#1209), which names
+     * the player whose state [playback] publishes, perhaps before its track is shown: the session
+     * [playback] is of when it is [player]'s, else [player]'s first session that may be shown; null
+     * when it has none, or the session names none. Never another player's.
+     */
+    fun playerActivity(player: String): PendingIntent? {
+        val session =
+            shownNow?.takeIf { it.gate.player == player && it.gate.key !in afterCall }
+                ?: eligible().firstOrNull { it.gate.player == player }
+        return session?.let { shown -> shown.gate.read(shown::asCall) { it.sessionActivity } }
+    }
+
+    /**
      * Drops [player] from [seenPlayers], once Android says its app was removed (#579): reinstalled,
      * it is probed again and seen again once it reports music, as a new player is. On the main
      * thread, as every change of the layer's state.
@@ -248,20 +261,25 @@ class SessionRepository(
         val eligible = eligible()
         if (eligible.none { it.gate.player == player }) return
         chosen = Chosen(player, activeOthers(eligible, player))
-        if (shownNow?.gate?.player != player) userChange = UserChange(player, clock())
+        // Taken by the switch to it when that is published, however long its reports take to settle.
+        userChange = if (shownNow?.gate?.player != player) UserChange(player, clock(), switch = true) else null
         publish()
     }
 
     /**
      * Sends [control] to the shown session (#1409, #1209), when its state advertises it
      * ([PlaybackInfo.allows]); nothing otherwise, and nothing to a call. A Previous or Next makes the
-     * change that follows the user's action (D5). On the main thread.
+     * change that follows the user's action (D5). False when nothing was sent: not advertised, a
+     * call, or the controller failed ([PlayerSession.send]), which also drops a pending mark of a
+     * change made here. On the main thread.
      */
-    fun send(control: Transport) {
-        val shown = shownNow ?: return
-        if (!playbackState.value.allows(control)) return
-        if (control.skips) userChange = UserChange(shown.gate.player, clock())
-        shown.gate.send(shown::asCall, control)
+    fun send(control: Transport): Boolean {
+        val shown = shownNow?.takeIf { playbackState.value.allows(control) } ?: return false
+        val at = clock()
+        val sent = shown.gate.send(shown::asCall, control)
+        // Only a control the player took marks the change that follows; a failed one leaves none.
+        userChange = if (sent && control.skips) UserChange(shown.gate.player, at) else userChange.takeIf { sent }
+        return sent
     }
 
     private var gate: Job? = null
@@ -527,7 +545,7 @@ class SessionRepository(
             // before the last one published (a hidden player's, shown once the other paused) is
             // timed now, as a switch. Judged once, as published.
             val timed = change.takeUnless { last != null && it.changedAt < last.changedAt }
-            val judged = judge(timed ?: SessionChange(track, clock(), null, from = previous), shown)
+            val judged = judge(timed ?: SessionChange(track, clock(), null, from = previous), shown, switched)
             changeState.value = judged
             judgedCause = judged.cause
         }
@@ -591,7 +609,9 @@ class SessionRepository(
     private fun judge(
         change: SessionChange,
         shown: Attached?,
-    ): SessionChange = if (madeHere(change, shown)) change.copy(cause = ChangeCause.USER_ACTION) else classify(change)
+        switched: Boolean,
+    ): SessionChange =
+        if (madeHere(change, shown, switched)) change.copy(cause = ChangeCause.USER_ACTION) else classify(change)
 
     /** The sessions that may be shown: a session seen as a call is not, until it is read again ([afterCall]). */
     private fun eligible(): List<Attached> = attached.values.filter { it.gate.key !in afterCall }
@@ -637,17 +657,20 @@ class SessionRepository(
             }
 
     /**
-     * Whether [change], to [shown]'s track, follows a control or choice made here ([userChange]) for
-     * that player within [USER_CHANGE_WINDOW]. The first change after it takes it, whoever made it.
+     * Whether [change], to [shown]'s track, was made here ([userChange]): for a player chosen in the
+     * menu, the switch to it ([switched]), whenever its reports settle; for a Previous or Next, a change
+     * of that player that began within [USER_CHANGE_WINDOW] after it. The first change published
+     * after the mark takes it, whoever made it, so it never carries over to a later change.
      */
     private fun madeHere(
         change: SessionChange,
         shown: Attached?,
+        switched: Boolean,
     ): Boolean {
-        val made = userChange?.takeIf { change.changedAt >= it.at } ?: return false
+        val made = userChange ?: return false
         userChange = null
-        return shown?.gate?.player == made.player &&
-            change.changedAt - made.at <= USER_CHANGE_WINDOW.inWholeMilliseconds
+        val window = change.changedAt - made.at in 0..USER_CHANGE_WINDOW.inWholeMilliseconds
+        return shown?.gate?.player == made.player && if (made.switch) switched else window
     }
 
     /** Publishes [trackChanges]: [track], published after [previous], with the cause it carries. */
@@ -1331,10 +1354,14 @@ class SessionRepository(
         val othersActive: Set<Any>,
     )
 
-    /** A control or choice made here that changes [player]'s track, [at] on the [clock]. */
+    /**
+     * A control or choice made here that changes [player]'s track, [at] on the [clock]: a [switch] to
+     * a player chosen in the menu, else a Previous or Next.
+     */
     private data class UserChange(
         val player: String,
         val at: Long,
+        val switch: Boolean = false,
     )
 
     companion object {
@@ -1440,12 +1467,23 @@ private class CallGate(
 
     fun unregister(callback: MediaController.Callback) = session.unregister(callback)
 
-    /** Sends [control] to the session ([PlayerSession.send]), unless it is a call: then [onCall]. */
+    /**
+     * Sends [control] to the session ([PlayerSession.send]), unless it is a call: then [onCall]. False
+     * when nothing was sent: a call, or the controller failed (the check of a call reads the
+     * controller too, and a dead binder may throw from either).
+     */
     fun send(
         onCall: () -> Unit,
         control: Transport,
-    ) {
-        if (isCall) onCall() else session.send(control)
+    ): Boolean {
+        val outcome =
+            try {
+                if (isCall) null else session.send(control)
+            } catch (_: RuntimeException) {
+                false
+            }
+        if (outcome == null) onCall()
+        return outcome == true
     }
 
     /** [read] of the session, unless it is a call before or after it: then [onCall], and null. */

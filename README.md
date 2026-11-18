@@ -93,7 +93,7 @@ How it works and how it is made:
 | 0.5. Pipeline CLI | Coverage report and generated insights over a test playlist, from the shared pipeline module | Done |
 | 1. Android MVP | Now-playing screen, sources, grounded insight, settings | Done |
 | 1.5. Play release | Signed app bundle, store listing and privacy policy, Google Play's review; OpenAI and Google as AI services, beside Anthropic; the layout setting, expandable boxes or separate pages; song, artist and album insights (#522) | Under way |
-| 2. Detail and discovery | The song, artist and album detail beyond their insights (the tracks by an artist or from an album in the playlist or session), genre cards beyond a genre's panel and sounds-like cards, under the layout setting; lyrics language; follow-up questions to the AI; export of the list of tracks played, with their insights; the insights' style, with presets or your own words; player controls | |
+| 2. Detail and discovery | The song, artist and album detail beyond their insights (the tracks by an artist or from an album in the playlist or session), genre cards beyond a genre's panel and sounds-like cards, under the layout setting; lyrics language; follow-up questions to the AI; export of the list of tracks played, with their insights; the insights' style, with presets or your own words | |
 | 3. Context and reach | Optional Spotify account, more players, a local model through Ollama, Discogs | |
 
 Details and the reasoning behind each decision are in the [design document](design/design.md); the work to the MVP and its release, with its dependencies, is in the [plan](design/plan.md).

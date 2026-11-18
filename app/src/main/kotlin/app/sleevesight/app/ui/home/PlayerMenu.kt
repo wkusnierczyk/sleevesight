@@ -57,9 +57,9 @@ import app.sleevesight.core.settings.Settings
  * it, and under them, when it advertises none, that it takes no controls from other apps; *Open
  * <player>*, which opens the player's own screen, else its launcher entry, as the player row above
  * the cover did (#596), and closes the menu; then, with more than one, the players *Settings →
- * Players* lists, as Home lists them while nothing plays (*Only enabled players on Home*, #674),
- * the shown one selected, each with its state, or *Open the app ↗* with no session. Choosing one with
- * a session makes Home show it ([HeaderPlayerFeed.follow]), and the menu's state and controls go
+ * Players* lists that are switched on ([menuPlayers]), the shown one selected, each with its state,
+ * or *Open the app ↗* with no session. Choosing one with a session makes Home show it
+ * ([HeaderPlayerFeed.follow]), and the menu's state and controls go
  * with it; choosing one with none opens its app. The menu stays open through the controls and a
  * choice of player; it closes on *Open <player>*, a tap outside, or Back ([close]).
  */
@@ -86,7 +86,7 @@ internal fun PlayerMenu(
         MenuRow(
             onClick = {
                 close()
-                if (!openPlayer(context, feed.activity(), feed.launch(player))) {
+                if (!openPlayer(context, feed.activity(player), feed.launch(player))) {
                     Toast.makeText(context, none, Toast.LENGTH_SHORT).show()
                 }
             },
@@ -159,14 +159,18 @@ private fun PlayersList(
     }
 }
 
-/** The players the menu lists: as Home lists them while nothing plays ([IdleHome]), or null until loaded. */
+/**
+ * The players the menu lists, or null until loaded: those *Settings → Players* lists ([listedPlayers]),
+ * A to Z, and of them only the ones switched on, whatever *Only enabled players on Home* says: a
+ * player switched off is never in the menu; one switched on is, playing or not.
+ */
 @Composable
 private fun menuPlayers(
     settings: Settings,
     apps: PlayerApps,
 ): List<ListedPlayer>? {
     val listed = listedPlayers(settings.followedPlayers.keys, apps) ?: return null
-    return if (settings.onlyEnabledPlayersOnHome) listed.filter { settings.follows(it.packageName) } else listed
+    return listed.filter { settings.follows(it.packageName) }
 }
 
 // One of the menu's controls: a pill with [control]'s symbol, read by its name; dimmed and not a

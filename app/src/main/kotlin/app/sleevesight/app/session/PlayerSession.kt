@@ -47,9 +47,10 @@ interface PlayerSession {
 
     /**
      * Sends [control] to the player through its transport controls (#1409, #1209); the player may
-     * ignore it. The caller sends only what the session's state advertises.
+     * ignore it. The caller sends only what the session's state advertises. False when it could not
+     * be sent: the controller failed (a player gone, a dead binder).
      */
-    fun send(control: Transport) {}
+    fun send(control: Transport): Boolean = false
 
     /** Registers [callback] for this session's changes, delivered on the main thread. */
     fun register(callback: MediaController.Callback)
@@ -97,19 +98,27 @@ class ControllerSession(
         }
 
     private companion object {
+        const val TAG = "Sleevesight"
         val CALL_USAGES =
             setOf(AudioAttributes.USAGE_VOICE_COMMUNICATION, AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING)
     }
 
-    override fun send(control: Transport) {
-        val controls = controller.transportControls
-        when (control) {
-            Transport.PLAY -> controls.play()
-            Transport.PAUSE -> controls.pause()
-            Transport.PREVIOUS -> controls.skipToPrevious()
-            Transport.NEXT -> controls.skipToNext()
+    // From Android 16 a binder's `RemoteException` comes back unchecked: the whole call is guarded.
+    @Suppress("TooGenericExceptionCaught") // Whatever the controller throws, the tap sends nothing.
+    override fun send(control: Transport): Boolean =
+        try {
+            val controls = controller.transportControls
+            when (control) {
+                Transport.PLAY -> controls.play()
+                Transport.PAUSE -> controls.pause()
+                Transport.PREVIOUS -> controls.skipToPrevious()
+                Transport.NEXT -> controls.skipToNext()
+            }
+            true
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "A control could not be sent to $player: ${e::class.simpleName}")
+            false
         }
-    }
 
     override fun register(callback: MediaController.Callback) {
         controller.registerCallback(callback, Handler(Looper.getMainLooper()))

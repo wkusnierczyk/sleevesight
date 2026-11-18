@@ -46,12 +46,14 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.session.AdPlaying
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.session.Transport
 import app.sleevesight.app.ui.HomeScreen
 import app.sleevesight.app.ui.settings.PlayerApps
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
@@ -97,6 +99,8 @@ class HeaderPlayerTest {
     private val sent = mutableListOf<Transport>()
     private val chosen = mutableListOf<String>()
     private var activity: PendingIntent? = null
+    private val askedScreen = mutableListOf<String>()
+    private val track = MutableStateFlow<NowPlaying?>(NowPlaying("Sundown", "Gordon Lightfoot", player = SPOTIFY))
 
     private val feed =
         HeaderPlayerFeed(
@@ -104,7 +108,10 @@ class HeaderPlayerTest {
             followed = followed,
             settings = settings,
             label = { NAMES.getValue(it) },
-            activity = { activity },
+            activity = { player ->
+                askedScreen += player
+                activity.takeIf { player == SPOTIFY }
+            },
             launch = { Intent(Intent.ACTION_MAIN).setPackage(it) },
             installed = null,
             send = { sent += it },
@@ -112,6 +119,8 @@ class HeaderPlayerTest {
                 chosen += it
                 playback.value = PlaybackInfo(it, followed.value.getValue(it), actions = ALL)
             },
+            nowPlaying = track,
+            ad = MutableStateFlow<AdPlaying?>(null),
         )
 
     private fun show(
@@ -281,6 +290,8 @@ class HeaderPlayerTest {
             openMenu()
             compose.onNodeWithTag(PLAYER_MENU_OPEN_PLAYER_TAG).performClick()
             menuClosed()
+            // The menu's player's own screen, asked by its name (review of #1417).
+            assertEquals(listOf(SPOTIFY), askedScreen)
             val started = shadowOf(it).nextStartedActivity ?: shadowOf(app).nextStartedActivity
             assertEquals(Intent.ACTION_VIEW, started?.action)
         }
@@ -301,6 +312,35 @@ class HeaderPlayerTest {
         show {
             openMenu()
             compose.onNodeWithText(text(R.string.home_players)).assertDoesNotExist()
+        }
+    }
+
+    // Review of #1417: a session kept with its track cleared leaves Home idle, with no player in the header.
+    @Test
+    fun aSessionWithNoTrackShowsNoPlayerIconAndNoRecordButton() {
+        track.value = null
+        show {
+            compose.onNodeWithTag(PLAYER_MENU_TAG).assertDoesNotExist()
+            assertEquals(0, buttons(R.string.home_record_pause) + buttons(R.string.home_record_play))
+        }
+    }
+
+    // A player switched off in Settings → Players is never in the menu, whatever *Only enabled players
+    // on Home* says; one switched on is, playing or not.
+    @Test
+    fun aPlayerSwitchedOffIsNeverInTheMenu() {
+        for (onlyEnabled in listOf(false, true)) {
+            settings.value =
+                Settings(
+                    followedPlayers = mapOf(SPOTIFY to true, YOUTUBE to true, CASTBOX to true, OFF to false),
+                    onlyEnabledPlayersOnHome = onlyEnabled,
+                )
+            show {
+                openMenu()
+                compose.onNodeWithTag(menuPlayerTag(CASTBOX)).assertExists()
+                compose.onNodeWithContentDescription("Castbox, ${text(R.string.home_player_open_app)}").assertExists()
+                compose.onNodeWithTag(menuPlayerTag(OFF)).assertDoesNotExist()
+            }
         }
     }
 
@@ -376,7 +416,8 @@ class HeaderPlayerTest {
         const val SPOTIFY = Settings.SPOTIFY
         const val YOUTUBE = "com.google.android.apps.youtube.music"
         const val CASTBOX = "fm.castbox.audiobook.radio.podcast"
-        val NAMES = mapOf(SPOTIFY to "Spotify", YOUTUBE to "YouTube Music", CASTBOX to "Castbox")
+        const val OFF = "com.example.switched.off"
+        val NAMES = mapOf(SPOTIFY to "Spotify", YOUTUBE to "YouTube Music", CASTBOX to "Castbox", OFF to "Off Player")
         const val ALL =
             PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT or
                 PlaybackState.ACTION_SKIP_TO_PREVIOUS

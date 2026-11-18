@@ -114,6 +114,8 @@ class MainActivity : ComponentActivity() {
             installed = installedPlayers,
             send = graph.sendToPlayer,
             follow = graph.followPlayer,
+            nowPlaying = graph.sessions.nowPlaying,
+            ad = graph.sessions.ad,
         )
     }
 
