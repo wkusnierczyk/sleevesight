@@ -14,10 +14,14 @@ package app.sleevesight.core.text
  * which a new start reads afresh. So a regex with `\G`, or a pass that finds an empty match, is read
  * with `findAll` after all: none of the regexes read here matches empty.
  */
-internal fun Regex.rangesIn(text: String): List<IntRange> {
+internal fun Regex.rangesIn(text: String): List<IntRange> = onePass(text) ?: findAll(text).map { it.range }.toList()
+
+// Where each match of this regex in [text] is, read with one matcher; null where that would not be
+// what a new start for each match finds ([rangesIn]).
+private fun Regex.onePass(text: String): List<IntRange>? {
     val mark = absentFrom(text)
     val ranges = if (mark == null || "\\G" in pattern) null else marked(text, mark)
-    return ranges?.takeIf { found -> found.none { it.isEmpty() } } ?: findAll(text).map { it.range }.toList()
+    return ranges?.takeIf { found -> found.none { it.isEmpty() } }
 }
 
 // Where each match of this regex in [text] is, read with one matcher, [mark] around each.
@@ -47,13 +51,17 @@ internal fun Regex.valuesIn(text: String): List<String> = rangesIn(text).map { t
 
 /**
  * [text] with each match of [regex] replaced by what [transform] makes of where it is, as
- * `regex.replace(text) { … }` replaces them, with one start of the regex engine ([rangesIn]).
+ * `regex.replace(text) { … }` replaces them, with one start of the regex engine ([rangesIn]); by
+ * `replace` itself where [rangesIn] falls back, as its empty matches differ from `findAll`'s (an
+ * empty match at the end after one that ends there).
  */
 internal fun replaceOnce(
     text: String,
     regex: Regex,
     transform: (IntRange) -> CharSequence,
-): String = replaceRanges(text, regex.rangesIn(text), transform)
+): String =
+    regex.onePass(text)?.let { replaceRanges(text, it, transform) }
+        ?: regex.replace(text) { transform(it.range) }
 
 /** [text] with each of [ranges], in order and apart, replaced by what [transform] makes of it. */
 internal fun replaceRanges(

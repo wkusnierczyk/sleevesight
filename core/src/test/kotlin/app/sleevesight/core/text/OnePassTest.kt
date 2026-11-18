@@ -56,6 +56,18 @@ class OnePassTest {
         assertEquals(g.findAll("aaba").map { it.range }.toList(), g.rangesIn("aaba"))
     }
 
+    @Test
+    fun `a replace where the one pass falls back replaces as Regex replace does, an empty match at the end too`() {
+        for ((regex, text) in listOf(Regex("x*") to "x", Regex("x*") to "axbxx", Regex("\\Ga") to "aab")) {
+            val asKotlin = mutableListOf<IntRange>()
+            val expected = regex.replace(text) { "~".also { _ -> asKotlin += it.range } }
+            val once = mutableListOf<IntRange>()
+            assertEquals(expected, replaceOnce(text, regex) { "~".also { _ -> once += it } }, "$regex in $text")
+            assertEquals(asKotlin, once, "$regex in $text")
+        }
+        assertEquals("~", replaceOnce("x", Regex("x*")) { "~" })
+    }
+
     private fun String.quoted() = replace("\n", "\\n").replace("\r", "\\r")
 
     // Varied texts of the pieces the regexes below weigh, as `GroundingScanTest`'s are made.
