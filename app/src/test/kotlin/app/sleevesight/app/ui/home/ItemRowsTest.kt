@@ -240,11 +240,12 @@ class ItemRowsTest {
     }
 
     @Test
-    fun theArtistRowIsArtistWhenNothingTellsTheComposerApart() {
-        // #1276: no split, one Artist row as before, whatever the track credits.
+    fun theArtistRowIsArtistsWhenNothingTellsTheComposerApartAndSeveralAreCredited() {
+        // #1276: no split, one row by the first artist; #1168: *Artists*, the others in its panel.
         val header = sundown.copy(title = "Somebody That I Used To Know", artists = "Gotye, Kimbra")
         val row = itemRows(header, normalizer.normalize(header)).single { it.item == InsightItem.ARTIST }
         assertEquals("Gotye", row.name)
-        assertEquals(R.string.home_item_artist to R.string.home_item_show_artist, row.kind to row.action)
+        assertEquals(listOf("Kimbra"), row.others)
+        assertEquals(R.string.home_item_artists to R.string.home_item_show_artists, row.kind to row.action)
     }
 }

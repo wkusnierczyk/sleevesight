@@ -67,6 +67,7 @@ import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SkipDetector
 import app.sleevesight.app.session.SkipDetectorLearning
 import app.sleevesight.app.session.SystemActiveSessions
+import app.sleevesight.app.session.Transport
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
@@ -74,6 +75,7 @@ import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.PrunePlayersMigration
+import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.speech.ReadAloud
@@ -397,13 +399,15 @@ class AppGraph internal constructor(
      * model list at start (once lookups are allowed) and at each opening of the model choice, and
      * marked unavailable by a call the service answers that it does not know the model or refuses
      * it. While the switched-on service's model is unavailable, no insight is written, and the
-     * settings and Home say so.
+     * settings and Home say so. The models a call found refused are kept for the saved key across
+     * starts (#970), for the model list to put last.
      */
     val modelCheck =
         ModelCheck(
             aiProviders,
             key = { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } },
             scope = pipelineScope,
+            kept = RefusedModelPrefs(appContext),
             stored = { provider -> SecretId.forProvider(provider)?.let { secrets.isStored(it) } == true },
         )
 
@@ -497,8 +501,8 @@ class AppGraph internal constructor(
         )
 
     /**
-     * What turns the record in Home's header logo (#848): whether the player line says *Playing*
-     * and *Spin the logo while music plays* is on, and *Logo speed*.
+     * What turns the record in Home's header logo (#848): whether the followed player says *Playing*
+     * (the player menu's state line) and *Spin the logo while music plays* is on, and *Logo speed*.
      */
     val logoSpin: StateFlow<LogoSpin> =
         combine(sessions.nowPlaying, sessions.playback, latestSettings, LogoSpin::of)
@@ -1082,9 +1086,32 @@ class AppGraph internal constructor(
     }
 
     /**
+     * Sends [control] to the shown player (#1409, #1209: Home's record and player menu), when it
+     * advertises it and it is sent, as the user's action: its time is kept for the track changes'
+     * features (D15).
+     * On the main thread.
+     */
+    val sendToPlayer: (Transport) -> Unit = { control ->
+        if (sessions.send(control)) userActions.acted()
+    }
+
+    /**
+     * Shows [player] on Home (#1409: chosen in Home's player menu) while it has a session
+     * ([SessionRepository.follow]); the user's action only when Home then shows another player, not
+     * for the one already shown. Recorded before the switch, which may publish its change at once.
+     * On the main thread.
+     */
+    val followPlayer: (String) -> Unit = { player ->
+        if (player in sessions.followedStates.value) {
+            if (sessions.playback.value.player != player) userActions.acted()
+            sessions.follow(player)
+        }
+    }
+
+    /**
      * The intent that opens a player from its launcher entry, for *Open the app ↗* under its name in
-     * the settings (#444), and for Home's player row when the session gives no usable screen (#596);
-     * null for one with none, or not visible to this app.
+     * the settings (#444), and for the player menu's *Open <player>* when the session gives no usable
+     * screen (#596, #1209); null for one with none, or not visible to this app.
      */
     fun playerLaunchIntent(packageName: String): Intent? =
         appContext.packageManager.getLaunchIntentForPackage(packageName)

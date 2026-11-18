@@ -6,11 +6,38 @@ import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 
-/** [provider]'s model [model], which the service does not list for the key, or refused (#540). */
+/**
+ * [provider]'s model [model], which the service does not list for the key, or refused (#540); how it
+ * was refused, [refusal], when a call found it so (#970), else null.
+ */
 data class UnavailableModel(
     val provider: ProviderId,
     val model: String,
+    val refusal: ModelRefusal? = null,
 )
+
+/** How a call found a model refused (#970), which the settings and Home say. */
+enum class ModelRefusal {
+    /** The service does not know the model ([AiErrorKind.MODEL_NOT_FOUND]): it is no longer served. */
+    NOT_SERVED,
+
+    /** The service refuses the model for the account ([AiErrorKind.MODEL_REFUSED]). */
+    ACCOUNT,
+    ;
+
+    companion object {
+        /** How [event] refuses the model, or null when it does not. */
+        fun of(event: CompletionEvent): ModelRefusal? =
+            when ((event as? CompletionEvent.Error)?.kind) {
+                AiErrorKind.MODEL_NOT_FOUND -> NOT_SERVED
+                AiErrorKind.MODEL_REFUSED -> ACCOUNT
+                else -> null
+            }
+    }
+}
+
+/** Each service's models refused for its saved key (#970), by service, with how each was refused. */
+typealias RefusedModels = Map<ProviderId, Map<String, ModelRefusal>>
 
 /** Why a model is unavailable, which says what makes it available again ([ModelCheck]). */
 enum class UnavailableReason {
@@ -26,14 +53,21 @@ enum class UnavailableReason {
 }
 
 /**
- * A service's model found unavailable, [why], by an answer made with the key whose fingerprint is
- * [key] (a SHA-256 of it, kept in memory only, never stored or logged).
+ * A service's model found unavailable, [why], and how a call refused it, [refusal] (#970; null for
+ * [UnavailableReason.LISTED_ABSENT]), by an answer made with the key whose fingerprint is [key] (a
+ * SHA-256 of it, kept in memory only, never stored or logged); null for a mark restored at start
+ * from the models kept as refused ([ModelMarks.selected]), made with the key saved then, which the
+ * first read of the key fills in.
  */
 class UnavailableMark(
     val model: String,
     val why: UnavailableReason,
-    internal val key: String,
-)
+    internal val key: String?,
+    val refusal: ModelRefusal? = null,
+) {
+    /** The same mark, made with the key [print]. */
+    internal fun madeWith(print: String?): UnavailableMark = UnavailableMark(model, why, print, refusal)
+}
 
 /**
  * The revisions of what an answer depends on, as they stood when its request was issued
@@ -66,11 +100,21 @@ class Ticket internal constructor(
  * - The marks ([listed], [answered]): an answer counts only if it was made with the key known now
  *   (when one is known), for the model selected now (once the settings are read), and both
  *   revisions are those of its [Ticket].
+ * - The models refused for each service's saved key ([refused], #970), whichever is selected,
+ *   [kept] when the loop starts: a call with one ends refused, and it joins them; one that answers,
+ *   and it leaves them; another key read for the service, and they all go. A call counts for them
+ *   if it was made with the key known now and its key revision is that of its [Ticket], whatever
+ *   model is selected now.
  */
 internal class ModelMarks(
     private val providers: Set<ProviderId>,
+    kept: RefusedModels = emptyMap(),
 ) {
     var marks: Map<ProviderId, UnavailableMark> = emptyMap()
+        private set
+
+    /** Each service's models refused for its saved key, which the list of models puts last (#970). */
+    var refused: RefusedModels = kept.filterValues { it.isNotEmpty() }
         private set
 
     private class Selection(
@@ -84,17 +128,27 @@ internal class ModelMarks(
     private val readOrder = HashMap<ProviderId, Long>()
     private val keyRevisions = HashMap<ProviderId, Long>()
 
+    // The services whose stored key could not be read before any was (#970).
+    private val unread = HashSet<ProviderId>()
+
+    // Each service's model chosen from the refused ones to try it, until a call with it ends (#970).
+    private val retrying = HashMap<ProviderId, String>()
+
     /** The revisions now, for a request about to be issued. */
     fun ticket(): Ticket = Ticket(keyRevisions.toMap(), selectionRevisions.toMap())
 
     /**
      * The settings read: the marks of a model no longer selected, and, once another service is
-     * switched on, those of the others, are dropped.
+     * switched on, those of the others, are dropped. At the first read, each service's selected
+     * model kept as [refused] is marked so again (#970): it stays refused until another is chosen,
+     * or a call with it answers. One chosen again later is not marked, so the next call tries it.
      */
     fun selected(settings: Settings) {
         val before = selection
         val now = Selection(settings.aiProvider, providers.associateWith { settings.model(it) })
-        if (before != null) {
+        if (before == null) {
+            marks = marks + restored(now)
+        } else {
             for (provider in providers) {
                 val toggled = (before.on == provider) != (now.on == provider)
                 val moved = toggled || before.models[provider] != now.models[provider]
@@ -102,6 +156,8 @@ internal class ModelMarks(
             }
         }
         selection = now
+        // Another model selected after one chosen to try it: its try is over.
+        retrying.entries.removeAll { (p, model) -> before?.models?.get(p) == model && now.models[p] != model }
         val switched = before != null && before.on != now.on
         marks =
             marks.filter { (provider, mark) ->
@@ -120,14 +176,58 @@ internal class ModelMarks(
         order: Long,
         stored: Boolean,
     ) {
-        // A read that failed for now says nothing, and must not stand in for the reads issued before it.
-        if (print == null && stored) return
+        // A read that failed for now says nothing, and must not stand in for the reads issued before
+        // it; but the key it could not read may be replaced before one is read (#970).
+        if (print == null && stored) {
+            if (provider !in prints) unread += provider
+            return
+        }
         if (order <= (readOrder[provider] ?: 0L)) return
         readOrder[provider] = order
         val known = provider in prints
-        if (known && prints[provider] != print) keyRevisions[provider] = (keyRevisions[provider] ?: 0L) + 1
+        val moved = known && prints[provider] != print
+        if (moved) keyRevisions[provider] = (keyRevisions[provider] ?: 0L) + 1
         prints[provider] = print
-        marks = marks.filter { (p, mark) -> p != provider || mark.key == print }
+        // The first key read after the one stored could not be: maybe the same, maybe one saved in its
+        // place; what was refused is cleared rather than kept for a key it may not belong to.
+        val unknown = !known && unread.remove(provider)
+        keyMarks(provider, print, moved || unknown)
+        // Another key saved for the service, or none: what the old one was refused says nothing of
+        // the next (#970).
+        if (moved || unknown || print == null) refused = refused - provider
+    }
+
+    /**
+     * [provider]'s [model] chosen from the list's refused models to try it (#970), whether or not it
+     * was the selected model already: any mark of it is lifted, so the next call tries it, as a
+     * fresh selection, and a list that does not hold it (a model retired, or closed to a new choice)
+     * does not mark it while it is tried ([retrying]). The try ends when a call with it ends, which
+     * answers (it leaves [refused]) or refuses it (it is marked again), or once another model is
+     * selected; it stays among [refused] until a call with it answers.
+     */
+    fun retry(
+        provider: ProviderId,
+        model: String,
+    ) {
+        retrying[provider] = model
+        if (marks[provider]?.model != model) return
+        marks = marks - provider
+        selectionRevisions[provider] = (selectionRevisions[provider] ?: 0L) + 1
+    }
+
+    // [provider]'s marks once its key is read as [print]: those made with another go. A mark
+    // restored at start was made with the key saved then: the key read is it, unless it [moved]
+    // since a read before.
+    private fun keyMarks(
+        provider: ProviderId,
+        print: String?,
+        moved: Boolean,
+    ) {
+        val holds = { mark: UnavailableMark -> print != null && (mark.key == print || (mark.key == null && !moved)) }
+        marks =
+            marks
+                .filter { (p, mark) -> p != provider || holds(mark) }
+                .mapValues { (p, mark) -> if (p == provider && mark.key == null) mark.madeWith(print) else mark }
     }
 
     /**
@@ -144,7 +244,8 @@ internal class ModelMarks(
         ticket: Ticket,
     ) {
         if (!counts(provider, model, print, ticket)) return
-        val holds = models.any { it.id == model }
+        // A model tried again is tried whatever the list says, until its call ends (#970).
+        val holds = models.any { it.id == model } || retrying[provider] == model
         val mark = marks[provider]?.takeIf { it.model == model }
         marks =
             when {
@@ -156,8 +257,9 @@ internal class ModelMarks(
 
     /**
      * A call with [provider]'s [model], made with the key [print] under [ticket], ended as [event]:
-     * one that names the model as not known or refused marks it [UnavailableReason.REFUSED]; one that
-     * succeeded lifts any mark of it.
+     * one that names the model as not known or refused marks it [UnavailableReason.REFUSED], with
+     * how ([ModelRefusal]), and keeps it as [refused] for the key; one that succeeded lifts any mark
+     * of it, and takes it out of [refused] (#970).
      */
     fun answered(
         provider: ProviderId,
@@ -166,14 +268,38 @@ internal class ModelMarks(
         ticket: Ticket,
         event: CompletionEvent,
     ) {
+        if (!sameKey(provider, print, ticket)) return
+        val refusal = ModelRefusal.of(event)
+        val kept = refused[provider].orEmpty()
+        val now = if (refusal != null) kept + (model to refusal) else kept - model
+        refused = if (now.isEmpty()) refused - provider else refused + (provider to now)
         if (!counts(provider, model, print, ticket)) return
+        if (retrying[provider] == model) retrying -= provider
         marks =
             when {
-                refuses(event) -> marks + (provider to UnavailableMark(model, UnavailableReason.REFUSED, print))
+                refusal != null -> marks + (provider to UnavailableMark(model, REFUSED, print, refusal))
                 marks[provider]?.model == model -> marks - provider
                 else -> marks
             }
     }
+
+    // The marks of each service's selected model kept as [refused], at the first read of [now].
+    private fun restored(now: Selection): Map<ProviderId, UnavailableMark> =
+        now.models
+            .mapNotNull { (provider, model) ->
+                val refusal = model?.let { refused[provider]?.get(it) } ?: return@mapNotNull null
+                provider to UnavailableMark(model, UnavailableReason.REFUSED, key = null, refusal)
+            }.toMap()
+
+    // Whether an answer made with the key [print] under [ticket] was made with the key known now.
+    private fun sameKey(
+        provider: ProviderId,
+        print: String,
+        ticket: Ticket,
+    ): Boolean =
+        !ticket.never &&
+            (provider !in prints || prints[provider] == print) &&
+            (keyRevisions[provider] ?: 0L) == (ticket.keys[provider] ?: 0L)
 
     // Whether an answer made with the key [print] for [model], under [ticket], still counts.
     private fun counts(
@@ -183,15 +309,13 @@ internal class ModelMarks(
         ticket: Ticket,
     ): Boolean {
         val now = selection
-        val sameKey = provider !in prints || prints[provider] == print
-        val sameRevisions =
-            (keyRevisions[provider] ?: 0L) == (ticket.keys[provider] ?: 0L) &&
-                (selectionRevisions[provider] ?: 0L) == (ticket.selection[provider] ?: 0L)
-        return !ticket.never && sameKey && sameRevisions && (now == null || now.models[provider] == model)
+        val sameSelection = (selectionRevisions[provider] ?: 0L) == (ticket.selection[provider] ?: 0L)
+        return sameKey(provider, print, ticket) && sameSelection && (now == null || now.models[provider] == model)
     }
 
     companion object {
         private val LISTED_ABSENT = UnavailableReason.LISTED_ABSENT
+        private val REFUSED = UnavailableReason.REFUSED
 
         /** The errors that say the model itself cannot be used, which another model mends. */
         private val MODEL_KINDS = setOf(AiErrorKind.MODEL_NOT_FOUND, AiErrorKind.MODEL_REFUSED)

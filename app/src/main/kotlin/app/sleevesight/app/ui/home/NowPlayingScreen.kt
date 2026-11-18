@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.home
 
-import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
@@ -65,9 +64,8 @@ import kotlinx.coroutines.flow.flowOf
  * decides whether it writes; a tap on Stop goes to it ([stop]) with the call Stop was offered for.
  *
  * @property playerLabel a player's name, from its package.
- * @property playerActivity the shown player's own screen, read when the player row is tapped.
  * @property playerLaunch the intent that opens a player from its launcher entry, by its package:
- *   the row's way in when the session gives no usable screen (#596).
+ *   the idle Home's rows' way in (#627).
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
  * @property chooseWritingMode saves a mode chosen in the insight card's menu of *Reactive*'s modes
@@ -101,8 +99,9 @@ import kotlinx.coroutines.flow.flowOf
  * @property releaseGroups the albums' release groups' first releases, for *Dates* (#1099).
  * @property ad the ad the player plays in place of a track (#880), which Home shows as such
  *   ([AdHome]); null while it plays none.
- * @property keys the keys' states (never a key): a service Home names as needing its key (#766);
- *   none known by default.
+ * @property keys the keys' states (never a key), for an item's insight no source has, whose line says
+ *   a source was not asked for want of its key (#1308), and a service Home names as needing its key
+ *   (#766); none known by default.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -113,7 +112,6 @@ class HomeFeed(
     val settings: StateFlow<Settings?>,
     val normalizer: Normalizer,
     val playerLabel: (String) -> String,
-    val playerActivity: () -> PendingIntent?,
     val write: (RunKey, NowPlaying) -> Unit,
     val stop: (CallId) -> Unit,
     val playerLaunch: (String) -> Intent? = { null },
@@ -157,9 +155,10 @@ fun NowPlayingHome(
 
 /**
  * A page of Home's ([page], #447), from the same [feed] as Home, for the track playing; [onBack]
- * goes back, and the page's links go where Home's do: to a setting, [openSettingsAt] (#766).
+ * goes back, and the page's links go where Home's do: to a setting, [openSettingsAt] (#1308, an item's
+ * page naming a source not asked; #766, what is off).
  */
-@Suppress("LongParameterList") // The page, and each of its ways out.
+@Suppress("LongParameterList") // The page, what it reads, and where its taps go.
 @Composable
 fun NowPlayingPage(
     feed: HomeFeed,
@@ -186,7 +185,8 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val unavailable by feed.unavailableModel.collectAsState()
     val guideHidden by feed.guideHidden.collectAsState()
     val ad by feed.ad.collectAsState()
-    val keys by feed.keys.collectAsState(initial = emptyMap())
+    // Null until first read, so no line says "disabled" for "no key" meanwhile (#1308).
+    val keys by feed.keys.collectAsState<Map<SecretId, SecretState>, Map<SecretId, SecretState>?>(initial = null)
     return NowPlayingState(view, playing, playback, art, settings, unavailable, guideHidden, ad, keys)
 }
 
@@ -198,7 +198,6 @@ private fun HomeFeed.actions(
 ) = NowPlayingActions(
     normalize = normalizer::normalize,
     playerLabel = playerLabel,
-    playerActivity = playerActivity,
     playerLaunch = playerLaunch,
     write = write,
     stop = stop,
@@ -237,16 +236,17 @@ internal class NowPlayingState(
     val unavailable: UnavailableModel? = null,
     val guideHidden: Boolean = false,
     val ad: AdPlaying? = null,
-    val keys: Map<SecretId, SecretState> = emptyMap(),
+    val keys: Map<SecretId, SecretState>? = emptyMap(),
 ) {
-    /** The sources Home's items name as lacking their key (#766, [keylessSources]). */
+    /** The sources Home's items name as lacking their key (#766, [keylessSources]); none until the keys' first read. */
     val keyless: Set<SourceId>
-        get() = keylessSources(view.needsKey, keys.filterValues { it == SecretState.ABSENT }.keys)
+        get() = keylessSources(view.needsKey, keys.orEmpty().filterValues { it == SecretState.ABSENT }.keys)
 }
 
 /**
- * How the screen names what it shows, and where its taps go. The player row opens [playerActivity],
- * else [playerLaunch] for the player's package (#596). [mail] takes a report of a problem
+ * How the screen names what it shows, and where its taps go. The idle Home's rows open
+ * [playerLaunch] for a player's package (#627); the shown player opens from the header's player menu
+ * (#1209). [mail] takes a report of a problem
  * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
  * the settings, from *Sources*' note of a source that needs its key (#440), and [openSettingsAt]
  * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
@@ -269,7 +269,6 @@ internal class NowPlayingState(
 internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
     val playerLabel: (String) -> String = { it },
-    val playerActivity: () -> PendingIntent? = { null },
     val playerLaunch: (String) -> Intent? = { null },
     val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val stop: (CallId) -> Unit = {},
@@ -294,7 +293,7 @@ internal class NowPlayingActions(
 )
 
 /**
- * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
+ * The home screen's content, top to bottom (design, *Home screen*): the art with
  * the playback position, the key data, the *Dates*, *Genres* and *Lyrics* buttons or panels (#724,
  * #772, #728), *Key insights*, the song's, the artist's and the album's insights (#522, [ItemRows]) and
  * *Sources*, straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
@@ -371,7 +370,7 @@ internal fun NowPlayingContent(
     ArtTheme(state.art) {
         CompositionLocalProvider(LocalTrackCleared provides shown.cleared, LocalKeyless provides state.keyless) {
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                PlayerAndCover(state, playing, header, coverTurn(shown, header, settings, actions, back), actions)
+                TrackCover(state, header, coverTurn(shown, header, settings, actions, back))
                 val notes = panelNotes(actions, cite, shown.modelAllowed, lines)
                 val genresPage = { actions.openPage(HomePage.Genres) }.takeIf { pages }
                 val under = UnderAlbumLine(inPlace, settings, notes, genresPage, labelNaming)

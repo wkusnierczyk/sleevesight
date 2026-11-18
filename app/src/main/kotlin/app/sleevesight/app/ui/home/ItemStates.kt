@@ -107,16 +107,25 @@ internal fun itemWrites(
 
 /** [text] in the notes' quiet style. */
 @Composable
-internal fun ItemQuiet(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+internal fun ItemQuiet(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text,
+        modifier,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 // [item]'s insight with nothing to write from: while sources its lines come from could not be reached
 // (#1163: MusicBrainz, without which Last.fm's and Wikipedia's lines about the artist are not verified),
 // that, naming them, with *Retry* beside it, which asks them again, as the key insight's line does
 // (#1121); the album's own lookups not reached (#1187) gathered again by that *Retry* too, and the
-// track's MusicBrainz, which names its release group, asked again; else that the sources give nothing
-// to write it from.
+// track's MusicBrainz, which names its release group, asked again; else, with no line at all, the
+// sources asked and those not asked (#1308, [NoSourceHasIt]); else, the lines there giving nothing to
+// write from, that the sources give nothing to write it from.
 @Composable
 internal fun NothingToWriteFrom(
     item: InsightItem,
@@ -126,7 +135,11 @@ internal fun NothingToWriteFrom(
 ) {
     val unanswered = evidence.unanswered
     if (unanswered.isEmpty()) {
-        ItemQuiet(stringResource(noEvidence(item, context.track)))
+        if (evidence.evidence.isEmpty()) {
+            NoSourceHasIt(item, context.asked(item, evidence), context)
+        } else {
+            ItemQuiet(stringResource(noEvidence(item, context.track)))
+        }
         return
     }
     // Wikidata by the setting that switches it, Wikipedia (#1187); the diagnostics keep it apart.

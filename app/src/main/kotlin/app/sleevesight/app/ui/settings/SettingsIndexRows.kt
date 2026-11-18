@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
@@ -15,7 +16,7 @@ import app.sleevesight.core.settings.WriteAutomatically
 internal fun aiRows(
     settings: Settings,
     modelName: (String) -> String,
-    unavailable: Map<ProviderId, String>,
+    unavailable: Map<ProviderId, UnavailableModel>,
 ): List<IndexedRow> =
     OFFERED_PROVIDERS.flatMap { provider ->
         val name = stringResource(providerName(provider))

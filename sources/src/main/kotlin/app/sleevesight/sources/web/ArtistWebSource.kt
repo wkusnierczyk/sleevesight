@@ -39,7 +39,8 @@ class ArtistWebSource(
     private val names: NameMatcher,
     kept: ArtistResults = ArtistResults.None,
 ) : ArtistWebLookup {
-    private val lines = KeptWebLines(PART, kept, BEFORE_DECODING)
+    // Marked with whether the AI service searched (#1308).
+    private val lines = KeptWebLines(PART, kept, BEFORE_DECODING, marked = true)
 
     override suspend fun kept(artist: ArtistWebQuery): List<EvidenceDraft>? = lines.kept(keyOf(artist))
 
@@ -57,6 +58,14 @@ class ArtistWebSource(
         artist: ArtistWebQuery,
         lines: List<EvidenceDraft>,
     ) = this.lines.keep(keyOf(artist), lines)
+
+    override suspend fun keep(
+        artist: ArtistWebQuery,
+        lines: List<EvidenceDraft>,
+        searched: Boolean,
+    ) = this.lines.keep(keyOf(artist), lines, searched)
+
+    override suspend fun unsearched(artist: ArtistWebQuery): Boolean = lines.unsearched(keyOf(artist))
 
     override fun pageLine(
         artist: ArtistWebQuery,

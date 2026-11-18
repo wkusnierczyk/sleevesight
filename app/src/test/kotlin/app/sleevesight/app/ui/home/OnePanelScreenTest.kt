@@ -5,7 +5,10 @@ import android.view.View
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
@@ -18,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -34,6 +38,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -124,6 +129,9 @@ class OnePanelScreenTest {
                     if (emitted) {
                         CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
                             Column(Modifier.verticalScroll(rememberScrollState())) {
+                                // A button above the track, as Home's header has (the player row was
+                                // one until it went into the header's player menu, #1209).
+                                Box(Modifier.size(48.dp).testTag(aboveTag).clickable {})
                                 NowPlayingContent(current.value, actions)
                             }
                         }
@@ -140,6 +148,8 @@ class OnePanelScreenTest {
     private var emitted by mutableStateOf(true)
     private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
     private var focus: FocusManager? = null
+
+    private val aboveTag = "above-the-track"
 
     // Saves the screen, then composes it again from what was saved, playing [then].
     private fun restore(then: NowPlayingState) {
@@ -373,13 +383,13 @@ class OnePanelScreenTest {
         startScreenReader()
         show {
             framed { click(DATES_CHIP_TAG) }
-            // The screen reader moved on, out of the panel, to the player's row.
+            // The screen reader moved on, out of the panel, to the button above the track.
             framed { focus!!.clearFocus(force = true) }
-            accessibilityFocus(PLAYER_TAG)
+            accessibilityFocus(aboveTag)
             framed { current.value = state(labelled(carefree)) }
             onlyOpen("none")
-            // Not checked: that it stays on the player's row. Here a new track drops the screen reader's
-            // focus from that row with no panel open at all, so it says nothing of this line.
+            // Not checked: that it stays on that button. A new track may drop the screen reader's focus
+            // from it with no panel open at all, so that says nothing of this line.
             assertFalse("not moved to the Dates button", accessibilityFocused(DATES_CHIP_TAG))
             compose.onNodeWithTag(DATES_CHIP_TAG).assertIsNotFocused()
         }

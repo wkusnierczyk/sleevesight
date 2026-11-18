@@ -35,7 +35,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ModelCheck
+import app.sleevesight.app.pipeline.RefusedModels
 import app.sleevesight.app.pipeline.UnavailableMark
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
@@ -121,7 +123,8 @@ fun SettingsScreen(
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
     val marks by (modelCheck?.unavailable ?: NONE_UNAVAILABLE).collectAsState()
-    val unavailable = marks.mapValues { it.value.model }
+    val unavailable = marks.mapValues { (provider, mark) -> UnavailableModel(provider, mark.model, mark.refusal) }
+    val refused by refusedModels(modelCheck).collectAsState()
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
@@ -253,6 +256,9 @@ fun SettingsScreen(
                 modelName = modelNames::of,
                 onSelect = { model -> update { it.withModel(shown.provider, model) } },
                 onDismiss = close,
+                refused = refused[shown.provider].orEmpty(),
+                gone = goneModel(shown.provider, settings.orDefaults(), unavailable),
+                onRetry = { model -> modelCheck?.retry(shown.provider, model) },
             )
         }
     }
@@ -260,6 +266,12 @@ fun SettingsScreen(
 
 /** No model found unavailable, for a screen without a [ModelCheck]. */
 private val NONE_UNAVAILABLE: StateFlow<Map<ProviderId, UnavailableMark>> = MutableStateFlow(emptyMap())
+
+/** No model found refused (#970), for a screen without a [ModelCheck]. */
+private val NONE_REFUSED: StateFlow<RefusedModels> = MutableStateFlow(emptyMap())
+
+/** The models [modelCheck] keeps as refused for each service's key (#970); none without one. */
+private fun refusedModels(modelCheck: ModelCheck?): StateFlow<RefusedModels> = modelCheck?.refused ?: NONE_REFUSED
 
 /** Saves a change to the settings. */
 internal typealias Update = ((Settings) -> Settings) -> Unit
@@ -479,7 +491,7 @@ private fun SettingsContent(
     settings: Settings,
     keys: KeysShown,
     navigation: Navigation,
-    unavailable: Map<ProviderId, String>,
+    unavailable: Map<ProviderId, UnavailableModel>,
     landOn: SettingsTarget?,
     jump: SettingsTarget?,
     onJumped: () -> Unit,
@@ -559,7 +571,7 @@ private fun SettingsColumn(
     settings: Settings,
     keys: KeysShown,
     navigation: Navigation,
-    unavailable: Map<ProviderId, String>,
+    unavailable: Map<ProviderId, UnavailableModel>,
     shown: Found,
     folds: SectionFolds,
     update: Update,

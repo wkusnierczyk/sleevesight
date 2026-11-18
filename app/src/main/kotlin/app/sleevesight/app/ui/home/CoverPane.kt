@@ -28,8 +28,8 @@ import app.sleevesight.core.model.NowPlaying
 import kotlin.math.min
 
 // Home split in two from [SPLIT_WIDTH] wide (#1097): the cover and the playback position on the left,
-// in a pane of their own that does not scroll, and on the right the header over what scrolls, the
-// player row first, as in portrait.
+// in a pane of their own that does not scroll, and on the right the header over what scrolls, as in
+// portrait.
 
 /**
  * The cover's side of Home split in two (#1097): what the track on Home puts there ([CoverInPane]),
@@ -72,7 +72,7 @@ internal fun CoverInPane(
 
 /**
  * The cover's side as Home's frame draws it: what [pane] holds, inside the pane's margins, read by a
- * screen reader as one group after the player row and before the title ([COVER_TRAVERSAL]); nothing,
+ * screen reader as one group after the header and before the title ([COVER_TRAVERSAL]); nothing,
  * no margins either, while it holds nothing.
  */
 @Composable
@@ -91,26 +91,22 @@ internal fun CoverSlot(pane: CoverPane) {
 }
 
 /**
- * The player row of [playing] and, under it, the art with the playback position ([ArtAndProgress]),
- * turned over as [turn] says, from [state], as long as [header] says. Home split in two
- * ([LocalCoverPane], #1097), the art and the position go to the cover's side, the art as large as it
- * fits there, and the player row stays first, read before them as in portrait.
+ * The art with the playback position ([ArtAndProgress]), turned over as [turn] says, from [state], as
+ * long as [header] says, first under the header: the player row that was above it went into the
+ * header's player menu (#1209). Home split in two ([LocalCoverPane], #1097), they go to the cover's
+ * side, the art as large as it fits there.
  */
 @Composable
-internal fun PlayerAndCover(
+internal fun TrackCover(
     state: NowPlayingState,
-    playing: NowPlaying,
     header: NowPlaying,
     turn: CoverTurn,
-    actions: NowPlayingActions,
 ) {
     val pane = LocalCoverPane.current
     val duration = header.duration
     if (pane == null) {
-        PlayerRow(playing.player, state.playback, actions)
         ArtAndProgress(state.art, state.playback, duration, turn)
     } else {
-        PlayerRow(playing.player, state.playback, actions, Modifier.semantics { traversalIndex = PLAYER_ROW_TRAVERSAL })
         CoverInPane(pane) { ArtAndProgress(state.art, state.playback, duration, turn, fitHeight = true) }
     }
 }
@@ -168,11 +164,10 @@ private val PANE_MARGIN_H = 16.dp
 private val PANE_MARGIN_V = 12.dp
 
 /**
- * The screen reader's order on Home split in two (#1097), as in portrait: the header, the player row,
- * the cover and the position, then the rest (at 0, by where it is).
+ * The screen reader's order on Home split in two (#1097), as in portrait: the header, the cover and
+ * the position, then the rest (at 0, by where it is).
  */
-internal const val HEADER_TRAVERSAL: Float = -3f
-internal const val PLAYER_ROW_TRAVERSAL: Float = -2f
+internal const val HEADER_TRAVERSAL: Float = -2f
 internal const val COVER_TRAVERSAL: Float = -1f
 
 /** The test tag of the cover's side of Home split in two (#1097). */

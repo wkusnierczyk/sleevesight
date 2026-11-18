@@ -132,7 +132,7 @@ class AppItemNotesUnavailableTest {
             advanceUntilIdle()
             built.heard()
             val unavailable = built.check.of(checkNotNull(settings.value), ProviderId.ANTHROPIC)
-            assertEquals(UnavailableModel(ProviderId.ANTHROPIC, OTHER), unavailable)
+            assertEquals(UnavailableModel(ProviderId.ANTHROPIC, OTHER, ModelRefusal.NOT_SERVED), unavailable)
             built.rebuild()
             assertNull(parts.value?.ai)
 

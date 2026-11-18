@@ -15,7 +15,7 @@ import kotlin.time.Duration
 
 // The words the home screen puts to what it shows.
 
-/** A player's state, as the player row says it; null for none, or a passing state. */
+/** A player's state, as the player menu says it ([PlayerMenu]); null for none, or a passing state. */
 @Composable
 internal fun stateText(status: PlaybackStatus): String? =
     when (status) {
@@ -28,7 +28,7 @@ internal fun stateText(status: PlaybackStatus): String? =
     }
 
 /**
- * Whether the player line under Home's header says *Playing* ([PlayerRow]): a track is showing
+ * Whether the followed player says *Playing* (the state line of [PlayerMenu]): a track is showing
  * ([nowPlaying]), and [playback] is its player's and says it plays.
  */
 internal fun playing(
@@ -36,7 +36,7 @@ internal fun playing(
     playback: PlaybackInfo,
 ): Boolean = nowPlaying != null && playbackStatus(nowPlaying.player, playback) == PlaybackStatus.PLAYING
 
-/** [playback]'s state if it is [player]'s, else none: what the player line says of [player]. */
+/** [playback]'s state if it is [player]'s, else none: what the player menu says of [player]. */
 internal fun playbackStatus(
     player: String,
     playback: PlaybackInfo,

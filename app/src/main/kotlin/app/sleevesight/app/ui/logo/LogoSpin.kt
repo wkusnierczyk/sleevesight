@@ -27,8 +27,9 @@ import kotlin.math.sign
 // The header logo's record turning while music plays (#848).
 
 /**
- * What turns the record in Home's header logo (#848): whether it turns ([turning]: the player line
- * says *Playing* and *Spin the logo while music plays* is on), and how fast ([speed], *Logo speed*).
+ * What turns the record in Home's header logo (#848): whether it turns ([turning]: the player menu's
+ * state line says *Playing* and *Spin the logo while music plays* is on), and how fast ([speed],
+ * *Logo speed*).
  */
 @Immutable
 data class LogoSpin(
@@ -40,7 +41,7 @@ data class LogoSpin(
         val STILL: LogoSpin = LogoSpin(turning = false)
 
         /**
-         * The spin for what Home shows: [turning] while the player line says *Playing* ([playing],
+         * The spin for what Home shows: [turning] while the player menu says *Playing* ([playing],
          * the same test the line's state goes by) and [Settings.spinLogo] is on; at
          * [Settings.logoSpeed]. Before the settings' first read, still: the setting may be off.
          */

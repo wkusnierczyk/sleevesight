@@ -148,7 +148,6 @@ class PageLinksTest {
                 settings = MutableStateFlow(Settings(layout = Layout.SEPARATE_PAGES, onePanel = false)),
                 normalizer = normalizer,
                 playerLabel = { it },
-                playerActivity = { null },
                 write = { _, _ -> },
                 stop = {},
             )
