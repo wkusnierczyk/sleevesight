@@ -2,14 +2,12 @@ package app.sleevesight.app.ui.settings
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,8 +31,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.center
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
@@ -148,9 +151,9 @@ internal fun KeyScreen(
 
 /**
  * A key screen's [title], which a screen reader reads as a heading. With a [step], *Load keys*'
- * numbered steps (#765), its number goes before it, in an outlined circle, in the quiet colour, at
- * [STEP_NUMBER_SCALE] of the title's size, as the API keys page draws its steps; a screen reader
- * reads the two as one heading, "Step 1: Encryption words".
+ * numbered steps (#765), its number goes before it, in the quiet colour, at [STEP_NUMBER_SCALE] of
+ * the title's size, inside a ring that shows how far along the steps are ([stepRing], #1022); a
+ * screen reader reads the two as one heading, "Step 1 of 4: Encryption words".
  */
 @Composable
 internal fun KeyScreenTitle(
@@ -163,7 +166,7 @@ internal fun KeyScreenTitle(
         Text(name, style = style, modifier = Modifier.semantics { heading() })
         return
     }
-    val spoken = stringResource(R.string.load_keys_step, step, name)
+    val spoken = stringResource(R.string.load_keys_step, step, LOAD_KEYS_STEPS, name)
     Row(
         modifier =
             Modifier.clearAndSetSemantics {
@@ -185,8 +188,10 @@ internal fun KeyScreenTitle(
             )
         // The circle wider than the number's size by STEP_CIRCLE_SCALE, as the page's.
         val side = with(LocalDensity.current) { (number.fontSize * STEP_CIRCLE_SCALE).toDp() }
+        val filled = MaterialTheme.colorScheme.onSurfaceVariant
+        val unfilled = MaterialTheme.colorScheme.outlineVariant
         Box(
-            modifier = Modifier.size(side).border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+            modifier = Modifier.size(side).drawBehind { stepRing(step, filled, unfilled) },
             contentAlignment = Alignment.Center,
         ) {
             // Centred by its ink, not its text box: a digit's side bearings differ (Roboto's 1 sits
@@ -211,6 +216,54 @@ internal fun KeyScreenTitle(
         Text(name, style = style)
     }
 }
+
+/**
+ * A step's ring (#1022): four quarters with [STEP_RING_GAP] between them, the first [reached]
+ * filled clockwise from 12 o'clock in [filled] (step 1 from 12 to 3, step 4 the whole ring), the
+ * rest in [unfilled], all [STEP_RING_WIDTH] wide and inside the bounds, as the circle's border was.
+ * It is still: each screen shows its own ring, with no animation from the one before.
+ */
+private fun DrawScope.stepRing(
+    reached: Int,
+    filled: Color,
+    unfilled: Color,
+) {
+    val width = STEP_RING_WIDTH.toPx()
+    val inset = width / 2
+    val radius = size.minDimension / 2 - inset
+    if (radius <= 0f) return
+    // The gap as a length along the ring, in degrees at its radius, half of it each side of a joint.
+    val gap = Math.toDegrees((STEP_RING_GAP.toPx() / radius).toDouble()).toFloat()
+    val sweep = QUARTER - gap
+    val stroke = Stroke(width = width, cap = StrokeCap.Butt)
+    for (quarter in 0 until LOAD_KEYS_STEPS) {
+        drawArc(
+            color = if (quarter < reached) filled else unfilled,
+            // Compose's 0° is 3 o'clock, and angles grow clockwise; 12 o'clock is -90°.
+            startAngle = TWELVE_O_CLOCK + quarter * QUARTER + gap / 2,
+            sweepAngle = sweep,
+            useCenter = false,
+            topLeft = Offset(size.width / 2 - radius, size.height / 2 - radius),
+            size = Size(radius * 2, radius * 2),
+            style = stroke,
+        )
+    }
+}
+
+/** *Load keys*' numbered steps, which a step's ring is split into ([stepRing]). */
+internal const val LOAD_KEYS_STEPS = 4
+
+/** A quarter of the ring, in degrees. */
+private const val QUARTER = 90f
+
+/** 12 o'clock, in Compose's degrees (0° at 3 o'clock). */
+private const val TWELVE_O_CLOCK = -90f
+
+/** How wide a step's ring is drawn, filled and unfilled alike, as the circle was. */
+private val STEP_RING_WIDTH = 2.dp
+
+/** The gap between two quarters of a step's ring, along the ring. */
+private val STEP_RING_GAP = 2.5.dp
 
 /**
  * The centre of [text]'s ink in [style], in pixels from the start of its baseline, from the glyphs'
@@ -268,7 +321,7 @@ private fun balanceAcross(
     var weight = 0.0
     var moment = 0.0
     pixels.forEachIndexed { i, pixel ->
-        val alpha = Color.alpha(pixel)
+        val alpha = android.graphics.Color.alpha(pixel)
         weight += alpha
         moment += alpha * (i % width + PIXEL_MIDDLE)
     }
