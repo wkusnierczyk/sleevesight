@@ -55,9 +55,21 @@ android {
         // The debug APK (the CI artifact) installs beside a release from Google Play, and tells
         // itself apart from it (#614): its version ends in `-debug` (*About* and the tester report
         // show it), and its name and icon are its own (`src/debug/res`).
+        //
+        // OpenRouter's sign-in returns through an App Link (#1396) of each build's own, so with both
+        // installed it returns to the build that began it: `BuildConfig.OPENROUTER_CALLBACK` and the
+        // manifest's filter (`openRouterCallbackPath`) say the same path. `OpenRouterSignIn.CALLBACK`
+        // and `DEBUG_CALLBACK` (`:ai`) hold the same addresses, as `OpenRouterAppLinkTest` and
+        // `OpenRouterSignInTest` check.
+        release {
+            buildConfigField("String", "OPENROUTER_CALLBACK", "\"https://sleevesight.app/auth/openrouter/\"")
+            manifestPlaceholders["openRouterCallbackPath"] = "/auth/openrouter/"
+        }
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            buildConfigField("String", "OPENROUTER_CALLBACK", "\"https://sleevesight.app/auth/openrouter/debug/\"")
+            manifestPlaceholders["openRouterCallbackPath"] = "/auth/openrouter/debug/"
         }
     }
 }

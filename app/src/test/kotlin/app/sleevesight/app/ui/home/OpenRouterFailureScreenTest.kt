@@ -76,7 +76,7 @@ class OpenRouterFailureScreenTest {
     ) = app.getString(id, app.getString(link))
 
     @Test
-    fun aKeyRefusedSaysToSetANewKeyWithALinkToAiServices() =
+    fun aKeyRefusedSaysToSignInAgainWithALinkToAiServices() =
         show("unauthorized", ProviderId.OPENROUTER) {
             compose
                 .onNodeWithTag(OPENROUTER_FAILURE_TAG)
@@ -84,7 +84,7 @@ class OpenRouterFailureScreenTest {
                 .assertTextEquals(line(R.string.home_openrouter_unauthorized, R.string.home_settings_ai_services_link))
             assertEquals(
                 "Writing failed: OpenRouter did not accept the key; it may have been deleted there. " +
-                    "Set a new key in Settings → AI services.",
+                    "Sign in again in Settings → AI services.",
                 line(R.string.home_openrouter_unauthorized, R.string.home_settings_ai_services_link),
             )
             compose.onNodeWithTag(OPENROUTER_FAILURE_TAG).performFirstLinkClick()

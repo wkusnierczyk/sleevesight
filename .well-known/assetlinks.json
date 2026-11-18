@@ -1,0 +1,25 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.sleevesight",
+      "sha256_cert_fingerprints": [
+        "93:6F:0B:D8:3B:E0:44:F2:FC:47:51:55:90:AA:F1:E9:91:38:6B:EB:E8:A9:BA:BB:E4:42:82:28:BE:11:D4:7B",
+        "05:E9:A3:3E:98:19:EF:5C:EC:8B:9E:61:07:4A:C8:9C:65:C2:2B:19:BF:9F:01:77:F1:66:68:B6:98:96:C8:20",
+        "1C:C6:CE:EF:D1:75:48:69:D0:EA:65:9B:69:77:7A:F6:35:D4:7E:91:42:D4:87:12:EC:8D:BA:6F:23:7E:37:74",
+        "B0:41:7A:F4:79:52:10:82:01:44:DC:9A:E0:D9:9E:CD:95:41:9B:61:5B:61:2D:4A:E7:C2:58:A9:D1:A2:31:8B"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.sleevesight.debug",
+      "sha256_cert_fingerprints": [
+        "D9:32:36:43:AE:B4:B4:99:93:DF:85:5F:D1:94:73:6F:28:26:C1:DE:D7:28:84:87:35:1E:0F:46:25:29:30:05"
+      ]
+    }
+  }
+]
