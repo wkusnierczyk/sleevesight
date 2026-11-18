@@ -91,11 +91,11 @@ class DimmedUnbackedScreenTest {
         prose(start).fetchSemanticsNode().config[SemanticsProperties.ContentDescription].single()
 
     // A chip's text: its label between thin spaces.
-    private fun chip(label: String) = " $label "
+    private fun chip(label: String) = citeLabel(label)
 
     // The `?` chip, glued to what comes before it (a word joiner and a no-break space), so it never
     // wraps onto a line alone.
-    private val mark = "\u2060\u00A0" + chip("?")
+    private val mark = "\u2060\u00A0" + UNBACKED_LABEL
 
     // The `?` chips' links in [text].
     private fun marks(text: AnnotatedString) =

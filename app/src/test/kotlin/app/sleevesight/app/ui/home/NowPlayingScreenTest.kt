@@ -331,7 +331,7 @@ class NowPlayingScreenTest {
                     ).fetchSemanticsNode()
                     .config[SemanticsProperties.Text]
             val prose = texts.first { "It is loved" in it.text }
-            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "AI" }
+            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end) == citeLabel("AI") }
             assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
         }
     }
@@ -362,7 +362,7 @@ class NowPlayingScreenTest {
                     .fetchSemanticsNode()
                     .config[SemanticsProperties.Text]
                     .first { "It is loved" in it.text }
-            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "AI" }
+            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end) == citeLabel("AI") }
             assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
         }
     }
@@ -442,7 +442,7 @@ class NowPlayingScreenTest {
                         .fetchSemanticsNode()
                         .config[SemanticsProperties.Text]
                         .first { "It topped the charts" in it.text }
-                val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "WD1" }
+                val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end) == citeLabel("WD1") }
                 assertEquals(lightColorScheme().errorContainer, chip.item.background)
             }
         }

@@ -182,8 +182,8 @@ class UncreditedAuthorsTest {
     private companion object {
         const val MB = "https://musicbrainz.org"
 
-        // A chip's text, as the insight's: its id between thin spaces.
-        const val CHIP = "\u2009MB2\u2009"
+        // A chip's text, as the insight's (`citeLabel`).
+        val CHIP = citeLabel("MB2")
         const val PUCCINI = "Giacomo Puccini"
         const val PAVAROTTI = "Luciano Pavarotti"
         const val ADAMI = "Giuseppe Adami"

@@ -73,7 +73,7 @@ internal fun AiExplanation(
         val seeNote = stringResource(R.string.home_cite_see_note)
         Text(
             explanationText(runs, byId, ExplanationLooks(chips, flagged, note, marked)) { id -> byId[id]?.let(open) },
-            style = MaterialTheme.typography.bodyLarge,
+            style = citedTextStyle(MaterialTheme.typography.bodyLarge),
             modifier =
                 Modifier.testTag(LYRICS_EXPLANATION_TAG).semantics {
                     contentDescription = spoken

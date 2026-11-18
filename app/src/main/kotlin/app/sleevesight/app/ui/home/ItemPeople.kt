@@ -272,7 +272,7 @@ internal fun AuthorsLine(
                     )
             }
         },
-        style = MaterialTheme.typography.bodyLarge,
+        style = citedTextStyle(MaterialTheme.typography.bodyLarge),
     )
 }
 

@@ -104,7 +104,7 @@ class InsightMarkdownScreenTest {
     ): List<String> = prose.spanStyles.filter { matches(it.item) }.map { prose.text.substring(it.start, it.end) }
 
     // A citation chip's text: its id between thin spaces.
-    private fun chip(id: String) = "\u2009$id\u2009"
+    private fun chip(id: String) = citeLabel(id)
 
     private val reply = "It is the song from *Project Hail Mary* [MB1]. It was **huge** on _Crazy World_ [W1]."
 
@@ -152,7 +152,10 @@ class InsightMarkdownScreenTest {
             assertEquals("Sundown\nIt topped the charts ${chip("W1")}.", first.text)
             val second = textOf("It was recorded")
             // Its `?` chip (#954) before its stop.
-            assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great\u2060\u00A0${chip("?")}.", second.text)
+            assertEquals(
+                "It was recorded in 1973 ${chip("MB1")}.\nIt is great\u2060\u00A0$UNBACKED_LABEL.",
+                second.text,
+            )
             assertFalse('#' in first.text || '-' in second.text)
             // The second item is a sentence of its own, on its own line, and flagged as uncited (#574),
             // dimmed (#954).

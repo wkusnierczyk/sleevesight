@@ -174,7 +174,7 @@ private fun Prose(
     val ink = MaterialTheme.colorScheme.onSurfaceVariant
     Text(
         prose.text,
-        style = MaterialTheme.typography.bodyLarge,
+        style = citedTextStyle(MaterialTheme.typography.bodyLarge),
         onTextLayout = { layout.value = it },
         modifier =
             Modifier.drawChipOutlines(outlined, layout, ink).semantics {
@@ -362,7 +362,7 @@ internal fun AnnotatedString.Builder.appendCite(
     onCite: (String) -> Unit,
     unsupported: Boolean = false,
 ) {
-    val label = " $shownAs "
+    val label = citeLabel(shownAs)
     when (kind) {
         CiteKind.LINE -> {
             val style = if (unsupported) styles.unsupported else styles.line

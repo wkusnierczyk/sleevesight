@@ -129,7 +129,7 @@ class UnsupportedCitationScreenTest {
             val text = prose().fetchSemanticsNode().config[SemanticsProperties.Text].first()
             val outlined = text.getStringAnnotations(OUTLINE_TAG, 0, text.length)
             assertEquals(listOf("W1"), outlined.map { it.item })
-            assertEquals(" W1 ", text.text.substring(outlined.single().start, outlined.single().end))
+            assertEquals(citeLabel("W1"), text.text.substring(outlined.single().start, outlined.single().end))
             // Still a link, to its line, with no fill.
             val links =
                 text
