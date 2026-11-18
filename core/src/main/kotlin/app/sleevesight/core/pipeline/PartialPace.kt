@@ -8,7 +8,7 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 /**
- * When a reply still streaming is read again for a sign of revision (`SelfRevision.ofPartial`, #798)
+ * When a reply still streaming is read again for a sign of revision (`SelfRevision.ofStreamed`, #798)
  * and shown (#1351). Each reading costs time growing with the text so far, so reading it at every
  * piece cost time growing with the square of the reply, more again on the phone. Asked only once the
  * reply can no longer be `NO_EVIDENCE` (`GroundingCheck.mayBeNoEvidence`), a piece is read: the first;
@@ -16,7 +16,9 @@ import kotlin.time.TimeSource
  * [SHARE] times as long as the last reading took after it, so on a long reply the readings take no
  * more than about a fifth of the time it streams. A piece not read is not shown either: the card
  * shows only text read for a sign, so the draft never shows past one; the text held back shows with
- * the next piece read, or as the reply ends.
+ * the next piece read, or as the reply ends. A sign once in the text stops it whichever pieces were
+ * read: each reading reads the text before any quotation or emphasis still open, and the reply as
+ * written as well as without a correction taken out ([SelfRevision.ofStreamed]).
  */
 internal class PartialPace(
     private val timeSource: TimeSource,
@@ -40,7 +42,7 @@ internal class PartialPace(
     ) {
         if (frozen || GroundingCheck.mayBeNoEvidence(partial)) return
         read(piece) {
-            frozen = SelfRevision.ofPartial(partial).freezes()
+            frozen = SelfRevision.ofStreamed(partial).any { it.freezes() }
             if (!frozen) show(partial)
         }
     }

@@ -65,6 +65,35 @@ class RevisionScanTest {
         assertEquals(listOf("It", " so.\n", " text", "\n"), read)
     }
 
+    @Test
+    fun `a sign stays found whatever opens after it, and a title still streaming freezes nothing`() {
+        val revised = "It came out in 1975 [MB1]. Wait, I need to correct that [MB1]. "
+        for (open in listOf("\"Sundown", "*Sundown", "**Sundown", "“Sundown")) {
+            assertNull(SelfRevision.ofPartial(revised + open), open)
+            assertEquals(listOf(SelfRevision.ASIDE), SelfRevision.ofStreamed(revised + open).distinct(), open)
+        }
+        // A title in emphasis, still open, that opens as an aside does: nothing before it is a sign.
+        assertEquals(emptyList(), SelfRevision.ofStreamed("It came out in 1975 [MB1]. Its single, *Wait, Let"))
+        // A correction taken out once its version came: the comment is a sign in the reply as written.
+        val corrected = "The song [W1].\nWait, the evidence.\nThe song [W1]."
+        assertNull(SelfRevision.ofPartial(corrected))
+        assertTrue(SelfRevision.ofStreamed(corrected).isNotEmpty())
+    }
+
+    @Test
+    fun `a reply read only before and after its sign and an opened quotation is frozen`() {
+        val time = TestTimeSource()
+        val pace = PartialPace(time)
+        val streamed = StringBuilder()
+        val shown = mutableListOf<String>()
+        for ((wait, piece) in REVISED_THEN_QUOTED) {
+            time += wait
+            streamed.append(piece)
+            pace.next(streamed.toString(), piece) { shown += it }
+        }
+        assertEquals(listOf("It came out in 1975 [MB1]. "), shown)
+    }
+
     private companion object {
         const val LINE = "It is so.\n"
 
