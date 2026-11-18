@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,9 +76,7 @@ internal fun AmbiguousNote(
 ) {
     Text(stringResource(R.string.home_tracklist_ambiguous), style = MaterialTheme.typography.bodyLarge)
     if (albums != null) {
-        FilledTonalButton(onClick = see, modifier = Modifier.testTag(ALBUMS_SEE_TAG)) {
-            Text(stringResource(R.string.home_albums_see, albums.groups.size))
-        }
+        PillButton(stringResource(R.string.home_albums_see, albums.groups.size), see, Modifier.testTag(ALBUMS_SEE_TAG))
     }
 }
 
@@ -302,9 +299,11 @@ private fun OpenedAlbum(
                 Text(stringResource(R.string.home_albums_all))
             }
             Spacer(Modifier.weight(1f))
-            FilledTonalButton(onClick = select, modifier = Modifier.padding(end = 4.dp).testTag(ALBUMS_SELECT_TAG)) {
-                Text(stringResource(R.string.home_albums_select))
-            }
+            PillButton(
+                stringResource(R.string.home_albums_select),
+                select,
+                Modifier.padding(end = 12.dp).testTag(ALBUMS_SELECT_TAG),
+            )
         }
         Text(
             details,

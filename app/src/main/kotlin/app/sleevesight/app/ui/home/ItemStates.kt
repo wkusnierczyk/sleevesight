@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,9 +57,7 @@ internal fun WriteButton(
     item: InsightItem,
     onClick: () -> Unit,
 ) {
-    Button(onClick = onClick, modifier = Modifier.testTag(itemWriteTag(item))) {
-        AiLabel(stringResource(R.string.home_write))
-    }
+    PillButton(onClick, Modifier.testTag(itemWriteTag(item))) { AiLabel(stringResource(R.string.home_write)) }
 }
 
 /**

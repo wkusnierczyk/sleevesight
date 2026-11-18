@@ -348,7 +348,8 @@ internal fun SearchButton(
 ) {
     val shape = RoundedCornerShape(CORNER)
     val colours = MaterialTheme.colorScheme
-    val ink = if (enabled) colours.primary else colours.onSurface.copy(alpha = DISABLED)
+    // The controls' colour, as the pill's (#1404), not the accent; the chip's shape kept (#1343).
+    val ink = if (enabled) colours.onSurface else colours.onSurface.copy(alpha = DISABLED)
     val edge = if (enabled) colours.outline else colours.onSurface.copy(alpha = DISABLED_EDGE)
     val unready = stringResource(R.string.home_ai_search_unready)
     Box(

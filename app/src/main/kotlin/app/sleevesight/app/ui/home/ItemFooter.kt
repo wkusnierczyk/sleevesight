@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -12,6 +11,7 @@ import app.sleevesight.app.pipeline.ItemAsk
 import app.sleevesight.app.pipeline.ItemShown
 import app.sleevesight.app.ui.lab.LabCompareUnder
 import app.sleevesight.app.ui.report.ReportAction
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.pipeline.AiSearches
 import app.sleevesight.core.pipeline.InsightItem
 import app.sleevesight.core.pipeline.InsightState
@@ -116,7 +116,7 @@ internal fun RewriteButton(
     enabled: Boolean,
     onRewrite: () -> Unit,
 ) {
-    Button(onClick = onRewrite, modifier = Modifier.testTag(itemWriteTag(item)), enabled = enabled) {
+    PillButton(onRewrite.takeIf { enabled }, Modifier.testTag(itemWriteTag(item))) {
         AiLabel(stringResource(if (enabled) R.string.home_rewrite else R.string.home_write))
     }
 }

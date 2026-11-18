@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.home
 
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.PillButton
 
 // After *Clear history* under *Look up the track again*'s *On request* (#1112): the track on Home
 // keeps its header, but what was found for it went with the history and nothing is asked for it,
@@ -32,9 +32,7 @@ internal fun ClearedInsight(onLookUpAgain: () -> Unit) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Button(onClick = onLookUpAgain, modifier = Modifier.testTag(LOOK_UP_AGAIN_TAG)) {
-        Text(stringResource(R.string.home_look_up_again))
-    }
+    PillButton(stringResource(R.string.home_look_up_again), onLookUpAgain, Modifier.testTag(LOOK_UP_AGAIN_TAG))
 }
 
 /** A field's waiting text ([looking]), or, for a track the last clear holds, that it was cleared (#1112). */
