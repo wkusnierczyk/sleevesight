@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -160,13 +161,22 @@ internal fun RecordButton(
  * The followed player's own icon in Home's header (#1209), while Home shows its track or ad
  * ([shownPlayback]); nothing while Home is idle, when it lists the players to start instead. A
  * screen reader reads it as "<player>, <state>. Player menu", a button, collapsed or expanded. A tap
- * opens the player menu under it ([PlayerMenu]), or closes it.
+ * opens the player menu under it ([PlayerMenu]), or closes it. The open menu does not go with the
+ * icon: it stays open on the shown session's state ([HeaderPlayerFeed.playback]) while a followed
+ * player has a session, so choosing one whose session holds no track (Home then idle, the icon
+ * gone) keeps it open on that player, as choosing any player does.
  */
 @Composable
 internal fun PlayerMenuButton(feed: HeaderPlayerFeed) {
-    val playback = feed.shownPlayback()
-    val player = playback.player ?: return
     var open by rememberSaveable { mutableStateOf(false) }
+    val playback by feed.playback.collectAsState()
+    val iconShown = feed.shownPlayback().player != null
+    val player = playback.player
+    if (player == null) {
+        // No session at all: nothing to open, and the menu does not come back by itself later.
+        if (open) SideEffect { open = false }
+        return
+    }
     val apps = remember(feed) { PlayerApps(feed.label, feed.launch, feed.installed) }
     val name = remember(player) { feed.label(player) }
     val state = stateText(playback.status)
@@ -177,29 +187,43 @@ internal fun PlayerMenuButton(feed: HeaderPlayerFeed) {
             stringResource(R.string.home_player_menu, name, state)
         }
     Box {
-        IconButton(
-            onClick = { open = !open },
-            modifier =
-                Modifier.testTag(PLAYER_MENU_TAG).semantics {
-                    contentDescription = description
-                    if (open) {
-                        collapse {
-                            open = false
-                            true
-                        }
-                    } else {
-                        expand {
-                            open = true
-                            true
-                        }
-                    }
-                },
-        ) {
-            PlayerIcon(player, name, apps, ICON)
-        }
+        if (iconShown) PlayerIconButton(player, name, description, apps, open) { open = it }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             PlayerMenu(feed, playback, name, apps, close = { open = false })
         }
+    }
+}
+
+// The player's icon as a button that opens and closes the menu ([open]), read as [description].
+@Suppress("LongParameterList") // The player, how it reads and looks, and the menu's state.
+@Composable
+private fun PlayerIconButton(
+    player: String,
+    name: String,
+    description: String,
+    apps: PlayerApps,
+    open: Boolean,
+    setOpen: (Boolean) -> Unit,
+) {
+    IconButton(
+        onClick = { setOpen(!open) },
+        modifier =
+            Modifier.testTag(PLAYER_MENU_TAG).semantics {
+                contentDescription = description
+                if (open) {
+                    collapse {
+                        setOpen(false)
+                        true
+                    }
+                } else {
+                    expand {
+                        setOpen(true)
+                        true
+                    }
+                }
+            },
+    ) {
+        PlayerIcon(player, name, apps, ICON)
     }
 }
 

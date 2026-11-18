@@ -214,6 +214,9 @@ internal class SessionControlsTest : SessionRepositoryFixture() {
         youtube.send(metadata(title = "Rainy Day People", durationMs = 200_000))
         at(1_100)
         repository.follow(YOUTUBE_MUSIC)
+        // Chosen again before its reports settle (review of #1417): the mark stays.
+        at(1_150)
+        repository.follow(YOUTUBE_MUSIC)
         settle()
         assertEquals("Rainy Day People", repository.nowPlaying.value?.title)
         assertEquals(ChangeCause.USER_ACTION, repository.lastChange.value?.cause)
@@ -262,5 +265,23 @@ internal class SessionControlsTest : SessionRepositoryFixture() {
         assertSame(first, repository.playerActivity(SPOTIFY))
         assertSame(second, repository.playerActivity(YOUTUBE_MUSIC))
         assertNull(repository.playerActivity("com.example.none"))
+    }
+
+    // Review of #1417: a control the player withdraws is not sent, though its new state is still settling.
+    @Test
+    fun aControlWithdrawnWhileTheStateSettlesIsNotSent() {
+        val spotify =
+            FakeSession(SPOTIFY, metadata = metadata(durationMs = 200_000), playbackState = state(actions = all))
+        system.active = listOf(spotify)
+        repository.start()
+        settle()
+        at(5_000)
+        spotify.send(state(positionMs = 199_990, updatedAt = 5_000, actions = PlaybackState.ACTION_PAUSE))
+        assertFalse(repository.send(Transport.NEXT))
+        assertEquals(emptyList<Transport>(), spotify.sent)
+        at(5_100)
+        spotify.send(metadata(title = "Carefree Highway", durationMs = 200_000))
+        settle()
+        assertEquals(ChangeCause.NATURAL_END, repository.lastChange.value?.cause)
     }
 }

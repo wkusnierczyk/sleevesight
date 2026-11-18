@@ -261,8 +261,10 @@ class SessionRepository(
         val eligible = eligible()
         if (eligible.none { it.gate.player == player }) return
         chosen = Chosen(player, activeOthers(eligible, player))
-        // Taken by the switch to it when that is published, however long its reports take to settle.
-        userChange = if (shownNow?.gate?.player != player) UserChange(player, clock(), switch = true) else null
+        // Taken by the switch to it when that is published, however long its reports take to settle;
+        // the player already shown (chosen again before its switch settled, or shown all along)
+        // keeps whatever mark is pending.
+        if (shownNow?.gate?.player != player) userChange = UserChange(player, clock(), switch = true)
         publish()
     }
 
@@ -274,7 +276,11 @@ class SessionRepository(
      * change made here. On the main thread.
      */
     fun send(control: Transport): Boolean {
-        val shown = shownNow?.takeIf { playbackState.value.allows(control) } ?: return false
+        // By the session's latest state, not the one published: a control withdrawn while its
+        // reports still settle is not sent.
+        val shown =
+            shownNow?.takeIf { SessionMapping.playbackInfo(it.gate.player, it.state).allows(control) }
+                ?: return false
         val at = clock()
         val sent = shown.gate.send(shown::asCall, control)
         // Only a control the player took marks the change that follows; a failed one leaves none.

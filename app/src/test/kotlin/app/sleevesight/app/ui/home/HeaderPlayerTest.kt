@@ -325,6 +325,22 @@ class HeaderPlayerTest {
         }
     }
 
+    // Review of #1417: choosing a player whose session holds no track leaves Home idle and the icon
+    // gone, and the menu open on that player all the same.
+    @Test
+    fun choosingAPlayerWithNoTrackKeepsTheMenuOpenOnIt() =
+        show {
+            openMenu()
+            compose.onNodeWithTag(menuPlayerTag(YOUTUBE)).performClick()
+            track.value = null
+            compose.waitForIdle()
+            compose.onNodeWithTag(PLAYER_MENU_TAG).assertDoesNotExist()
+            menuOpen()
+            compose
+                .onNodeWithText(text(R.string.home_player_state, "YouTube Music", text(R.string.home_state_paused)))
+                .assertExists()
+        }
+
     // A player switched off in Settings → Players is never in the menu, whatever *Only enabled players
     // on Home* says; one switched on is, playing or not.
     @Test
