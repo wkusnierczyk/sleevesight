@@ -86,11 +86,12 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
  * article): a page any line has the address of is that line ([lineOf]). With [passages], the pages'
  * texts being passages of them (#1434), a page whose passage a line already listed, or a longer page
  * of [pages], holds whole is left out ([withoutRepeats]), its address and passage kept in
- * [SourcesLines.moved] with that line's id; any other passage is listed as a line of its own, at an
- * address a line has already too (#1435), so a citation of it lands on the words it cites, never on
- * another passage of its page ([webLineOf]); each passage shows whole, one cut mid-sentence after "…"
- * ([shownPassage]). A page whose text is its address has no passage: never left out, shown as it is,
- * each address once. [lines] itself with no page to add, or no evidence to add them to.
+ * [SourcesLines.moved] with that line's id, a line at its own address before any other (#1435); any
+ * other passage is listed as a line of its own, at an address a line has already too (#1435), so a
+ * citation of it lands on the words it cites, never on another passage of its page ([webLineOf]);
+ * each passage shows whole, one cut mid-sentence after "…" ([shownPassage]). A page whose text is
+ * its address has no passage: never left out, shown as it is, each address once, none at an address
+ * a passage of [pages] has. [lines] itself with no page to add, or no evidence to add them to.
  */
 internal fun withPages(
     lines: SourcesLines,
@@ -158,10 +159,11 @@ internal fun shownLine(
  * The id of the line [lines] shows the page at [url] under: for its [passage] left out as a repeat
  * (#1434), the line that holds it ([moved], `SourcesLines.moved`, by address and passage), first, so
  * a line listed later at the address (an explanation's page, its title alone) never takes its place;
- * else the first web line at its address (`sameAddress`) that holds [passage] whole ([repeats]), so of
- * one page's passages, each listed (#1435), a citation lands on the one it cites; else the first web
- * line at its address; null for none. A page whose passage is unknown finds no line it was left out
- * for, and lands on its address's first line.
+ * a passage its own page's line holds is kept as that line's (#1435, [withoutRepeats]), never as
+ * another source's that holds it too; else the first web line at its address (`sameAddress`) that
+ * holds [passage] whole ([repeats]), so of one page's passages, each listed (#1435), a citation
+ * lands on the one it cites; else the first web line at its address; null for none. A page whose
+ * passage is unknown finds no line it was left out for, and lands on its address's first line.
  */
 internal fun webLineOf(
     url: String,
@@ -215,11 +217,13 @@ internal fun withAlbum(
  * (#912), the composer's and the chips' lines (#1199) and its song's (#958), once [notes] gathered
  * them; then the pages the AI's genre list from [genres] rests on (#1205), once it lists any genre,
  * and those the genres' reasons found on the web
- * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each address once;
- * last, the page the check of the track's vocals cites (#1053, [GenreNotes.vocals]), named *vocals
- * check*, while the genres *Genres* composes ([composedGenres], *Find the lyrics*' answer from
- * [search] with them) still weigh its answer ([checkedPage]), and not again when another line has its
- * address; after it, the pages the song's explanation from [search] cites (#1067, [explainedPages]),
+ * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each passage once; a
+ * page without a passage, each address once (#1435); last, the page the check of the track's vocals
+ * cites (#1053, [GenreNotes.vocals]), named *vocals check*, while the genres *Genres* composes
+ * ([composedGenres], *Find the lyrics*' answer from [search] with them) still weigh its answer
+ * ([checkedPage]), listed again only when no line already holds its passage (#1435); a page without
+ * a passage, not when a line has its address; after it, the pages the song's explanation from
+ * [search] cites (#1067, [explainedPages]),
  * fresh or kept, named *explanation*, each address once; last, under an empty *Genres*, the pages
  * the reasons of *Ask AI*'s genres cite (#952, [answeredGenrePages]), named *genres*. A reason's
  * citations, the check's and the explanation's show these ids by address ([shownLine], [webLineOf],

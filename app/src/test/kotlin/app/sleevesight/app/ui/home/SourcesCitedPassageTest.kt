@@ -93,4 +93,50 @@ class SourcesCitedPassageTest {
         assertEquals(1, titled.evidence!!.lines.size)
         assertEquals("S1", webLineOf(spotify, titled.evidence))
     }
+
+    private val song = "Turn, a song by Damien Jurado."
+
+    @Test
+    fun aPassageItsPagesLineAndAnotherBothHoldIsItsPagesLine() {
+        // Another source's line, and another address's, that hold the passage before Spotify's line does.
+        val others =
+            listOf(
+                EvidenceDraft(SourceId.LASTFM, Scope.SONG, song, null, at),
+                EvidenceDraft(SourceId.WEB, Scope.WEB, "Out now: $song", "https://example.org/turn", at),
+            )
+        others.forEach { other ->
+            val own = EvidenceDraft(SourceId.WEB, Scope.WEB, play, spotify, at)
+            val lines = SourcesLines(EvidenceSet.of(listOf(other, own), JvmHasher))
+            val listed = withPages(lines, listOf(WebPage(spotify, null, song)), LinePurpose.GENRES, true)
+            val shown = listed.evidence!!.lines
+            assertEquals(2, shown.size)
+            val spotifys = shown.single { it.url == spotify }.id
+            assertEquals(mapOf(MovedPage(spotify, passageKey(song)) to spotifys), listed.moved)
+            assertEquals(spotifys, webLineOf(spotify, listed.evidence, listed.moved, song))
+            assertEquals(spotifys, shownLine("S2", reason(spotify, song), listed.evidence, listed.moved))
+        }
+    }
+
+    @Test
+    fun aPassageTwoPagesOfTheBatchHoldIsHeldByThePageAtItsOwnAddress() {
+        val other = WebPage("https://example.org/turn", null, "Listen: $song Out now on Secretly Canadian, on vinyl.")
+        val part = WebPage(spotify, null, song)
+        val pages = listOf(other, WebPage(spotify, null, play), part)
+        val listed = withPages(lines("https://example.org/own" to "Own page."), pages, LinePurpose.GENRES, true)
+        assertEquals(3, listed.evidence!!.lines.size)
+        assertEquals(mapOf(MovedPage(spotify, passageKey(song)) to "S3"), listed.moved)
+        assertEquals("S3", webLineOf(spotify, listed.evidence, listed.moved, song))
+    }
+
+    @Test
+    fun aPageWithoutAPassageIsNotListedAtAnAddressAPassageOfTheBatchHas() {
+        val bare = WebPage(spotify, null, spotify)
+        val passage = WebPage("$spotify/", null, quote)
+        listOf(listOf(bare, passage), listOf(passage, bare)).forEach { pages ->
+            val listed = withPages(lines("https://example.org/own" to "Own page."), pages, LinePurpose.GENRES, true)
+            val added = listed.evidence!!.lines.drop(1)
+            assertEquals(listOf(quote), added.map { it.text })
+            assertEquals("S2", webLineOf(spotify, listed.evidence))
+        }
+    }
 }
