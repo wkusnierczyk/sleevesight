@@ -80,16 +80,18 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
 
 /**
  * [lines] with [pages] as web lines after them, each named [purpose] (#1205), numbered on from the
- * web lines they have (`S7` after `S6`); a page whose address a web line has already (`sameAddress`)
- * is that line, not listed twice, and keeps its own name. The song's explanation (#1067,
- * [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources (its Wikipedia
- * article): a page any line has the address of is that line ([lineOf]). With [passages], the pages'
- * texts being passages of them (#1434), a page whose passage a line already listed, or a longer page
- * of [pages], holds whole is left out ([withoutRepeats]), its address and passage kept in
- * [SourcesLines.moved] with that line's id, before each address is kept once, so a distinct passage
- * after a repeat at the same address is listed; each passage shows whole, one cut mid-sentence after
- * "…" ([shownPassage]). A page whose text is its address has no passage: never left out, shown as it is.
- * [lines] itself with no page to add, or no evidence to add them to.
+ * web lines they have (`S7` after `S6`); a page without a passage whose address a web line has
+ * already (`sameAddress`) is that line, not listed twice, and keeps its own name. The song's
+ * explanation (#1067, [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources
+ * (its Wikipedia article): a page any line has the address of is that line ([lineOf]). With
+ * [passages], the pages' texts being passages of them (#1434), a page whose passage a line already
+ * listed, or a longer page of [pages], holds whole is left out ([withoutRepeats], which picks the
+ * holder, #1435), its address and passage kept in [SourcesLines.moved] with that line's id; any
+ * other passage is listed as a line of its own, at an address a line has already too (#1435), so a
+ * citation of it lands on the words it cites, never on another passage of its page ([webLineOf]);
+ * each passage shows whole, one cut mid-sentence after "…" ([shownPassage]). A page whose text is
+ * its address has no passage: never left out, shown as it is, each address once, none at an address
+ * a passage of [pages] has. [lines] itself with no page to add, or no evidence to add them to.
  */
 internal fun withPages(
     lines: SourcesLines,
@@ -104,24 +106,16 @@ internal fun withPages(
             .orEmpty()
             .filter { purpose == LinePurpose.EXPLANATION || it.source == SourceId.WEB }
             .mapNotNull { it.url }
-    // A page at an address a web line has already is that line (#1205).
-    val unlisted = pages.filter { page -> web.none { sameAddress(it, page.url) } }
-    // A page that repeats another's text (iHeart's AllMusic's), a passage cut mid-sentence (#1434),
-    // read before each address is kept once, so when the first page at an address repeats a line,
-    // the next there with a passage of its own is listed. A page whose text is its address (of a list
-    // kept before passages were) has no passage: never a repeat, nor held by a line, shown as it is.
-    val (bare, read) = unlisted.partition { !passages || addressOnly(it.text, it.url) }
+    // A page whose text is its address (of a list kept before passages were), or any page without
+    // [passages], has no passage: never a repeat, nor held by a line, shown as it is.
+    val (bare, read) = pages.partition { !passages || addressOnly(it.text, it.url) }
+    // A page that repeats another's text (iHeart's AllMusic's), a passage cut mid-sentence (#1434):
+    // left out, held by the line, or the longer page, that has it whole, wherever its address. Every
+    // other passage is listed, at an address a line, or another passage, has too (#1435): a reason's
+    // search may give the page another passage than the list's, and its citation lands on that one.
     val held = evidence?.lines.orEmpty().filterNot { line -> line.url?.let { addressOnly(line.text, it) } == true }
     val repeats = withoutRepeats(read, held)
-    val passageKept = repeats.kept.toSet()
-    // Each address once, as `sameAddress` reads them (#1205): a page the list and a reason's search
-    // both found, one with a trailing slash, is one line; the pages keep their order.
-    val fresh =
-        unlisted
-            .filter { it in bare || it in passageKept }
-            .fold(listOf<WebPage>()) { kept, page ->
-                if (kept.any { sameAddress(it.url, page.url) }) kept else kept + page
-            }
+    val fresh = repeats.listed(pages, bare, web)
     if (evidence == null || (fresh.isEmpty() && repeats.repeated.isEmpty())) return lines
     val drafts =
         fresh.map {
@@ -135,7 +129,7 @@ internal fun withPages(
     val moved =
         repeats.repeated
             .mapNotNull { repeat ->
-                val line = repeat.line ?: repeat.within?.let { webLineOf(it.url, shown) }
+                val line = repeat.line ?: repeat.within?.let { webLineOf(it.url, shown, passage = it.text) }
                 line?.let { MovedPage(repeat.page.url, passageKey(repeat.page.text)) to it }
             }.toMap()
     return SourcesLines(shown, lines.album, lines.purposes + named, lines.asked, lines.moved + moved)
@@ -163,22 +157,32 @@ internal fun shownLine(
 
 /**
  * The id of the line [lines] shows the page at [url] under: for its [passage] left out as a repeat
- * (#1434), the line that holds it ([moved], `SourcesLines.moved`, by address and passage), first, so
- * a line listed later at the address (an explanation's page, its title alone) never takes its place;
- * else the web line at its address (`sameAddress`); null for none. A page whose passage is unknown
- * finds no line it was left out for.
+ * (#1434), the line that holds it ([moved], `SourcesLines.moved`, by address and passage), first
+ * when that line is at its own address, as [withoutRepeats] picks it (#1435); else the first web
+ * line at its address (`sameAddress`) that holds [passage] whole ([repeats]), so of one page's
+ * passages, each listed (#1435), a citation lands on the one it cites, and a line a later call lists
+ * there (the vocals check's) takes it from another source's; else the line in [moved] elsewhere, so
+ * a line listed later at the address by its title alone (an explanation's page) never takes its
+ * place; else the first web line at its address; null for none. A page whose passage is unknown
+ * finds no line it was left out for, and lands on its address's first line.
  */
 internal fun webLineOf(
     url: String,
     lines: EvidenceSet?,
     moved: Moved = emptyMap(),
     passage: String? = null,
-): String? =
-    moved.holderOf(url, passage)
-        ?: lines
-            ?.lines
-            ?.firstOrNull { it.source == SourceId.WEB && it.url?.let { at -> sameAddress(at, url) } == true }
-            ?.id
+): String? {
+    val all = lines?.lines.orEmpty()
+    val at = all.filter { it.source == SourceId.WEB && it.url?.let { address -> sameAddress(address, url) } == true }
+    val holder = moved.holderOf(url, passage)
+    // The holder at the page's own address first, as `withoutRepeats` picks it; one elsewhere only
+    // after a line at the address that holds the passage, listed by a later call (the vocals check's).
+    val own = all.firstOrNull { it.id == holder }?.url?.let { sameAddress(it, url) } == true
+    return holder?.takeIf { own }
+        ?: passage?.let { cited -> at.firstOrNull { repeats(cited, it.text) } }?.id
+        ?: holder
+        ?: at.firstOrNull()?.id
+}
 
 /**
  * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web
@@ -216,11 +220,13 @@ internal fun withAlbum(
  * (#912), the composer's and the chips' lines (#1199) and its song's (#958), once [notes] gathered
  * them; then the pages the AI's genre list from [genres] rests on (#1205), once it lists any genre,
  * and those the genres' reasons found on the web
- * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each address once;
- * last, the page the check of the track's vocals cites (#1053, [GenreNotes.vocals]), named *vocals
- * check*, while the genres *Genres* composes ([composedGenres], *Find the lyrics*' answer from
- * [search] with them) still weigh its answer ([checkedPage]), and not again when another line has its
- * address; after it, the pages the song's explanation from [search] cites (#1067, [explainedPages]),
+ * (#801, [GenreNotes.searchedPages]), all named *genres* and numbered together, each passage once; a
+ * page without a passage, each address once (#1435); last, the page the check of the track's vocals
+ * cites (#1053, [GenreNotes.vocals]), named *vocals check*, while the genres *Genres* composes
+ * ([composedGenres], *Find the lyrics*' answer from [search] with them) still weigh its answer
+ * ([checkedPage]), listed again only when no line already holds its passage (#1435); a page without
+ * a passage, not when a line has its address; after it, the pages the song's explanation from
+ * [search] cites (#1067, [explainedPages]),
  * fresh or kept, named *explanation*, each address once; last, under an empty *Genres*, the pages
  * the reasons of *Ask AI*'s genres cite (#952, [answeredGenrePages]), named *genres*. A reason's
  * citations, the check's and the explanation's show these ids by address ([shownLine], [webLineOf],
