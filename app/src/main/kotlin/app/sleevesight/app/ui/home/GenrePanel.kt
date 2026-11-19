@@ -66,7 +66,7 @@ internal fun GenreBody(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // What the genre is, and *Why is this …?* (#523), above the tags.
         GenreAbout(track, genre, notes, search, afterRetry)
-        TagsGrid(track, genre, notes.onCite, notes.lines, extras)
+        TagsGrid(track, genre, notes.onCite, notes.lines, extras, notes.moved)
     }
 }
 
@@ -80,7 +80,8 @@ internal fun GenreBody(
  * album's and the artist's web lines, `SourcesLines`), whose artists' descriptions name genres
  * (#1000, `describedGenres`), cited by the ids *Sources* shows; null for none; and [asked], those
  * lines before the pages listed for showing alone joined them (#1205, `SourcesLines.asked`), which a
- * genre's reason is asked and keyed on.
+ * genre's reason is asked and keyed on; and [moved], the pages *Sources* leaves out as repeats, each
+ * at the line that holds its passage (#1434, `SourcesLines.moved`), where their citations go.
  */
 @Suppress("LongParameterList") // Where the notes come from, where their links go, and what they read.
 internal class PanelNotes(
@@ -91,6 +92,7 @@ internal class PanelNotes(
     val openSettingsAt: (SettingsTarget) -> Unit = {},
     val lines: EvidenceSet? = null,
     val asked: EvidenceSet? = lines,
+    val moved: Map<String, String> = emptyMap(),
 )
 
 // What a genre's panel on Home reads (#523): a citation unfolds *Sources* to its line ([cite]); the
@@ -108,6 +110,7 @@ internal fun panelNotes(
     actions.openSettingsAt,
     lines.evidence,
     lines.asked,
+    lines.moved,
 )
 
 /** The test tags of the genre's panel on the genres' page and its heading, as [Panel] makes them. */

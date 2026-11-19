@@ -62,7 +62,8 @@ import app.sleevesight.core.pipeline.TrackState
  * artist's name on its own line above them with several artists; a *Bio* row with whose bio it is
  * and the citations of its lines, spaces between ("Adele’s bio W6"), each a link that opens its
  * line in *Sources* ([onCite]); under the sources of the row the AI's genres from the web joined, "From:" and the
- * citations of the pages they rest on, as [lines] (*Sources*' own) number them ([FromPages], #1205);
+ * citations of the pages they rest on, as [lines] (*Sources*' own) number them ([FromPages], #1205),
+ * a page left out as a repeat as the line that holds its passage ([moved], #1434);
  * then, in the right column, once, when MusicBrainz gave any tag, its credit and its licence, linked
  * (D12).
  *
@@ -79,6 +80,7 @@ import app.sleevesight.core.pipeline.TrackState
  * five as outlined cells, in the order of the chips past the cap, read after "weaker evidence:"
  * ("Track, Rock, Pop; weaker evidence: Britpop"); its sources and MusicBrainz's credit count them too.
  */
+@Suppress("LongParameterList") // The track and genre, where citations go, and what they are numbered by.
 @Composable
 internal fun TagsGrid(
     track: TrackState,
@@ -86,6 +88,7 @@ internal fun TagsGrid(
     onCite: (String) -> Unit = {},
     lines: EvidenceSet? = null,
     extras: Boolean = false,
+    moved: Map<String, String> = emptyMap(),
 ) {
     val table = track.genres.table
     val order = rememberGenreOrder()
@@ -113,7 +116,7 @@ internal fun TagsGrid(
         GridHeading(stringResource(R.string.home_genre_tag_sources))
         // The citations of the pages the AI's genres from the web rest on (#1205), as *Sources* numbers them.
         val sources = track.genres.aiSources
-        val pages = remember(sources, lines) { sources.mapNotNull { webLineOf(it, lines) }.distinct() }
+        val pages = remember(sources, lines, moved) { sources.mapNotNull { webLineOf(it, lines, moved) }.distinct() }
         rows.forEachIndexed { index, row ->
             val parts = sourceParts(row, onCite)
             if (parts.isEmpty()) return@forEachIndexed

@@ -101,8 +101,9 @@ internal fun libraryPending(
  * ([genre] in italics, as its chip names it) and its page's citation, or nothing found either way,
  * "Web search found nothing on whether this track has vocals."; each answer with "Written by {model}
  * with web search." under it (#1162). The page's citation is the line *Sources* shows it under ([lines], the
- * same address: `sourcesLines` lists it, *vocals check · host*, #1053), a link that opens it there
- * ([onCite]); none while *Sources* has no such line. Nothing with no check, or a failed one.
+ * same address: `sourcesLines` lists it, *vocals check · host*, #1053; or, left out as a repeat, the
+ * line that holds its passage, [moved], #1434), a link that opens it there ([onCite]); none while
+ * *Sources* has no such line. Nothing with no check, or a failed one.
  */
 @Composable
 internal fun VocalsNote(
@@ -110,6 +111,7 @@ internal fun VocalsNote(
     genre: GenreLabel,
     lines: EvidenceSet?,
     onCite: (String) -> Unit,
+    moved: Map<String, String> = emptyMap(),
 ) {
     when (val state = shown?.state) {
         VocalsState.Checking ->
@@ -134,7 +136,7 @@ internal fun VocalsNote(
                     VocalsAnswer.UNKNOWN -> listOf(TextPart.Words(stringResource(R.string.genre_vocals_unknown)))
                 }.takeIf { state.answer == VocalsAnswer.INSTRUMENTAL || shown.tapped } ?: return
             Column(Modifier.testTag(GENRE_VOCALS_TAG), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                val line = state.page?.let { webLineOf(it.url, lines) }
+                val line = state.page?.let { webLineOf(it.url, lines, moved) }
                 AnswerLine(words, line, onCite)
                 SearchCredit(creditString(Credit(shown.model, shown.effort, web = true)))
             }

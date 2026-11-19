@@ -43,12 +43,15 @@ import kotlin.time.Instant
  * lines named by what they were read for (#1205, [LinePurpose]: "genres"), in place of their scope.
  * [asked] is [evidence] before those pages joined it (#1205): what a genre's reason is asked and keyed
  * on (`reasonedOn`), so pages listed for showing never change a reason's key, nor cost one again.
+ * [moved] holds, by address, the pages left out as repeats (#1434, [withoutRepeats]) and the id of
+ * the line that holds each one's passage whole, which a citation of it shows and opens ([webLineOf]).
  */
 internal class SourcesLines(
     val evidence: EvidenceSet?,
     val album: Set<String> = emptySet(),
     val purposes: Map<String, LinePurpose> = emptyMap(),
     val asked: EvidenceSet? = evidence,
+    val moved: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -80,9 +83,10 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
  * is that line, not listed twice, and keeps its own name. The song's explanation (#1067,
  * [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources (its Wikipedia
  * article): a page any line has the address of is that line ([lineOf]). With [passages], the pages'
- * texts being passages of them (#1434), a page that repeats a line already listed, or a longer page
- * of [pages], is left out ([withoutRepeats]), and each passage shows from a sentence's start
- * ([shownPassage]). [lines] itself with no page to add, or no evidence to add them to.
+ * texts being passages of them (#1434), a page whose passage a line already listed, or a longer page
+ * of [pages], holds whole is left out ([withoutRepeats]), its address kept in [SourcesLines.moved]
+ * with that line's id; each passage shows whole, one cut mid-sentence after "…" ([shownPassage]).
+ * [lines] itself with no page to add, or no evidence to add them to.
  */
 internal fun withPages(
     lines: SourcesLines,
@@ -105,8 +109,9 @@ internal fun withPages(
             if (known) kept else kept + page
         }
     // A page that repeats another's text (iHeart's AllMusic's), a passage cut mid-sentence (#1434).
-    val fresh = if (passages) withoutRepeats(distinct, evidence?.lines.orEmpty().map { it.text }) else distinct
-    if (evidence == null || fresh.isEmpty()) return lines
+    val read = if (passages) withoutRepeats(distinct, evidence?.lines.orEmpty()) else Passages(distinct, emptyList())
+    val fresh = read.kept
+    if (evidence == null || (fresh.isEmpty() && read.repeated.isEmpty())) return lines
     val drafts =
         fresh.map {
             val text = if (passages) shownPassage(it.text) else it.text
@@ -115,38 +120,50 @@ internal fun withPages(
     val shown = evidence.with(drafts, JvmHasher)
     val own = evidence.ids.toSet()
     val named = shown.lines.filter { it.id !in own }.associate { it.id to purpose }
-    return SourcesLines(shown, lines.album, lines.purposes + named, lines.asked)
+    // Each page left out at the line that holds its passage: a line listed, or the page kept that does.
+    val moved =
+        read.repeated
+            .mapNotNull { repeat ->
+                val line = repeat.line ?: repeat.within?.let { webLineOf(it.url, shown) }
+                line?.let { repeat.page.url to it }
+            }.toMap()
+    return SourcesLines(shown, lines.album, lines.purposes + named, lines.asked, lines.moved + moved)
 }
 
 /**
  * The id of the line [sources] (*Sources*' lines) shows for the line [id] of [evidence], a reason's
- * own (#1205): a web page's by its address ([webLineOf]), whatever its id in [evidence], else the same
- * source, scope and words ([shownId]); null for none. A reason keeps its own ids, as it was checked
- * and kept; only what shows them is mapped, so a citation lands on its page however *Sources*
- * numbers it.
+ * own (#1205): a web page's by its address ([webLineOf]), whatever its id in [evidence], or, left out
+ * as a repeat, the line that holds its passage ([moved], #1434); else the same source, scope and
+ * words ([shownId]); null for none, which shows no citation at all, never its own id that *Sources*
+ * may number another line by. A reason keeps its own ids, as it was checked and kept; only what
+ * shows them is mapped, so a citation lands on its page however *Sources* numbers it.
  */
 internal fun shownLine(
     id: String,
     evidence: EvidenceSet?,
     sources: EvidenceSet?,
+    moved: Map<String, String> = emptyMap(),
 ): String? {
     val line = evidence?.get(id) ?: return null
-    val page = line.url?.takeIf { line.source == SourceId.WEB }?.let { webLineOf(it, sources) }
+    val page = line.url?.takeIf { line.source == SourceId.WEB }?.let { webLineOf(it, sources, moved) }
     return page ?: shownId(id, evidence, sources)
 }
 
 /**
- * The id of the line [lines] shows the page at [url] under (`sameAddress`), among its web lines; null
- * for none.
+ * The id of the line [lines] shows the page at [url] under (`sameAddress`), among its web lines, or,
+ * for a page left out as a repeat (#1434), the line that holds its passage ([moved],
+ * `SourcesLines.moved`); null for none.
  */
 internal fun webLineOf(
     url: String,
     lines: EvidenceSet?,
+    moved: Map<String, String> = emptyMap(),
 ): String? =
     lines
         ?.lines
         ?.firstOrNull { it.source == SourceId.WEB && it.url?.let { at -> sameAddress(at, url) } == true }
         ?.id
+        ?: moved.entries.firstOrNull { sameAddress(it.key, url) }?.value
 
 /**
  * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web

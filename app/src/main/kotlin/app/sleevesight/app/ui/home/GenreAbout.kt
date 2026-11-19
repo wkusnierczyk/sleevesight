@@ -136,7 +136,7 @@ internal fun GenreAbout(
     val why = track.genres.weakEvidence(genre)
     if (!answersWeak(vocals)) WeakEvidenceNote(why, named, onCite)
     DescribedNote(track.genres.describedIn(genre), why, onCite)
-    VocalsNote(vocals, named, shown.lines ?: track.evidence, onCite)
+    VocalsNote(vocals, named, shown.lines ?: track.evidence, onCite, shown.moved)
     // While the check runs, no *Why is this …?*: a tap runs it, then the reason. Once a tap's check
     // found vocals, none for the play either: an explanation of the genre would contradict it.
     if (vocals?.state != VocalsState.Checking && !vocalsTapped(vocals)) {
@@ -183,7 +183,15 @@ internal fun GenreReasonBlock(
                 reason,
                 question,
                 InsightContext(asked, true, true, shown.modelAllowed, InsightOffers()),
-                ReasonActions(shown.onCite, readAloud, explain, afterRetry, shown.openSettingsAt, shown.lines),
+                ReasonActions(
+                    shown.onCite,
+                    readAloud,
+                    explain,
+                    afterRetry,
+                    shown.openSettingsAt,
+                    shown.lines,
+                    shown.moved,
+                ),
             )
         }
     }
