@@ -225,6 +225,13 @@ class DatesScreenTest {
         said(listOf(DateSentence.Edition("2025-11-07", wedding, EditionPart.Named(reception, "2026-01-30")))) {
             assertEquals(line, listOf(wedding, reception), italics(line))
         }
+        val single =
+            "The single Material Girl was first released in 1985. " +
+                "Material Girl / Pretender, an edition of it under a new title, was released in February 1985."
+        val pretender = EditionPart.Named("Material Girl / Pretender", "1985-02")
+        said(listOf(DateSentence.Edition("1985", "Material Girl", pretender, ReleaseKind.SINGLE))) {
+            assertEquals(single, listOf("Material Girl", "Material Girl / Pretender"), italics(single))
+        }
     }
 
     @Test
