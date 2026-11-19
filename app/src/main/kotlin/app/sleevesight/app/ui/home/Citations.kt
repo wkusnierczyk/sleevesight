@@ -20,7 +20,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
@@ -38,36 +37,48 @@ import app.sleevesight.core.synthesis.SentenceStatus
 
 // A paragraph of the insight as shown (its citations as chips) and as a screen reader reads it
 // (each chip by what it points at, `home_cite`, `home_cite_model` or `home_cite_unknown`, rather
-// than its bare id, and an uncited sentence said to be so, as the dimmed text shows it), with the
-// lines its chips scroll to, in order, each once, at most [MAX_LINE_ACTIONS].
+// than its bare id, and a run of sentences citing nothing said to be so, as its `?` chip shows it),
+// with the lines its chips scroll to, in order, each once, at most [MAX_LINE_ACTIONS]; and the way to
+// the note on its dimmed text, when it has any ([note], #954, #1437).
 private class ProseText(
     val text: AnnotatedString,
     val spoken: String,
     val lines: List<String>,
     val label: (String) -> String = { it },
-    // The way to the note on its dimmed text, when it has any (#954).
-    val note: NoteFocus? = null,
+    val note: ToNote? = null,
+)
+
+// The way to the note ([focus], #954) from a paragraph's outlined chips, of the lines [unsupported]
+// (#1437), and from its `?` chips, when it has any ([uncited]).
+private class ToNote(
+    val focus: NoteFocus,
+    val unsupported: List<String>,
+    val uncited: Boolean,
+)
+
+// A checked paragraph's sentences as shown ([shown]: each with its runs, those of a dimmed one with its
+// chips only at its run's end, #1437, and whether it starts a line), which end with their run's mark
+// ([marked]), and how its citations read and show ([policy], [styles]).
+private class Marked(
+    val shown: List<Triple<CheckedSentence, List<ShownRun>, Boolean>>,
+    val marked: List<Boolean>,
+    val policy: CitePolicy,
+    val styles: CiteStyles,
 )
 
 /**
- * A checked paragraph's sentences that are dimmed: uncited, citing a line that does not exist, or
- * citing lines that do not back them (#1036).
- */
-internal val DIMMED_STATUSES: Set<SentenceStatus> =
-    setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.UNSUPPORTED)
-
-/**
- * A checked paragraph of [grounded]: a sentence uncited, citing a line that does not exist, or citing
- * lines that do not back it ([SentenceStatus.UNSUPPORTED], #1036), is dimmed: upright, in the text's
- * colour at 60 % ([dimmedText], #954; in italics until then, #819), its titles in italics as anywhere.
- * After it, after its own chips, a `?` chip ([CiteStyles.unbacked]; one for a run of dimmed sentences,
- * after the last, [runEnds]) goes to the note under the reply
- * ([UnbackedNote], by [LocalNoteFocus]), as a citation's chip goes to its line. An unsupported
- * sentence's line chips are a dim outline with no fill
- * ([CiteStyles.unsupported]), and still open their lines; a screen reader hears each as "W2: does not
- * say this", and the sentence as "(not backed by its source)" before its final stop, as an uncited
- * one's "(not cited)", a `?` chip then as "(Not backed, see the note)", which the
- * paragraph also offers as an action. Its citations are read as the check read them,
+ * A checked paragraph of [grounded] (#1437, after #954 and #1036). A sentence citing a line that does
+ * not exist is taken out, nothing said of it ([takenOut]). A sentence uncited, or citing lines that do
+ * not back it ([SentenceStatus.UNSUPPORTED]), is dimmed: upright, in the text's colour at 60 %
+ * ([dimmedText]), its titles in italics as anywhere. A run of dimmed sentences with the same backing
+ * ([backing]: all citing nothing, or all citing the same lines) shows one mark, after its last sentence
+ * ([runEnds]), never both on one sentence: citing nothing, a `?` chip ([CiteStyles.unbacked]) before
+ * its final stop; citing lines, those lines' chips as a dim outline with no fill
+ * ([CiteStyles.unsupported]), the other sentences of the run showing none. Both go to the note under
+ * the reply ([UnbackedNote], by [LocalNoteFocus]); with no note to go to, an outlined chip opens its
+ * line. A screen reader hears a `?` chip as "(not cited)" and an outlined chip as "W2: does not say
+ * this", and has each as an action of the paragraph: "Not cited, see the note", "W2: does not say
+ * this, see the note". Its citations are read as the check read them,
  * against the card's own evidence and with the model's own knowledge as it was allowed when the
  * card was written ([GroundedText.allowModel]), not as the settings now allow it: a card kept stays
  * as it was checked.
@@ -91,49 +102,117 @@ internal fun CheckedProse(
     val flagged = dimmedText()
     val note = LocalNoteFocus.current
     val policy = CitePolicy(evidence, grounded.allowModel, held, label)
-    val sentences = paragraph.map { it.text }
-    // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out;
-    // a line break before it passes to the sentence shown next (#574). Each shown sentence with its
-    // runs and whether it starts a line.
+    // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out,
+    // nor is one taken out (#1437); a line break before it passes to the sentence shown next (#574).
+    // Each shown sentence with its runs and whether it starts a line.
     val shown =
-        remember(paragraph) {
+        remember(paragraph, evidence, held) {
             var newLine = false
-            paragraph.zip(shown(sentences, checked = true)).mapNotNull { (sentence, runs) ->
+            paragraph.zip(shown(paragraph.map { it.text }, checked = true)).mapNotNull { (sentence, runs) ->
                 newLine = newLine || sentence.afterLineBreak
-                if (runs.isBlank()) null else Triple(sentence, runs, newLine).also { newLine = false }
+                val out = runs.isBlank() || takenOut(sentence, runs, evidence, grounded.allowModel, held)
+                if (out) null else Triple(sentence, runs, newLine).also { newLine = false }
             }
         }
     if (shown.isEmpty()) return
-    // Only the last of a run of dimmed sentences ends with a `?` chip (#954): a sentence not dimmed,
-    // the model's own knowledge's among them, or the paragraph's end, ends a run.
-    val marked = runEnds(shown.map { (sentence, _, _) -> sentence.status in DIMMED_STATUSES })
-    val notes = SpokenNotes(resources)
+    // The sentences that end with their run's mark (#1437): its `?` chip, or its outlined chips; a
+    // dimmed one's chips show only at its run's end.
+    val ends = runEnds(shown.map { (sentence, _, _) -> backing(sentence) })
+    val marked =
+        Marked(
+            shown.mapIndexed { i, (sentence, runs, newLine) ->
+                val shownRuns =
+                    if (sentence.status == SentenceStatus.UNSUPPORTED &&
+                        !ends[i]
+                    ) {
+                        withoutChips(runs)
+                    } else {
+                        runs
+                    }
+                Triple(sentence, shownRuns, newLine)
+            },
+            ends,
+            policy,
+            styles,
+        )
+    val dimmed = shown.any { (sentence, _, _) -> sentence.status in DIMMED_STATUSES }
+    val text = markedText(marked, flagged, note.takeIf { dimmed }, onCite)
+    Prose(markedProse(marked, text, note.takeIf { dimmed }, resources), onCite)
+}
+
+// [marked] as a screen reader hears it, with the lines its chips open and its way to the note
+// ([note], #1437): its outlined chips' lines, then whether it has a `?` chip; with no note to go to,
+// its outlined chips open their lines.
+private fun markedProse(
+    marked: Marked,
+    text: AnnotatedString,
+    note: NoteFocus?,
+    resources: Resources,
+): ProseText {
+    val uncited = resources.getString(R.string.home_cite_none)
+    val status = { i: Int -> marked.shown[i].first.status }
     val said =
-        shown.withIndex().joinToString(" ") { (i, sentenceRuns) ->
-            val (sentence, runs, _) = sentenceRuns
-            val words = spoken(runs, policy, resources, sentence.status == SentenceStatus.UNSUPPORTED)
-            notes.said(words, sentence.status, chip = marked[i])
+        marked.shown.indices.joinToString(" ") { i ->
+            val unsupported = status(i) == SentenceStatus.UNSUPPORTED
+            val words = spoken(marked.shown[i].second, marked.policy, resources, unsupported)
+            if (status(i) == SentenceStatus.UNCITED && marked.marked[i]) notCited(words, uncited) else words
         }
-    val text =
-        buildAnnotatedString {
-            shown.forEachIndexed { i, (sentence, runs, newLine) ->
-                // A sentence the reply began on a new line (a list's item, a heading) shows on one (#574).
-                if (i > 0) append(if (newLine) '\n' else ' ')
-                val doubtful = sentence.status in DIMMED_STATUSES
-                val unsupported = sentence.status == SentenceStatus.UNSUPPORTED
-                if (marked[i]) {
-                    // The `?` chip after the sentence's own chips, before its final stop (#954).
+    val runsOf = { outlined: Boolean ->
+        marked.shown.indices
+            .filter { (status(it) == SentenceStatus.UNSUPPORTED) == outlined }
+            .flatMap { marked.shown[it].second }
+    }
+    val backed = lines(runsOf(false), marked.policy)
+    val unsupported = lines(runsOf(true), marked.policy).take(MAX_LINE_ACTIONS - 1)
+    val toNote =
+        note?.let {
+            ToNote(
+                it,
+                unsupported,
+                marked.shown.indices.any { status(it) == SentenceStatus.UNCITED },
+            )
+        }
+    val lines = if (toNote == null) (backed + unsupported).distinct() else backed
+    return ProseText(text, said, lines, marked.policy.label, toNote)
+}
+
+// [marked] as shown: a dimmed sentence in [flagged], one citing nothing at its run's end with a `?`
+// chip before its final stop (#954), one citing lines that do not back it with their chips outlined,
+// going to the [note] when there is one (#1437); any other chip opening its line ([onCite]).
+private fun markedText(
+    marked: Marked,
+    flagged: SpanStyle,
+    note: NoteFocus?,
+    onCite: (String) -> Unit,
+): AnnotatedString {
+    val toNote: (String) -> Unit = note?.let { focus -> { _: String -> focus.go() } } ?: onCite
+    val (policy, styles) = marked.policy to marked.styles
+    return buildAnnotatedString {
+        marked.shown.forEachIndexed { i, (sentence, runs, newLine) ->
+            // A sentence the reply began on a new line (a list's item, a heading) shows on one (#574).
+            if (i > 0) append(if (newLine) '\n' else ' ')
+            when {
+                sentence.status == SentenceStatus.UNCITED && marked.marked[i] -> {
                     val (before, after) = unbackedAt(runs)
-                    appendSentence(before, policy, styles, onCite, flagged, unsupported)
+                    appendSentence(before, policy, styles, onCite, flagged)
                     appendUnbacked(before, styles, note)
-                    appendSentence(after, policy, styles, onCite, flagged, unsupported)
-                } else {
-                    appendSentence(runs, policy, styles, onCite, flagged.takeIf { doubtful }, unsupported)
+                    appendSentence(after, policy, styles, onCite, flagged)
                 }
+
+                sentence.status == SentenceStatus.UNSUPPORTED ->
+                    appendSentence(runs, policy, styles, toNote, flagged, unsupported = true)
+
+                else ->
+                    appendSentence(
+                        runs,
+                        policy,
+                        styles,
+                        onCite,
+                        flagged.takeIf { sentence.status in DIMMED_STATUSES },
+                    )
             }
         }
-    val dimmed = shown.any { (sentence, _, _) -> sentence.status in DIMMED_STATUSES }
-    Prose(ProseText(text, said, lines(sentences, policy), label, note.takeIf { dimmed }), onCite)
+    }
 }
 
 /**
@@ -155,7 +234,7 @@ internal fun UncheckedProse(
     if (shown.isBlank()) return
     val text = buildAnnotatedString { appendSentence(shown, policy, styles, onCite, null) }
     Prose(
-        ProseText(text, spoken(shown, policy, LocalResources.current), lines(listOf(paragraph), policy), label),
+        ProseText(text, spoken(shown, policy, LocalResources.current), lines(shown, policy), label),
         onCite,
     )
 }
@@ -182,21 +261,32 @@ private fun Prose(
             Modifier.drawChipOutlines(outlined, layout, ink).semantics {
                 text = shown
                 contentDescription = prose.spoken
-                // Each line's, then the note's on the dimmed text (#954).
-                val note =
-                    prose.note?.let { focus ->
-                        CustomAccessibilityAction(resources.getString(R.string.home_cite_see_note)) {
-                            focus.go()
-                            true
-                        }
-                    }
+                // Each line's, then the outlined chips' and the `?` chips', which go to the note (#1437).
+                val toNote =
+                    prose.note
+                        ?.let { toNote ->
+                            val focus = toNote.focus
+                            toNote.unsupported.map { id ->
+                                val said = resources.getString(R.string.home_cite_unsupported_see_note, prose.label(id))
+                                CustomAccessibilityAction(said) {
+                                    focus.go()
+                                    true
+                                }
+                            } +
+                                listOfNotNull(
+                                    CustomAccessibilityAction(resources.getString(R.string.home_cite_see_note)) {
+                                        focus.go()
+                                        true
+                                    }.takeIf { toNote.uncited },
+                                )
+                        }.orEmpty()
                 val actions =
                     prose.lines.map { id ->
                         CustomAccessibilityAction(resources.getString(R.string.home_cite, prose.label(id))) {
                             onCite(id)
                             true
                         }
-                    } + listOfNotNull(note)
+                    } + toNote
                 if (actions.isNotEmpty()) customActions = actions
             },
     )
@@ -232,15 +322,14 @@ private fun spoken(
         .replace(SPACE_BEFORE_STOP, "$1")
         .trim()
 
-// The lines [sentences] cite that a chip scrolls to, in order, each once, at most
-// [MAX_LINE_ACTIONS]: each becomes an accessibility action of the paragraph.
+// The lines [runs] cite that a chip scrolls to, in order, each once, at most [MAX_LINE_ACTIONS]: each
+// becomes an accessibility action of the paragraph.
 private fun lines(
-    sentences: List<String>,
+    runs: List<ShownRun>,
     policy: CitePolicy,
 ): List<String> =
-    sentences
-        .flatMap(::segments)
-        .filterIsInstance<Segment.Cite>()
+    runs
+        .filterIsInstance<ShownRun.Cite>()
         .map { it.id }
         .filter { citeKind(it, policy.evidence, policy.modelAllowed, policy.held) == CiteKind.LINE }
         .distinct()
@@ -311,46 +400,6 @@ private fun AnnotatedString.Builder.appendSentence(
 }
 
 /**
- * A run of a sentence's [text], its title in italics and its bold in bold (#555), in [flagged] when
- * the sentence is dimmed ([dimmedText], upright, so a title in it stays in italics, #954). Also
- * *Explain the song*'s (#908).
- */
-internal fun AnnotatedString.Builder.appendText(
-    text: ShownRun.Text,
-    flagged: SpanStyle?,
-) {
-    val marked =
-        SpanStyle(
-            fontStyle = if (text.italic) FontStyle.Italic else null,
-            fontWeight = if (text.bold) FontWeight.Bold else null,
-        )
-    val style = flagged?.merge(marked) ?: marked
-    if (style == SpanStyle()) append(text.text) else withStyle(style) { append(text.text) }
-}
-
-/**
- * The `?` chip after a dimmed sentence's [before] runs (#954), kept on the line of the word or chip
- * before it ([CHIP_GLUE]: a word joiner, then a no-break space unless they end in a space), so it
- * never wraps onto a line alone. On a tap, it goes to the note under the reply ([NoteFocus.go]); with
- * no [note] to go to, it only shows.
- */
-internal fun AnnotatedString.Builder.appendUnbacked(
-    before: List<ShownRun>,
-    styles: CiteStyles,
-    note: NoteFocus?,
-) {
-    val spaced = (before.lastOrNull() as? ShownRun.Text)?.text?.lastOrNull()?.isWhitespace() == true
-    if (before.isNotEmpty()) append(if (spaced) WORD_JOINER else CHIP_GLUE)
-    val label = UNBACKED_LABEL
-    if (note == null) {
-        withStyle(styles.unbacked) { append(label) }
-    } else {
-        val link = LinkAnnotation.Clickable(UNBACKED_LINK_TAG, TextLinkStyles(styles.unbacked)) { note.go() }
-        withLink(link) { append(label) }
-    }
-}
-
-/**
  * A citation as a chip, shown as [shownAs]: a line's scrolls to it ([onCite] with [id]), with no
  * fill and an outline the paragraph draws ([OUTLINE_TAG]) when it does not back its sentence
  * ([unsupported], #1036); the model's and a missing line's only say what they are. Also *Explain the
@@ -385,14 +434,6 @@ const val CITE_PREFIX: String = "cite:"
 
 /** The tag of the annotation over a chip drawn as an outline (#1036), its evidence id the item. */
 const val OUTLINE_TAG: String = "outline"
-
-// No break before the `?` chip (#954): a word joiner, which holds even after a citation chip's thin
-// space, where a line may break before a no-break space; then a no-break space, the space shown.
-private const val WORD_JOINER = "\u2060"
-private const val CHIP_GLUE = "$WORD_JOINER\u00A0"
-
-/** The link tag of the `?` chip after a dimmed sentence (#954), which goes to the note under the reply. */
-const val UNBACKED_LINK_TAG: String = "unbacked"
 
 private val CITE_SIZE = 0.8.em
 private val SPACES = Regex("\\s+")

@@ -125,7 +125,7 @@ class GenreReasonNoteScreenTest {
     }
 
     // One text for any number of dimmed sentences (#854).
-    private val note get() = app.getString(R.string.home_note_unbacked)
+    private val note get() = app.getString(R.string.home_note_unbacked_uncited)
 
     @Test
     fun theCaseOfTheIssueWithEverySentenceCitedHasNoNote() {
@@ -150,14 +150,14 @@ class GenreReasonNoteScreenTest {
                     "this track's instruments or sound.",
             ),
         ) {
-            assertEquals("Dimmed text is not backed by the sources.", note)
+            assertEquals("Dimmed text is not backed by any source.", note)
             compose.onNodeWithText(note).assertExists()
         }
 
     @Test
     fun twoDimmedSentencesGetTheSameNote() =
         show(written("$REPLY It feels alternative. It is loud.")) {
-            assertEquals("Dimmed text is not backed by the sources.", note)
+            assertEquals("Dimmed text is not backed by any source.", note)
             compose.onNodeWithText(note).assertExists()
         }
 

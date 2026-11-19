@@ -174,7 +174,7 @@ class InsightMarkdownScreenTest {
             assertEquals(
                 listOf(
                     "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                        "It is really great (${text(R.string.home_cite_none)}) (${text(R.string.home_cite_see_note)}).",
+                        "It is really great (${text(R.string.home_cite_none)}).",
                 ),
                 prose("It topped the charts").fetchSemanticsNode().config[SemanticsProperties.ContentDescription],
             )
@@ -184,7 +184,7 @@ class InsightMarkdownScreenTest {
     fun aRuleOnItsOwnShowsAsNothingAndIsNotCountedAsUnbacked() =
         show(written("It charted [W1].\n\n---\n\nIt sold [MB1].")) {
             // The check reads the rule as a paragraph and an uncited sentence; the card shows none of it.
-            val unbacked = app.getString(R.string.home_note_unbacked)
+            val unbacked = app.getString(R.string.home_note_unbacked_uncited)
             assertEquals(0, compose.onAllNodesWithText(unbacked).fetchSemanticsNodes().size)
             assertEquals(0, compose.onAllNodesWithText("---", substring = true).fetchSemanticsNodes().size)
             textOf("It charted")

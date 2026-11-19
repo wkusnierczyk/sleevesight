@@ -17,7 +17,8 @@ import app.sleevesight.core.synthesis.SentenceStatus
 
 /**
  * The grounding line under a written insight or a genre's reason: a note only when there is
- * something to say ([Note]), the one the dimmed sentences' `?` chips go to (#954), and under it, with
+ * something to say ([UnbackedNote]: the one the dimmed sentences' marks go to, #954, #1437, its lines'
+ * chips read as [cites] reads them), and under it, with
  * [details] (*Show grounding details*, a developer option, #437), the grounding check's counts in
  * full ([Meta]). Whether it was kept from before is not its to say:
  * the insight's credit says who wrote it (#1162), a genre's reason its own line
@@ -31,47 +32,23 @@ import app.sleevesight.core.synthesis.SentenceStatus
 internal fun GroundingLine(
     grounded: GroundedText,
     details: Boolean,
+    cites: NoteCites,
     modifier: Modifier = Modifier,
 ) {
-    Note(grounded, modifier)
+    // Shown only when there is something to say (#437): text the sources do not back, which is
+    // dimmed. A sentence from the model's own knowledge is not counted: it is not dimmed, and its own
+    // chip says where it is from; nor is one taken out, or one that shows as nothing (#555).
+    val unbacked = remember(grounded, cites.evidence, cites.held) { unbacked(grounded, cites) }
+    unbacked?.let { UnbackedNote(it, modifier, cites.onCite) }
     // The full counts show only in developer mode, and are marked as such (#536); the note stays (#954).
     if (details) DeveloperMark { Meta(grounded, Modifier) }
 }
 
 /**
- * The note under the insight (#437), shown only when there is something to say: the sentences the
- * sources do not back, which are dimmed (uncited, citing missing evidence, or citing lines that do
- * not back them, #1036; #819), named by
- * that mark (#664), in one text for any number of them ("Dimmed text is not backed by the
- * sources.", #854), after the `?` chip each of them ends with, which goes to it (#954,
- * [UnbackedNote]). A sentence from the
- * model's own knowledge is not counted: it is not dimmed, and its own chip says where it is from. A
- * sentence the sources back
- * needs no word: its citations show it. The full counts are [Meta]'s, behind *Show grounding details*.
- * A sentence that shows as nothing once its Markdown is cleaned (a rule on its own, #555) is not
- * counted: the reader could not find it.
- */
-@Composable
-private fun Note(
-    grounded: GroundedText,
-    modifier: Modifier,
-) {
-    val unbacked = remember(grounded) { unbacked(grounded) }
-    if (unbacked > 0) UnbackedNote(modifier)
-}
-
-// The sentences the sources do not back that show on the card, dimmed.
-private fun unbacked(grounded: GroundedText): Int =
-    grounded.paragraphs.sumOf { paragraph ->
-        paragraph.zip(shown(paragraph.map { it.text }, checked = true)).count { (sentence, runs) ->
-            sentence.status in DIMMED_STATUSES && !runs.isBlank()
-        }
-    }
-
-/**
  * The statuses of a sentence the sources do not back, which reading aloud marks "Unverified:" (#325):
- * the ones dimmed ([DIMMED_STATUSES], which the note counts, citing lines that do not back them, #1036,
- * among them) and the model's own knowledge.
+ * the ones dimmed ([DIMMED_STATUSES], which the note names, citing lines that do not back them, #1036,
+ * among them) and the model's own knowledge. One citing a line that does not exist is not read at all
+ * (#1437), as the card takes it out.
  */
 internal val UNBACKED = DIMMED_STATUSES + SentenceStatus.MODEL
 

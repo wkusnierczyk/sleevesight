@@ -56,13 +56,14 @@ class SpokenWordsTest {
     }
 
     @Test
-    fun theMarkOfAnInsightKeptFromBeforeIsLeftOutTooAndACitationOfNoLineIsUnverified() {
+    fun theMarkOfAnInsightKeptFromBeforeIsLeftOutTooAndACitationOfNoLineIsNotRead() {
         // `[M]`, the model's mark until #668, in an insight kept from before.
         assertEquals(
             listOf("Sundown was recorded in 1973.", "Unverified: Lightfoot wrote it in Toronto."),
             spoken("Sundown was recorded in 1973 [MB1]. Lightfoot wrote it in Toronto [M].", allowModel = true),
         )
-        assertEquals(listOf("Unverified: It was a hit."), spoken("It was a hit [W9]."))
+        // A sentence citing a line that does not exist is not read, as the card takes it out (#1437).
+        assertEquals(emptyList<String>(), spoken("It was a hit [W9]."))
     }
 
     @Test

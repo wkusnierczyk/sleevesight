@@ -343,7 +343,7 @@ class CreditLineScreenTest {
         // How far the traversal is followed from the heading: past *Read aloud*, a few nodes away.
         const val MAX_STEPS = 16
 
-        const val NOTE = "Dimmed text is not backed by the sources."
+        const val NOTE = "Dimmed text is not backed by any source."
 
         // What the nodes read from the heading on are.
         const val HEADING = "heading"

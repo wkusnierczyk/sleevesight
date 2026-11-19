@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.home
 
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.synthesis.GroundedText
+import app.sleevesight.core.synthesis.SentenceStatus
 
 // What *Read aloud* says (#325): the insight's sentences as the card shows them, without their
 // citations, and a sentence the sources do not back said to be so.
@@ -22,9 +23,10 @@ class SpokenWords(
  * parsed again: its runs as the card shows them ([shown]), the Markdown cleaned, with the citation
  * runs left out, whatever their id (`[MB1]`, web search's `[S1]` or `[G1]`, the model's own `[M]` or
  * `[AI]`); a sentence the card shows as nothing (a rule on its own) is not read. A sentence the sources do not back
- * ([UNBACKED]: uncited or citing a line that does not exist, both dimmed, or from the
+ * ([UNBACKED]: uncited or citing lines that do not back it, both dimmed, or from the
  * model's own knowledge, with its chip), starts with [SpokenWords.unverified], so listening keeps
- * what the screen marks. A text the check found no sentence in is read whole, as the card shows
+ * what the screen marks; one citing a line that does not exist is not read, as the card takes it
+ * out (#1437). A text the check found no sentence in is read whole, as the card shows
  * it, without its citations.
  */
 internal fun spokenSentences(
@@ -40,6 +42,8 @@ internal fun spokenSentences(
             val said = tidy(runs.filterIsInstance<ShownRun.Text>().joinToString("") { it.text })
             when {
                 said.isEmpty() -> null
+                // Taken out, as the card takes it out (#1437).
+                sentence.status == SentenceStatus.UNKNOWN -> null
                 sentence.status in UNBACKED -> "${words.unverified} $said"
                 else -> said
             }

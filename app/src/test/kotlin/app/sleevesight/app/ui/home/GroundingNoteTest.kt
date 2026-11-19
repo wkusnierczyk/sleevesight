@@ -53,8 +53,8 @@ class GroundingNoteTest {
         vararg args: Any,
     ) = app.resources.getQuantityString(id, count, *args)
 
-    // One text for any number of dimmed sentences (#854).
-    private val unbacked get() = text(R.string.home_note_unbacked)
+    // One text for any number of dimmed sentences (#854), here citing nothing (#1437).
+    private val unbacked get() = text(R.string.home_note_unbacked_uncited)
 
     private fun show(
         insight: InsightState.Written,
@@ -103,24 +103,25 @@ class GroundingNoteTest {
         }
 
     @Test
-    fun anUncitedSentenceGetsThePlainNote() =
+    fun anUncitedSentenceGetsTheNoteOnTextCitingNothing() =
         show(written("It was recorded in 1973 [MB1]. It is great.")) {
             compose.onNodeWithText(unbacked).assertExists()
-            assertEquals("Dimmed text is not backed by the sources.", unbacked)
+            assertEquals("Dimmed text is not backed by any source.", unbacked)
             assertNoGroundedCount()
         }
 
     @Test
-    fun dimmedSentencesUncitedAndMissingTogetherGetOneNoteForAnyNumber() =
+    fun aSentenceCitingAMissingLineIsTakenOutAndTheUncitedGetOneNote() =
         show(
             written(
                 "It was recorded in 1973 [MB1]. It is great. It was a hit [MB9]. It is loved [AI].",
                 allowModel = true,
             ),
         ) {
-            // The model's own sentence carries its chip and is not dimmed, so the note leaves it out.
+            // The model's own sentence carries its chip and is not dimmed, so the note leaves it out; the
+            // one citing a line that does not exist is taken out, nothing said of it (#1437).
             compose.onNodeWithText(unbacked).assertExists()
-            assertEquals("Dimmed text is not backed by the sources.", unbacked)
+            assertEquals(0, count("It was a hit", substring = true))
             assertNoGroundedCount()
         }
 
@@ -200,6 +201,6 @@ class GroundingNoteTest {
     }
 
     private companion object {
-        const val NOT_BACKED = "not backed by the sources"
+        const val NOT_BACKED = "Dimmed text is not"
     }
 }

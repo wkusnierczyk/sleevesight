@@ -345,18 +345,14 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun aCardCheckedWithTheModelsKnowledgeAllowedShowsItsModelCitationAsSoBesideAMissingLine() {
-        // No sentence comes out `MODEL`: the only `[AI]` sits beside a line that does not exist.
-        val kept = track(insight = written("It is loved [AI][L1].", cached = true, allowModel = true))
+    fun aSentenceCitingTheModelBesideAMissingLineIsTakenOut() {
+        // No sentence comes out `MODEL`: the `[AI]` sits beside a line that does not exist, so the
+        // sentence is taken out, nothing said of it (#1437).
+        val reply = "It topped the charts [W1]. It is loved [AI][L1]."
+        val kept = track(insight = written(reply, cached = true, allowModel = true))
         show(state(PipelineView(kept, aiReady = true))) {
-            val prose =
-                compose
-                    .onNodeWithText("It is loved", substring = true)
-                    .fetchSemanticsNode()
-                    .config[SemanticsProperties.Text]
-                    .first { "It is loved" in it.text }
-            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "AI" }
-            assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
+            compose.onNodeWithText("It topped the charts", substring = true).assertExists()
+            assertEquals(0, compose.onAllNodesWithText("It is loved", substring = true).fetchSemanticsNodes().size)
         }
     }
 
@@ -377,9 +373,9 @@ class NowPlayingScreenTest {
                     listOf(
                         "It topped the charts (${text(R.string.home_cite, "W1")}). " +
                             "It is loved (${text(R.string.home_cite_model)}). " +
-                            "It charted (${text(R.string.home_cite_unknown, "L1")}). " +
-                            // One `?` chip for the run of two dimmed sentences, after the second (#954).
-                            "It is great (${text(R.string.home_cite_none)}) (${text(R.string.home_cite_see_note)}).",
+                            // The sentence citing a line that does not exist is taken out (#1437); the
+                            // uncited one's `?` chip is read as "not cited" (#954).
+                            "It is great (${text(R.string.home_cite_none)}).",
                     ),
                 ),
             )
@@ -408,9 +404,9 @@ class NowPlayingScreenTest {
         val reply = "It topped the charts [W1]. It is a single [WD1]."
         val writing = InsightState.Writing(reply, held)
         for (insight in listOf(writing, written(reply, held = held))) {
-            // Once checked, the sentence citing a line the prompt left out is dimmed, with its `?` chip (#954).
+            // Once checked, the sentence citing a line the prompt left out is taken out (#1437).
             val checked = insight is InsightState.Written
-            val noteChip = if (checked) " (${text(R.string.home_cite_see_note)})" else ""
+            val single = " It is a single (${text(R.string.home_cite_unknown, "WD1")})."
             show(state(PipelineView(track(insight = insight), aiReady = true))) {
                 val node =
                     compose
@@ -422,21 +418,24 @@ class NowPlayingScreenTest {
                     SemanticsMatcher.expectValue(
                         SemanticsProperties.ContentDescription,
                         listOf(
-                            "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "It is a single (${text(R.string.home_cite_unknown, "WD1")})$noteChip.",
+                            "It topped the charts (${text(R.string.home_cite, "W1")})." +
+                                if (checked) "" else single,
                         ),
                     ),
                 )
                 val actions = node.fetchSemanticsNode().config[SemanticsActions.CustomActions]
-                val toNote = listOfNotNull(text(R.string.home_cite_see_note).takeIf { checked })
-                assertEquals(listOf(text(R.string.home_cite, "W1")) + toNote, actions.map { it.label })
+                assertEquals(listOf(text(R.string.home_cite, "W1")), actions.map { it.label })
                 val prose =
                     node
                         .fetchSemanticsNode()
                         .config[SemanticsProperties.Text]
                         .first { "It topped the charts" in it.text }
-                val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "WD1" }
-                assertEquals(lightColorScheme().errorContainer, chip.item.background)
+                val chip = prose.spanStyles.singleOrNull { prose.text.substring(it.start, it.end).trim() == "WD1" }
+                if (checked) {
+                    assertEquals(null, chip)
+                } else {
+                    assertEquals(lightColorScheme().errorContainer, chip!!.item.background)
+                }
             }
         }
     }
@@ -455,8 +454,7 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "They called it \"great.\" (${text(R.string.home_cite_none)})" +
-                                " (${text(R.string.home_cite_see_note)})",
+                                "They called it \"great.\" (${text(R.string.home_cite_none)})",
                         ),
                     ),
                 )
@@ -478,8 +476,7 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "(See the sleeve (${text(R.string.home_cite_none)})" +
-                                " (${text(R.string.home_cite_see_note)}).)",
+                                "(See the sleeve (${text(R.string.home_cite_none)}).)",
                         ),
                     ),
                 )
@@ -501,8 +498,7 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "(They called it \"great.\") (${text(R.string.home_cite_none)})" +
-                                " (${text(R.string.home_cite_see_note)})",
+                                "(They called it \"great.\") (${text(R.string.home_cite_none)})",
                         ),
                     ),
                 )

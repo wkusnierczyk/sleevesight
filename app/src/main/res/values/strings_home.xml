@@ -44,7 +44,7 @@
     <string name="home_guide_about_cover">The album’s cover. A tap turns it over to show the album’s tracklist from MusicBrainz: each track with its length, the playing song marked. An album of several discs has a page for each, swiped sideways, with the disc’s number at the top. A tap anywhere on the back turns it back. When there is no tracklist, the back says why: MusicBrainz is still looking, has no tracklist for the album, has several albums of that name, could not be reached, or is disabled.</string>
     <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
-    <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A dimmed sentence rests on none.</string>
+    <string name="home_guide_about_cite">Each sentence names the source lines it rests on. A tap on one opens Sources at that line. A dimmed sentence is not fully backed by the lines it names, or names none: its outlined chip or its ? leads to the note under the text.</string>
     <string name="home_guide_about_write">Write insight has your AI service write the insight, a paid call on your key. The arrow beside it chooses when insights are written: On demand, On track change (auto) or On track skip (auto). Once an insight is written, it also offers Look again, which looks every source up afresh without an AI call (a paid search on your Exa key when Exa web search is on); when they found something new, Rewrite insight writes the insight from it.</string>
     <string name="home_guide_about_sources">What each source found about the track. A tap opens a table of the sources, each with what it found, and under it the lines they found, each with a link to where it was found. A tap on a source’s letter shows or hides its lines.</string>
     <!-- The magnifier at the picture's corner (#673), as a screen reader names it; it opens the picture full screen. -->
@@ -815,12 +815,18 @@
     <string name="home_insight_stopped">Stopped before the reply ended, so nothing was kept.</string>
     <!-- Under a stopped write, with Write insight offered again (#625). -->
     <string name="home_insight_retry">Tap Write insight to try again, as a new call.</string>
-    <!-- The note under an insight and under a genre's reason (#437): only for sentences the sources do
-         not back, which are dimmed (uncited, or citing missing evidence; #819), naming the mark
-         (#664); one text for any number of them (#854). A genre's reason kept from before says so in
-         a line of its own (home_ai_kept_today, #851), an insight not at all: its credit says who wrote
-         it (#1162). -->
-    <string name="home_note_unbacked">Dimmed text is not backed by the sources.</string>
+    <!-- The note under an insight, a genre's reason and Explain the song (#437, #1437): only for
+         sentences the sources do not back, which are dimmed, worded for what is dimmed, one text for
+         any number of them (#854). %1$s is where the chips of the lines those sentences cite go,
+         sorted ("S2 S8"); a screen reader hears them there as "(Source S2, Source S8)". A genre's
+         reason kept from before says so in a line of its own (home_ai_kept_today, #851), an insight
+         not at all: its credit says who wrote it (#1162). -->
+    <!-- Only sentences citing lines that do not back them. -->
+    <string name="home_note_unbacked_unsupported">Dimmed text is not fully backed by the cited sources %1$s.</string>
+    <!-- Only sentences citing nothing. -->
+    <string name="home_note_unbacked_uncited">Dimmed text is not backed by any source.</string>
+    <!-- Both kinds. -->
+    <string name="home_note_unbacked_both">Dimmed text is not fully backed by the cited sources %1$s, or is not backed by any source.</string>
     <!-- Under an insight, a song's, an artist's or an album's insight and a genre's reason that cite lines
          found in the track's language (#902), after the note above: one line per language. %1$s is the
          language's name ("Hindi"), %2$s the citations, joined as home_source_finding_comma and
@@ -850,10 +856,11 @@
     <!-- Said by a screen reader for a citation chip, and after a sentence, whose cited lines do not
          hold its names, numbers or dates (#1036): the sentence is dimmed, the chip a dim outline. -->
     <string name="home_cite_unsupported">%1$s: does not say this</string>
-    <string name="home_cite_unbacked">not backed by its source</string>
-    <!-- The `?` chip after a dimmed sentence (#954), as a screen reader reads it and as the action that
-         goes to the note under the text ("Dimmed text is not backed by the sources."). -->
-    <string name="home_cite_see_note">Not backed, see the note</string>
+    <!-- The action of an outlined chip (#1437), which goes to the note under the text. -->
+    <string name="home_cite_unsupported_see_note">%1$s: does not say this, see the note</string>
+    <!-- The action of the `?` chip after a dimmed sentence citing nothing (#954, #1437), which goes to
+         the note under the text. -->
+    <string name="home_cite_see_note">Not cited, see the note</string>
 
     <!-- Why an insight could not be written: the fixed labels the pipeline gives. -->
     <!-- Only when the phone had no network, or the service's host could not be resolved (#1164). -->

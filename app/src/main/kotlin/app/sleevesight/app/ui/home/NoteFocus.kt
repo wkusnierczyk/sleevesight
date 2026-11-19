@@ -1,10 +1,7 @@
 package app.sleevesight.app.ui.home
 
-import android.content.res.Resources
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.LocalContentColor
@@ -23,20 +20,26 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
-import app.sleevesight.core.synthesis.SentenceStatus
 import kotlinx.coroutines.delay
 
-// The mark for text the sources do not back (#954): a dimmed sentence's look, the `?` chip after the
-// last of a run of them, the note under the reply ("? Dimmed text is not backed by the sources."), and
-// the way a `?` chip goes to it, as a citation's chip goes to its line.
+// The mark for text the sources do not back (#954, #1437): a dimmed sentence's look, the `?` chip after
+// the last of a run of them citing nothing, the note under the reply, worded for what is dimmed, and
+// the way a `?` chip or an outlined chip goes to it, as a citation's chip goes to its line.
 
 /**
  * The way to a reply's note on its dimmed text (#954): a `?` chip tapped ([go]) brings the note into
@@ -114,34 +117,85 @@ internal fun Modifier.noteTarget(): Modifier {
 }
 
 /**
- * The note under a reply with dimmed text (#954): the `?` chip the dimmed sentences end with, then
- * "Dimmed text is not backed by the sources.", in the notes' small muted type, on their shared
- * baseline, the words wrapping beside the chip. A screen reader hears the words alone; the chip here
- * is the one the sentences' chips point at, not a link.
+ * The note under a reply with dimmed text (#1437, after #954), worded for what is dimmed ([unbacked]):
+ * text citing lines that do not back it ("Dimmed text is not fully backed by the cited sources S2
+ * S8."), text citing nothing ("Dimmed text is not backed by any source."), or both, in the notes'
+ * small muted type. The lines' chips are a citation's, each opening *Sources* at its line
+ * ([NoteCites.onCite]); a screen reader hears them as "(Source S2, Source S8)" and has each as an
+ * action. The outlined chips and the `?` chips of the text go to it ([noteTarget]).
  */
 @Composable
-internal fun UnbackedNote(modifier: Modifier = Modifier) {
-    val style = MaterialTheme.typography.labelMedium
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val chip = citeStyles().unbacked
-    Row(modifier.noteTarget()) {
-        Text(
-            buildAnnotatedString { withStyle(chip) { append(UNBACKED_LABEL) } },
-            modifier = Modifier.alignByBaseline().clearAndSetSemantics { },
-            style = style,
-            color = muted,
-        )
-        Text(
-            stringResource(R.string.home_note_unbacked),
-            modifier = Modifier.padding(start = NOTE_CHIP_GAP).alignByBaseline(),
-            style = style,
-            color = muted,
-        )
-    }
+internal fun UnbackedNote(
+    unbacked: Unbacked,
+    modifier: Modifier = Modifier,
+    onCite: (String) -> Unit = {},
+) {
+    val resources = LocalResources.current
+    val styles = citeStyles()
+    val words =
+        when {
+            unbacked.lines.isEmpty() -> R.string.home_note_unbacked_uncited
+            unbacked.uncited -> R.string.home_note_unbacked_both
+            else -> R.string.home_note_unbacked_unsupported
+        }
+    val text =
+        buildAnnotatedString {
+            val parts = resources.getString(words, CHIPS_AT).split(CHIPS_AT, limit = 2)
+            append(parts.first())
+            unbacked.lines.forEachIndexed { i, id ->
+                if (i > 0) append(' ')
+                appendCite(id, id, CiteKind.LINE, styles, onCite)
+            }
+            parts.getOrNull(1)?.let(::append)
+        }
+    val cited = unbacked.lines.map { resources.getString(R.string.home_cite, it) }
+    val said = resources.getString(words, cited.joinToString(", ", "(", ")"))
+    val exported = withoutIsolates(text)
+    Text(
+        text,
+        modifier =
+            modifier.noteTarget().semantics {
+                this.text = exported
+                contentDescription = said
+                if (unbacked.lines.isNotEmpty()) {
+                    customActions =
+                        unbacked.lines.zip(cited) { id, name ->
+                            CustomAccessibilityAction(name) {
+                                onCite(id)
+                                true
+                            }
+                        }
+                }
+            },
+        style = citedTextStyle(MaterialTheme.typography.labelMedium),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
-// The space between the note's `?` chip and its words, as a word space.
-private val NOTE_CHIP_GAP = 4.dp
+// Where the note's words take the lines' chips: a character no text holds.
+private const val CHIPS_AT = "\uE000"
+
+/**
+ * The `?` chip after a dimmed sentence's [before] runs (#954), kept on the line of the word or chip
+ * before it ([CHIP_GLUE]: a word joiner, then a no-break space unless they end in a space), so it
+ * never wraps onto a line alone. On a tap, it goes to the note under the reply ([NoteFocus.go]); with
+ * no [note] to go to, it only shows.
+ */
+internal fun AnnotatedString.Builder.appendUnbacked(
+    before: List<ShownRun>,
+    styles: CiteStyles,
+    note: NoteFocus?,
+) {
+    val spaced = (before.lastOrNull() as? ShownRun.Text)?.text?.lastOrNull()?.isWhitespace() == true
+    if (before.isNotEmpty()) append(if (spaced) WORD_JOINER else CHIP_GLUE)
+    val label = UNBACKED_LABEL
+    if (note == null) {
+        withStyle(styles.unbacked) { append(label) }
+    } else {
+        val link = LinkAnnotation.Clickable(UNBACKED_LINK_TAG, TextLinkStyles(styles.unbacked)) { note.go() }
+        withLink(link) { append(label) }
+    }
+}
 
 /**
  * A dimmed sentence's look (#954): upright, in the text's own colour at [DIMMED_ALPHA], nothing behind
@@ -152,13 +206,6 @@ internal fun dimmedText(): SpanStyle {
     val ink = LocalContentColor.current.takeIf { it.isSpecified } ?: MaterialTheme.colorScheme.onSurface
     return SpanStyle(color = ink.copy(alpha = ink.alpha * DIMMED_ALPHA))
 }
-
-/**
- * Which of a paragraph's sentences, [dimmed] or not, end with a `?` chip (#954): the last of each run
- * of dimmed sentences, a sentence not dimmed or the paragraph's end ending a run.
- */
-internal fun runEnds(dimmed: List<Boolean>): List<Boolean> =
-    dimmed.mapIndexed { i, dim -> dim && dimmed.getOrNull(i + 1) != true }
 
 /**
  * Where a dimmed sentence's `?` chip goes among its [runs] (#954), as the runs before it and after it:
@@ -176,40 +223,20 @@ internal fun unbackedAt(runs: List<ShownRun>): Pair<List<ShownRun>, List<ShownRu
 }
 
 /**
- * What a screen reader says of a checked sentence the sources do not back, beside its words: "(not
- * cited)" or "(not backed by its source)", then, for the last of a run of dimmed sentences, its `?`
- * chip's "(Not backed, see the note)" (#954).
+ * What a screen reader says of a checked sentence that cites nothing, the last of its run, whose `?`
+ * chip it hears (#954, #1437): [words] with "(not cited)" before its final punctuation, where a
+ * citation would be: "It is great (not cited)." A closing quote keeps it out of the quotation:
+ * 'They called it "great." (not cited)'. A closing bracket alone keeps it inside, as a citation
+ * would be: "(See the sleeve (not cited).)"; a closing quote among the closers still keeps it out:
+ * '(They called it "great.") (not cited)'.
  */
-internal class SpokenNotes(
-    resources: Resources,
-) {
-    private val uncited = resources.getString(R.string.home_cite_none)
-    private val unbacked = resources.getString(R.string.home_cite_unbacked)
-    private val seeNote = resources.getString(R.string.home_cite_see_note)
-
-    /**
-     * [words], a sentence of [status], as said: its notes before its final punctuation, where a
-     * citation would be: "It is great (not cited)." A closing quote keeps them out of the quotation:
-     * 'They called it "great." (not cited)'. A closing bracket alone keeps them inside, as a citation
-     * would be: "(See the sleeve (not cited).)"; a closing quote among the closers still keeps them
-     * out: '(They called it "great.") (not cited)'. With [chip], its `?` chip's words follow.
-     */
-    fun said(
-        words: String,
-        status: SentenceStatus,
-        chip: Boolean,
-    ): String {
-        val end = FINAL_PUNCTUATION.find(words)
-        val at = if (end == null || end.groupValues[1].any { it in QUOTES }) words.length else end.range.first
-        val note =
-            when (status) {
-                SentenceStatus.UNCITED -> " ($uncited)"
-                SentenceStatus.UNSUPPORTED -> " ($unbacked)"
-                else -> ""
-            }
-        val said = note + if (chip) " ($seeNote)" else ""
-        return if (said.isEmpty()) words else words.take(at) + said + words.drop(at)
-    }
+internal fun notCited(
+    words: String,
+    uncited: String,
+): String {
+    val end = FINAL_PUNCTUATION.find(words)
+    val at = if (end == null || end.groupValues[1].any { it in QUOTES }) words.length else end.range.first
+    return words.take(at) + " ($uncited)" + words.drop(at)
 }
 
 // A dimmed sentence's opacity, of the text's colour (#954), and the `?` chip's grey's, of the text's.
@@ -222,3 +249,11 @@ internal const val UNBACKED_LABEL: String = "\u2009?\u2009"
 /** The test tags of the note on dimmed text (#954), and of it while it flashes. */
 const val UNBACKED_NOTE_TAG: String = "unbacked-note"
 const val UNBACKED_NOTE_FLASHING_TAG: String = "unbacked-note:flashing"
+
+// No break before the `?` chip (#954): a word joiner, which holds even after a citation chip's thin
+// space, where a line may break before a no-break space; then a no-break space, the space shown.
+private const val WORD_JOINER = "\u2060"
+private const val CHIP_GLUE = "$WORD_JOINER\u00A0"
+
+/** The link tag of the `?` chip after a dimmed sentence (#954), which goes to the note under the reply. */
+const val UNBACKED_LINK_TAG: String = "unbacked"

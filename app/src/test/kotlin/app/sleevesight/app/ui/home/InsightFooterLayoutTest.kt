@@ -213,7 +213,7 @@ class InsightFooterLayoutTest {
     private companion object {
         const val CARD = "card"
         const val BEFORE = "Written by Claude Haiku 5.5. Rewriting stopped. Tap Rewrite insight"
-        const val NOTE = "Dimmed text is not backed by the sources."
+        const val NOTE = "Dimmed text is not backed by any source."
         const val COUNTS = "1 of 2 sentences grounded · 1 uncited"
         const val REPORT = "Report the insight"
         const val TOLERANCE = 0.02f

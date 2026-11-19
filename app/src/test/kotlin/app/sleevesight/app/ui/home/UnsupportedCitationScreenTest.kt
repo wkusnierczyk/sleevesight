@@ -39,10 +39,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * A sentence whose cited line holds none of its year (#1036): kept, dimmed as unbacked and counted in
- * the note; its chip a dim outline that still opens its line, and the line's tag in *Sources* the
- * same; TalkBack hears "W1: does not say this" and "(not backed by its source)", reading aloud
- * "Unverified:"; the developer counts say "1 unsupported (W1)".
+ * A sentence whose cited line holds none of its year (#1036): kept, dimmed as unbacked and named in
+ * the note, which shows its line's chip (#1437); its chip a dim outline, and the line's tag in
+ * *Sources* the same; TalkBack hears "W1: does not say this", reading aloud "Unverified:"; the
+ * developer counts say "1 unsupported (W1)".
  */
 @RunWith(RobolectricTestRunner::class)
 class UnsupportedCitationScreenTest {
@@ -113,24 +113,26 @@ class UnsupportedCitationScreenTest {
     @Test
     fun theSentenceIsDimmedNotedAndReadAsNotBacked() =
         show {
-            compose.onNodeWithText(app.getString(R.string.home_note_unbacked)).assertExists()
+            val note = compose.onNodeWithTag(UNBACKED_NOTE_TAG).fetchSemanticsNode()
+            assertEquals(
+                "Dimmed text is not fully backed by the cited sources (Source W1).",
+                note.config[SemanticsProperties.ContentDescription].single(),
+            )
             val said = prose().fetchSemanticsNode().config[SemanticsProperties.ContentDescription].single()
             assertEquals(
-                "It topped the charts in 1986 (W1: does not say this) (not backed by its source) " +
-                    "(${app.getString(R.string.home_cite_see_note)}). " +
-                    "Sundown was recorded in 1973 (Source MB1).",
+                "It topped the charts in 1986 (W1: does not say this). Sundown was recorded in 1973 (Source MB1).",
                 said,
             )
         }
 
     @Test
-    fun itsChipIsOutlinedAndStillOpensItsLine() =
+    fun itsChipIsOutlinedWithNoFill() =
         show {
             val text = prose().fetchSemanticsNode().config[SemanticsProperties.Text].first()
             val outlined = text.getStringAnnotations(OUTLINE_TAG, 0, text.length)
             assertEquals(listOf("W1"), outlined.map { it.item })
             assertEquals(" W1 ", text.text.substring(outlined.single().start, outlined.single().end))
-            // Still a link, to its line, with no fill.
+            // A link (to the note, #1437), with no fill.
             val links =
                 text
                     .getLinkAnnotations(
