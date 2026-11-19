@@ -102,6 +102,24 @@ class WikipediaSourceTest {
         }
 
     @Test
+    fun `an artist's article that gave no line is not reported as found`() =
+        runTest {
+            val kept = MemoryArtistResults(clock, 7.days)
+            // The artist cache holds his article as accepted, with no line of it (#1433).
+            val key = "$GORDON_LIGHTFOOT Gordon Lightfoot"
+            kept.keep(WikipediaSource.ARTIST_PART, key, """{"accepted":true,"lines":[]}""")
+            val sundown = RecordedTracks.track(RegressionCase.RICH_DATA.tracks.single())
+            val carefree = sundown.copy(title = "Carefree Highway")
+            val gordon = Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", GORDON_LIGHTFOOT)))
+
+            val noSong = NoSongArticle(net, "Carefree Highway")
+            val result = adapter(kept, noSong).lookup(carefree, CompletableDeferred(gordon))
+
+            assertEquals(emptyList(), result.evidence)
+            assertEquals(Outcome.None, result.outcome)
+        }
+
+    @Test
     fun `the kept part's version is 4 and the track results' 11, for an uncredited composer's article`() {
         // #1129 and #1203 changed what a track resolves to, which a track's result is checked against; an
         // artist's article, reached by the artist's id, is not, so the artist cache was kept; nor did the
