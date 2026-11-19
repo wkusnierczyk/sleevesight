@@ -4,6 +4,8 @@
 package app.sleevesight.sources.wikipedia
 
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.StatedGenre
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
@@ -117,6 +119,59 @@ class WikipediaSourceTest {
 
             assertEquals(emptyList(), result.evidence)
             assertEquals(Outcome.None, result.outcome)
+        }
+
+    @Test
+    fun `a kept artist's article that gave no line is not reported, and its genres still count`() =
+        runTest {
+            val kept = MemoryArtistResults(clock, 7.days)
+            val page = "https://www.wikidata.org/wiki/Q1349392"
+            val key = "$GORDON_LIGHTFOOT Gordon Lightfoot"
+            kept.keep(
+                WikipediaSource.ARTIST_PART,
+                key,
+                """{"accepted":true,"lines":[],"genres":["folk"],"item":"$page"}""",
+            )
+            val sundown = RecordedTracks.track(RegressionCase.RICH_DATA.tracks.single())
+            val carefree = sundown.copy(title = "Carefree Highway")
+            val gordon = Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", GORDON_LIGHTFOOT)))
+
+            val noSong = NoSongArticle(net, "Carefree Highway")
+            val result = adapter(kept, noSong).lookup(carefree, CompletableDeferred(gordon))
+
+            assertEquals(Outcome.None, result.outcome)
+            assertEquals(emptyList(), result.evidence)
+            assertEquals(
+                listOf(StatedGenre("folk", GenreLevel.ARTIST, "Gordon Lightfoot", page)),
+                result.statedGenres,
+            )
+        }
+
+    @Test
+    fun `an accepted artist whose lead could not be read and that gave no line is unreachable and not kept`() =
+        runTest {
+            val kept = MemoryArtistResults(clock, 7.days)
+            val sundown = RecordedTracks.track(RegressionCase.RICH_DATA.tracks.single())
+            val carefree = sundown.copy(title = "Carefree Highway")
+            val gordon = Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", GORDON_LIGHTFOOT)))
+            // The artist's item is accepted; his lead fails, and Wikidata names none of the items its
+            // lines would name (genres, labels, awards), so it gives no line either.
+            val noSong = NoSongArticle(net, "Carefree Highway", failing = { it.query["titles"] == "Gordon Lightfoot" })
+            val unnamed =
+                object : NetClient by noSong {
+                    override suspend fun send(request: NetRequest): NetResult<NetResponse> =
+                        if (request.query["props"] == "labels") {
+                            NetResult.Success(NetResponse(200, emptyMap(), """{"entities":{}}""".encodeToByteArray()))
+                        } else {
+                            noSong.send(request)
+                        }
+                }
+
+            val result = adapter(kept, unnamed).lookup(carefree, CompletableDeferred(gordon))
+
+            assertEquals(Outcome.Unreachable, result.outcome)
+            assertEquals(emptyList(), result.evidence)
+            assertEquals(emptySet(), kept.keys(WikipediaSource.ARTIST_PART))
         }
 
     @Test

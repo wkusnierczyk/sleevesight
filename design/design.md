@@ -177,7 +177,7 @@ The hard part, and the place most failures came from in the prototype. Resolutio
 | Outcome | Meaning |
 |---|---|
 | `song_article` | The source describes this recording |
-| `artist_article` | The source describes the performer only, with at least one line from it (an artist's article that gave no line is `none`, #1433) |
+| `artist_article` | The source describes the performer only, with at least one line from it (an artist's article that gave no line is not reported: the outcome is what else the lookup found (`rejected`, `unreachable` or `none`), #1433) |
 | `original_song` | The source describes the song as first recorded by someone else; this track is a cover or version |
 | `rejected(reason)` | A candidate was found and failed the entity check, for example a different artist with the same name |
 | `none` | Nothing found |
