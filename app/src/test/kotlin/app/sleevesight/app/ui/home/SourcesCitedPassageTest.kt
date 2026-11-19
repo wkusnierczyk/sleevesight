@@ -140,6 +140,26 @@ class SourcesCitedPassageTest {
     }
 
     @Test
+    fun aPassageMovedToAnotherLineIsItsPagesLineOnceALaterBatchListsThatPageHoldingIt() {
+        // The genre list's short passage goes to Last.fm's L1; the vocals check then lists Spotify's
+        // longer passage, which holds it: a citation of the short one opens Spotify's line.
+        val lastfm = EvidenceDraft(SourceId.LASTFM, Scope.SONG, song, null, at)
+        val genres =
+            withPages(
+                SourcesLines(EvidenceSet.of(listOf(lastfm), JvmHasher)),
+                listOf(WebPage(spotify, null, song)),
+                LinePurpose.GENRES,
+                passages = true,
+            )
+        assertEquals(mapOf(MovedPage(spotify, passageKey(song)) to "L1"), genres.moved)
+        val listed = withPages(genres, listOf(WebPage(spotify, null, play)), LinePurpose.VOCALS_CHECK, true)
+        val shown = listed.evidence!!.lines
+        val spotifys = shown.single { it.url == spotify }.id
+        assertEquals(spotifys, webLineOf(spotify, listed.evidence, listed.moved, song))
+        assertEquals(spotifys, shownLine("S2", reason(spotify, song), listed.evidence, listed.moved))
+    }
+
+    @Test
     fun aPassageTwoPagesOfTheBatchHoldIsHeldByThePageAtItsOwnAddress() {
         val other = WebPage("https://example.org/turn", null, "Listen: $song Out now on Secretly Canadian, on vinyl.")
         val part = WebPage(spotify, null, song)

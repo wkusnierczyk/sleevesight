@@ -157,13 +157,14 @@ internal fun shownLine(
 
 /**
  * The id of the line [lines] shows the page at [url] under: for its [passage] left out as a repeat
- * (#1434), the line that holds it ([moved], `SourcesLines.moved`, by address and passage), first, so
- * a line listed later at the address (an explanation's page, its title alone) never takes its place;
- * a passage its own page's line holds is kept as that line's (#1435, [withoutRepeats]), never as
- * another source's that holds it too; else the first web line at its address (`sameAddress`) that
- * holds [passage] whole ([repeats]), so of one page's passages, each listed (#1435), a citation
- * lands on the one it cites; else the first web line at its address; null for none. A page whose
- * passage is unknown finds no line it was left out for, and lands on its address's first line.
+ * (#1434), the line that holds it ([moved], `SourcesLines.moved`, by address and passage), first
+ * when that line is at its own address, as [withoutRepeats] picks it (#1435); else the first web
+ * line at its address (`sameAddress`) that holds [passage] whole ([repeats]), so of one page's
+ * passages, each listed (#1435), a citation lands on the one it cites, and a line a later call lists
+ * there (the vocals check's) takes it from another source's; else the line in [moved] elsewhere, so
+ * a line listed later at the address by its title alone (an explanation's page) never takes its
+ * place; else the first web line at its address; null for none. A page whose passage is unknown
+ * finds no line it was left out for, and lands on its address's first line.
  */
 internal fun webLineOf(
     url: String,
@@ -171,13 +172,15 @@ internal fun webLineOf(
     moved: Moved = emptyMap(),
     passage: String? = null,
 ): String? {
-    val at =
-        lines
-            ?.lines
-            .orEmpty()
-            .filter { it.source == SourceId.WEB && it.url?.let { address -> sameAddress(address, url) } == true }
-    return moved.holderOf(url, passage)
+    val all = lines?.lines.orEmpty()
+    val at = all.filter { it.source == SourceId.WEB && it.url?.let { address -> sameAddress(address, url) } == true }
+    val holder = moved.holderOf(url, passage)
+    // The holder at the page's own address first, as `withoutRepeats` picks it; one elsewhere only
+    // after a line at the address that holds the passage, listed by a later call (the vocals check's).
+    val own = all.firstOrNull { it.id == holder }?.url?.let { sameAddress(it, url) } == true
+    return holder?.takeIf { own }
         ?: passage?.let { cited -> at.firstOrNull { repeats(cited, it.text) } }?.id
+        ?: holder
         ?: at.firstOrNull()?.id
 }
 
