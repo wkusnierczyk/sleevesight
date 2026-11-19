@@ -64,13 +64,14 @@ import app.sleevesight.app.ui.home.LocalCoverPane
 import app.sleevesight.app.ui.home.LogoAndRecord
 import app.sleevesight.app.ui.home.NothingPlaying
 import app.sleevesight.app.ui.home.ONE_COLUMN_MAX_WIDTH
-import app.sleevesight.app.ui.home.PlayerMenuButton
+import app.sleevesight.app.ui.home.PlayerSymbol
 import app.sleevesight.app.ui.home.RecordButton
 import app.sleevesight.app.ui.home.SPLIT_WIDTH
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.logo.LogoSpin
 import app.sleevesight.app.ui.report.ReportButtonState
 import app.sleevesight.app.ui.report.TesterReportButton
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.LocalDeveloperMark
 import app.sleevesight.app.ui.theme.MessageHost
@@ -97,8 +98,9 @@ import kotlin.math.min
  * With [themeButton] (#636: *Theme button* on, the default), the header shows the theme button
  * before the cogwheel. With [logoSpin] (#848), the header logo's record turns while it says so and
  * notification access is on, as the followed player then says it plays. With [player] (#1409, #1209)
- * and access on, the record plays and pauses the followed player, and the player's own icon after it
- * opens the player menu.
+ * and access on, the record plays and pauses the followed player, and the player symbol opens the
+ * player menu (#1440), or, with no player switched on, a panel that links to *Settings → Players*
+ * ([onOpenSettingsAt]).
  */
 @Suppress("LongParameterList") // The header's and the body's seams, each one of Home's parts.
 @Composable
@@ -110,6 +112,7 @@ fun HomeScreen(
     themeButton: ThemeButtonState? = null,
     logoSpin: StateFlow<LogoSpin>? = null,
     player: HeaderPlayerFeed? = null,
+    onOpenSettingsAt: (SettingsTarget) -> Unit = { onOpenSettings() },
     pipeline: @Composable () -> Unit = {},
 ) {
     val scroll = rememberScrollState()
@@ -139,6 +142,7 @@ fun HomeScreen(
                                     themeButton,
                                     if (accessGranted) logoSpin else null,
                                     if (accessGranted) player else null,
+                                    onOpenPlayers = { onOpenSettingsAt(SettingsTarget.players) },
                                 )
                             }
                         },
@@ -278,11 +282,11 @@ private fun SemanticsPropertyReceiver.headerFirst() {
 /**
  * Home's header (#445), pinned above what scrolls: the one-line logo ([HeaderLogo], #383), whose words
  * scroll Home back to the top, and whose record is a button of its own ([RecordButton], #1409), which
- * plays and pauses the followed player ([player]); after the logo, while a followed player has a
- * session, the player's own icon, which opens the player menu ([PlayerMenuButton], #1209); and at the
- * end the cogwheel, which opens the settings, with the theme button ([themeButton], #636), which
- * opens the theme menu (#771), before it while *Theme button* is on. The logo's record turns as
- * [logoSpin] says (#848). A divider under it shows once Home has scrolled.
+ * plays and pauses the followed player ([player]), and does nothing on a long press; and at the end
+ * the player symbol, which opens the player menu (#1209), or a panel with [onOpenPlayers]' link, and
+ * the player on a long press ([PlayerSymbol], #1440), the theme button ([themeButton], #636), which
+ * opens the theme menu (#771), while *Theme button* is on, and the cogwheel, which opens the
+ * settings. The logo's record turns as [logoSpin] says (#848). A divider under it shows once Home has scrolled.
  */
 @Suppress("LongParameterList") // The header's parts, each on its own.
 @Composable
@@ -293,6 +297,7 @@ private fun HomeHeader(
     themeButton: ThemeButtonState?,
     logoSpin: StateFlow<LogoSpin>?,
     player: HeaderPlayerFeed?,
+    onOpenPlayers: () -> Unit,
 ) {
     val spin = logoSpin?.collectAsState()?.value ?: LogoSpin.STILL
     // The header's box, which a debug build's bug crawls out of and back into (#848).
@@ -312,14 +317,12 @@ private fun HomeHeader(
         ) {
             // Weighted, so the buttons are measured first and keep their 48 dp at any font size; not
             // filled, so the tap target is the logo and not the row's empty middle.
-            Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
-                LogoAndRecord(spin, { box }, toTop, onScrollToTop, player, Modifier.weight(1f, fill = false))
-                // The followed player's own icon (#1209), while one has a session.
-                player?.let { PlayerMenuButton(it) }
-            }
+            LogoAndRecord(spin, { box }, toTop, onScrollToTop, player, Modifier.weight(1f, fill = false))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // The current theme, named and drawn, which opens the theme menu (#771), first; the
-                // cogwheel stays at the end.
+                // The player symbol (#1440), in place of the player's own icon after the logo (#1209).
+                player?.let { PlayerSymbol(it, onOpenPlayers) }
+                // The current theme, named and drawn, which opens the theme menu (#771); the cogwheel
+                // stays at the end.
                 themeButton?.let { ThemeMenuButton(it) }
                 HeaderButton(settings, R.drawable.ic_settings, onOpenSettings)
             }

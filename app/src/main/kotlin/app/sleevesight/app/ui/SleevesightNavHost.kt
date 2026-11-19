@@ -106,7 +106,7 @@ class SettingsLinks(
  * [testerReport] feed, the tester's report button while its settings show it (#452), and, with a
  * [themeButton] feed, the theme button while *Theme button* shows it (#636), and with [logoSpin],
  * the header logo's record turning while music plays (#848), and with [player], the record playing
- * and pausing the followed player and the player's icon opening its menu (#1409, #1209); each of
+ * and pausing the followed player and the player symbol opening its menu (#1409, #1209, #1440); each of
  * [HomePage]'s pages (#447) shows an item of it on a page of its own, as [page] draws it, and goes
  * back to where it was opened from, Home at the place it was scrolled to, as Android's back does.
  */
@@ -167,6 +167,7 @@ fun SleevesightNavHost(
                         themeButton = themeButtonOf(themeButton),
                         logoSpin = logoSpin,
                         player = player,
+                        onOpenSettingsAt = links.openSettingsAt,
                         pipeline = { pipeline(links) },
                     )
                 }

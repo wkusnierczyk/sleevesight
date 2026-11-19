@@ -5,24 +5,21 @@ import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,12 +36,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.collapse
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.expand
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -62,20 +56,23 @@ import app.sleevesight.app.ui.settings.PlayerApps
 import app.sleevesight.app.ui.settings.playerIcon
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-// The followed player in Home's header (#1409, #1209): the record plays and pauses it, and its own
-// icon after the record opens the player menu, which took the place of the player row above the cover.
+// The followed player in Home's header (#1409, #1209, #1440): the record plays and pauses it, and the
+// player symbol ([PlayerSymbol]) opens the player menu, which took the place of the player row above
+// the cover.
 
 /**
- * What Home's header reads of the followed player, and where its taps go (#1409, #1209): the shown
+ * What Home's header reads of the followed player, and where its taps go (#1409, #1209, #1440): the shown
  * player's state ([playback], with the controls it advertises), each followed player with a session
  * and its state ([followed]), the settings for the players *Settings → Players* lists ([settings]),
  * the players' names ([label]), icons ([installed]) and ways in ([activity], a player's own screen,
  * its session's; [launch], a player's launcher entry); [send] sends a control to the shown player, and
  * [follow] makes Home show another followed player with a session. Home shows a track ([nowPlaying])
- * or an ad ([ad]), or it is idle: then the header shows no player ([shownPlayback]), though a session
- * be kept.
+ * or an ad ([ad]), or it is idle: then the record plays no player ([shownPlayback]), though a session
+ * be kept; the player symbol still opens the menu on it (#1440). The player last shown, kept after
+ * its session ends ([lastPlayer], #1440), is the one the symbol's long press opens while none plays.
  */
 @Suppress("LongParameterList") // What the header reads, each published on its own, and its two actions.
 class HeaderPlayerFeed(
@@ -90,12 +87,13 @@ class HeaderPlayerFeed(
     val follow: (String) -> Unit,
     val nowPlaying: StateFlow<NowPlaying?>,
     val ad: StateFlow<AdPlaying?>,
+    val lastPlayer: StateFlow<String?> = MutableStateFlow(null),
 )
 
 /**
  * The shown player's state as the header goes by it (#1409, #1209): [PlaybackInfo.NONE] while Home
  * is idle, showing neither a track nor an ad (a session kept with no track, its metadata cleared), so
- * the header then has no player icon and the record no button, as with no session at all.
+ * the record then has no button, as with no session at all.
  */
 @Composable
 internal fun HeaderPlayerFeed.shownPlayback(): PlaybackInfo {
@@ -111,8 +109,8 @@ internal fun HeaderPlayerFeed.shownPlayback(): PlaybackInfo {
  * sends Play or Pause to the shown player ([PlaybackInfo.toggle]) when its state advertises it, and
  * a screen reader reads it as a button named for what the tap does, *Play* or *Pause*. With no
  * player, or one that advertises neither, a tap does nothing, and it is not a button: it takes the
- * tap still, so a tap on the record never scrolls Home, as one on the words does. In a debug build
- * the bug in the record's place takes the same tap.
+ * tap still, so a tap on the record never scrolls Home, as one on the words does. A long press does
+ * nothing (#1440). In a debug build the bug in the record's place takes the same tap.
  */
 @Composable
 internal fun RecordButton(
@@ -144,87 +142,28 @@ internal fun RecordButton(
         if (playback.allows(control)) {
             placed
                 .testTag(RECORD_TAG)
-                .clickable(
+                // Read as a button that plays or pauses, and nothing more: no long press (#1440).
+                .clearAndSetSemantics {
+                    contentDescription = label
+                    role = Role.Button
+                    onClick {
+                        send(control)
+                        true
+                    }
+                }
+                // A long press taken and dropped (#1440), not a tap on its release, as `clickable` has it.
+                .combinedClickable(
                     interactionSource = null,
                     indication = ripple(bounded = false, radius = TARGET / 2),
                     role = Role.Button,
+                    hapticFeedbackEnabled = false,
+                    onLongClick = {},
                 ) { send(control) }
-                .semantics { contentDescription = label }
         } else {
             // Taken and dropped, and nothing to a screen reader.
             placed.testTag(RECORD_TAG).clearAndSetSemantics {}.pointerInput(Unit) { detectTapGestures {} }
         }
     Box(target)
-}
-
-/**
- * The followed player's own icon in Home's header (#1209), while Home shows its track or ad
- * ([shownPlayback]); nothing while Home is idle, when it lists the players to start instead. A
- * screen reader reads it as "<player>, <state>. Player menu", a button, collapsed or expanded. A tap
- * opens the player menu under it ([PlayerMenu]), or closes it. The open menu does not go with the
- * icon: it stays open on the shown session's state ([HeaderPlayerFeed.playback]) while a followed
- * player has a session, so choosing one whose session holds no track (Home then idle, the icon
- * gone) keeps it open on that player, as choosing any player does.
- */
-@Composable
-internal fun PlayerMenuButton(feed: HeaderPlayerFeed) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    val playback by feed.playback.collectAsState()
-    val iconShown = feed.shownPlayback().player != null
-    val player = playback.player
-    if (player == null) {
-        // No session at all: nothing to open, and the menu does not come back by itself later.
-        if (open) SideEffect { open = false }
-        return
-    }
-    val apps = remember(feed) { PlayerApps(feed.label, feed.launch, feed.installed) }
-    val name = remember(player) { feed.label(player) }
-    val state = stateText(playback.status)
-    val description =
-        if (state == null) {
-            stringResource(R.string.home_player_menu_no_state, name)
-        } else {
-            stringResource(R.string.home_player_menu, name, state)
-        }
-    Box {
-        if (iconShown) PlayerIconButton(player, name, description, apps, open) { open = it }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            PlayerMenu(feed, playback, name, apps, close = { open = false })
-        }
-    }
-}
-
-// The player's icon as a button that opens and closes the menu ([open]), read as [description].
-@Suppress("LongParameterList") // The player, how it reads and looks, and the menu's state.
-@Composable
-private fun PlayerIconButton(
-    player: String,
-    name: String,
-    description: String,
-    apps: PlayerApps,
-    open: Boolean,
-    setOpen: (Boolean) -> Unit,
-) {
-    IconButton(
-        onClick = { setOpen(!open) },
-        modifier =
-            Modifier.testTag(PLAYER_MENU_TAG).semantics {
-                contentDescription = description
-                if (open) {
-                    collapse {
-                        setOpen(false)
-                        true
-                    }
-                } else {
-                    expand {
-                        setOpen(true)
-                        true
-                    }
-                }
-            },
-    ) {
-        PlayerIcon(player, name, apps, ICON)
-    }
 }
 
 /**
@@ -285,13 +224,14 @@ internal fun PlayerIcon(
     name: String,
     apps: PlayerApps,
     size: Dp,
+    modifier: Modifier = Modifier,
 ) {
     val icon = playerIcon(player, apps)
     if (icon != null) {
-        Image(icon, contentDescription = null, modifier = Modifier.size(size))
+        Image(icon, contentDescription = null, modifier = modifier.size(size))
     } else {
         Box(
-            Modifier
+            modifier
                 .size(size)
                 .clip(RoundedCornerShape(size * CORNER_SHARE))
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = LETTER_FILL)),
@@ -312,14 +252,8 @@ internal fun PlayerIcon(
 /** The test tag of the record's own button in Home's header (#1409). */
 const val RECORD_TAG: String = "home-record"
 
-/** The test tag of the followed player's icon in Home's header, which opens the player menu (#1209). */
-const val PLAYER_MENU_TAG: String = "home-player-menu"
-
 /** The record's touch target: Material's least. */
 private val TARGET = 48.dp
-
-/** The player's icon in the header: a little larger than the record, as the mock-up drew it. */
-private val ICON = 26.dp
 
 /** The stand-in letter's size, as a share of its square. */
 private const val LETTER_SHARE = 0.55f
