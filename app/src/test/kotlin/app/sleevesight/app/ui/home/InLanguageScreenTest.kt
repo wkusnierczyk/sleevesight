@@ -217,10 +217,22 @@ class InLanguageScreenTest {
             assertEquals(0, count("Translated from", substring = true))
         }
 
+    /**
+     * Codex, PR #1453: a sentence taken out (citing a line that does not exist, #1437) names no line
+     * it translated, as it is not shown; the grounding counts still count it.
+     */
+    @Test
+    fun aSentenceTakenOutNamesNoTranslatedLine() {
+        val reply = written("It is from the film [MB1]. Its music is by Shandilya [W2] [S99].", from = evidence)
+        assertEquals(emptyList<Pair<String, List<String>>>(), translatedCites(reply.grounded, evidence))
+        assertEquals(1, reply.grounded.counts.unknown)
+    }
+
     @Test
     fun aCitationOutsideWhatThePromptHeldIsNoTranslatedLine() {
+        // Its sentence citing `S1` is taken out under [held], as the card shows it (#1437).
         val held = setOf("MB1", "W1", "W2")
-        val reply = written("It is from the film [W2] [S1].", held = held, from = evidence)
+        val reply = written("It is from the film [W2]. Its singer is classical [S1].", from = evidence)
         assertEquals(listOf("hi" to listOf("W2")), translatedCites(reply.grounded, evidence, held))
         assertEquals(listOf("hi" to listOf("W2", "S1")), translatedCites(reply.grounded, evidence))
         assertEquals(emptyList<Pair<String, List<String>>>(), translatedCites(reply.grounded, null))

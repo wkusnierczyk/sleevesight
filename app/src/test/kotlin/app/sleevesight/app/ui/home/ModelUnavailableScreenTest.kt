@@ -193,7 +193,7 @@ class ModelUnavailableScreenTest {
         // Kept from before, with a sentence the sources do not back: every line of the footer shows.
         show(written("It is a song [MB1]. It was a hit.", cached = true).copy(writtenBy = HomeFixtures.haiku), haiku) {
             val previously = compose.onNodeWithText(HomeFixtures.HAIKU_CREDIT).performScrollTo()
-            val note = compose.onNodeWithText(app.getString(R.string.home_note_unbacked))
+            val note = compose.onNodeWithText(app.getString(R.string.home_note_unbacked_uncited))
             val report = compose.onNodeWithTag(REPORT_TAG)
             val line = compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).assertTextEquals(said)
             val write = compose.onNodeWithTag(NO_ACTION_TAG)

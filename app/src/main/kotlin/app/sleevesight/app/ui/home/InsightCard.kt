@@ -281,7 +281,11 @@ private fun Footer(
         context.unanswered?.let { InsightPartial(it) { handoff.moveTo(report) } }
         val reportModifier = Modifier.handoffTarget(handoff, report)
         // No *Kept from before.*: the credit says who wrote it.
-        GroundingLine(insight.grounded, details = groundingDetails)
+        GroundingLine(
+            insight.grounded,
+            details = groundingDetails,
+            NoteCites(context.track?.evidence, insight.held, onCite = actions.onCite),
+        )
         TranslatedLine(insight.grounded, context.track?.evidence, insight.held)
         if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
         context.track?.let { track -> ReportAction(reportModifier) { actions.onReport(track, insight) } }

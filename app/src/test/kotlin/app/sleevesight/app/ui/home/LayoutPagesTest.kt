@@ -413,7 +413,8 @@ class LayoutPagesTest {
 
     @Test
     fun aCitationOpensSourcesPageAtItsLine() =
-        show(state(long(insight = written("It was a hit [MB12].")), pages)) {
+        // Checked against the track's own lines, so its citation is of a line that exists (#1437).
+        show(state(long(insight = written("It was a hit [MB12].", from = long().evidence!!)), pages)) {
             compose.onNodeWithText("It was a hit", substring = true).performScrollTo().performFirstLinkClick {
                 (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + "MB12"
             }

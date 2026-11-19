@@ -4,9 +4,15 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -22,6 +28,9 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.CheckedSentence
+import app.sleevesight.core.synthesis.GroundedText
+import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -53,8 +62,8 @@ class GroundingNoteTest {
         vararg args: Any,
     ) = app.resources.getQuantityString(id, count, *args)
 
-    // One text for any number of dimmed sentences (#854).
-    private val unbacked get() = text(R.string.home_note_unbacked)
+    // One text for any number of dimmed sentences (#854), here citing nothing (#1437).
+    private val unbacked get() = text(R.string.home_note_unbacked_uncited)
 
     private fun show(
         insight: InsightState.Written,
@@ -103,24 +112,25 @@ class GroundingNoteTest {
         }
 
     @Test
-    fun anUncitedSentenceGetsThePlainNote() =
+    fun anUncitedSentenceGetsTheNoteOnTextCitingNothing() =
         show(written("It was recorded in 1973 [MB1]. It is great.")) {
             compose.onNodeWithText(unbacked).assertExists()
-            assertEquals("Dimmed text is not backed by the sources.", unbacked)
+            assertEquals("Dimmed text is not backed by any source.", unbacked)
             assertNoGroundedCount()
         }
 
     @Test
-    fun dimmedSentencesUncitedAndMissingTogetherGetOneNoteForAnyNumber() =
+    fun aSentenceCitingAMissingLineIsTakenOutAndTheUncitedGetOneNote() =
         show(
             written(
                 "It was recorded in 1973 [MB1]. It is great. It was a hit [MB9]. It is loved [AI].",
                 allowModel = true,
             ),
         ) {
-            // The model's own sentence carries its chip and is not dimmed, so the note leaves it out.
+            // The model's own sentence carries its chip and is not dimmed, so the note leaves it out; the
+            // one citing a line that does not exist is taken out, nothing said of it (#1437).
             compose.onNodeWithText(unbacked).assertExists()
-            assertEquals("Dimmed text is not backed by the sources.", unbacked)
+            assertEquals(0, count("It was a hit", substring = true))
             assertNoGroundedCount()
         }
 
@@ -199,7 +209,42 @@ class GroundingNoteTest {
         }
     }
 
+    @Test
+    fun theNotesLinesFollowSourcesRenumberingThemWhileTheReplyStaysTheSame() {
+        // A sentence citing a line that does not back it: the note names that line as *Sources* does.
+        val sentence = CheckedSentence("It sold well [MB1].", listOf("MB1"), SentenceStatus.UNSUPPORTED)
+        val grounded = GroundedText("It sold well [MB1].", listOf(listOf(sentence)), allowModel = false)
+        var label by mutableStateOf<(String) -> String?>({ it })
+        val opened = mutableListOf<String>()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    WithUnbackedNote {
+                        val cites = NoteCites(HomeFixtures.evidence, label = label) { id -> opened += id }
+                        GroundingLine(grounded, false, cites)
+                    }
+                }
+            }
+
+            fun said() =
+                compose
+                    .onNodeWithTag(UNBACKED_NOTE_TAG)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.ContentDescription]
+                    .single()
+            assertTrue(said(), text(R.string.home_cite, "MB1") in said())
+            // *Sources* numbers the line anew; the reply and its evidence are the same.
+            compose.runOnUiThread { label = { id -> if (id == "MB1") "MB3" else id } }
+            compose.waitForIdle()
+            assertTrue(said(), text(R.string.home_cite, "MB3") in said())
+            assertTrue(said(), text(R.string.home_cite, "MB1") !in said())
+            val node = compose.onNodeWithTag(UNBACKED_NOTE_TAG).fetchSemanticsNode()
+            compose.runOnUiThread { node.config[SemanticsActions.CustomActions].single().action() }
+            assertEquals(listOf("MB3"), opened)
+        }
+    }
+
     private companion object {
-        const val NOT_BACKED = "not backed by the sources"
+        const val NOT_BACKED = "Dimmed text is not"
     }
 }

@@ -133,7 +133,7 @@ class RewrittenNotePicturesTest {
     }
 
     private companion object {
-        const val NOTE = "Dimmed text is not backed by the sources."
+        const val NOTE = "Dimmed text is not backed by any source."
         val HAIKU_HIGH = WrittenBy(5, ProviderId.ANTHROPIC, "claude-haiku-5-5", ReasoningEffort.HIGH)
         val SOL_HIGH = WrittenBy(5, ProviderId.OPENAI, "gpt-6.1-sol", ReasoningEffort.HIGH)
     }

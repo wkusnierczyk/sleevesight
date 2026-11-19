@@ -339,14 +339,14 @@ class LyricsAiScreenTest {
             // the track's web line S1, the track's own page that line.
             assertEquals(
                 // A citation after a stop is said before it, as it shows (#1061).
-                "It is about jealousy (Source S2). It reads as a warning. (not cited) (Not backed, see the note) " +
+                "It is about jealousy (Source S2). It reads as a warning (not cited). " +
                     "The title is a time of day (Source S3). It sold (Source S1).",
                 said,
             )
             val actions = prose.config[SemanticsActions.CustomActions]
             // Then the way to the note on the dimmed sentence (#954).
             assertEquals(
-                listOf("Source S2", "Source S3", "Source S1", "Not backed, see the note"),
+                listOf("Source S2", "Source S3", "Source S1", "Not cited, see the note"),
                 actions.map { it.label },
             )
             assertTrue(placed(prose).top >= bounds(explainTag(AI_SEARCH_RULE_TAG)).bottom)

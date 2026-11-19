@@ -208,7 +208,7 @@ internal fun ReasonShown(
                         label = shownAs,
                     )
                 }
-                ReasonCredits(shown, state, evidence, shownAs, actions.readAloud)
+                ReasonCredits(shown, state, evidence, shownAs, actions.readAloud, actions.onCite)
                 if (!state.complete) QuietNote(stringResource(R.string.genre_why_incomplete))
                 if (BuildConfig.DEBUG) LabCompareUnder(PromptKind.GENRE_REASONS, context.track, state, evidence)
             }
@@ -240,9 +240,10 @@ internal fun ReasonShown(
 }
 
 // Under a written reason ([state]): its credit (#1162), with *Read aloud* ([readAloud]) at the end of
-// its row, the grounding note, which of its citations of [evidence] it translated from the track's
-// language (#902), named as its chips are ([shownAs], #1205), and, kept from before, when it was
-// written (#851).
+// its row, the grounding note, its lines' chips opening *Sources* at them ([onCite], #1437), which of
+// its citations of [evidence] it translated from the track's language (#902), named as its chips are
+// ([shownAs], #1205), and, kept from before, when it was written (#851).
+@Suppress("LongParameterList") // The reason, what it cites, and what its parts do.
 @Composable
 private fun ReasonCredits(
     shown: GenreReason.Shown,
@@ -250,6 +251,7 @@ private fun ReasonCredits(
     evidence: EvidenceSet?,
     shownAs: (String) -> String?,
     readAloud: ReadAloudControl?,
+    onCite: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         // "with web search" for a reason from web pages (#695): asked again with them, and citing one.
@@ -259,7 +261,11 @@ private fun ReasonCredits(
             readAloud = readAloud?.let { { ReadAloudButton(it, GENRE_READ_ALOUD_TAG) } },
             variant = state.writtenBy?.variant,
         )
-        GroundingLine(state.grounded, details = false)
+        GroundingLine(
+            state.grounded,
+            details = false,
+            NoteCites(evidence, label = shownAs, onCite = onCite),
+        )
         TranslatedLine(state.grounded, evidence, label = shownAs)
         shown.keptAt?.let { KeptLine(it) }
     }

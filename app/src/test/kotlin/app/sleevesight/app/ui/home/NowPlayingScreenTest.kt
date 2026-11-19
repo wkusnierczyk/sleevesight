@@ -59,8 +59,11 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.CheckedSentence
+import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
+import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -345,18 +348,14 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun aCardCheckedWithTheModelsKnowledgeAllowedShowsItsModelCitationAsSoBesideAMissingLine() {
-        // No sentence comes out `MODEL`: the only `[AI]` sits beside a line that does not exist.
-        val kept = track(insight = written("It is loved [AI][L1].", cached = true, allowModel = true))
+    fun aSentenceCitingTheModelBesideAMissingLineIsTakenOut() {
+        // No sentence comes out `MODEL`: the `[AI]` sits beside a line that does not exist, so the
+        // sentence is taken out, nothing said of it (#1437).
+        val reply = "It topped the charts [W1]. It is loved [AI][L1]."
+        val kept = track(insight = written(reply, cached = true, allowModel = true))
         show(state(PipelineView(kept, aiReady = true))) {
-            val prose =
-                compose
-                    .onNodeWithText("It is loved", substring = true)
-                    .fetchSemanticsNode()
-                    .config[SemanticsProperties.Text]
-                    .first { "It is loved" in it.text }
-            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "AI" }
-            assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
+            compose.onNodeWithText("It topped the charts", substring = true).assertExists()
+            assertEquals(0, compose.onAllNodesWithText("It is loved", substring = true).fetchSemanticsNodes().size)
         }
     }
 
@@ -377,9 +376,9 @@ class NowPlayingScreenTest {
                     listOf(
                         "It topped the charts (${text(R.string.home_cite, "W1")}). " +
                             "It is loved (${text(R.string.home_cite_model)}). " +
-                            "It charted (${text(R.string.home_cite_unknown, "L1")}). " +
-                            // One `?` chip for the run of two dimmed sentences, after the second (#954).
-                            "It is great (${text(R.string.home_cite_none)}) (${text(R.string.home_cite_see_note)}).",
+                            // The sentence citing a line that does not exist is taken out (#1437); the
+                            // uncited one's `?` chip is read as "not cited" (#954).
+                            "It is great (${text(R.string.home_cite_none)}).",
                     ),
                 ),
             )
@@ -408,9 +407,9 @@ class NowPlayingScreenTest {
         val reply = "It topped the charts [W1]. It is a single [WD1]."
         val writing = InsightState.Writing(reply, held)
         for (insight in listOf(writing, written(reply, held = held))) {
-            // Once checked, the sentence citing a line the prompt left out is dimmed, with its `?` chip (#954).
+            // Once checked, the sentence citing a line the prompt left out is taken out (#1437).
             val checked = insight is InsightState.Written
-            val noteChip = if (checked) " (${text(R.string.home_cite_see_note)})" else ""
+            val single = " It is a single (${text(R.string.home_cite_unknown, "WD1")})."
             show(state(PipelineView(track(insight = insight), aiReady = true))) {
                 val node =
                     compose
@@ -422,21 +421,24 @@ class NowPlayingScreenTest {
                     SemanticsMatcher.expectValue(
                         SemanticsProperties.ContentDescription,
                         listOf(
-                            "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "It is a single (${text(R.string.home_cite_unknown, "WD1")})$noteChip.",
+                            "It topped the charts (${text(R.string.home_cite, "W1")})." +
+                                if (checked) "" else single,
                         ),
                     ),
                 )
                 val actions = node.fetchSemanticsNode().config[SemanticsActions.CustomActions]
-                val toNote = listOfNotNull(text(R.string.home_cite_see_note).takeIf { checked })
-                assertEquals(listOf(text(R.string.home_cite, "W1")) + toNote, actions.map { it.label })
+                assertEquals(listOf(text(R.string.home_cite, "W1")), actions.map { it.label })
                 val prose =
                     node
                         .fetchSemanticsNode()
                         .config[SemanticsProperties.Text]
                         .first { "It topped the charts" in it.text }
-                val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "WD1" }
-                assertEquals(lightColorScheme().errorContainer, chip.item.background)
+                val chip = prose.spanStyles.singleOrNull { prose.text.substring(it.start, it.end).trim() == "WD1" }
+                if (checked) {
+                    assertEquals(null, chip)
+                } else {
+                    assertEquals(lightColorScheme().errorContainer, chip!!.item.background)
+                }
             }
         }
     }
@@ -455,8 +457,7 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "They called it \"great.\" (${text(R.string.home_cite_none)})" +
-                                " (${text(R.string.home_cite_see_note)})",
+                                "They called it \"great.\" (${text(R.string.home_cite_none)})",
                         ),
                     ),
                 )
@@ -478,8 +479,7 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "(See the sleeve (${text(R.string.home_cite_none)})" +
-                                " (${text(R.string.home_cite_see_note)}).)",
+                                "(See the sleeve (${text(R.string.home_cite_none)}).)",
                         ),
                     ),
                 )
@@ -501,8 +501,7 @@ class NowPlayingScreenTest {
                         SemanticsProperties.ContentDescription,
                         listOf(
                             "It topped the charts (${text(R.string.home_cite, "W1")}). " +
-                                "(They called it \"great.\") (${text(R.string.home_cite_none)})" +
-                                " (${text(R.string.home_cite_see_note)})",
+                                "(They called it \"great.\") (${text(R.string.home_cite_none)})",
                         ),
                     ),
                 )
@@ -543,6 +542,61 @@ class NowPlayingScreenTest {
             // A line past them is reached under *Sources*, which lists every line once unfolded.
             unfoldAll()
             compose.onNodeWithTag(LINE_PREFIX + evidence.ids.last()).performScrollTo().assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun dimmedTextCitingManyLinesOffersABoundedSetOfActionsOnTheParagraphAndOnTheNote() {
+        // A paragraph's 16 lines, 15 outlined chips and a `?` chip, 32 actions in all before the cap
+        // (#1437), and a note naming 40 lines: Compose throws building either node at 32.
+        val drafts = (1..40).map { HomeFixtures.draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val evidence = EvidenceSet.of(drafts, JvmHasher)
+        val ids = evidence.ids
+
+        fun cited(from: List<String>) = from.joinToString("") { "[$it]" }
+        val sentences =
+            listOf(
+                CheckedSentence("It is documented ${cited(ids.take(20))}.", ids.take(20), SentenceStatus.OK),
+                CheckedSentence("It sold well ${cited(ids)}.", ids, SentenceStatus.UNSUPPORTED),
+                CheckedSentence("It is great.", emptyList(), SentenceStatus.UNCITED),
+            )
+        val grounded = GroundedText(sentences.joinToString(" ") { it.text }, listOf(sentences), allowModel = false)
+        val track = track(insight = InsightState.Written(grounded, cached = false), evidence = evidence)
+        val accessibility = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+        accessibility.setEnabled(true)
+        accessibility.setTouchExplorationEnabled(true)
+        accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        show(state(PipelineView(track, aiReady = true))) { activity ->
+            val provider = { checkNotNull(composeView(activity.window.decorView).accessibilityNodeProvider) }
+            val paragraph =
+                compose
+                    .onNode(
+                        hasText("It is documented", substring = true) and
+                            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                    ).performScrollTo()
+                    .fetchSemanticsNode()
+            val info = checkNotNull(provider().createAccessibilityNodeInfo(paragraph.id)) { "no node" }
+            val custom =
+                info.actionList
+                    .mapNotNull { it.label?.toString() }
+                    .filter { it.startsWith("Source ") || it.endsWith("see the note") }
+            // The lines' first, as many as a paragraph offers, the outlined chips' after, and the `?`
+            // chips' one kept last: 31 in all.
+            assertEquals(MAX_ACTIONS, custom.size)
+            assertEquals(ids.take(16).map { text(R.string.home_cite, it) }, custom.take(16))
+            assertEquals(
+                ids.take(14).map { text(R.string.home_cite_unsupported_see_note, it) },
+                custom.subList(16, 30),
+            )
+            assertEquals(text(R.string.home_cite_see_note), custom.last())
+
+            // The note names all 40, and offers the first 16 as actions.
+            val note = compose.onNodeWithTag(UNBACKED_NOTE_TAG).performScrollTo().fetchSemanticsNode()
+            val noteInfo = checkNotNull(provider().createAccessibilityNodeInfo(note.id)) { "no note node" }
+            val lines = noteInfo.actionList.mapNotNull { it.label?.toString() }.filter { it.startsWith("Source ") }
+            assertEquals(sortedIds(ids).take(16).map { text(R.string.home_cite, it) }, lines)
+            val said = note.config[SemanticsProperties.ContentDescription].single()
+            assertTrue(said, ids.all { text(R.string.home_cite, it) in said })
         }
     }
 

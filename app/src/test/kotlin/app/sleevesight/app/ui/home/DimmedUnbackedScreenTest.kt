@@ -41,10 +41,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * One mark for text the sources do not back (#954): a dimmed sentence upright, in the text's colour
- * at 60 %, and a `?` chip after the last of each run of them, after its own chips, which goes to the
- * note under the insight ("? Dimmed text is not backed by the sources."); none after a sentence from
- * the AI model's own knowledge.
+ * One mark for text the sources do not back (#954, #1437): a dimmed sentence upright, in the text's
+ * colour at 60 %, and a `?` chip after the last of each run of them citing nothing, which goes to the
+ * note under the insight ("Dimmed text is not backed by any source."); none after a sentence from
+ * the AI model's own knowledge, nor after one citing a line (its outlined chip is its mark); a
+ * sentence citing a line that does not exist taken out.
  */
 @RunWith(RobolectricTestRunner::class)
 class DimmedUnbackedScreenTest {
@@ -130,22 +131,20 @@ class DimmedUnbackedScreenTest {
         }
 
     @Test
-    fun aSentenceCitingAMissingLineGetsTheMarkAfterItsChip() =
+    fun aSentenceCitingAMissingLineIsTakenOutWithNothingSaid() =
         show(written("It topped the charts [W1]. It was a hit [MB9].")) {
             val text = textOf("It topped the charts")
-            assertEquals("It topped the charts ${chip("W1")}. It was a hit ${chip("MB9")}$mark.", text.text)
-            assertEquals(
-                "It topped the charts (Source W1). It was a hit (MB9: no such evidence line) ($seeNote).",
-                said("It topped the charts"),
-            )
+            assertEquals("It topped the charts ${chip("W1")}.", text.text)
+            assertEquals("It topped the charts (Source W1).", said("It topped the charts"))
+            assertEquals(0, compose.onAllNodesWithTag(UNBACKED_NOTE_TAG).fetchSemanticsNodes().size)
         }
 
     @Test
-    fun anUnsupportedSentenceGetsTheMarkAfterItsChip() =
+    fun anUnsupportedSentenceKeepsItsOutlinedChipWithNoMark() =
         show(written("It topped the charts in 1986 [W1]. Sundown was recorded in 1973 [MB1].", support = true)) {
             val text = textOf("It topped the charts")
-            assertTrue(text.text.startsWith("It topped the charts in 1986 ${chip("W1")}$mark."))
-            assertEquals(1, marks(text).size)
+            assertTrue(text.text.startsWith("It topped the charts in 1986 ${chip("W1")}."))
+            assertEquals(0, marks(text).size)
         }
 
     @Test
@@ -164,7 +163,7 @@ class DimmedUnbackedScreenTest {
             assertEquals("It topped the charts ${chip("W1")}. It is great. It is loved$mark.", text.text)
             assertEquals(1, marks(text).size)
             assertEquals(
-                "It topped the charts (Source W1). It is great (not cited). It is loved (not cited) ($seeNote).",
+                "It topped the charts (Source W1). It is great. It is loved (not cited).",
                 said("It topped the charts"),
             )
         }
@@ -198,15 +197,14 @@ class DimmedUnbackedScreenTest {
         }
 
     @Test
-    fun theNoteStartsWithTheMark() =
+    fun theNoteSaysTextCitingNothingIsNotBackedByAnySource() =
         show(written("It topped the charts [W1]. It is great.")) {
             val note = compose.onNodeWithTag(UNBACKED_NOTE_TAG).performScrollTo().fetchSemanticsNode()
-            val words = compose.onNodeWithText(app.getString(R.string.home_note_unbacked)).fetchSemanticsNode()
-            assertEquals("Dimmed text is not backed by the sources.", app.getString(R.string.home_note_unbacked))
-            // The chip comes first, so the words start to its right; the chip itself is not read.
-            assertTrue(words.boundsInRoot.left > note.boundsInRoot.left)
-            val read = words.config[SemanticsProperties.Text].single().text
-            assertEquals(app.getString(R.string.home_note_unbacked), read)
+            val words = app.getString(R.string.home_note_unbacked_uncited)
+            assertEquals("Dimmed text is not backed by any source.", words)
+            // The words alone, with no chip before them (#1437).
+            assertEquals(words, note.config[SemanticsProperties.Text].single().text)
+            compose.onNodeWithText(words).assertExists()
         }
 
     @Test
@@ -229,7 +227,7 @@ class DimmedUnbackedScreenTest {
     fun theScreenReaderHasTheMarkAsAnActionThatGoesToTheNote() =
         show(written("It topped the charts [W1]. It is great.")) {
             assertEquals(
-                "It topped the charts (Source W1). It is great (not cited) ($seeNote).",
+                "It topped the charts (Source W1). It is great (not cited).",
                 said("It topped the charts"),
             )
             val actions = prose("It topped the charts").fetchSemanticsNode().config[SemanticsActions.CustomActions]

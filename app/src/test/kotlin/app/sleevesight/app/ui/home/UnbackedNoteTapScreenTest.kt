@@ -113,7 +113,7 @@ class UnbackedNoteTapScreenTest {
             compose.waitForIdle()
             compose.onNodeWithTag(UNBACKED_NOTE_FLASHING_TAG, useUnmergedTree = true).assertIsDisplayed()
             compose
-                .onNodeWithText(app.getString(R.string.home_note_unbacked), useUnmergedTree = true)
+                .onNodeWithText(app.getString(R.string.home_note_unbacked_uncited), useUnmergedTree = true)
                 .assertIsDisplayed()
         } finally {
             compose.mainClock.autoAdvance = true

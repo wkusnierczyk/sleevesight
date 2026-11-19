@@ -33,9 +33,10 @@ import app.sleevesight.core.synthesis.sameAddress
 
 /**
  * What the song is about, as [answer] has it (#908), under the rule *Ask AI* draws: its sentences as
- * an insight's ([CheckedProse]'s look), a sentence no page backs (uncited, or citing a page it was not
- * given) dimmed ([dimmedText], #954), read as not cited, and followed by a `?` chip that goes to the
- * note under the text ([UnbackedNote]), read "Not backed, see the note" and offered as an action too.
+ * an insight's ([CheckedProse]'s look), a sentence citing a page it was not given taken out, nothing
+ * said of it (#1437), an uncited one dimmed ([dimmedText], #954), the last of a run of them followed
+ * by a `?` chip, read "(not cited)", that goes to the note under the text ([UnbackedNote], "Dimmed
+ * text is not backed by any source."), offered as an action too, "Not cited, see the note".
  * Each citation is the line
  * *Sources* lists its page under (#1067: [lines], *Sources*' own, by the page's address, `sourcesLines`
  * naming it *explanation*), shown by that line's id ("S7") and opening *Sources* at it ([onCite]), as
@@ -61,18 +62,22 @@ internal fun AiExplanation(
     val byId = remember(answer, lines) { citedLines(answer.pages, lines) }
     val sentences = answer.grounded.paragraphs.flatten()
     val modelAllowed = answer.grounded.allowModel
-    val runs = remember(answer) { sentences.zip(shown(sentences.map { it.text }, checked = true)) }
+    // A sentence citing a page it was not given is taken out (#1437).
+    val runs =
+        remember(answer, byId) {
+            val ids = CitedIds(byId, modelAllowed)
+            sentences.zip(shown(sentences.map { it.text }, checked = true)).filterNot { (sentence, parts) ->
+                sentence.status == SentenceStatus.UNKNOWN ||
+                    parts.any { it is ShownRun.Cite && byId[it.id] == null && !ids.model(it.id) }
+            }
+        }
     // The sentences that end with a `?` chip (#954): the last of each run of doubtful ones shown, the
     // text drawn as one paragraph; a sentence that shows as nothing neither ends a run nor breaks one.
     val marked = remember(runs) { chipEnds(runs) }
     val uncited = stringResource(R.string.home_cite_none)
-    // "(not cited) (Not backed, see the note)": the sentence's note, then its `?` chip's (#954).
-    val uncitedMarked = "$uncited) (${stringResource(R.string.home_cite_see_note)}"
     val spoken =
         runs.withIndex().joinToString(" ") { (i, run) ->
-            val (sentence, parts) = run
-            val said = if (marked[i]) uncitedMarked else uncited
-            spokenSentence(sentence, parts, CitedIds(byId, modelAllowed), said, resources)
+            spokenSentence(run.first, run.second, CitedIds(byId, modelAllowed), uncited.takeIf { marked[i] }, resources)
         }
     // A citation's line in *Sources*, or, with none, its page in the browser.
     val open = { cited: CitedLine -> if (cited.inSources) onCite(cited.shown) else openWebLink(uris, cited.url) }
@@ -110,7 +115,7 @@ internal fun AiExplanation(
                 },
         )
         // The note the dimmed sentences' `?` chips go to (#954), right under the text.
-        if (dimmed) UnbackedNote()
+        if (dimmed) UnbackedNote(Unbacked(lines = emptyList(), uncited = true))
     }
 }
 
@@ -137,7 +142,7 @@ private class CitedIds(
 // Which of [runs] end with a `?` chip (#954, [runEnds]), among those that show.
 private fun chipEnds(runs: List<Pair<CheckedSentence, List<ShownRun>>>): List<Boolean> {
     val shownAt = runs.indices.filterNot { runs[it].second.isBlank() }
-    val ends = runEnds(shownAt.map { doubtful(runs[it].first) })
+    val ends = runEnds(shownAt.map { i -> UNCITED_RUN.takeIf { doubtful(runs[i].first) } })
     val marked = MutableList(runs.size) { false }
     shownAt.forEachIndexed { k, i -> marked[i] = ends[k] }
     return marked
@@ -199,9 +204,8 @@ internal fun lineOf(
     webLineOf(url, lines)
         ?: lines?.lines?.firstOrNull { line -> line.url?.let { sameAddress(it, url) } == true }?.id
 
-// Whether [sentence] is shown dimmed: no page backs it.
-private fun doubtful(sentence: CheckedSentence): Boolean =
-    sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
+// Whether [sentence] is shown dimmed: it cites no page.
+private fun doubtful(sentence: CheckedSentence): Boolean = sentence.status == SentenceStatus.UNCITED
 
 // The sentences' [runs] as shown: a doubtful one dimmed ([ExplanationLooks.flagged]), the last of a
 // run of them followed by a `?` chip (#954, [appendUnbacked]), each citation of a page in [byId] a
@@ -255,13 +259,13 @@ private fun AnnotatedString.Builder.appendParts(
 
 // [sentence] ([parts]) as a screen reader hears it: each citation "Source S7", by its line in
 // *Sources*, or that no such page was given; `[AI]`, where allowed, "From the AI model’s own
-// knowledge, not verified" (#952); a doubtful one said to be not cited, then its `?` chip (#954),
-// "Not backed, see the note" ([uncited], both).
+// knowledge, not verified" (#952); the last of a run of doubtful ones said to be not cited, as its `?`
+// chip shows it ([uncited], "not cited", #1437; null for any other).
 private fun spokenSentence(
     sentence: CheckedSentence,
     parts: List<ShownRun>,
     ids: CitedIds,
-    uncited: String,
+    uncited: String?,
     resources: Resources,
 ): String {
     val words =
@@ -283,7 +287,7 @@ private fun spokenSentence(
             }.replace(SPACES, " ")
             .replace(SPACE_BEFORE_STOP, "$1")
             .trim()
-    return if (doubtful(sentence)) "$words ($uncited)" else words
+    return if (doubtful(sentence) && uncited != null) notCited(words, uncited) else words
 }
 
 /**
