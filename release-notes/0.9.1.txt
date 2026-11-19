@@ -1,0 +1,4 @@
+What's new in 0.9.1:
+- A plain note symbol at the top replaces your player's logo: tap it for the player menu, hold it to open the player.
+- With no player switched on, the symbol says so and takes you to Settings → Players.
+- The player menu shows your player's logo beside Open <player>.
