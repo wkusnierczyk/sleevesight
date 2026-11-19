@@ -38,14 +38,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.logo.animatorDurationScale
+import app.sleevesight.app.ui.settings.ListedPlayer
 import app.sleevesight.app.ui.settings.PlayerApps
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
-import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.delay
 
 // The player symbol in Home's header (#1440): a neutral music note, in place of the followed
@@ -59,7 +60,7 @@ private enum class SymbolState {
     /** Players are switched on in *Settings → Players*, but none has a session: dimmed. */
     NOTHING_PLAYING,
 
-    /** No player is switched on: dimmed. */
+    /** No player *Settings → Players* lists is switched on, once they have loaded: dimmed. */
     NONE_ENABLED,
 }
 
@@ -90,10 +91,12 @@ internal fun PlayerSymbol(
     val settings by feed.settings.collectAsState()
     val player = playback.player
     val apps = remember(feed) { PlayerApps(feed.label, feed.launch, feed.installed) }
-    val state = symbolState(player, settings)
+    // The players the menu lists; none switched on is said only once they have loaded.
+    val listed = settings?.let { menuPlayers(it, apps) }
+    val state = symbolState(player, listed)
     // The player last followed, kept while Home is away too, for a long press while none plays.
     val last by feed.lastPlayer.collectAsState()
-    val firstOn = settings?.let { menuPlayers(it, apps) }?.firstOrNull()
+    val firstOn = listed?.firstOrNull()
     // What is open: the menu, or a panel, as the state was at the tap; none when the state moves on.
     var opened by rememberSaveable { mutableStateOf<SymbolState?>(null) }
     if (opened != null && opened != state) SideEffect { opened = null }
@@ -108,7 +111,10 @@ internal fun PlayerSymbol(
             open(target, state == SymbolState.PLAYER)
         }
     }
-    val flashing = flashesIcon(feed, player, playback.status == PlaybackStatus.PLAYING)
+    val flashing = flashesIcon(feed, player, playing(playback))
+    // What the popup last showed, kept while it closes, so its content goes with it.
+    var shown by remember { mutableStateOf<SymbolState?>(null) }
+    opened?.let { if (it != shown) SideEffect { shown = it } }
     Box {
         SymbolButton(
             state,
@@ -119,7 +125,7 @@ internal fun PlayerSymbol(
             onHold = onHold,
         )
         DropdownMenu(expanded = opened != null, onDismissRequest = { opened = null }) {
-            SymbolPopup(opened, feed, apps, close = { opened = null }, onOpenPlayers)
+            SymbolPopup(opened ?: shown, feed, apps, close = { opened = null }, onOpenPlayers)
         }
     }
 }
@@ -137,7 +143,13 @@ private fun SymbolPopup(
     when (opened) {
         SymbolState.PLAYER ->
             playback.player?.let { PlayerMenu(feed, playback, remember(it) { feed.label(it) }, apps, close) }
-        SymbolState.NOTHING_PLAYING -> SymbolPanel(close) { NothingPlayingText() }
+        SymbolState.NOTHING_PLAYING ->
+            SymbolPanel(close) {
+                Text(
+                    stringResource(R.string.home_player_symbol_nothing_playing),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         SymbolState.NONE_ENABLED ->
             SymbolPanel(close) {
                 NoneEnabledText {
@@ -149,15 +161,24 @@ private fun SymbolPopup(
     }
 }
 
-// What the symbol stands for, with [player]'s session shown, or none, and the players' [settings].
+// What the symbol stands for, with [player]'s session shown, or none, and the players the menu lists
+// ([listed], null until loaded): none switched on there as *Settings → Players* shows them.
 private fun symbolState(
     player: String?,
-    settings: Settings?,
+    listed: List<ListedPlayer>?,
 ): SymbolState =
     when {
         player != null -> SymbolState.PLAYER
-        settings?.let { s -> s.followedPlayers.keys.none(s::follows) } == true -> SymbolState.NONE_ENABLED
+        listed?.isEmpty() == true -> SymbolState.NONE_ENABLED
         else -> SymbolState.NOTHING_PLAYING
+    }
+
+// Whether [playback]'s player plays ([PlaybackInfo.plays]); null in a passing state (buffering, a
+// skip, connecting), which keeps what was before, so a skip or a stall is no start.
+private fun playing(playback: PlaybackInfo): Boolean? =
+    when (playback.status) {
+        PlaybackStatus.OTHER, PlaybackStatus.BUFFERING -> null
+        else -> playback.plays
     }
 
 // Opens a player's app: its session's screen too [withScreen], else its launcher entry; a message
@@ -226,8 +247,9 @@ private fun SymbolButton(
 
 /**
  * The player whose own icon the symbol shows now, or null for the note (#1440): [player], for
- * [FLASH_MS] once it starts playing ([playing]) or Home switches to it from another player, never on
- * the first look at Home, and only with motion: the phone's animations on and *Spin the logo* on.
+ * [FLASH_MS] once it starts playing ([playing]; null, a passing state, keeps what was before) or Home
+ * switches to it from another player, never on the first look at Home, and only with motion: the
+ * phone's animations on and *Spin the logo* on.
  * Noticing the change and timing the second are apart, so a pause or another report within the
  * second does not cut it short; it ends early only when Home leaves, the player goes, or motion is
  * switched off, and switching motion back on starts none. No timer of its own besides.
@@ -236,7 +258,7 @@ private fun SymbolButton(
 private fun flashesIcon(
     feed: HeaderPlayerFeed,
     player: String?,
-    playing: Boolean,
+    playing: Boolean?,
 ): String? {
     val settings by feed.settings.collectAsState()
     val motion = animatorDurationScale() > 0f && settings?.spinLogo == true
@@ -248,9 +270,10 @@ private fun flashesIcon(
     val seen = remember { arrayOfNulls<Pair<String?, Boolean>>(1) }
     LaunchedEffect(player, playing) {
         val before = seen[0]
-        seen[0] = player to playing
+        val plays = playing ?: before?.second ?: false
+        seen[0] = player to plays
         if (player != flashing) flashing = null
-        if (moving && before != null && flashes(before, player, playing)) {
+        if (moving && before != null && flashes(before, player, plays)) {
             flashing = player
             flash++
         }
@@ -296,11 +319,6 @@ private fun SymbolPanel(
             modifier = Modifier.align(Alignment.End).testTag(SYMBOL_PANEL_DISMISS_TAG),
         )
     }
-}
-
-@Composable
-private fun NothingPlayingText() {
-    Text(stringResource(R.string.home_player_symbol_nothing_playing), style = MaterialTheme.typography.bodyMedium)
 }
 
 // *No player enabled*, with *Settings → Players* a link there ([toPlayers]).

@@ -58,6 +58,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.session.Transport
 import app.sleevesight.app.ui.HomeScreen
 import app.sleevesight.app.ui.logo.LocalAnimatorDurationScale
+import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.PlayerApps
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.SleevesightTheme
@@ -65,6 +66,8 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -120,7 +123,10 @@ class HeaderPlayerTest {
     // The phone's animator duration scale, as the app's root provides it.
     private val scale = mutableFloatStateOf(1f)
 
-    private val feed =
+    private val feed = feedOf(installed = null)
+
+    // The feed, with the phone's players as [installed] says (null: every player listed).
+    private fun feedOf(installed: InstalledPlayers?) =
         HeaderPlayerFeed(
             playback = playback,
             followed = followed,
@@ -131,7 +137,7 @@ class HeaderPlayerTest {
                 activity.takeIf { player == SPOTIFY }
             },
             launch = { Intent(Intent.ACTION_MAIN).setPackage(it) },
-            installed = null,
+            installed = installed,
             send = { sent += it },
             follow = {
                 chosen += it
@@ -145,6 +151,7 @@ class HeaderPlayerTest {
     private fun show(
         dark: Boolean = false,
         openSettingsAt: (SettingsTarget) -> Unit = {},
+        shownFeed: HeaderPlayerFeed = feed,
         block: (MainActivity) -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -157,7 +164,7 @@ class HeaderPlayerTest {
                                     accessGranted = true,
                                     onOpenFirstRun = {},
                                     onOpenSettings = {},
-                                    player = feed,
+                                    player = shownFeed,
                                     onOpenSettingsAt = openSettingsAt,
                                 ) {
                                     Column {
@@ -435,12 +442,84 @@ class HeaderPlayerTest {
     @Test
     fun aLongPressOnTheRecordDoesNothing() =
         show {
+            // To a screen reader too: a tap, and no long press.
+            val record = compose.onNodeWithTag(RECORD_TAG).fetchSemanticsNode().config
+            assertTrue(SemanticsActions.OnClick in record)
+            assertFalse(SemanticsActions.OnLongClick in record)
             compose.onNodeWithTag(RECORD_TAG).performTouchInput { longClick(center) }
             compose.waitForIdle()
             assertEquals(emptyList<Transport>(), sent)
             menuClosed()
             assertEquals(null, shadowOf(app).nextStartedActivity)
         }
+
+    // Claude review of #1441: a skip or a stall passes through other states and is no start.
+    @Test
+    fun aSkipOrAStallIsNoStartAndShowsNoIcon() =
+        show {
+            compose.mainClock.autoAdvance = false
+            for (status in listOf(PlaybackStatus.OTHER, PlaybackStatus.BUFFERING, PlaybackStatus.PLAYING)) {
+                playback.value = PlaybackInfo(SPOTIFY, status, actions = ALL)
+                frames()
+                iconShown(false)
+            }
+            compose.mainClock.autoAdvance = true
+        }
+
+    // Claude review of #1441: with *Settings*' defaults (Spotify on) and Spotify not on the phone,
+    // no player *Settings → Players* lists is on: the symbol says so and links there.
+    @Test
+    fun withTheDefaultsAndSpotifyNotOnThePhoneNoPlayerIsEnabled() {
+        nothingPlaying()
+        lastPlayer.value = null
+        settings.value = Settings()
+        val phone = InstalledPlayers(icon = { null }, visible = { false }, seen = MutableStateFlow(emptySet()))
+        show(shownFeed = feedOf(phone)) {
+            compose.waitUntil(WAIT_MS) {
+                compose
+                    .onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
+                    .fetchSemanticsNodes()
+                    .any { it.config.getOrElseNullable(SemanticsProperties.StateDescription) { null } == noneEnabled() }
+            }
+            symbolReads(noneEnabled())
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
+            assertEquals(null, shadowOf(app).nextStartedActivity)
+        }
+    }
+
+    // Claude review of #1441: the last player followed, since switched off, gives way to the first
+    // switched on.
+    @Test
+    fun aLongPressWithTheLastPlayerSwitchedOffOpensTheFirstSwitchedOn() {
+        nothingPlaying()
+        lastPlayer.value = YOUTUBE
+        settings.value = Settings(followedPlayers = mapOf(SPOTIFY to true, YOUTUBE to false, CASTBOX to true))
+        show {
+            compose.waitForIdle()
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.waitForIdle()
+            assertEquals(CASTBOX, shadowOf(app).nextStartedActivity?.`package`)
+        }
+    }
+
+    // Claude review of #1441: with players switched on but none listed on the phone, and no player
+    // followed before, a long press has nothing to open: the panel says no player is enabled.
+    @Test
+    fun aLongPressWithNothingToOpenOpensThePanel() {
+        nothingPlaying()
+        lastPlayer.value = null
+        val phone = InstalledPlayers(icon = { null }, visible = { false }, seen = MutableStateFlow(emptySet()))
+        show(shownFeed = feedOf(phone)) {
+            compose.waitForIdle()
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.waitForIdle()
+            assertEquals(null, shadowOf(app).nextStartedActivity)
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
+        }
+    }
+
+    private fun noneEnabled() = text(R.string.home_player_symbol_none_enabled_state)
 
     @Test
     fun theSymbolIsReadAsPlayerMenuWithItsActionsAndOpensTheMenu() =
