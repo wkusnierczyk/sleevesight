@@ -120,6 +120,7 @@ class SessionRepository(
     private val adState = MutableStateFlow<AdPlaying?>(null)
     private val withdrawnState = MutableStateFlow<NowPlaying?>(null)
     private val playbackState = MutableStateFlow(PlaybackInfo.NONE)
+    private val lastPlayerState = MutableStateFlow<String?>(null)
     private val queueState = MutableStateFlow<SessionQueue?>(null)
     private val artState = MutableStateFlow<Bitmap?>(null)
     private val changeState = MutableStateFlow<SessionChange?>(null)
@@ -196,6 +197,12 @@ class SessionRepository(
 
     /** The shown player's playback state; [PlaybackInfo.NONE] when there is no followed session. */
     val playback: StateFlow<PlaybackInfo> = playbackState.asStateFlow()
+
+    /**
+     * The player last shown ([playback]'s), kept once its session ends, null before the first, for
+     * the header's player symbol, whose long press opens it while none plays (#1440). In memory only.
+     */
+    val lastPlayer: StateFlow<String?> = lastPlayerState.asStateFlow()
 
     /**
      * Each followed player with a session now, in the system's order, with its state: its session
@@ -512,14 +519,20 @@ class SessionRepository(
         probes[key]?.check()
     }
 
+    /** Publishes [shown]'s playback state, and keeps its player as the last shown (#1440). */
+    private fun publishPlayback(shown: Attached?) {
+        playbackState.value =
+            shown?.let { SessionMapping.playbackInfo(it.gate.player, it.state) } ?: PlaybackInfo.NONE
+        shown?.let { lastPlayerState.value = it.gate.player }
+    }
+
     /** Publishes the shown player's state; [settled] is the session whose settle triggered it, if one did. */
     private fun publish(settled: Attached? = null) {
         val eligible = eligible()
         val shown = choose(eligible)
         shownNow = shown
         followedState.value = statesOf(eligible)
-        playbackState.value =
-            shown?.let { SessionMapping.playbackInfo(it.gate.player, it.state) } ?: PlaybackInfo.NONE
+        publishPlayback(shown)
         queueState.value = shown?.let { SessionMapping.queue(it.queue, it.queueTitle) }
         // A player that becomes the one shown because it started a new track has not settled
         // yet: its track is still the one before. The track shown stays until it settles.

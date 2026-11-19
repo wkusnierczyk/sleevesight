@@ -183,6 +183,26 @@ internal class SessionControlsTest : SessionRepositoryFixture() {
         assertEquals(SPOTIFY, repository.playback.value.player)
     }
 
+    // The header's player symbol opens the player last shown while none plays (#1440).
+    @Test
+    fun thePlayerLastShownIsKeptOnceItsSessionEnds() {
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        assertEquals(null, repository.lastPlayer.value)
+        val spotify = FakeSession(SPOTIFY, playbackState = state())
+        val youtube = FakeSession(YOUTUBE_MUSIC, metadata = carefree, playbackState = state(PlaybackState.STATE_PAUSED))
+        system.active = listOf(spotify, youtube)
+        repository.start()
+        settle()
+        assertEquals(SPOTIFY, repository.lastPlayer.value)
+        repository.follow(YOUTUBE_MUSIC)
+        settle()
+        assertEquals(YOUTUBE_MUSIC, repository.lastPlayer.value)
+        system.change(emptyList())
+        settle()
+        assertEquals(null, repository.playback.value.player)
+        assertEquals(YOUTUBE_MUSIC, repository.lastPlayer.value)
+    }
+
     @Test
     fun aPlayerWithNoSessionCannotBeChosen() {
         followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)

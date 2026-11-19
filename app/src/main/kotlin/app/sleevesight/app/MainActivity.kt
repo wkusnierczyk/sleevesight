@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
             follow = graph.followPlayer,
             nowPlaying = graph.sessions.nowPlaying,
             ad = graph.sessions.ad,
+            lastPlayer = graph.sessions.lastPlayer,
         )
     }
 

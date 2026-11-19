@@ -56,6 +56,7 @@ import app.sleevesight.app.ui.settings.PlayerApps
 import app.sleevesight.app.ui.settings.playerIcon
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 // The followed player in Home's header (#1409, #1209, #1440): the record plays and pauses it, and the
@@ -70,7 +71,8 @@ import kotlinx.coroutines.flow.StateFlow
  * its session's; [launch], a player's launcher entry); [send] sends a control to the shown player, and
  * [follow] makes Home show another followed player with a session. Home shows a track ([nowPlaying])
  * or an ad ([ad]), or it is idle: then the record plays no player ([shownPlayback]), though a session
- * be kept; the player symbol still opens the menu on it (#1440).
+ * be kept; the player symbol still opens the menu on it (#1440). The player last shown, kept after
+ * its session ends ([lastPlayer], #1440), is the one the symbol's long press opens while none plays.
  */
 @Suppress("LongParameterList") // What the header reads, each published on its own, and its two actions.
 class HeaderPlayerFeed(
@@ -85,6 +87,7 @@ class HeaderPlayerFeed(
     val follow: (String) -> Unit,
     val nowPlaying: StateFlow<NowPlaying?>,
     val ad: StateFlow<AdPlaying?>,
+    val lastPlayer: StateFlow<String?> = MutableStateFlow(null),
 )
 
 /**

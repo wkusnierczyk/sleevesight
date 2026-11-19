@@ -14,6 +14,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
@@ -53,6 +57,7 @@ import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.session.Transport
 import app.sleevesight.app.ui.HomeScreen
+import app.sleevesight.app.ui.logo.LocalAnimatorDurationScale
 import app.sleevesight.app.ui.settings.PlayerApps
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.SleevesightTheme
@@ -106,6 +111,15 @@ class HeaderPlayerTest {
     private val askedScreen = mutableListOf<String>()
     private val track = MutableStateFlow<NowPlaying?>(NowPlaying("Sundown", "Gordon Lightfoot", player = SPOTIFY))
 
+    // The player last shown, as the session layer keeps it (#1440).
+    private val lastPlayer = MutableStateFlow<String?>(SPOTIFY)
+
+    // Whether Home is composed; off, as when the settings are open over it.
+    private val homeShown = mutableStateOf(true)
+
+    // The phone's animator duration scale, as the app's root provides it.
+    private val scale = mutableFloatStateOf(1f)
+
     private val feed =
         HeaderPlayerFeed(
             playback = playback,
@@ -125,6 +139,7 @@ class HeaderPlayerTest {
             },
             nowPlaying = track,
             ad = MutableStateFlow<AdPlaying?>(null),
+            lastPlayer = lastPlayer,
         )
 
     private fun show(
@@ -136,15 +151,21 @@ class HeaderPlayerTest {
             scenario.onActivity {
                 it.setContent {
                     SleevesightTheme(darkTheme = dark) {
-                        HomeScreen(
-                            accessGranted = true,
-                            onOpenFirstRun = {},
-                            onOpenSettings = {},
-                            player = feed,
-                            onOpenSettingsAt = openSettingsAt,
-                        ) {
-                            Column {
-                                for (i in 0 until LINES) Text("Line $i", modifier = Modifier.testTag("line$i"))
+                        CompositionLocalProvider(LocalAnimatorDurationScale provides scale.floatValue) {
+                            if (homeShown.value) {
+                                HomeScreen(
+                                    accessGranted = true,
+                                    onOpenFirstRun = {},
+                                    onOpenSettings = {},
+                                    player = feed,
+                                    onOpenSettingsAt = openSettingsAt,
+                                ) {
+                                    Column {
+                                        for (i in 0 until LINES) Text("Line $i", modifier = Modifier.testTag("line$i"))
+                                    }
+                                }
+                            } else {
+                                Text("Elsewhere")
                             }
                         }
                     }
@@ -248,6 +269,7 @@ class HeaderPlayerTest {
     @Test
     fun aLongPressWithNothingPlayingOpensTheFirstPlayerSwitchedOn() {
         nothingPlaying()
+        lastPlayer.value = null
         show {
             // The players load off the main thread.
             compose.waitForIdle()
@@ -321,6 +343,81 @@ class HeaderPlayerTest {
             compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertExists()
             compose.mainClock.autoAdvance = true
         }
+
+    // Codex review of #1441: the player last followed is the session layer's, so one that played and
+    // stopped while Home was away is the one a long press opens on return.
+    @Test
+    fun theLastPlayerFollowedIsKeptWhileHomeIsAway() =
+        show {
+            homeShown.value = false
+            compose.waitForIdle()
+            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
+            lastPlayer.value = YOUTUBE
+            nothingPlaying()
+            homeShown.value = true
+            compose.waitForIdle()
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.waitForIdle()
+            assertEquals(YOUTUBE, shadowOf(app).nextStartedActivity?.`package`)
+        }
+
+    // Codex review of #1441: a pause within the second does not cut it short.
+    @Test
+    fun aPauseWithinTheSecondKeepsTheIconForTheWholeSecond() =
+        show {
+            compose.mainClock.autoAdvance = false
+            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
+            frames()
+            iconShown(true)
+            compose.mainClock.advanceTimeBy(HALF_MS)
+            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PAUSED, actions = ALL)
+            frames()
+            iconShown(true)
+            compose.mainClock.advanceTimeBy(HALF_MS)
+            iconShown(false)
+            compose.mainClock.autoAdvance = true
+        }
+
+    // Codex review of #1441: motion switched off within the second ends it at once; back on, none starts.
+    @Test
+    fun motionSwitchedOffWithinTheSecondEndsItAndBackOnStartsNone() {
+        val ways =
+            listOf<Pair<() -> Unit, () -> Unit>>(
+                { scale.floatValue = 0f } to { scale.floatValue = 1f },
+                { settings.value = settings.value?.copy(spinLogo = false) } to
+                    { settings.value = settings.value?.copy(spinLogo = true) },
+            )
+        for ((off, on) in ways) {
+            playback.value = PlaybackInfo(SPOTIFY, PlaybackStatus.PLAYING, actions = ALL)
+            show {
+                compose.mainClock.autoAdvance = false
+                playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
+                frames()
+                iconShown(true)
+                off()
+                frames()
+                iconShown(false)
+                on()
+                frames()
+                iconShown(false)
+                compose.mainClock.advanceTimeBy(FLASH_PAST_MS)
+                iconShown(false)
+                compose.mainClock.autoAdvance = true
+            }
+        }
+    }
+
+    private fun frames() {
+        // A state written here, off the composition, is seen at the next frame.
+        Snapshot.sendApplyNotifications()
+        compose.mainClock.advanceTimeByFrame()
+        compose.mainClock.advanceTimeBy(FRAME_MS)
+    }
+
+    private fun iconShown(shown: Boolean) {
+        val icon = compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true)
+        if (shown) icon.assertExists() else icon.assertDoesNotExist()
+    }
 
     @Test
     fun theSymbolKeepsTheNoteWhileSpinTheLogoIsOff() {
@@ -581,5 +678,6 @@ class HeaderPlayerTest {
         const val WAIT_MS = 5_000L
         const val FRAME_MS = 32L
         const val FLASH_PAST_MS = 1_100L
+        const val HALF_MS = 500L
     }
 }

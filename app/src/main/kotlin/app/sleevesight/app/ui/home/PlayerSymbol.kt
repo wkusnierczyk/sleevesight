@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -67,10 +68,11 @@ private enum class SymbolState {
  * colour, shown always. With a followed player's session ([SymbolState.PLAYER]), a tap opens the
  * player menu under it ([PlayerMenu]), or closes it, and a long press opens the player, as the menu's
  * *Open <player>* does. With players switched on but none playing, it is dimmed: a tap opens a panel
- * that says nothing is playing, and a long press opens the last player followed, else the first one
- * switched on. With no player switched on, it is dimmed too, and a tap or a long press opens a panel
- * that says so and links to *Settings → Players* ([onOpenPlayers]). A panel's *Dismiss*, a tap
- * outside or Back closes it; the next tap opens it again.
+ * that says nothing is playing, and a long press opens the last player followed
+ * ([HeaderPlayerFeed.lastPlayer]), else the first one switched on. With no player switched on, it
+ * is dimmed too, and a tap or a long press opens a panel that says so and links to *Settings →
+ * Players* ([onOpenPlayers]). A panel's *Dismiss*, a tap outside or Back closes it; the next tap
+ * opens it again.
  *
  * Once, for a second, when a followed player starts playing or Home switches to another player, the
  * symbol shows that player's own icon ([PlayerIcon]) in place of the note ([flashesIcon]); not with
@@ -89,9 +91,8 @@ internal fun PlayerSymbol(
     val player = playback.player
     val apps = remember(feed) { PlayerApps(feed.label, feed.launch, feed.installed) }
     val state = symbolState(player, settings)
-    // The player last followed, for a long press while none plays.
-    var last by rememberSaveable { mutableStateOf<String?>(null) }
-    if (player != null && player != last) SideEffect { last = player }
+    // The player last followed, kept while Home is away too, for a long press while none plays.
+    val last by feed.lastPlayer.collectAsState()
     val firstOn = settings?.let { menuPlayers(it, apps) }?.firstOrNull()
     // What is open: the menu, or a panel, as the state was at the tap; none when the state moves on.
     var opened by rememberSaveable { mutableStateOf<SymbolState?>(null) }
@@ -111,7 +112,7 @@ internal fun PlayerSymbol(
     Box {
         SymbolButton(
             state,
-            icon = player.takeIf { flashing },
+            icon = flashing,
             apps = apps,
             label = feed.label,
             onTap = { opened = if (opened == null) state else null },
@@ -224,33 +225,43 @@ private fun SymbolButton(
 }
 
 /**
- * Whether the symbol shows the player's own icon now (#1440): for [FLASH_MS] once [player] starts
- * playing ([playing]) or Home switches to another player, never on the first look at Home, and only
- * with motion: the phone's animations on and *Spin the logo* on. No timer of its own besides.
+ * The player whose own icon the symbol shows now, or null for the note (#1440): [player], for
+ * [FLASH_MS] once it starts playing ([playing]) or Home switches to it from another player, never on
+ * the first look at Home, and only with motion: the phone's animations on and *Spin the logo* on.
+ * Noticing the change and timing the second are apart, so a pause or another report within the
+ * second does not cut it short; it ends early only when Home leaves, the player goes, or motion is
+ * switched off, and switching motion back on starts none. No timer of its own besides.
  */
 @Composable
 private fun flashesIcon(
     feed: HeaderPlayerFeed,
     player: String?,
     playing: Boolean,
-): Boolean {
+): String? {
     val settings by feed.settings.collectAsState()
-    val motion by rememberUpdatedState(animatorDurationScale() > 0f && settings?.spinLogo == true)
-    var flashing by remember { mutableStateOf(false) }
+    val motion = animatorDurationScale() > 0f && settings?.spinLogo == true
+    val moving by rememberUpdatedState(motion)
+    // The player whose icon shows, and each flash's own number, which its timer goes by.
+    var flashing by remember { mutableStateOf<String?>(null) }
+    var flash by remember { mutableIntStateOf(0) }
     // What the last look saw: the player and whether it played; none before the first.
     val seen = remember { arrayOfNulls<Pair<String?, Boolean>>(1) }
     LaunchedEffect(player, playing) {
         val before = seen[0]
         seen[0] = player to playing
-        if (!motion || before == null || !flashes(before, player, playing)) return@LaunchedEffect
-        flashing = true
-        try {
-            delay(FLASH_MS)
-        } finally {
-            flashing = false
+        if (player != flashing) flashing = null
+        if (moving && before != null && flashes(before, player, playing)) {
+            flashing = player
+            flash++
         }
     }
-    return flashing
+    LaunchedEffect(flash) {
+        if (flashing == null) return@LaunchedEffect
+        delay(FLASH_MS)
+        flashing = null
+    }
+    if (!motion && flashing != null) SideEffect { flashing = null }
+    return flashing.takeIf { motion && it == player }
 }
 
 // Whether a player [player], [playing] or not, after [before] (the player then, and whether it
