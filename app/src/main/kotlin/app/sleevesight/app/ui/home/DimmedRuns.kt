@@ -99,13 +99,13 @@ internal data class Unbacked(
 
 /**
  * Where a reply's citations point, for its note's chips (#1437): its [evidence], the ids its prompt
- * [held] (#239), each line as *Sources* shows it ([label]), and what a tap on one does ([onCite],
- * given the id [label] shows).
+ * [held] (#239), each line as *Sources* shows it ([label]; one it names nothing, #1434, left out),
+ * and what a tap on one does ([onCite], given the id [label] shows).
  */
 internal class NoteCites(
     val evidence: EvidenceSet?,
     val held: Set<String>? = null,
-    val label: (String) -> String = { it },
+    val label: (String) -> String? = { it },
     val onCite: (String) -> Unit = {},
 )
 
@@ -128,7 +128,7 @@ internal fun unbacked(
             .filter { (sentence, _) -> sentence.status == SentenceStatus.UNSUPPORTED }
             .flatMap { (_, runs) -> runs.filterIsInstance<ShownRun.Cite>().map { it.id } }
             .filter { citeKind(it, cites.evidence, grounded.allowModel, cites.held) == CiteKind.LINE }
-            .map(cites.label)
+            .mapNotNull(cites.label)
             .distinct()
     val uncited = shown.any { (sentence, _) -> sentence.status == SentenceStatus.UNCITED }
     return if (lines.isEmpty() && !uncited) null else Unbacked(sortedIds(lines), uncited)

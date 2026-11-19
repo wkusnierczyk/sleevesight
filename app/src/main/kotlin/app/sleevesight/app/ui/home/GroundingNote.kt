@@ -61,7 +61,8 @@ internal val UNBACKED = DIMMED_STATUSES + SentenceStatus.MODEL
  * outside [held] (the ids its prompt held, when it left some out, #239) not one, as its chip shows
  * it; the chips themselves stay as they are. Each citation is named by [label], as its chip names it:
  * the id *Sources* shows its line under, for the song's, the artist's and the album's insights,
- * whose own ids may differ (`shownAs`). Nothing is drawn when none is in another language.
+ * whose own ids may differ (`shownAs`); one it names nothing (#1434) is left out. Nothing is drawn
+ * when none is in another language.
  */
 @Suppress("SpreadOperator") // A handful of arguments, passed straight through.
 @Composable
@@ -69,7 +70,7 @@ internal fun TranslatedLine(
     grounded: GroundedText,
     evidence: EvidenceSet?,
     held: Set<String>? = null,
-    label: (String) -> String = { it },
+    label: (String) -> String? = { it },
     modifier: Modifier = Modifier,
 ) {
     val translated = remember(grounded, evidence, held) { translatedCites(grounded, evidence, held) }
@@ -78,7 +79,8 @@ internal fun TranslatedLine(
     val words = Words { id, args -> resources.getString(id, *args) }
     for ((language, ids) in translated) {
         // The language is read from the line itself, then the citation named as its chip names it.
-        val shown = ids.map(label).distinct()
+        val shown = ids.mapNotNull(label).distinct()
+        if (shown.isEmpty()) continue
         MetaLine(
             stringResource(R.string.home_note_translated, languageName(language), listText(shown, words)),
             modifier.testTag(TRANSLATED_PREFIX + language),

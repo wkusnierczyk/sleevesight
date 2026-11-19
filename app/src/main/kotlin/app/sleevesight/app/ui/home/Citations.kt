@@ -44,7 +44,7 @@ private class ProseText(
     val text: AnnotatedString,
     val spoken: String,
     val lines: List<String>,
-    val label: (String) -> String = { it },
+    val label: (String) -> String? = { it },
     val note: ToNote? = null,
 )
 
@@ -85,7 +85,8 @@ private class Marked(
  * A line outside [held], the ids its prompt held when it left some out (#239), reads as no line.
  * A citation shows, and is read, by [label] of its id: the id *Sources* shows its line under, where
  * that differs (the song's, the artist's and the album's insights, #522, cite their own evidence's
- * ids); its own id by default.
+ * ids); its own id by default. A line's citation [label] has no id for (#1434: *Sources* lists no line
+ * for it) is not shown, read, nor offered as an action at all.
  */
 @Suppress("LongParameterList") // The paragraph, what it is read against, and how its citations show.
 @Composable
@@ -95,7 +96,7 @@ internal fun CheckedProse(
     evidence: EvidenceSet?,
     onCite: (String) -> Unit,
     held: Set<String>? = null,
-    label: (String) -> String = { it },
+    label: (String) -> String? = { it },
 ) {
     val styles = citeStyles()
     val resources = LocalResources.current
@@ -226,7 +227,7 @@ internal fun UncheckedProse(
     context: InsightContext,
     onCite: (String) -> Unit,
     held: Set<String>? = null,
-    label: (String) -> String = { it },
+    label: (String) -> String? = { it },
 ) {
     val styles = citeStyles()
     val policy = CitePolicy(context.track?.evidence, context.modelAllowed, held, label)
@@ -266,8 +267,8 @@ private fun Prose(
                     prose.note
                         ?.let { toNote ->
                             val focus = toNote.focus
-                            toNote.unsupported.map { id ->
-                                val said = resources.getString(R.string.home_cite_unsupported_see_note, prose.label(id))
+                            toNote.unsupported.mapNotNull { id -> prose.label(id) }.map { shownAs ->
+                                val said = resources.getString(R.string.home_cite_unsupported_see_note, shownAs)
                                 CustomAccessibilityAction(said) {
                                     focus.go()
                                     true
@@ -281,8 +282,8 @@ private fun Prose(
                                 )
                         }.orEmpty()
                 val actions =
-                    prose.lines.map { id ->
-                        CustomAccessibilityAction(resources.getString(R.string.home_cite, prose.label(id))) {
+                    prose.lines.mapNotNull { id -> prose.label(id)?.let { id to it } }.map { (id, shownAs) ->
+                        CustomAccessibilityAction(resources.getString(R.string.home_cite, shownAs)) {
                             onCite(id)
                             true
                         }
@@ -309,13 +310,13 @@ private fun spoken(
                         when (citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)) {
                             CiteKind.LINE -> {
                                 val cite = if (unsupported) R.string.home_cite_unsupported else R.string.home_cite
-                                resources.getString(cite, policy.label(segment.id))
+                                policy.label(segment.id)?.let { resources.getString(cite, it) }
                             }
 
                             CiteKind.MODEL -> resources.getString(R.string.home_cite_model)
                             CiteKind.UNKNOWN -> resources.getString(R.string.home_cite_unknown, segment.id)
                         }
-                    " ($said) "
+                    said?.let { " ($it) " } ?: " "
                 }
             }
         }.replace(SPACES, " ")
@@ -332,6 +333,7 @@ private fun lines(
         .filterIsInstance<ShownRun.Cite>()
         .map { it.id }
         .filter { citeKind(it, policy.evidence, policy.modelAllowed, policy.held) == CiteKind.LINE }
+        .filter { policy.label(it) != null }
         .distinct()
         .take(MAX_LINE_ACTIONS)
 
@@ -341,7 +343,7 @@ private class CitePolicy(
     val evidence: EvidenceSet?,
     val modelAllowed: Boolean,
     val held: Set<String>? = null,
-    val label: (String) -> String = { it },
+    val label: (String) -> String? = { it },
 )
 
 /**
@@ -387,13 +389,17 @@ private fun AnnotatedString.Builder.appendSentence(
     flagged: SpanStyle?,
     unsupported: Boolean = false,
 ) {
-    for (segment in runs) {
+    // A line's citation with no label (#1434) is not shown at all.
+    val unshown = { id: String ->
+        citeKind(id, policy.evidence, policy.modelAllowed, policy.held) == CiteKind.LINE && policy.label(id) == null
+    }
+    for (segment in withoutCites(runs, unshown)) {
         when (segment) {
             is ShownRun.Text -> appendText(segment, flagged)
             is ShownRun.Cite -> {
                 val kind = citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)
                 val shownAs = if (kind == CiteKind.LINE) policy.label(segment.id) else segment.id
-                appendCite(segment.id, shownAs, kind, styles, onCite, unsupported)
+                shownAs?.let { appendCite(segment.id, it, kind, styles, onCite, unsupported) }
             }
         }
     }
