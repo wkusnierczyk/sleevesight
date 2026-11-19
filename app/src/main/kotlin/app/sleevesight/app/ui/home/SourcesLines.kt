@@ -86,7 +86,9 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
  * article): a page any line has the address of is that line ([lineOf]). With [passages], the pages'
  * texts being passages of them (#1434), a page whose passage a line already listed, or a longer page
  * of [pages], holds whole is left out ([withoutRepeats]), its address and passage kept in
- * [SourcesLines.moved] with that line's id; each passage shows whole, one cut mid-sentence after "…" ([shownPassage]).
+ * [SourcesLines.moved] with that line's id, before each address is kept once, so a distinct passage
+ * after a repeat at the same address is listed; each passage shows whole, one cut mid-sentence after
+ * "…" ([shownPassage]). A page whose text is its address has no passage: never left out, shown as it is.
  * [lines] itself with no page to add, or no evidence to add them to.
  */
 internal fun withPages(
@@ -102,20 +104,28 @@ internal fun withPages(
             .orEmpty()
             .filter { purpose == LinePurpose.EXPLANATION || it.source == SourceId.WEB }
             .mapNotNull { it.url }
+    // A page at an address a web line has already is that line (#1205).
+    val unlisted = pages.filter { page -> web.none { sameAddress(it, page.url) } }
+    // A page that repeats another's text (iHeart's AllMusic's), a passage cut mid-sentence (#1434),
+    // read before each address is kept once, so when the first page at an address repeats a line,
+    // the next there with a passage of its own is listed. A page whose text is its address (of a list
+    // kept before passages were) has no passage: never a repeat, nor held by a line, shown as it is.
+    val (bare, read) = unlisted.partition { !passages || addressOnly(it.text, it.url) }
+    val held = evidence?.lines.orEmpty().filterNot { line -> line.url?.let { addressOnly(line.text, it) } == true }
+    val repeats = withoutRepeats(read, held)
+    val passageKept = repeats.kept.toSet()
     // Each address once, as `sameAddress` reads them (#1205): a page the list and a reason's search
-    // both found, one with a trailing slash, is one line.
-    val distinct =
-        pages.fold(listOf<WebPage>()) { kept, page ->
-            val known = (web + kept.map { it.url }).any { sameAddress(it, page.url) }
-            if (known) kept else kept + page
-        }
-    // A page that repeats another's text (iHeart's AllMusic's), a passage cut mid-sentence (#1434).
-    val read = if (passages) withoutRepeats(distinct, evidence?.lines.orEmpty()) else Passages(distinct, emptyList())
-    val fresh = read.kept
-    if (evidence == null || (fresh.isEmpty() && read.repeated.isEmpty())) return lines
+    // both found, one with a trailing slash, is one line; the pages keep their order.
+    val fresh =
+        unlisted
+            .filter { it in bare || it in passageKept }
+            .fold(listOf<WebPage>()) { kept, page ->
+                if (kept.any { sameAddress(it.url, page.url) }) kept else kept + page
+            }
+    if (evidence == null || (fresh.isEmpty() && repeats.repeated.isEmpty())) return lines
     val drafts =
         fresh.map {
-            val text = if (passages) shownPassage(it.text) else it.text
+            val text = if (passages && it !in bare) shownPassage(it.text) else it.text
             EvidenceDraft(SourceId.WEB, Scope.WEB, text, it.url, UNDATED)
         }
     val shown = evidence.with(drafts, JvmHasher)
@@ -123,7 +133,7 @@ internal fun withPages(
     val named = shown.lines.filter { it.id !in own }.associate { it.id to purpose }
     // Each page left out at the line that holds its passage: a line listed, or the page kept that does.
     val moved =
-        read.repeated
+        repeats.repeated
             .mapNotNull { repeat ->
                 val line = repeat.line ?: repeat.within?.let { webLineOf(it.url, shown) }
                 line?.let { MovedPage(repeat.page.url, passageKey(repeat.page.text)) to it }

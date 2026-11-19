@@ -53,6 +53,15 @@ internal fun Moved.holderOf(
     return entries.firstOrNull { it.key.passage == key && sameAddress(it.key.url, url) }?.value
 }
 
+/**
+ * Whether [text], a page's at [url], is its own address (#1434): a page of a list kept before
+ * passages were, or one whose passage was not kept (`GenreLists`), has no passage.
+ */
+internal fun addressOnly(
+    text: String,
+    url: String,
+): Boolean = sameAddress(text, url)
+
 /** [text], a passage, as repeats are read: its words, case, punctuation and spaces aside. */
 internal fun passageKey(text: String): String = words(text).joinToString(" ")
 
@@ -96,9 +105,11 @@ internal fun repeats(
 
 /**
  * [text], a page's passage, as *Sources* shows it (#1434): one that starts mid-sentence (a small
- * letter, or a mark such as a comma, before its first word) with every word of it, the marks and
- * spaces before its first word (an opening quote or bracket aside) left out and "… " in front; as it
- * is otherwise.
+ * letter, or a mark that closes or joins, such as a comma, a dash or a closing bracket, before its
+ * first word) with every word of it, those marks and the spaces before its first word left out and
+ * "… " in front; as it is otherwise. What opens a sentence stays and is no sign of one cut: an
+ * opening bracket or quote of any script („, 「, «), a symbol ($, €, +, ©), and the marks in
+ * [OPENERS] ("#1", "@", an ellipsis). Read by Unicode category, not by a list of marks.
  */
 internal fun shownPassage(text: String): String {
     val passage = text.trim()
@@ -108,12 +119,26 @@ internal fun shownPassage(text: String): String {
         first >= 0 &&
             (
                 Character.isLowerCase(passage.codePointAt(first)) ||
-                    passage.take(first).any { it !in OPENERS && !it.isWhitespace() }
+                    passage.take(first).firstAt { cuts(it) && it !in OPENER_CODES } >= 0
             )
     if (!midSentence) return passage
-    val start = passage.firstAt { wordy(it) || it in OPENING_CODES }
+    val start = passage.firstAt { !Character.isWhitespace(it) && !cuts(it) }
     return "$ELLIPSIS ${passage.substring(start)}"
 }
+
+// Whether [code], before a passage's first word, is a mark that closes or joins (#1434): a connector,
+// a dash, a closing bracket or quote, other punctuation (a comma, a full stop) other than an opener's
+// ([KEPT_MARKS]). An opening bracket or quote and a symbol are not.
+private fun cuts(code: Int): Boolean = Character.getType(code).toByte() in CUT_TYPES && code !in KEPT_CODES
+
+private val CUT_TYPES =
+    setOf(
+        Character.CONNECTOR_PUNCTUATION,
+        Character.DASH_PUNCTUATION,
+        Character.END_PUNCTUATION,
+        Character.FINAL_QUOTE_PUNCTUATION,
+        Character.OTHER_PUNCTUATION,
+    )
 
 // The index of the first code point of this that [test] holds for; -1 for none.
 private fun String.firstAt(test: (Int) -> Boolean): Int {
@@ -145,13 +170,17 @@ private fun words(text: String): List<String> =
 
 private const val ELLIPSIS = "…"
 
-// What opens a sentence before its first word: an opening quote or bracket, kept when trimming.
-private const val OPENING_MARKS = "\"'“‘«([¿¡"
+// Other punctuation (Unicode's Po) that opens a sentence before its first word, kept when trimming:
+// a straight quote, an inverted question or exclamation mark, a number or at sign, a section mark.
+private const val KEPT_MARKS = "\"'¿¡#@§¶"
 
-private val OPENING_CODES = OPENING_MARKS.map { it.code }.toSet()
+private val KEPT_CODES = KEPT_MARKS.map { it.code }.toSet()
 
-// What may come before a sentence's first word, spaces aside: an opening quote or bracket, an ellipsis.
-private const val OPENERS = "$OPENING_MARKS…."
+// What may come before a sentence's first word, spaces aside, besides what opens one: an ellipsis, a
+// full stop of one ("... and then"). Left out when the passage is cut mid-sentence.
+private const val OPENERS = "$KEPT_MARKS…."
+
+private val OPENER_CODES = OPENERS.map { it.code }.toSet()
 
 // A run of what is no letter, mark nor digit (a Hindi vowel sign is a mark: रीमा is not राम); classes
 // ICU and the JVM read alike.

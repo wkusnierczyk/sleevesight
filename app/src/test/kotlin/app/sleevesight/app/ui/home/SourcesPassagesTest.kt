@@ -115,6 +115,37 @@ class SourcesPassagesTest {
     }
 
     @Test
+    fun aDistinctPassageAfterARepeatAtTheSameAddressIsListed() {
+        // The list's page at the address repeats S1; a reason's search found another passage there.
+        val held = WebPage(address, null, iheart.text)
+        val distinct = WebPage(address, null, genreLine)
+        val listed = withPages(lines(bio), listOf(held, distinct), LinePurpose.GENRES, passages = true)
+        assertEquals(listOf(address), shown(listed).map { it.url })
+        assertEquals(genreLine, shown(listed).single().text)
+        // The repeat is cited as S1, the distinct passage as its own line, S2.
+        assertEquals("S1", webLineOf(address, listed.evidence, listed.moved, held.text))
+        assertEquals("S2", webLineOf(address, listed.evidence, listed.moved, distinct.text))
+    }
+
+    @Test
+    fun aPageWhoseTextIsItsAddressHasNoPassage() {
+        // A list kept before passages were: each page's address as its text. The shorter address's
+        // words are within the longer's, yet both are pages of their own, shown as they are.
+        val artist = WebPage("https://www.allmusic.com/artist/kaleo", null, "https://www.allmusic.com/artist/kaleo")
+        val biography =
+            WebPage(
+                "https://www.allmusic.com/artist/kaleo/biography",
+                null,
+                "https://www.allmusic.com/artist/kaleo/biography",
+            )
+        val listed = withPages(lines("Own page."), listOf(artist, biography), LinePurpose.GENRES, passages = true)
+        assertEquals(listOf(artist.url, biography.url), shown(listed).map { it.url })
+        assertEquals(listOf(artist.url, biography.url), shown(listed).map { it.text })
+        assertEquals(emptyMap<MovedPage, String>(), listed.moved)
+        assertEquals("S2", webLineOf(artist.url, listed.evidence, listed.moved, artist.text))
+    }
+
+    @Test
     fun aPageNearlyTheSameAsALineIsKept() {
         val again = WebPage("https://example.com/bio", null, bio.replace("Seattle.", "Seattle, Washington;"))
         val listed = withPages(lines(bio), listOf(again), LinePurpose.GENRES, passages = true)
@@ -191,6 +222,23 @@ class SourcesPassagesTest {
         assertEquals("“Turn” is a song.", shownPassage("“Turn” is a song."))
         assertEquals("… Already trimmed.", shownPassage("… Already trimmed."))
         assertEquals("1997 saw his first album.", shownPassage("1997 saw his first album."))
+    }
+
+    @Test
+    fun whatOpensASentenceStaysAndIsNoSignOfOneCut() {
+        // A symbol before the first word: currency, a number sign.
+        assertEquals("$5 million was spent on it.", shownPassage("$5 million was spent on it."))
+        assertEquals("#1 on Billboard for six weeks.", shownPassage("#1 on Billboard for six weeks."))
+        // Opening quotes of other scripts: German, CJK, a single guillemet.
+        assertEquals("„Hallo“, sagte er.", shownPassage("„Hallo“, sagte er."))
+        assertEquals("「ターン」は歌です。", shownPassage("「ターン」は歌です。"))
+        assertEquals("‹Turn› is a song.", shownPassage("‹Turn› is a song."))
+        // Cut mid-sentence: the comma goes, the symbol or the quote after it stays.
+        assertEquals("… $5 million was spent.", shownPassage(", $5 million was spent."))
+        assertEquals("… #1 on Billboard.", shownPassage("; #1 on Billboard."))
+        assertEquals("… „Hallo“, sagte er.", shownPassage("), „Hallo“, sagte er."))
+        // A closing quote or a dash before the first word is a sign of one cut.
+        assertEquals("… Turn is a song.", shownPassage("” — Turn is a song."))
     }
 
     @Test
