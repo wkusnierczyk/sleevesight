@@ -115,7 +115,9 @@ class WikipediaSource(
             }
             if (part.unreachable) findings.unreachable = true
         }
-        findings.artistFound = parts.any { it.accepted != null }
+        // An artist's article is reported only when it gave a line (#1433): one that quoted nothing
+        // leaves the source with no result, as its chip, dimmed for want of a line, says.
+        findings.artistFound = parts.any { it.accepted != null && it.lines.isNotEmpty() }
         // Each artist's lines say which artist they are about (#522), as the track credits it.
         val artistLines =
             credits.zip(parts).flatMap { (artist, part) ->
