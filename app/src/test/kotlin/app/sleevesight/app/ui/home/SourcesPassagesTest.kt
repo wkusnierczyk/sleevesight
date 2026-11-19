@@ -50,17 +50,17 @@ class SourcesPassagesTest {
         assertEquals(listOf(allmusic.url, other.url), shown(listed).map { it.url })
         assertEquals(listOf("S2", "S3"), listed.purposes.keys.sorted())
         // Its citations go to the page that holds its passage, AllMusic's, S2.
-        assertEquals(mapOf(iheart.url to "S2"), listed.moved)
+        assertEquals(mapOf(MovedPage(iheart.url, passageKey(iheart.text)) to "S2"), listed.moved)
     }
 
     @Test
     fun aPageWhosePassageALineAlreadyListedHoldsIsLeftOutAndCitedAsThatLine() {
         val listed = withPages(lines(bio), listOf(iheart, other), LinePurpose.VOCALS_CHECK, passages = true)
         assertEquals(listOf(other.url), shown(listed).map { it.url })
-        assertEquals("S1", webLineOf(iheart.url, listed.evidence, listed.moved))
+        assertEquals("S1", webLineOf(iheart.url, listed.evidence, listed.moved, iheart.text))
         // Kept from one call to the next: the explanation's pages after the check's.
         val after = withPages(listed, listOf(WebPage("https://example.org/x", null, "X")), LinePurpose.EXPLANATION)
-        assertEquals("S1", webLineOf(iheart.url, after.evidence, after.moved))
+        assertEquals("S1", webLineOf(iheart.url, after.evidence, after.moved, iheart.text))
     }
 
     @Test
@@ -68,7 +68,50 @@ class SourcesPassagesTest {
         // Nothing fresh to list, only the repeat: still where its citations go.
         val listed = withPages(lines(bio), listOf(iheart), LinePurpose.GENRES, passages = true)
         assertEquals(1, listed.evidence!!.lines.size)
-        assertEquals("S1", webLineOf(iheart.url, listed.evidence, listed.moved))
+        assertEquals("S1", webLineOf(iheart.url, listed.evidence, listed.moved, iheart.text))
+    }
+
+    // One address, two highlights: the genre's, held by S1, and the vocals check's, held by S2.
+    private val genreLine = "Turn is a folk song with a slow, hushed arrangement and a lone guitar."
+    private val vocalsLine = "The singer's voice carries the whole of Turn, from the first verse to the last."
+    private val address = "https://www.iheart.com/song/turn"
+    private val genrePart = WebPage(address, null, ", a folk song with a slow, hushed arrangement")
+    private val vocalsPart = WebPage(address, null, "the whole of Turn, from the first verse")
+
+    @Test
+    fun twoPassagesOfOneAddressAreEachCitedAsTheLineThatHoldsIt() {
+        val genres = withPages(lines(genreLine, vocalsLine), listOf(genrePart), LinePurpose.GENRES, passages = true)
+        val checked = withPages(genres, listOf(vocalsPart), LinePurpose.VOCALS_CHECK, passages = true)
+        assertEquals(2, checked.evidence!!.lines.size)
+        // The vocals check's passage does not take the genre's place: each its own holder.
+        assertEquals("S1", webLineOf(address, checked.evidence, checked.moved, genrePart.text))
+        assertEquals("S2", webLineOf(address, checked.evidence, checked.moved, vocalsPart.text))
+        // A reason's citation of the genre's passage, by its address and words, shows S1.
+        val reason =
+            lines("Own page.").evidence!!.with(
+                listOf(EvidenceDraft(SourceId.WEB, Scope.WEB, genrePart.text, address, at)),
+                JvmHasher,
+            )
+        assertEquals("S1", shownLine("S2", reason, checked.evidence, checked.moved))
+    }
+
+    @Test
+    fun aLineListedLaterAtTheAddressNeverTakesTheHoldersPlace() {
+        val genres = withPages(lines(genreLine), listOf(genrePart), LinePurpose.GENRES, passages = true)
+        // The explanation cites the same address, its title alone: a line of its own, S2.
+        val title = WebPage(address, "Turn", "Turn")
+        val explained = withPages(genres, listOf(title), LinePurpose.EXPLANATION)
+        assertEquals(address, explained.evidence!!["S2"]?.url)
+        // The genre's passage is still cited as S1, the line that holds it; the title as S2.
+        assertEquals("S1", webLineOf(address, explained.evidence, explained.moved, genrePart.text))
+        assertEquals("S2", webLineOf(address, explained.evidence, explained.moved))
+    }
+
+    @Test
+    fun aPageLeftOutCitedWithAPassageItWasNotLeftOutForShowsNoLine() {
+        val listed = withPages(lines(bio), listOf(iheart), LinePurpose.GENRES, passages = true)
+        assertEquals(null, webLineOf(iheart.url, listed.evidence, listed.moved))
+        assertEquals(null, webLineOf(iheart.url, listed.evidence, listed.moved, "Another highlight."))
     }
 
     @Test
@@ -97,6 +140,19 @@ class SourcesPassagesTest {
         val listed = withPages(lines(bio), listOf(year), LinePurpose.GENRES, passages = true)
         assertEquals(listOf(year.url), shown(listed).map { it.url })
         assertFalse(repeats("4.5 stars", "Rated 45 stars."))
+    }
+
+    @Test
+    fun aPassageThatDiffersInAVowelSignIsKept() {
+        // Hindi: Ram sang this song; Rima sang this song. The vowel signs are marks, and words.
+        val ram = "राम ने यह गीत गाया।"
+        val rima = WebPage("https://example.in/rima", null, "रीमा ने यह गीत गाया।")
+        assertFalse(repeats(rima.text, ram))
+        assertFalse(repeats(ram, rima.text))
+        assertTrue(repeats("राम ने यह गीत गाया", ram))
+        val listed = withPages(lines(ram), listOf(rima), LinePurpose.GENRES, passages = true)
+        assertEquals(listOf(rima.url), shown(listed).map { it.url })
+        assertEquals(emptyMap<MovedPage, String>(), listed.moved)
     }
 
     @Test
@@ -138,6 +194,14 @@ class SourcesPassagesTest {
     }
 
     @Test
+    fun aLetterBeyondTheFirstPlaneIsALetterNotAMark() {
+        // 𝔱 and 𝔗 are each a surrogate pair: the title stays, small letters read as mid-sentence.
+        assertEquals("… 𝔱𝔲𝔯𝔫 is an instrumental track.", shownPassage("𝔱𝔲𝔯𝔫 is an instrumental track."))
+        assertEquals("𝔗𝔲𝔯𝔫 is an instrumental track.", shownPassage("𝔗𝔲𝔯𝔫 is an instrumental track."))
+        assertEquals("… 𝔱𝔲𝔯𝔫 is a song.", shownPassage(", 𝔱𝔲𝔯𝔫 is a song."))
+    }
+
+    @Test
     fun aPassageRepeatsALineOnlyWhole() {
         assertTrue(repeats("Seattle", "From Seattle, Washington."))
         assertTrue(repeats(", from SEATTLE  washington", "From Seattle, Washington."))
@@ -160,6 +224,16 @@ class SourcesPassagesTest {
                 JvmHasher,
             )
         assertEquals(null, shownLine("S2", reasons.evidence, sources))
-        assertEquals("S2", shownLine("S2", reasons.evidence, sources, mapOf("https://example.net/1" to "S2")))
+        assertEquals(
+            "S2",
+            shownLine(
+                "S2",
+                reasons.evidence,
+                sources,
+                mapOf(
+                    MovedPage("https://example.net/1", passageKey("Another page.")) to "S2",
+                ),
+            ),
+        )
     }
 }

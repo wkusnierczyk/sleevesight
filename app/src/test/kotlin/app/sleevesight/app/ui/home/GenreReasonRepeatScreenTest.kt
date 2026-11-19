@@ -158,7 +158,7 @@ class GenreReasonRepeatScreenTest {
             assertEquals(other.url, evidence.single { it.id == "S7" }.url)
             assertEquals(holder.url, evidence.single { it.id == "S8" }.url)
             assertTrue(evidence.none { it.url == repeat.url })
-            assertEquals(mapOf(repeat.url to "S8"), lines.moved)
+            assertEquals(mapOf(MovedPage(repeat.url, passageKey(repeat.text)) to "S8"), lines.moved)
             val reason = compose.onNodeWithText("brooding folk-rock ballad", substring = true).performScrollTo()
             val node = reason.fetchSemanticsNode()
             val text = node.config[SemanticsProperties.Text].joinToString { it.text }

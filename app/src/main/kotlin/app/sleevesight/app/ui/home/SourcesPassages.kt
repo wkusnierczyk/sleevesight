@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.home
 
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.sources.WebPage
+import app.sleevesight.core.synthesis.sameAddress
 import java.util.Locale
 
 // The passages of the web pages *Sources* lists (#1434): a page whose passage a line already listed
@@ -26,6 +27,34 @@ internal class Repeated(
     val line: String? = null,
     val within: WebPage? = null,
 )
+
+/**
+ * A page left out as a repeat (#1434), by its address, [url], and its passage as [passageKey] reads
+ * it, [passage]: one address may give two passages (a genre's highlight and the vocals check's), each
+ * held by another line.
+ */
+internal data class MovedPage(
+    val url: String,
+    val passage: String,
+)
+
+/** The pages left out as repeats (#1434), each with the id of the line that holds its passage whole. */
+internal typealias Moved = Map<MovedPage, String>
+
+/**
+ * The id of the line that holds the passage [passage] of the page at [url] (`sameAddress`), left out
+ * as a repeat (#1434); null for a passage unknown, or one no line holds for this address.
+ */
+internal fun Moved.holderOf(
+    url: String,
+    passage: String?,
+): String? {
+    val key = passage?.let(::passageKey)?.takeIf { it.isNotEmpty() } ?: return null
+    return entries.firstOrNull { it.key.passage == key && sameAddress(it.key.url, url) }?.value
+}
+
+/** [text], a passage, as repeats are read: its words, case, punctuation and spaces aside. */
+internal fun passageKey(text: String): String = words(text).joinToString(" ")
 
 /**
  * [pages], whose texts are passages of them (Exa's highlights), without those that repeat another
@@ -73,16 +102,41 @@ internal fun repeats(
  */
 internal fun shownPassage(text: String): String {
     val passage = text.trim()
-    val first = passage.indexOfFirst { it.isLetterOrDigit() }
+    // Read by code point, so a letter beyond the first plane (𝔱, a surrogate pair) is a letter.
+    val first = passage.firstAt(::wordy)
     val midSentence =
         first >= 0 &&
-            (passage[first].isLowerCase() || passage.take(first).any { it !in OPENERS && !it.isWhitespace() })
+            (
+                Character.isLowerCase(passage.codePointAt(first)) ||
+                    passage.take(first).any { it !in OPENERS && !it.isWhitespace() }
+            )
     if (!midSentence) return passage
-    val start = passage.indexOfFirst { it.isLetterOrDigit() || it in OPENING_MARKS }
+    val start = passage.firstAt { wordy(it) || it in OPENING_CODES }
     return "$ELLIPSIS ${passage.substring(start)}"
 }
 
-// The words of [text], in small letters, without its punctuation.
+// The index of the first code point of this that [test] holds for; -1 for none.
+private fun String.firstAt(test: (Int) -> Boolean): Int {
+    var index = 0
+    while (index < length) {
+        val code = codePointAt(index)
+        if (test(code)) return index
+        index += Character.charCount(code)
+    }
+    return -1
+}
+
+// Whether [code] is of a word, as [words] reads them: a letter, a mark (a Hindi vowel sign), a digit.
+private fun wordy(code: Int): Boolean = Character.isLetterOrDigit(code) || Character.getType(code) in MARKS
+
+private val MARKS =
+    setOf(
+        Character.NON_SPACING_MARK.toInt(),
+        Character.COMBINING_SPACING_MARK.toInt(),
+        Character.ENCLOSING_MARK.toInt(),
+    )
+
+// The words of [text], in small letters, without its punctuation; its letters' marks kept.
 private fun words(text: String): List<String> =
     text
         .lowercase(Locale.ROOT)
@@ -94,8 +148,11 @@ private const val ELLIPSIS = "…"
 // What opens a sentence before its first word: an opening quote or bracket, kept when trimming.
 private const val OPENING_MARKS = "\"'“‘«([¿¡"
 
+private val OPENING_CODES = OPENING_MARKS.map { it.code }.toSet()
+
 // What may come before a sentence's first word, spaces aside: an opening quote or bracket, an ellipsis.
 private const val OPENERS = "$OPENING_MARKS…."
 
-// A run of what is no letter nor digit; classes ICU and the JVM read alike.
-private val NOT_WORD = Regex("[^\\p{L}\\p{N}]+")
+// A run of what is no letter, mark nor digit (a Hindi vowel sign is a mark: रीमा is not राम); classes
+// ICU and the JVM read alike.
+private val NOT_WORD = Regex("[^\\p{L}\\p{M}\\p{N}]+")

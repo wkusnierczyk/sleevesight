@@ -66,7 +66,7 @@ internal fun GenreBody(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // What the genre is, and *Why is this …?* (#523), above the tags.
         GenreAbout(track, genre, notes, search, afterRetry)
-        TagsGrid(track, genre, notes.onCite, notes.lines, extras, notes.moved)
+        TagsGrid(track, genre, notes.onCite, notes.lines, extras)
     }
 }
 
@@ -92,7 +92,7 @@ internal class PanelNotes(
     val openSettingsAt: (SettingsTarget) -> Unit = {},
     val lines: EvidenceSet? = null,
     val asked: EvidenceSet? = lines,
-    val moved: Map<String, String> = emptyMap(),
+    val moved: Moved = emptyMap(),
 )
 
 // What a genre's panel on Home reads (#523): a citation unfolds *Sources* to its line ([cite]); the

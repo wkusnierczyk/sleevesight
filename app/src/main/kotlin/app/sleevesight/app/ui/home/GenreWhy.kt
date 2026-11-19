@@ -127,7 +127,7 @@ internal fun enableParts(
 private fun shownAs(
     evidence: EvidenceSet?,
     sources: EvidenceSet?,
-    moved: Map<String, String>,
+    moved: Moved,
 ): (String) -> String? = { id -> shownLine(id, evidence, sources ?: evidence, moved) }
 
 // A paragraph of a reason still being written, its citations shown and opened as [shownAs] has them.
@@ -155,7 +155,7 @@ internal class ReasonActions(
     val afterRetry: () -> Unit,
     val openSettingsAt: (SettingsTarget) -> Unit,
     val sources: EvidenceSet? = null,
-    val moved: Map<String, String> = emptyMap(),
+    val moved: Moved = emptyMap(),
 )
 
 // The reason asked for ([shown]), under the [question] (#523, #762): while the AI service is asked

@@ -43,15 +43,16 @@ import kotlin.time.Instant
  * lines named by what they were read for (#1205, [LinePurpose]: "genres"), in place of their scope.
  * [asked] is [evidence] before those pages joined it (#1205): what a genre's reason is asked and keyed
  * on (`reasonedOn`), so pages listed for showing never change a reason's key, nor cost one again.
- * [moved] holds, by address, the pages left out as repeats (#1434, [withoutRepeats]) and the id of
- * the line that holds each one's passage whole, which a citation of it shows and opens ([webLineOf]).
+ * [moved] holds, by address and passage, the pages left out as repeats (#1434, [withoutRepeats]) and
+ * the id of the line that holds each one's passage whole, which a citation of it shows and opens
+ * ([webLineOf]).
  */
 internal class SourcesLines(
     val evidence: EvidenceSet?,
     val album: Set<String> = emptySet(),
     val purposes: Map<String, LinePurpose> = emptyMap(),
     val asked: EvidenceSet? = evidence,
-    val moved: Map<String, String> = emptyMap(),
+    val moved: Moved = emptyMap(),
 )
 
 /**
@@ -84,8 +85,8 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
  * [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources (its Wikipedia
  * article): a page any line has the address of is that line ([lineOf]). With [passages], the pages'
  * texts being passages of them (#1434), a page whose passage a line already listed, or a longer page
- * of [pages], holds whole is left out ([withoutRepeats]), its address kept in [SourcesLines.moved]
- * with that line's id; each passage shows whole, one cut mid-sentence after "…" ([shownPassage]).
+ * of [pages], holds whole is left out ([withoutRepeats]), its address and passage kept in
+ * [SourcesLines.moved] with that line's id; each passage shows whole, one cut mid-sentence after "…" ([shownPassage]).
  * [lines] itself with no page to add, or no evidence to add them to.
  */
 internal fun withPages(
@@ -125,45 +126,49 @@ internal fun withPages(
         read.repeated
             .mapNotNull { repeat ->
                 val line = repeat.line ?: repeat.within?.let { webLineOf(it.url, shown) }
-                line?.let { repeat.page.url to it }
+                line?.let { MovedPage(repeat.page.url, passageKey(repeat.page.text)) to it }
             }.toMap()
     return SourcesLines(shown, lines.album, lines.purposes + named, lines.asked, lines.moved + moved)
 }
 
 /**
  * The id of the line [sources] (*Sources*' lines) shows for the line [id] of [evidence], a reason's
- * own (#1205): a web page's by its address ([webLineOf]), whatever its id in [evidence], or, left out
- * as a repeat, the line that holds its passage ([moved], #1434); else the same source, scope and
- * words ([shownId]); null for none, which shows no citation at all, never its own id that *Sources*
- * may number another line by. A reason keeps its own ids, as it was checked and kept; only what
- * shows them is mapped, so a citation lands on its page however *Sources* numbers it.
+ * own (#1205): left out as a repeat, the line that holds its passage ([moved], #1434, by its address
+ * and passage); a web page's by its address ([webLineOf]), whatever its id in [evidence]; else the
+ * same source, scope and words ([shownId]); null for none, which shows no citation at all, never
+ * its own id that *Sources* may number another line by. A reason keeps its own ids, as it was
+ * checked and kept; only what shows them is mapped, so a citation lands on its page however
+ * *Sources* numbers it.
  */
 internal fun shownLine(
     id: String,
     evidence: EvidenceSet?,
     sources: EvidenceSet?,
-    moved: Map<String, String> = emptyMap(),
+    moved: Moved = emptyMap(),
 ): String? {
     val line = evidence?.get(id) ?: return null
-    val page = line.url?.takeIf { line.source == SourceId.WEB }?.let { webLineOf(it, sources, moved) }
+    val page = line.url?.takeIf { line.source == SourceId.WEB }?.let { webLineOf(it, sources, moved, line.text) }
     return page ?: shownId(id, evidence, sources)
 }
 
 /**
- * The id of the line [lines] shows the page at [url] under (`sameAddress`), among its web lines, or,
- * for a page left out as a repeat (#1434), the line that holds its passage ([moved],
- * `SourcesLines.moved`); null for none.
+ * The id of the line [lines] shows the page at [url] under: for its [passage] left out as a repeat
+ * (#1434), the line that holds it ([moved], `SourcesLines.moved`, by address and passage), first, so
+ * a line listed later at the address (an explanation's page, its title alone) never takes its place;
+ * else the web line at its address (`sameAddress`); null for none. A page whose passage is unknown
+ * finds no line it was left out for.
  */
 internal fun webLineOf(
     url: String,
     lines: EvidenceSet?,
-    moved: Map<String, String> = emptyMap(),
+    moved: Moved = emptyMap(),
+    passage: String? = null,
 ): String? =
-    lines
-        ?.lines
-        ?.firstOrNull { it.source == SourceId.WEB && it.url?.let { at -> sameAddress(at, url) } == true }
-        ?.id
-        ?: moved.entries.firstOrNull { sameAddress(it.key, url) }?.value
+    moved.holderOf(url, passage)
+        ?: lines
+            ?.lines
+            ?.firstOrNull { it.source == SourceId.WEB && it.url?.let { at -> sameAddress(at, url) } == true }
+            ?.id
 
 /**
  * [evidence], the track's, with [album]'s lines (#522) and [artist]'s, the artist's insight's (its web

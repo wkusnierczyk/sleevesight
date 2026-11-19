@@ -111,7 +111,7 @@ internal fun VocalsNote(
     genre: GenreLabel,
     lines: EvidenceSet?,
     onCite: (String) -> Unit,
-    moved: Map<String, String> = emptyMap(),
+    moved: Moved = emptyMap(),
 ) {
     when (val state = shown?.state) {
         VocalsState.Checking ->
@@ -136,7 +136,7 @@ internal fun VocalsNote(
                     VocalsAnswer.UNKNOWN -> listOf(TextPart.Words(stringResource(R.string.genre_vocals_unknown)))
                 }.takeIf { state.answer == VocalsAnswer.INSTRUMENTAL || shown.tapped } ?: return
             Column(Modifier.testTag(GENRE_VOCALS_TAG), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                val line = state.page?.let { webLineOf(it.url, lines, moved) }
+                val line = state.page?.let { webLineOf(it.url, lines, moved, it.text) }
                 AnswerLine(words, line, onCite)
                 SearchCredit(creditString(Credit(shown.model, shown.effort, web = true)))
             }
