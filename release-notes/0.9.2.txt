@@ -1,0 +1,5 @@
+What's new in 0.9.2:
+- A citation opens the very passage it cites in Sources.
+- Sources lists a page that repeats another once, and a source that quoted nothing as Nothing found.
+- Text the sources don't back: one mark per run, and a note saying what is dimmed. A sentence citing evidence that doesn't exist is left out.
+- Dates says how an edition under a new title relates to its album.
