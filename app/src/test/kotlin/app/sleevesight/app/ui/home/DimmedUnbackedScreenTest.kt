@@ -44,7 +44,7 @@ import org.robolectric.RobolectricTestRunner
  * One mark for text the sources do not back (#954, #1437): a dimmed sentence upright, in the text's
  * colour at 60 %, and a `?` chip after the last of each run of them citing nothing, which goes to the
  * note under the insight ("Dimmed text is not backed by any source."); none after a sentence from
- * the AI model's own knowledge, nor after one citing a line (its outlined chip is its mark); a
+ * the AI model's own knowledge, nor after one citing a line (its grey chip is its mark); a
  * sentence citing a line that does not exist taken out.
  */
 @RunWith(RobolectricTestRunner::class)
