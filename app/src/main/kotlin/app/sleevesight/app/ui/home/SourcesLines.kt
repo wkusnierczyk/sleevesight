@@ -79,13 +79,16 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
  * web lines they have (`S7` after `S6`); a page whose address a web line has already (`sameAddress`)
  * is that line, not listed twice, and keeps its own name. The song's explanation (#1067,
  * [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources (its Wikipedia
- * article): a page any line has the address of is that line ([lineOf]). [lines] itself with no page
- * to add, or no evidence to add them to.
+ * article): a page any line has the address of is that line ([lineOf]). With [passages], the pages'
+ * texts being passages of them (#1434), a page that repeats a line already listed, or a longer page
+ * of [pages], is left out ([withoutRepeats]), and each passage shows from a sentence's start
+ * ([shownPassage]). [lines] itself with no page to add, or no evidence to add them to.
  */
 internal fun withPages(
     lines: SourcesLines,
     pages: List<WebPage>,
     purpose: LinePurpose,
+    passages: Boolean = false,
 ): SourcesLines {
     val evidence = lines.evidence
     val web =
@@ -96,13 +99,19 @@ internal fun withPages(
             .mapNotNull { it.url }
     // Each address once, as `sameAddress` reads them (#1205): a page the list and a reason's search
     // both found, one with a trailing slash, is one line.
-    val fresh =
+    val distinct =
         pages.fold(listOf<WebPage>()) { kept, page ->
             val known = (web + kept.map { it.url }).any { sameAddress(it, page.url) }
             if (known) kept else kept + page
         }
+    // A page that repeats another's text (iHeart's AllMusic's), a passage cut mid-sentence (#1434).
+    val fresh = if (passages) withoutRepeats(distinct, evidence?.lines.orEmpty().map { it.text }) else distinct
     if (evidence == null || fresh.isEmpty()) return lines
-    val drafts = fresh.map { EvidenceDraft(SourceId.WEB, Scope.WEB, it.text, it.url, UNDATED) }
+    val drafts =
+        fresh.map {
+            val text = if (passages) shownPassage(it.text) else it.text
+            EvidenceDraft(SourceId.WEB, Scope.WEB, text, it.url, UNDATED)
+        }
     val shown = evidence.with(drafts, JvmHasher)
     val own = evidence.ids.toSet()
     val named = shown.lines.filter { it.id !in own }.associate { it.id to purpose }
@@ -221,7 +230,8 @@ internal fun sourcesLines(
     val taken = track?.albumIds.orEmpty()
     val genreLines =
         remember(evidence, album, artist, song, taken, others, pages) {
-            withPages(withAlbum(evidence, album, artist, song, taken, others), pages, LinePurpose.GENRES)
+            val all = withAlbum(evidence, album, artist, song, taken, others)
+            withPages(all, pages, LinePurpose.GENRES, passages = true)
         }
     // The genres as *Genres* composes them, the artists' descriptions read from these lines.
     val composed = composedGenres(track, PanelNotes(genres, lines = genreLines.evidence), PanelSearch(search, track))
@@ -238,7 +248,11 @@ internal fun sourcesLines(
     val reasoned = answeredGenrePages(asked, track).takeIf { track?.genres?.hasTags != true }.orEmpty()
     return remember(genreLines, checked, explanation, reasoned) {
         val explained =
-            withPages(withPages(genreLines, checked, LinePurpose.VOCALS_CHECK), explanation, LinePurpose.EXPLANATION)
+            withPages(
+                withPages(genreLines, checked, LinePurpose.VOCALS_CHECK, passages = true),
+                explanation,
+                LinePurpose.EXPLANATION,
+            )
         // A page any line has the address of (the track's Wikipedia article) is that line, not a new one.
         withPages(explained, reasoned.filter { lineOf(it.url, explained.evidence) == null }, LinePurpose.GENRES)
     }
