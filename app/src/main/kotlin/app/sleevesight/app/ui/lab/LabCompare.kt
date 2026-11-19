@@ -254,7 +254,7 @@ private fun VersionCard(
 
 // What a version wrote: checked against the insight's evidence where the panel has it, its
 // citations shown as the insight's are; else as written. It has no note on its dimmed text, and does
-// not take the one of the insight it sits under (#1437): its `?` and outlined chips go to no note.
+// not take the one of the insight it sits under (#1437): its `?` and grey line chips go to no note.
 @Composable
 private fun Written(
     subject: LabSubject,

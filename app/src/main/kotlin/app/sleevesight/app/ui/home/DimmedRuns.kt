@@ -55,7 +55,7 @@ internal val UNCITED_RUN: Any = Any()
 /**
  * Which of a paragraph's sentences, by their [backings] ([backing]), end with their run's mark
  * (#1437): the last of each run of dimmed sentences with the same backing (all citing nothing, the
- * `?` chip; all citing the same lines, their outlined chips), a sentence not dimmed, one with another
+ * `?` chip; all citing the same lines, their grey line chips), a sentence not dimmed, one with another
  * backing, or the paragraph's end ending a run.
  */
 internal fun runEnds(backings: List<Any?>): List<Boolean> =

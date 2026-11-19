@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -34,6 +35,7 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,8 +43,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * A sentence whose cited line holds none of its year (#1036): kept, dimmed as unbacked and named in
- * the note, which shows its line's chip (#1437); its chip a dim outline, and the line's tag in
- * *Sources* the same; TalkBack hears "W1: does not say this", reading aloud "Unverified:"; the
+ * the note, which shows its line's chip (#1437); its chip grey, with no outline (#1458), and the
+ * line's tag in *Sources* a dim outline; TalkBack hears "W1: does not say this", reading aloud "Unverified:"; the
  * developer counts say "1 unsupported (W1)".
  */
 @RunWith(RobolectricTestRunner::class)
@@ -145,41 +147,28 @@ class UnsupportedCitationScreenTest {
                 "It sold in 1986, then again in 1990 ${chip("W1")}. Sundown was recorded in 1973 ${chip("MB1")}.",
                 text.text,
             )
-            assertEquals(listOf("W1"), text.getStringAnnotations(OUTLINE_TAG, 0, text.length).map { it.item })
+            val links = clickable(text)
+            assertEquals(1, links.count { it.tag == CITE_PREFIX + "W1" })
         }
 
+    private fun clickable(text: AnnotatedString) =
+        text.getLinkAnnotations(0, text.length).map { it.item }.filterIsInstance<LinkAnnotation.Clickable>()
+
     @Test
-    fun itsChipIsOutlinedWithNoFill() =
+    fun itsChipIsGreyWithNoOutline() =
         show {
             val text = prose().fetchSemanticsNode().config[SemanticsProperties.Text].first()
-            val outlined = text.getStringAnnotations(OUTLINE_TAG, 0, text.length)
-            assertEquals(listOf("W1"), outlined.map { it.item })
-            assertEquals(" W1 ", text.text.substring(outlined.single().start, outlined.single().end))
-            // A link (to the note, #1437), with no fill.
-            val links =
-                text
-                    .getLinkAnnotations(
-                        0,
-                        text.length,
-                    ).map { it.item }
-                    .filterIsInstance<LinkAnnotation.Clickable>()
-            val w1 = links.single { it.tag == CITE_PREFIX + "W1" }
-            assertEquals(
-                null,
-                w1.styles
-                    ?.style
-                    ?.background
-                    ?.takeIf { it.isSpecified },
-            )
-            // The supported sentence's chip keeps its fill.
-            val mb1 = links.single { it.tag == CITE_PREFIX + "MB1" }
-            assertEquals(
-                true,
-                mb1.styles
-                    ?.style
-                    ?.background
-                    ?.isSpecified,
-            )
+            // No outline drawn over it (#1458): the paragraph marks no chip for one.
+            assertEquals(emptyList<Any>(), text.getStringAnnotations("outline", 0, text.length))
+            val links = clickable(text)
+            // A link (to the note, #1437), filled grey as the `?` chip is, its text not the line chip's.
+            val w1 = checkNotNull(links.single { it.tag == CITE_PREFIX + "W1" }.styles?.style)
+            assertEquals(UNBACKED_GREY, w1.background.alpha, 0.01f)
+            // The supported sentence's chip keeps its fill; both chips of one size and weight.
+            val mb1 = checkNotNull(links.single { it.tag == CITE_PREFIX + "MB1" }.styles?.style)
+            assertEquals(true, mb1.background.isSpecified && mb1.background.alpha == 1f)
+            assertNotEquals(mb1.color, w1.color)
+            assertEquals(mb1.fontWeight to mb1.fontSize, w1.fontWeight to w1.fontSize)
         }
 
     @Test

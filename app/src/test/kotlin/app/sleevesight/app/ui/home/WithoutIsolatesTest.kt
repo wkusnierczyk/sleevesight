@@ -9,8 +9,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
- * [withoutIsolates] (#1350): the chips' text without their isolates, each chip's link, outline
- * annotation and look still over exactly that chip's id between its thin spaces.
+ * [withoutIsolates] (#1350): the chips' text without their isolates, each chip's link and look
+ * still over exactly that chip's id between its thin spaces.
  */
 class WithoutIsolatesTest {
     private val styles =
@@ -46,13 +46,6 @@ class WithoutIsolatesTest {
             listOf(CITE_PREFIX + "S1", CITE_PREFIX + "S2"),
             links.map { (it.item as LinkAnnotation.Clickable).tag },
         )
-    }
-
-    @Test
-    fun theOutlineCoversTheUnsupportedChip() {
-        val outlined = copy.getStringAnnotations(OUTLINE_TAG, 0, copy.length).single()
-        assertEquals("S1", outlined.item)
-        assertEquals(" S1 ", copy.text.substring(outlined.start, outlined.end))
     }
 
     @Test
