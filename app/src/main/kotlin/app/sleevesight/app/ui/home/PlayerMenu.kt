@@ -49,18 +49,18 @@ import app.sleevesight.app.ui.settings.listedPlayers
 import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.settings.Settings
 
-// The player menu (#1209), which the followed player's icon in Home's header opens ([PlayerMenuButton]).
+// The player menu (#1209), which the player symbol in Home's header opens ([PlayerSymbol], #1440).
 
 /**
  * The player menu (#1209), for the shown player ([playback], named [name]): its name and state;
  * Previous, Play or Pause, and Next, pills, each dimmed and not a button unless the player advertises
  * it, and under them, when it advertises none, that it takes no controls from other apps; *Open
- * <player>*, which opens the player's own screen, else its launcher entry, as the player row above
- * the cover did (#596), and closes the menu; then, with more than one, the players *Settings →
- * Players* lists that are switched on ([menuPlayers]), the shown one selected, each with its state,
- * or *Open the app ↗* with no session. Choosing one with a session makes Home show it
- * ([HeaderPlayerFeed.follow]), and the menu's state and controls go
- * with it; choosing one with none opens its app. The menu stays open through the controls and a
+ * <player>*, after the player's own icon (#1440), which opens the player's own screen, else its
+ * launcher entry, as the player row above the cover did (#596), and closes the menu; then, with more
+ * than one, the players *Settings → Players* lists that are switched on ([menuPlayers]), the shown
+ * one selected, each with its state, or *Open the app ↗* with no session. Choosing one with a session
+ * makes Home show it ([HeaderPlayerFeed.follow]), and the menu's state and controls go with it;
+ * choosing one with none opens its app. The menu stays open through the controls and a
  * choice of player; it closes on *Open <player>*, a tap outside, or Back ([close]).
  */
 @Composable
@@ -92,6 +92,8 @@ internal fun PlayerMenu(
             },
             modifier = Modifier.padding(top = 8.dp).testTag(PLAYER_MENU_OPEN_PLAYER_TAG),
         ) {
+            // The player's own icon (#1440), now the header shows a neutral symbol; the text names it.
+            PlayerIcon(player, name, apps, CHOICE_ICON, Modifier.testTag(PLAYER_MENU_OPEN_PLAYER_ICON_TAG))
             Text(stringResource(R.string.home_open_player, name), modifier = Modifier.weight(1f))
             Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -162,10 +164,11 @@ private fun PlayersList(
 /**
  * The players the menu lists, or null until loaded: those *Settings → Players* lists ([listedPlayers]),
  * A to Z, and of them only the ones switched on, whatever *Only enabled players on Home* says: a
- * player switched off is never in the menu; one switched on is, playing or not.
+ * player switched off is never in the menu; one switched on is, playing or not. The player symbol
+ * opens the first of them on a long press while none plays and none was followed before (#1440).
  */
 @Composable
-private fun menuPlayers(
+internal fun menuPlayers(
     settings: Settings,
     apps: PlayerApps,
 ): List<ListedPlayer>? {
@@ -271,6 +274,9 @@ const val PLAYER_MENU_OPEN_TAG: String = "home-player-menu-open"
 
 /** The test tag of the player menu's *Open <player>*. */
 const val PLAYER_MENU_OPEN_PLAYER_TAG: String = "home-player-menu-open-player"
+
+/** The test tag of the player's icon on the player menu's *Open <player>* (#1440). */
+const val PLAYER_MENU_OPEN_PLAYER_ICON_TAG: String = "home-player-menu-open-player-icon"
 
 /** The test tag of the player menu's pill for [control]. */
 fun transportTag(control: Transport): String = "home-transport-${control.name}"

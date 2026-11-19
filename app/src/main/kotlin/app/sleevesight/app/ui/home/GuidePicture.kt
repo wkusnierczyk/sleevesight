@@ -287,7 +287,7 @@ private class PictureBox {
  * to the width it is given, at the default font size whatever the phone's, with a fixed example
  * track. The header's logo and the key data are Home's own ([HeaderLogo], [KeyData]); the rest are
  * plain copies of Home's parts, since Home's own need a run's state, take taps and carry their own
- * semantics: the player's icon in the header (#1209; a plain stand-in, not any player's own), a
+ * semantics: the player symbol in the header (#1440), a
  * fixed cover (beige, with no blue, so the pen's arrows stand out), the position, *Key insights*
  * with its citation and the Write button; the *Dates* and *Genres* buttons (#724, #772) and
  * *Sources*' chip are Home's own [ChipFrame], without a click. Each part the notes name tells
@@ -345,8 +345,8 @@ internal fun MiniHome(
     }
 }
 
-// Home's header: the logo, Home's own; the player's icon after it (#1209), [player] where it is;
-// and the cogwheel, [cogwheel] where it is.
+// Home's header: the logo, Home's own; and at the end the player symbol (#1440), [player] where it
+// is, and the cogwheel, [cogwheel] where it is.
 @Composable
 private fun MiniHeader(
     player: Modifier,
@@ -357,15 +357,19 @@ private fun MiniHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            HeaderLogo()
-            MiniPlayer(player)
+        HeaderLogo()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painterResource(R.drawable.ic_music_note),
+                contentDescription = null,
+                modifier = Modifier.padding(12.dp).then(player),
+            )
+            Icon(
+                painterResource(R.drawable.ic_settings),
+                contentDescription = null,
+                modifier = Modifier.padding(12.dp).then(cogwheel),
+            )
         }
-        Icon(
-            painterResource(R.drawable.ic_settings),
-            contentDescription = null,
-            modifier = Modifier.padding(12.dp).then(cogwheel),
-        )
     }
 }
 
@@ -381,21 +385,6 @@ private fun MiniSources(modifier: Modifier) {
             style = MaterialTheme.typography.labelLarge,
             color = content,
         )
-    }
-}
-
-// The player's icon in the header (#1209), as a plain stand-in: no player's own icon, and the letter
-// of the example player on a rounded square, as Home draws a player whose icon it has not got.
-@Composable
-private fun MiniPlayer(modifier: Modifier) {
-    Box(
-        modifier
-            .size(26.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = MINI_PLAYER_FILL)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(EXAMPLE_PLAYER.take(1), style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -539,9 +528,6 @@ private const val PANEL_AFTER_NOTE = 0.5f
 
 // The example track.
 private const val EXAMPLE_PLAYER = "Spotify"
-
-/** How much of the text's colour fills the player's stand-in icon, as Home's stand-in. */
-private const val MINI_PLAYER_FILL = 0.12f
 private const val EXAMPLE_TITLE = "Blue in Green"
 private const val EXAMPLE_ARTIST = "Miles Davis"
 private const val EXAMPLE_ALBUM = "Kind of Blue"

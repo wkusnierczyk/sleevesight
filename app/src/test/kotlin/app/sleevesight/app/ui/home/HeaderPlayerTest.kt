@@ -32,11 +32,13 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
@@ -52,6 +54,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.session.Transport
 import app.sleevesight.app.ui.HomeScreen
 import app.sleevesight.app.ui.settings.PlayerApps
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
@@ -68,10 +71,11 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * The followed player in Home's header (#1409, #1209): the record plays and pauses it, only as it
- * advertises, and is no button otherwise; its icon opens the player menu, whose controls and choice of
- * player leave it open and whose *Open <player>* closes it (a tap outside and Back close it as any
- * Material menu); nothing playing, no icon. Drawn as
+ * The followed player in Home's header (#1409, #1209, #1440): the record plays and pauses it, only as
+ * it advertises, and is no button otherwise, and a long press on it does nothing; the player symbol
+ * opens the player menu, whose controls and choice of player leave it open and whose *Open <player>*
+ * closes it (a tap outside and Back close it as any Material menu), and a long press opens the player;
+ * with nothing playing or no player switched on, the symbol is dimmed and opens a panel. Drawn as
  * on a phone, light and dark, at the default font size and twice it, the menu closed and open; with
  * `SLEEVESIGHT_PICTURES` set, each is also saved there as a picture.
  */
@@ -125,13 +129,20 @@ class HeaderPlayerTest {
 
     private fun show(
         dark: Boolean = false,
+        openSettingsAt: (SettingsTarget) -> Unit = {},
         block: (MainActivity) -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
                     SleevesightTheme(darkTheme = dark) {
-                        HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}, player = feed) {
+                        HomeScreen(
+                            accessGranted = true,
+                            onOpenFirstRun = {},
+                            onOpenSettings = {},
+                            player = feed,
+                            onOpenSettingsAt = openSettingsAt,
+                        ) {
                             Column {
                                 for (i in 0 until LINES) Text("Line $i", modifier = Modifier.testTag("line$i"))
                             }
@@ -145,8 +156,27 @@ class HeaderPlayerTest {
     }
 
     private fun openMenu() {
-        compose.onNodeWithTag(PLAYER_MENU_TAG).performClick()
+        compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performClick()
         compose.onNodeWithTag(PLAYER_MENU_OPEN_TAG).assertExists()
+    }
+
+    // No session at all.
+    private fun nothingPlaying() {
+        playback.value = PlaybackInfo.NONE.copy(actions = ALL)
+        followed.value = emptyMap()
+        track.value = null
+    }
+
+    // The symbol, read as *Player menu*, a button, dimmed with [state] said, or not dimmed with none.
+    private fun symbolReads(state: String?) {
+        val symbol = compose.onNodeWithTag(PLAYER_SYMBOL_TAG)
+        val named = listOf(text(R.string.home_player_symbol))
+        symbol
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, named))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        val said = symbol.fetchSemanticsNode().config.getOrElseNullable(SemanticsProperties.StateDescription) { null }
+        assertEquals(state, said)
     }
 
     private fun menuOpen() = compose.onNodeWithTag(PLAYER_MENU_OPEN_TAG).assertExists()
@@ -199,22 +229,129 @@ class HeaderPlayerTest {
     }
 
     @Test
-    fun withNothingPlayingThereIsNoPlayerIconAndNoRecordButton() {
-        playback.value = PlaybackInfo.NONE.copy(actions = ALL)
-        followed.value = emptyMap()
+    fun withNothingPlayingTheSymbolIsDimmedAndOpensAPanelAndThereIsNoRecordButton() {
+        nothingPlaying()
         show {
-            compose.onNodeWithTag(PLAYER_MENU_TAG).assertDoesNotExist()
+            symbolReads(text(R.string.home_player_symbol_nothing_playing_state))
             assertEquals(0, buttons(R.string.home_record_pause) + buttons(R.string.home_record_play))
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performClick()
+            compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
+            menuClosed()
+            compose.onNodeWithTag(SYMBOL_PANEL_DISMISS_TAG).performClick()
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
+            // It opens again on the next tap.
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performClick()
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
         }
     }
 
     @Test
-    fun theIconIsReadWithThePlayerAndItsStateAndOpensTheMenu() =
+    fun aLongPressWithNothingPlayingOpensTheFirstPlayerSwitchedOn() {
+        nothingPlaying()
         show {
-            compose
-                .onNodeWithContentDescription(
-                    text(R.string.home_player_menu, "Spotify", text(R.string.home_state_playing)),
-                ).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            // The players load off the main thread.
+            compose.waitForIdle()
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.waitForIdle()
+            // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
+            assertEquals(CASTBOX, shadowOf(app).nextStartedActivity?.`package`)
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun aLongPressOnceAPlayerStoppedOpensTheLastPlayerFollowed() =
+        show {
+            nothingPlaying()
+            compose.waitForIdle()
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.waitForIdle()
+            assertEquals(SPOTIFY, shadowOf(app).nextStartedActivity?.`package`)
+        }
+
+    @Test
+    fun withNoPlayerSwitchedOnTheSymbolIsDimmedAndATapOrALongPressLinksToPlayers() {
+        nothingPlaying()
+        settings.value = Settings(followedPlayers = mapOf(SPOTIFY to false, YOUTUBE to false))
+        val opened = mutableListOf<SettingsTarget>()
+        show(openSettingsAt = { opened += it }) {
+            symbolReads(text(R.string.home_player_symbol_none_enabled_state))
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
+            assertEquals(null, shadowOf(app).nextStartedActivity)
+            compose.onNodeWithTag(SYMBOL_PANEL_DISMISS_TAG).performClick()
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performClick()
+            val link = text(R.string.home_players_none_link)
+            compose.onNodeWithText(text(R.string.home_player_symbol_none_enabled, link)).performFirstLinkClick()
+            compose.waitForIdle()
+            assertEquals(listOf(SettingsTarget.players), opened)
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun aLongPressWithAPlayerOpensIt() {
+        activity = PendingIntent.getActivity(app, 0, Intent(Intent.ACTION_VIEW), PendingIntent.FLAG_IMMUTABLE)
+        show {
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
+            compose.waitForIdle()
+            menuClosed()
+            assertEquals(listOf(SPOTIFY), askedScreen)
+            val started = shadowOf(it).nextStartedActivity ?: shadowOf(app).nextStartedActivity
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+        }
+    }
+
+    @Test
+    fun theSymbolShowsThePlayersIconForASecondWhenHomeSwitchesPlayer() =
+        show {
+            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertDoesNotExist()
+            compose.mainClock.autoAdvance = false
+            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PAUSED, actions = ALL)
+            compose.mainClock.advanceTimeByFrame()
+            compose.mainClock.advanceTimeBy(FRAME_MS)
+            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertExists()
+            compose.mainClock.advanceTimeBy(FLASH_PAST_MS)
+            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertDoesNotExist()
+            // And when a player starts playing.
+            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
+            compose.mainClock.advanceTimeByFrame()
+            compose.mainClock.advanceTimeBy(FRAME_MS)
+            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertExists()
+            compose.mainClock.autoAdvance = true
+        }
+
+    @Test
+    fun theSymbolKeepsTheNoteWhileSpinTheLogoIsOff() {
+        settings.value = settings.value?.copy(spinLogo = false)
+        show {
+            compose.mainClock.autoAdvance = false
+            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
+            compose.mainClock.advanceTimeByFrame()
+            compose.mainClock.advanceTimeBy(FRAME_MS)
+            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertDoesNotExist()
+            compose.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
+    fun aLongPressOnTheRecordDoesNothing() =
+        show {
+            compose.onNodeWithTag(RECORD_TAG).performTouchInput { longClick(center) }
+            compose.waitForIdle()
+            assertEquals(emptyList<Transport>(), sent)
+            menuClosed()
+            assertEquals(null, shadowOf(app).nextStartedActivity)
+        }
+
+    @Test
+    fun theSymbolIsReadAsPlayerMenuWithItsActionsAndOpensTheMenu() =
+        show {
+            symbolReads(null)
+            val symbol = compose.onNodeWithTag(PLAYER_SYMBOL_TAG).fetchSemanticsNode().config
+            assertEquals(text(R.string.home_player_symbol_tap), symbol[SemanticsActions.OnClick].label)
+            assertEquals(text(R.string.home_player_symbol_hold), symbol[SemanticsActions.OnLongClick].label)
             openMenu()
             compose
                 .onNodeWithText(text(R.string.home_player_state, "Spotify", text(R.string.home_state_playing)))
@@ -223,6 +360,8 @@ class HeaderPlayerTest {
             compose.onNodeWithTag(transportTag(Transport.PAUSE)).assertIsEnabled()
             compose.onNodeWithContentDescription(text(R.string.home_next)).assertIsEnabled()
             compose.onNodeWithText(text(R.string.home_open_player, "Spotify")).assertExists()
+            // The player's own icon on *Open <player>* (#1440).
+            compose.onNodeWithTag(PLAYER_MENU_OPEN_PLAYER_ICON_TAG, useUnmergedTree = true).assertExists()
             compose.onNodeWithText(text(R.string.home_players)).assertExists()
             compose
                 .onNodeWithContentDescription("Spotify, ${text(R.string.home_state_playing)}")
@@ -298,11 +437,11 @@ class HeaderPlayerTest {
     }
 
     @Test
-    fun theIconIsReadAsAMenuThatCollapses() =
+    fun aSecondTapOnTheSymbolClosesTheMenu() =
         show {
-            compose.onNodeWithTag(PLAYER_MENU_TAG).performSemanticsAction(SemanticsActions.Expand)
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performSemanticsAction(SemanticsActions.OnClick)
             menuOpen()
-            compose.onNodeWithTag(PLAYER_MENU_TAG).performSemanticsAction(SemanticsActions.Collapse)
+            compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performSemanticsAction(SemanticsActions.OnClick)
             menuClosed()
         }
 
@@ -315,18 +454,20 @@ class HeaderPlayerTest {
         }
     }
 
-    // Review of #1417: a session kept with its track cleared leaves Home idle, with no player in the header.
+    // Review of #1417: a session kept with its track cleared leaves Home idle, with no record button;
+    // the symbol still opens the menu on its player (#1440).
     @Test
-    fun aSessionWithNoTrackShowsNoPlayerIconAndNoRecordButton() {
+    fun aSessionWithNoTrackHasNoRecordButtonAndTheSymbolOpensTheMenu() {
         track.value = null
         show {
-            compose.onNodeWithTag(PLAYER_MENU_TAG).assertDoesNotExist()
             assertEquals(0, buttons(R.string.home_record_pause) + buttons(R.string.home_record_play))
+            symbolReads(null)
+            openMenu()
         }
     }
 
-    // Review of #1417: choosing a player whose session holds no track leaves Home idle and the icon
-    // gone, and the menu open on that player all the same.
+    // Review of #1417: choosing a player whose session holds no track leaves Home idle, and the menu
+    // open on that player all the same.
     @Test
     fun choosingAPlayerWithNoTrackKeepsTheMenuOpenOnIt() =
         show {
@@ -334,7 +475,6 @@ class HeaderPlayerTest {
             compose.onNodeWithTag(menuPlayerTag(YOUTUBE)).performClick()
             track.value = null
             compose.waitForIdle()
-            compose.onNodeWithTag(PLAYER_MENU_TAG).assertDoesNotExist()
             menuOpen()
             compose
                 .onNodeWithText(text(R.string.home_player_state, "YouTube Music", text(R.string.home_state_paused)))
@@ -439,5 +579,7 @@ class HeaderPlayerTest {
                 PlaybackState.ACTION_SKIP_TO_PREVIOUS
         const val LINES = 80
         const val WAIT_MS = 5_000L
+        const val FRAME_MS = 32L
+        const val FLASH_PAST_MS = 1_100L
     }
 }

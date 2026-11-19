@@ -105,8 +105,8 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    // The followed player in Home's header (#1409, #1209): the record plays and pauses it, and its icon
-    // opens the player menu.
+    // The followed player in Home's header (#1409, #1209, #1440): the record plays and pauses it, and the
+    // player symbol opens the player menu.
     private val headerPlayer: HeaderPlayerFeed by lazy {
         HeaderPlayerFeed(
             playback = graph.sessions.playback,
