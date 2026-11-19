@@ -106,6 +106,7 @@ private fun genreNotes(
     actions.openSettingsAt,
     lines.evidence,
     lines.asked,
+    lines.moved,
 )
 
 /**

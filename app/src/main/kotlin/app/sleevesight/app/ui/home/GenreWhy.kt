@@ -120,11 +120,15 @@ internal fun enableParts(
 }
 
 // How a reason's citation of its line [evidence] calls [it][String] shows, and opens: by the id
-// [sources] (*Sources*' lines) lists that line under ([shownLine], #1205), else its own.
+// [sources] (*Sources*' lines) lists that line under ([shownLine], #1205; a page left out as a repeat,
+// by the line that holds its passage, [moved], #1434), [evidence]'s own with no *Sources* lines given;
+// null, no citation shown nor offered, for one *Sources* has no line for: never its own id, which
+// *Sources* may number another line by.
 private fun shownAs(
     evidence: EvidenceSet?,
     sources: EvidenceSet?,
-): (String) -> String = { id -> shownLine(id, evidence, sources) ?: id }
+    moved: Moved,
+): (String) -> String? = { id -> shownLine(id, evidence, sources ?: evidence, moved) }
 
 // A paragraph of a reason still being written, its citations shown and opened as [shownAs] has them.
 @Composable
@@ -133,15 +137,16 @@ private fun PartialProse(
     context: InsightContext,
     actions: ReasonActions,
 ) {
-    val shownAs = shownAs(context.track?.evidence, actions.sources)
-    UncheckedProse(paragraph, context, { id -> actions.onCite(shownAs(id)) }, label = shownAs)
+    val shownAs = shownAs(context.track?.evidence, actions.sources, actions.moved)
+    UncheckedProse(paragraph, context, { id -> shownAs(id)?.let(actions.onCite) }, label = shownAs)
 }
 
 // What a reason shown does: where a citation goes ([onCite]), its *Read aloud* ([readAloud], null for
 // none), asking again ([again]: a failed call's *Retry*), where the focus goes as *Retry* gives
 // way to the loading line ([afterRetry]), where the could-not line's links open ([openSettingsAt]);
 // and the lines *Sources* shows ([sources]), whose ids its citations show and open, by the page or
-// the words they cite (#1205, [shownLine]): a reason's own numbering is its evidence's, not theirs.
+// the words they cite (#1205, [shownLine]): a reason's own numbering is its evidence's, not theirs;
+// and the pages *Sources* leaves out as repeats, each at the line holding its passage ([moved], #1434).
 @Suppress("LongParameterList") // What each part of a reason does, and where its citations point.
 internal class ReasonActions(
     val onCite: (String) -> Unit,
@@ -150,6 +155,7 @@ internal class ReasonActions(
     val afterRetry: () -> Unit,
     val openSettingsAt: (SettingsTarget) -> Unit,
     val sources: EvidenceSet? = null,
+    val moved: Moved = emptyMap(),
 )
 
 // The reason asked for ([shown]), under the [question] (#523, #762): while the AI service is asked
@@ -192,13 +198,13 @@ internal fun ReasonShown(
                 // A reason asked again with web search cites the pages it found too (#801).
                 val evidence = state.searched ?: context.track?.evidence
                 // Each citation shown, and opened, by the id *Sources* lists its line under (#1205).
-                val shownAs = shownAs(evidence, actions.sources)
+                val shownAs = shownAs(evidence, actions.sources, actions.moved)
                 for (paragraph in state.grounded.paragraphs) {
                     CheckedProse(
                         paragraph,
                         state.grounded,
                         evidence,
-                        { id -> actions.onCite(shownAs(id)) },
+                        { id -> shownAs(id)?.let(actions.onCite) },
                         label = shownAs,
                     )
                 }
@@ -242,7 +248,7 @@ private fun ReasonCredits(
     shown: GenreReason.Shown,
     state: InsightState.Written,
     evidence: EvidenceSet?,
-    shownAs: (String) -> String,
+    shownAs: (String) -> String?,
     readAloud: ReadAloudControl?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

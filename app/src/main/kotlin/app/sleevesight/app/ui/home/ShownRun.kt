@@ -618,3 +618,28 @@ internal fun paragraphsOf(text: String): List<String> =
     text.split(BLANK_LINE).map(String::trim).filter(String::isNotEmpty)
 
 private val BLANK_LINE = Regex("\\n\\s*\\n")
+
+/**
+ * [runs] without the citations [left] says to leave out (#1434: a line's that *Sources* has no line
+ * for), and the space before one where a stop, or nothing, follows it, so no space is left alone
+ * before the stop.
+ */
+internal fun withoutCites(
+    runs: List<ShownRun>,
+    left: (String) -> Boolean,
+): List<ShownRun> {
+    fun out(run: ShownRun) = run is ShownRun.Cite && left(run.id)
+    if (runs.none(::out)) return runs
+    val kept = mutableListOf<ShownRun>()
+    runs.forEachIndexed { at, run ->
+        if (!out(run)) {
+            kept += run
+            return@forEachIndexed
+        }
+        val next = runs.drop(at + 1).firstOrNull { !out(it) }
+        val stopNext = next == null || (next is ShownRun.Text && next.text.firstOrNull()?.isLetterOrDigit() == false)
+        val before = kept.lastOrNull() as? ShownRun.Text
+        if (stopNext && before != null) kept[kept.lastIndex] = before.copy(text = before.text.trimEnd())
+    }
+    return kept
+}
