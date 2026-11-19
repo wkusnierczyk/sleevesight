@@ -31,8 +31,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * One mark per run of dimmed sentences with the same backing (#1437): an outlined chip for lines that
- * do not back them, a `?` for none, never both on one sentence; both go to the note, worded for what
+ * One mark per run of dimmed sentences with the same backing (#1437): a grey chip for each line that
+ * does not back them, a `?` for none, never both on one sentence; both go to the note, worded for what
  * is dimmed, whose lines' chips, sorted, open *Sources*.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -88,7 +88,7 @@ class UnbackedRunsScreenTest {
     private val mark = "⁠ " + chip("?")
 
     @Test
-    fun aRunCitingTheSameLineShowsItsOutlinedChipOnceAfterItsLast() =
+    fun aRunCitingTheSameLineShowsItsGreyChipOnceAfterItsLast() =
         show("It topped the charts in 1986 [W1]. It was a hit in 1990 [W1]. Sundown was recorded in 1973 [MB1].") {
             val text = textOf()
             assertEquals(
@@ -96,7 +96,7 @@ class UnbackedRunsScreenTest {
                     "Sundown was recorded in 1973 ${chip("MB1")}.",
                 text.text,
             )
-            assertEquals(1, text.getStringAnnotations(OUTLINE_TAG, 0, text.length).size)
+            assertEquals(1, links(text).count { it.tag == CITE_PREFIX + "W1" })
             assertEquals(0, links(text).count { it.tag == UNBACKED_LINK_TAG })
             assertEquals(
                 "It topped the charts in 1986. It was a hit in 1990 (W1: does not say this). " +
@@ -144,7 +144,7 @@ class UnbackedRunsScreenTest {
         }
 
     @Test
-    fun theOutlinedChipAndItsActionGoToTheNote() =
+    fun theGreyChipAndItsActionGoToTheNote() =
         show("It topped the charts in 1986 [W1]. Sundown was recorded in 1973 [MB1].") {
             val actions = prose().fetchSemanticsNode().config[SemanticsActions.CustomActions]
             assertEquals(listOf("Source MB1", "W1: does not say this, see the note"), actions.map { it.label })

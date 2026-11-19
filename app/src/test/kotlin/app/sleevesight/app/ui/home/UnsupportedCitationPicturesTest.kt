@@ -42,7 +42,7 @@ import java.io.File
 
 /**
  * The insight with a sentence its line does not back (#1036), drawn as on a phone, light and dark, at
- * the default font size and twice it, with *Sources* open: the sentence dimmed, its chip and its
+ * the default font size and twice it, with *Sources* open: the sentence dimmed, its chip grey (#1458) and its
  * line's tag a dim outline. The pictures are written only when `SLEEVESIGHT_PICTURES` names a
  * directory; otherwise each case only checks the outlined tag is there.
  */

@@ -4,7 +4,6 @@ import android.content.res.Resources
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
@@ -16,7 +15,6 @@ import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
@@ -45,7 +43,7 @@ private class ProseText(
     val note: ToNote? = null,
 )
 
-// The way to the note ([focus], #954) from a paragraph's outlined chips, of the lines [unsupported]
+// The way to the note ([focus], #954) from a paragraph's grey line chips, of the lines [unsupported]
 // (#1437), and from its `?` chips, when it has any ([uncited]).
 private class ToNote(
     val focus: NoteFocus,
@@ -70,10 +68,10 @@ private class Marked(
  * ([dimmedText]), its titles in italics as anywhere. A run of dimmed sentences with the same backing
  * ([backing]: all citing nothing, or all citing the same lines) shows one mark, after its last sentence
  * ([runEnds]), never both on one sentence: citing nothing, a `?` chip ([CiteStyles.unbacked]) before
- * its final stop; citing lines, those lines' chips as a dim outline with no fill
- * ([CiteStyles.unsupported]), the other sentences of the run showing none. Both go to the note under
- * the reply ([UnbackedNote], by [LocalNoteFocus]); with no note to go to, an outlined chip opens its
- * line. A screen reader hears a `?` chip as "(not cited)" and an outlined chip as "W2: does not say
+ * its final stop; citing lines, those lines' chips in grey, as the `?` chip, with no outline
+ * ([CiteStyles.unsupported], #1458), the other sentences of the run showing none. Both go to the note
+ * under the reply ([UnbackedNote], by [LocalNoteFocus]); with no note to go to, a grey line chip opens
+ * its line. A screen reader hears a `?` chip as "(not cited)" and a grey line chip as "W2: does not say
  * this", and has each as an action of the paragraph: "Not cited, see the note", "W2: does not say
  * this, see the note". Its citations are read as the check read them,
  * against the card's own evidence and with the model's own knowledge as it was allowed when the
@@ -113,7 +111,7 @@ internal fun CheckedProse(
             }
         }
     if (shown.isEmpty()) return
-    // The sentences that end with their run's mark (#1437): its `?` chip, or its outlined chips; a
+    // The sentences that end with their run's mark (#1437): its `?` chip, or its grey line chips; a
     // dimmed one's chips show only at its run's end, once each, as one group before its stop.
     val ends = runEnds(shown.map { (sentence, _, _) -> backing(sentence) })
     val marked =
@@ -137,8 +135,8 @@ internal fun CheckedProse(
 }
 
 // [marked] as a screen reader hears it, with the lines its chips open and its way to the note
-// ([note], #1437): its outlined chips' lines, then whether it has a `?` chip; with no note to go to,
-// its outlined chips open their lines.
+// ([note], #1437): its grey line chips' lines, then whether it has a `?` chip; with no note to go to,
+// its grey line chips open their lines.
 private fun markedProse(
     marked: Marked,
     text: AnnotatedString,
@@ -153,9 +151,9 @@ private fun markedProse(
             val words = spoken(marked.shown[i].second, marked.policy, resources, unsupported)
             if (status(i) == SentenceStatus.UNCITED && marked.marked[i]) notCited(words, uncited) else words
         }
-    val runsOf = { outlined: Boolean ->
+    val runsOf = { unsupported: Boolean ->
         marked.shown.indices
-            .filter { (status(it) == SentenceStatus.UNSUPPORTED) == outlined }
+            .filter { (status(it) == SentenceStatus.UNSUPPORTED) == unsupported }
             .flatMap { marked.shown[it].second }
     }
     val backed = lines(runsOf(false), marked.policy)
@@ -173,7 +171,7 @@ private fun markedProse(
 }
 
 // [marked] as shown: a dimmed sentence in [flagged], one citing nothing at its run's end with a `?`
-// chip before its final stop (#954), one citing lines that do not back it with their chips outlined,
+// chip before its final stop (#954), one citing lines that do not back it with their chips grey,
 // going to the [note] when there is one (#1437); any other chip opening its line ([onCite]).
 private fun markedText(
     marked: Marked,
@@ -237,31 +235,26 @@ internal fun UncheckedProse(
 
 // A paragraph with citation chips, read by a screen reader with each chip said in words, and each
 // line a chip scrolls to offered as an action too: a description read in place of the text may hide
-// the links in it. An unsupported sentence's chips are outlined (#1036), drawn behind the text from
-// the layout the same frame measured, as `MarkedText` draws a link's mark.
+// the links in it.
 @Composable
 private fun Prose(
     prose: ProseText,
     onCite: (String) -> Unit,
 ) {
     val resources = LocalResources.current
-    val outlined = remember(prose.text) { outlinedChips(prose.text) }
     val shown = remember(prose.text) { withoutIsolates(prose.text) }
-    val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
-    val ink = MaterialTheme.colorScheme.onSurfaceVariant
     Text(
         prose.text,
         style = citedTextStyle(MaterialTheme.typography.bodyLarge),
-        onTextLayout = { layout.value = it },
         modifier =
-            Modifier.drawChipOutlines(outlined, layout, ink).semantics {
+            Modifier.semantics {
                 text = shown
                 contentDescription = prose.spoken
-                // Each line's, then the outlined chips', then the `?` chips', which go to the note
-                // (#1437): at most [MAX_ACTIONS] in all, the outlined chips' giving way first, the `?`
+                // Each line's, then the grey line chips', then the `?` chips', which go to the note
+                // (#1437): at most [MAX_ACTIONS] in all, the grey line chips' giving way first, the `?`
                 // chips' one action kept, as it stands for every sentence citing nothing.
                 val focus = prose.note?.focus
-                val outlined =
+                val unsupported =
                     prose.note
                         ?.unsupported
                         ?.mapNotNull { id -> prose.label(id) }
@@ -287,7 +280,7 @@ private fun Prose(
                             true
                         }
                     }
-                val actions = (lines + outlined).take(MAX_ACTIONS - uncited.size) + uncited
+                val actions = (lines + unsupported).take(MAX_ACTIONS - uncited.size) + uncited
                 if (actions.isNotEmpty()) customActions = actions
             },
     )
@@ -346,8 +339,8 @@ private class CitePolicy(
     val label: (String) -> String? = { it },
 )
 
-// A sentence's [runs], its titles in italics (#555), dimmed when [flagged], its line chips outlined
-// when its lines do not back it ([unsupported], #1036).
+// A sentence's [runs], its titles in italics (#555), dimmed when [flagged], its line chips grey when
+// its lines do not back it ([unsupported], #1036, #1458).
 @Suppress("LongParameterList") // The sentence, how its citations read and show, and how it is marked.
 private fun AnnotatedString.Builder.appendSentence(
     runs: List<ShownRun>,
@@ -396,9 +389,9 @@ internal fun AnnotatedString.Builder.appendUnbacked(
 }
 
 /**
- * A citation as a chip, shown as [shownAs]: a line's scrolls to it ([onCite] with [id]), with no
- * fill and an outline the paragraph draws ([OUTLINE_TAG]) when it does not back its sentence
- * ([unsupported], #1036); the model's and a missing line's only say what they are. Also *Explain the
+ * A citation as a chip, shown as [shownAs]: a line's scrolls to it ([onCite] with [id]), grey
+ * ([CiteStyles.unsupported], #1458) when it does not back its sentence ([unsupported], #1036); the
+ * model's and a missing line's only say what they are. Also *Explain the
  * song*'s (#908), whose chip of a page opens it.
  */
 @Suppress("LongParameterList") // The citation, how it shows, and what a tap does.
@@ -415,9 +408,7 @@ internal fun AnnotatedString.Builder.appendCite(
         CiteKind.LINE -> {
             val style = if (unsupported) styles.unsupported else styles.line
             val link = LinkAnnotation.Clickable(CITE_PREFIX + id, TextLinkStyles(style)) { onCite(id) }
-            if (unsupported) pushStringAnnotation(OUTLINE_TAG, id)
             withLink(link) { append(label) }
-            if (unsupported) pop()
         }
 
         CiteKind.MODEL -> withStyle(styles.model) { append(label) }
@@ -427,9 +418,6 @@ internal fun AnnotatedString.Builder.appendCite(
 
 /** The prefix of a citation chip's link tag, before the evidence id. */
 const val CITE_PREFIX: String = "cite:"
-
-/** The tag of the annotation over a chip drawn as an outline (#1036), its evidence id the item. */
-const val OUTLINE_TAG: String = "outline"
 
 // No break before the `?` chip (#954): a word joiner, which holds even after a citation chip's thin
 // space, where a line may break before a no-break space; then a no-break space, the space shown.
@@ -457,5 +445,5 @@ internal val FINAL_PUNCTUATION = Regex("[.!?…]+([$QUOTES)\\]]*)$")
 internal const val MAX_LINE_ACTIONS = 16
 
 // The accessibility actions one node offers in all, below the 32 Compose allows: a paragraph's lines
-// ([MAX_LINE_ACTIONS]), its outlined chips' and its `?` chips' (#1437) together.
+// ([MAX_LINE_ACTIONS]), its grey line chips' and its `?` chips' (#1437) together.
 internal const val MAX_ACTIONS = 31

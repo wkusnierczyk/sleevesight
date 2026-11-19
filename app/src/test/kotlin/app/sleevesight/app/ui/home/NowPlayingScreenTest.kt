@@ -547,7 +547,7 @@ class NowPlayingScreenTest {
 
     @Test
     fun dimmedTextCitingManyLinesOffersABoundedSetOfActionsOnTheParagraphAndOnTheNote() {
-        // A paragraph's 16 lines, 15 outlined chips and a `?` chip, 32 actions in all before the cap
+        // A paragraph's 16 lines, 15 grey line chips and a `?` chip, 32 actions in all before the cap
         // (#1437), and a note naming 40 lines: Compose throws building either node at 32.
         val drafts = (1..40).map { HomeFixtures.draft(SourceId.MUSICBRAINZ, "Fact $it.") }
         val evidence = EvidenceSet.of(drafts, JvmHasher)
@@ -580,7 +580,7 @@ class NowPlayingScreenTest {
                 info.actionList
                     .mapNotNull { it.label?.toString() }
                     .filter { it.startsWith("Source ") || it.endsWith("see the note") }
-            // The lines' first, as many as a paragraph offers, the outlined chips' after, and the `?`
+            // The lines' first, as many as a paragraph offers, the grey line chips' after, and the `?`
             // chips' one kept last: 31 in all.
             assertEquals(MAX_ACTIONS, custom.size)
             assertEquals(ids.take(16).map { text(R.string.home_cite, it) }, custom.take(16))

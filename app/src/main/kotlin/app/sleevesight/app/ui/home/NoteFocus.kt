@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
 
 // The mark for text the sources do not back (#954, #1437): a dimmed sentence's look, the `?` chip after
 // the last of a run of them citing nothing, the note under the reply, worded for what is dimmed, and
-// the way a `?` chip or an outlined chip goes to it, as a citation's chip goes to its line.
+// the way a `?` chip or a grey line chip goes to it, as a citation's chip goes to its line.
 
 /**
  * The way to a reply's note on its dimmed text (#954): a `?` chip tapped ([go]) brings the note into
@@ -115,9 +115,10 @@ internal fun Modifier.noteTarget(): Modifier {
  * The note under a reply with dimmed text (#1437, after #954), worded for what is dimmed ([unbacked]):
  * text citing lines that do not back it ("Dimmed text is not fully backed by the cited sources S2
  * S8."), text citing nothing ("Dimmed text is not backed by any source."), or both, in the notes'
- * small muted type. The lines' chips are a citation's, each opening *Sources* at its line
- * ([NoteCites.onCite]); a screen reader hears them as "(Source S2, Source S8)" and has each, up to
- * [MAX_LINE_ACTIONS], as an action. The outlined chips and the `?` chips of the text go to it ([noteTarget]).
+ * small muted type. The lines' chips are grey, as those lines' chips in the text
+ * ([CiteStyles.unsupported], #1458), each opening *Sources* at its line ([NoteCites.onCite]); a screen
+ * reader hears them as "(Source S2, Source S8)" and has each, up to [MAX_LINE_ACTIONS], as an action.
+ * The grey line chips and the `?` chips of the text go to it ([noteTarget]).
  */
 @Composable
 internal fun UnbackedNote(
@@ -139,7 +140,7 @@ internal fun UnbackedNote(
             append(parts.first())
             unbacked.lines.forEachIndexed { i, id ->
                 if (i > 0) append(' ')
-                appendCite(id, id, CiteKind.LINE, styles, onCite)
+                appendCite(id, id, CiteKind.LINE, styles, onCite, unsupported = true)
             }
             parts.getOrNull(1)?.let(::append)
         }

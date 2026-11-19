@@ -148,7 +148,7 @@ internal fun SourcesSection(
  * [SourcesLines]), which the chips show and hide as the track's. [retry] of the sources that could
  * not be reached is *Retry* beside the note that says so (#1121), null while it is not offered.
  * [unsupported] are the ids of the lines the key insight cites only from sentences they do not back
- * (#1036, [unsupportedLines]), whose tags show as their chips there do: a dim outline.
+ * (#1036, [unsupportedLines]), whose tags show as a dim outline.
  */
 @Suppress("LongParameterList") // What the section shows, each its own.
 internal class SourcesShown(
@@ -337,7 +337,7 @@ private fun Entries(
  * in that language's locale (a span over the whole text, so a screen reader is given the language
  * too, not only the drawing), and says the language after the host: *release · hi.wikipedia.org · in
  * Hindi*. Its tag is a dim outline when the insight's sentences that cite it are not backed by it
- * (#1036), as their chips are.
+ * (#1036).
  */
 @Composable
 private fun EvidenceRow(
@@ -398,7 +398,7 @@ private class LineLook(
 /**
  * A line's tag, right-aligned in the tags' column, [width] wide: filled, or, when the line does not
  * back the insight's sentences citing it ([unsupported], #1036), with no fill, a thin outline and its
- * text in the dimmed text's colour, as their chips show.
+ * text in the dimmed text's colour.
  */
 @Composable
 private fun Tag(

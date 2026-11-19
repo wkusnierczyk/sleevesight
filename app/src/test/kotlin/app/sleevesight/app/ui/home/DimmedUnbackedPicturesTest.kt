@@ -29,7 +29,7 @@ import java.io.File
 /**
  * The mark for text the sources do not back (#954, #1437), drawn as on a phone, light and dark, at the
  * default font size and, for both kinds, twice it: dimmed sentences upright at 60 %, a `?` chip after
- * the last of each run of them citing nothing, an outlined chip after the last of a run citing the
+ * the last of each run of them citing nothing, a grey line chip (#1458) after the last of a run citing the
  * same line that does not back it, none after the AI model's own sentence, and the note under the
  * insight worded for what is dimmed ([VARIANTS]). With `SLEEVESIGHT_PICTURES` set, each is saved there
  * as a picture.
