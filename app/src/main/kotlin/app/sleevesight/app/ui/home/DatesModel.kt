@@ -166,7 +166,10 @@ internal sealed interface EditionPart {
         val date: String,
     ) : EditionPart
 
-    /** "{name} was released {when}.": under another title, the player's [name]. */
+    /**
+     * "{name}, an edition of it under a new title, was released {when}.": under another title, the player's
+     * [name], said as an edition of the release before it (#1432).
+     */
     data class Named(
         val name: String,
         val date: String,

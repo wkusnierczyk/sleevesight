@@ -162,7 +162,6 @@ class DatesScreenTest {
     fun anEditionReadsTheOriginalThenTheEditionEachTitleInItalics() {
         // #1116's picked wording: the original first, then the edition played.
         val thriller = "Thriller"
-        val deluxe = "Thriller 25 Super Deluxe Edition"
         val further = "Actually: Further Listening 1987 - 1988"
         val girl = "Material Girl"
         val remaster2018 = YearTag("2018", true, further)
@@ -171,11 +170,6 @@ class DatesScreenTest {
             DateSentence.Edition("1987-09-07", "Actually", EditionPart.Remaster(remaster2018, further, "2001-06"))
         val cases =
             listOf(
-                DateSentence.Edition("1982-11-30", thriller, EditionPart.Named(deluxe, "2008-02-08")) to
-                    (
-                        "The album $thriller was first released on 30 November 1982. " +
-                            "$deluxe was released on 8 February 2008." to listOf(thriller, deluxe)
-                    ),
                 DateSentence.Edition("1977-02-04", "Rumours", EditionPart.Same("2004")) to
                     (
                         "The album Rumours was first released on 4 February 1977. " +
@@ -217,6 +211,26 @@ class DatesScreenTest {
                 val (line, italic) = expected
                 assertEquals(line, italic, italics(line))
             }
+        }
+    }
+
+    @Test
+    fun anEditionUnderANewTitleIsSaidToBeAnEditionOfTheAlbumBeforeIt() {
+        // #1432's decided wording: "Reception" read as a second, unrelated album after its group's.
+        val wedding = "A Jackal's Wedding"
+        val reception = "Reception"
+        val line =
+            "The album $wedding was first released on 7 November 2025. " +
+                "$reception, an edition of it under a new title, was released on 30 January 2026."
+        said(listOf(DateSentence.Edition("2025-11-07", wedding, EditionPart.Named(reception, "2026-01-30")))) {
+            assertEquals(line, listOf(wedding, reception), italics(line))
+        }
+        val single =
+            "The single Material Girl was first released in 1985. " +
+                "Material Girl / Pretender, an edition of it under a new title, was released in February 1985."
+        val pretender = EditionPart.Named("Material Girl / Pretender", "1985-02")
+        said(listOf(DateSentence.Edition("1985", "Material Girl", pretender, ReleaseKind.SINGLE))) {
+            assertEquals(single, listOf("Material Girl", "Material Girl / Pretender"), italics(single))
         }
     }
 
