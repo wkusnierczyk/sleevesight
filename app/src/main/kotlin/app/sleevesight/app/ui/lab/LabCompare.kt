@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,6 +42,7 @@ import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.ui.home.AiLabel
 import app.sleevesight.app.ui.home.CheckedProse
 import app.sleevesight.app.ui.home.Credit
+import app.sleevesight.app.ui.home.LocalNoteFocus
 import app.sleevesight.app.ui.home.creditText
 import app.sleevesight.app.ui.logo.Busy
 import app.sleevesight.app.ui.theme.DeveloperMark
@@ -251,7 +253,8 @@ private fun VersionCard(
 }
 
 // What a version wrote: checked against the insight's evidence where the panel has it, its
-// citations shown as the insight's are; else as written.
+// citations shown as the insight's are; else as written. It has no note on its dimmed text, and does
+// not take the one of the insight it sits under (#1437): its `?` and outlined chips go to no note.
 @Composable
 private fun Written(
     subject: LabSubject,
@@ -260,7 +263,9 @@ private fun Written(
     val evidence = subject.evidence
     val reply = remember(text, evidence) { evidence?.let { GroundingCheck.check(text, it, subject.allowModel) } }
     if (reply is InsightReply.Written) {
-        for (paragraph in reply.grounded.paragraphs) CheckedProse(paragraph, reply.grounded, evidence, onCite = {})
+        CompositionLocalProvider(LocalNoteFocus provides null) {
+            for (paragraph in reply.grounded.paragraphs) CheckedProse(paragraph, reply.grounded, evidence, onCite = {})
+        }
     } else {
         Text(AnnotatedString(text), style = MaterialTheme.typography.bodyLarge)
     }

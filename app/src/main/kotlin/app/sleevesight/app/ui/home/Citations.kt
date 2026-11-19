@@ -259,32 +259,37 @@ private fun Prose(
             Modifier.drawChipOutlines(outlined, layout, ink).semantics {
                 text = shown
                 contentDescription = prose.spoken
-                // Each line's, then the outlined chips' and the `?` chips', which go to the note (#1437).
-                val toNote =
+                // Each line's, then the outlined chips', then the `?` chips', which go to the note
+                // (#1437): at most [MAX_ACTIONS] in all, the outlined chips' giving way first, the `?`
+                // chips' one action kept, as it stands for every sentence citing nothing.
+                val focus = prose.note?.focus
+                val outlined =
                     prose.note
-                        ?.let { toNote ->
-                            val focus = toNote.focus
-                            toNote.unsupported.mapNotNull { id -> prose.label(id) }.map { shownAs ->
-                                val said = resources.getString(R.string.home_cite_unsupported_see_note, shownAs)
-                                CustomAccessibilityAction(said) {
-                                    focus.go()
-                                    true
-                                }
-                            } +
-                                listOfNotNull(
-                                    CustomAccessibilityAction(resources.getString(R.string.home_cite_see_note)) {
-                                        focus.go()
-                                        true
-                                    }.takeIf { toNote.uncited },
-                                )
-                        }.orEmpty()
-                val actions =
+                        ?.unsupported
+                        ?.mapNotNull { id -> prose.label(id) }
+                        .orEmpty()
+                        .map { shownAs ->
+                            val said = resources.getString(R.string.home_cite_unsupported_see_note, shownAs)
+                            CustomAccessibilityAction(said) {
+                                focus?.go()
+                                true
+                            }
+                        }
+                val uncited =
+                    listOfNotNull(
+                        CustomAccessibilityAction(resources.getString(R.string.home_cite_see_note)) {
+                            focus?.go()
+                            true
+                        }.takeIf { prose.note?.uncited == true },
+                    )
+                val lines =
                     prose.lines.mapNotNull { id -> prose.label(id)?.let { id to it } }.map { (id, shownAs) ->
                         CustomAccessibilityAction(resources.getString(R.string.home_cite, shownAs)) {
                             onCite(id)
                             true
                         }
-                    } + toNote
+                    }
+                val actions = (lines + outlined).take(MAX_ACTIONS - uncited.size) + uncited
                 if (actions.isNotEmpty()) customActions = actions
             },
     )
@@ -450,4 +455,9 @@ internal val FINAL_PUNCTUATION = Regex("[.!?…]+([$QUOTES)\\]]*)$")
 // `AndroidComposeViewAccessibilityDelegateCompat`), and a menu that long is hard to use anyway.
 // Lines past these are reached under *Sources*, which lists every line: their chips' links may not
 // reach a screen reader, which reads the paragraph's content description in place of its text.
-private const val MAX_LINE_ACTIONS = 16
+// Also the note's, whose chips are each a line (`UnbackedNote`).
+internal const val MAX_LINE_ACTIONS = 16
+
+// The accessibility actions one node offers in all, below the 32 Compose allows: a paragraph's lines
+// ([MAX_LINE_ACTIONS]), its outlined chips' and its `?` chips' (#1437) together.
+internal const val MAX_ACTIONS = 31

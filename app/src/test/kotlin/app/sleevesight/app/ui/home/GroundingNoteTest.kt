@@ -4,9 +4,15 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -22,6 +28,9 @@ import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.CheckedSentence
+import app.sleevesight.core.synthesis.GroundedText
+import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -197,6 +206,41 @@ class GroundingNoteTest {
         show(written(reply)) {
             assertNoUnbackedNote()
             assertEquals(0, count(text(R.string.home_meta_self_corrected), substring = true))
+        }
+    }
+
+    @Test
+    fun theNotesLinesFollowSourcesRenumberingThemWhileTheReplyStaysTheSame() {
+        // A sentence citing a line that does not back it: the note names that line as *Sources* does.
+        val sentence = CheckedSentence("It sold well [MB1].", listOf("MB1"), SentenceStatus.UNSUPPORTED)
+        val grounded = GroundedText("It sold well [MB1].", listOf(listOf(sentence)), allowModel = false)
+        var label by mutableStateOf<(String) -> String?>({ it })
+        val opened = mutableListOf<String>()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    WithUnbackedNote {
+                        val cites = NoteCites(HomeFixtures.evidence, label = label) { id -> opened += id }
+                        GroundingLine(grounded, false, cites)
+                    }
+                }
+            }
+
+            fun said() =
+                compose
+                    .onNodeWithTag(UNBACKED_NOTE_TAG)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.ContentDescription]
+                    .single()
+            assertTrue(said(), text(R.string.home_cite, "MB1") in said())
+            // *Sources* numbers the line anew; the reply and its evidence are the same.
+            compose.runOnUiThread { label = { id -> if (id == "MB1") "MB3" else id } }
+            compose.waitForIdle()
+            assertTrue(said(), text(R.string.home_cite, "MB3") in said())
+            assertTrue(said(), text(R.string.home_cite, "MB1") !in said())
+            val node = compose.onNodeWithTag(UNBACKED_NOTE_TAG).fetchSemanticsNode()
+            compose.runOnUiThread { node.config[SemanticsActions.CustomActions].single().action() }
+            assertEquals(listOf("MB3"), opened)
         }
     }
 

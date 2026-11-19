@@ -1,5 +1,7 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.core.synthesis.CheckedSentence
+import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -10,6 +12,22 @@ class DimmedRunsTest {
         val s2 = listOf("S2")
         val backings = listOf(null, listOf("S1"), s2, listOf("S2"), UNCITED_RUN, UNCITED_RUN, listOf("S3"))
         assertEquals(listOf(false, true, false, true, false, true, true), runEnds(backings))
+    }
+
+    @Test
+    fun reorderedOrRepeatedCitationsOfTheSameLinesAreOneRun() {
+        fun unsupported(vararg cites: String) =
+            CheckedSentence("It sold well.", cites.toList(), SentenceStatus.UNSUPPORTED)
+        val sentences =
+            listOf(
+                unsupported("S1", "S2"),
+                unsupported("S2", "S1"),
+                unsupported("S2", "S2", "S1"),
+                unsupported("S1", "S1"),
+                unsupported("S1"),
+            )
+        val backings = sentences.map(::backing)
+        assertEquals(listOf(false, false, true, false, true), runEnds(backings))
     }
 
     @Test

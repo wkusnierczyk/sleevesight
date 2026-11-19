@@ -116,8 +116,8 @@ internal fun Modifier.noteTarget(): Modifier {
  * text citing lines that do not back it ("Dimmed text is not fully backed by the cited sources S2
  * S8."), text citing nothing ("Dimmed text is not backed by any source."), or both, in the notes'
  * small muted type. The lines' chips are a citation's, each opening *Sources* at its line
- * ([NoteCites.onCite]); a screen reader hears them as "(Source S2, Source S8)" and has each as an
- * action. The outlined chips and the `?` chips of the text go to it ([noteTarget]).
+ * ([NoteCites.onCite]); a screen reader hears them as "(Source S2, Source S8)" and has each, up to
+ * [MAX_LINE_ACTIONS], as an action. The outlined chips and the `?` chips of the text go to it ([noteTarget]).
  */
 @Composable
 internal fun UnbackedNote(
@@ -152,9 +152,11 @@ internal fun UnbackedNote(
             modifier.noteTarget().semantics {
                 this.text = exported
                 contentDescription = said
+                // Each line's chip as an action, at most [MAX_LINE_ACTIONS], as a paragraph's: Compose
+                // allows no more than 32 on one node, and *Sources* lists every line.
                 if (unbacked.lines.isNotEmpty()) {
                     customActions =
-                        unbacked.lines.zip(cited) { id, name ->
+                        unbacked.lines.take(MAX_LINE_ACTIONS).zip(cited) { id, name ->
                             CustomAccessibilityAction(name) {
                                 onCite(id)
                                 true

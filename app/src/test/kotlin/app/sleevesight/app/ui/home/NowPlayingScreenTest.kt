@@ -59,8 +59,11 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.WrittenBy
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.CheckedSentence
+import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
+import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -539,6 +542,61 @@ class NowPlayingScreenTest {
             // A line past them is reached under *Sources*, which lists every line once unfolded.
             unfoldAll()
             compose.onNodeWithTag(LINE_PREFIX + evidence.ids.last()).performScrollTo().assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun dimmedTextCitingManyLinesOffersABoundedSetOfActionsOnTheParagraphAndOnTheNote() {
+        // A paragraph's 16 lines, 15 outlined chips and a `?` chip, 32 actions in all before the cap
+        // (#1437), and a note naming 40 lines: Compose throws building either node at 32.
+        val drafts = (1..40).map { HomeFixtures.draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val evidence = EvidenceSet.of(drafts, JvmHasher)
+        val ids = evidence.ids
+
+        fun cited(from: List<String>) = from.joinToString("") { "[$it]" }
+        val sentences =
+            listOf(
+                CheckedSentence("It is documented ${cited(ids.take(20))}.", ids.take(20), SentenceStatus.OK),
+                CheckedSentence("It sold well ${cited(ids)}.", ids, SentenceStatus.UNSUPPORTED),
+                CheckedSentence("It is great.", emptyList(), SentenceStatus.UNCITED),
+            )
+        val grounded = GroundedText(sentences.joinToString(" ") { it.text }, listOf(sentences), allowModel = false)
+        val track = track(insight = InsightState.Written(grounded, cached = false), evidence = evidence)
+        val accessibility = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+        accessibility.setEnabled(true)
+        accessibility.setTouchExplorationEnabled(true)
+        accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        show(state(PipelineView(track, aiReady = true))) { activity ->
+            val provider = { checkNotNull(composeView(activity.window.decorView).accessibilityNodeProvider) }
+            val paragraph =
+                compose
+                    .onNode(
+                        hasText("It is documented", substring = true) and
+                            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                    ).performScrollTo()
+                    .fetchSemanticsNode()
+            val info = checkNotNull(provider().createAccessibilityNodeInfo(paragraph.id)) { "no node" }
+            val custom =
+                info.actionList
+                    .mapNotNull { it.label?.toString() }
+                    .filter { it.startsWith("Source ") || it.endsWith("see the note") }
+            // The lines' first, as many as a paragraph offers, the outlined chips' after, and the `?`
+            // chips' one kept last: 31 in all.
+            assertEquals(MAX_ACTIONS, custom.size)
+            assertEquals(ids.take(16).map { text(R.string.home_cite, it) }, custom.take(16))
+            assertEquals(
+                ids.take(14).map { text(R.string.home_cite_unsupported_see_note, it) },
+                custom.subList(16, 30),
+            )
+            assertEquals(text(R.string.home_cite_see_note), custom.last())
+
+            // The note names all 40, and offers the first 16 as actions.
+            val note = compose.onNodeWithTag(UNBACKED_NOTE_TAG).performScrollTo().fetchSemanticsNode()
+            val noteInfo = checkNotNull(provider().createAccessibilityNodeInfo(note.id)) { "no note node" }
+            val lines = noteInfo.actionList.mapNotNull { it.label?.toString() }.filter { it.startsWith("Source ") }
+            assertEquals(sortedIds(ids).take(16).map { text(R.string.home_cite, it) }, lines)
+            val said = note.config[SemanticsProperties.ContentDescription].single()
+            assertTrue(said, ids.all { text(R.string.home_cite, it) in said })
         }
     }
 

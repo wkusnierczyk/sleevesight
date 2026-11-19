@@ -38,13 +38,14 @@ internal fun takenOut(
 
 /**
  * What a dimmed [sentence] is backed by, the same for each sentence of a run that shows one mark
- * (#1437): [UNCITED_RUN] for one citing nothing, its citations for one citing lines that do not back
- * it; null for a sentence not dimmed.
+ * (#1437): [UNCITED_RUN] for one citing nothing, the set of its citations for one citing lines that
+ * do not back it, so `[S1][S2]` and `[S2][S1]`, or `[S1][S1]` and `[S1]`, are one backing; null for a
+ * sentence not dimmed.
  */
 internal fun backing(sentence: CheckedSentence): Any? =
     when (sentence.status) {
         SentenceStatus.UNCITED -> UNCITED_RUN
-        SentenceStatus.UNSUPPORTED -> sentence.cites
+        SentenceStatus.UNSUPPORTED -> sentence.cites.toSet()
         else -> null
     }
 
@@ -110,28 +111,40 @@ internal class NoteCites(
 )
 
 /**
- * What the note under [grounded] says ([Unbacked]), its sentences read as [cites] reads them, those
- * taken out ([takenOut]) and those that show as nothing left out; null with no dimmed text.
+ * What the note under [grounded] says ([Unbacked]), its sentences read against [evidence] and [held]
+ * (#239), those taken out ([takenOut]) and those that show as nothing left out; null with no dimmed
+ * text. Its lines by their own ids, each once, in the order they first come, not yet as *Sources*
+ * shows them ([shownAs]): *Sources* may number them anew while the reply and its evidence stay as they
+ * are (#1437), so a caller keeping this names them each time it draws the note.
  */
-internal fun unbacked(
+internal fun unbackedIds(
     grounded: GroundedText,
-    cites: NoteCites,
+    evidence: EvidenceSet?,
+    held: Set<String>?,
 ): Unbacked? {
     val shown =
         grounded.paragraphs.flatMap { paragraph ->
             paragraph.zip(shown(paragraph.map { it.text }, checked = true)).filter { (sentence, runs) ->
-                !runs.isBlank() && !takenOut(sentence, runs, cites.evidence, grounded.allowModel, cites.held)
+                !runs.isBlank() && !takenOut(sentence, runs, evidence, grounded.allowModel, held)
             }
         }
     val lines =
         shown
             .filter { (sentence, _) -> sentence.status == SentenceStatus.UNSUPPORTED }
             .flatMap { (_, runs) -> runs.filterIsInstance<ShownRun.Cite>().map { it.id } }
-            .filter { citeKind(it, cites.evidence, grounded.allowModel, cites.held) == CiteKind.LINE }
-            .mapNotNull(cites.label)
+            .filter { citeKind(it, evidence, grounded.allowModel, held) == CiteKind.LINE }
             .distinct()
     val uncited = shown.any { (sentence, _) -> sentence.status == SentenceStatus.UNCITED }
-    return if (lines.isEmpty() && !uncited) null else Unbacked(sortedIds(lines), uncited)
+    return if (lines.isEmpty() && !uncited) null else Unbacked(lines, uncited)
+}
+
+/**
+ * These lines as *Sources* shows them ([label]; one it names nothing, #1434, left out), each once,
+ * sorted ([sortedIds]); null when none is left and nothing is uncited.
+ */
+internal fun Unbacked.shownAs(label: (String) -> String?): Unbacked? {
+    val shown = lines.mapNotNull(label).distinct()
+    return if (shown.isEmpty() && !uncited) null else Unbacked(sortedIds(shown), uncited)
 }
 
 /** [ids] ("S8", "W2", "S10") in order of their letters, then their number: "S8", "S10", "W2". */

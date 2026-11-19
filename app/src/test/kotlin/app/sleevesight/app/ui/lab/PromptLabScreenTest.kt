@@ -6,7 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -28,6 +30,12 @@ import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.lab.PromptLab
 import app.sleevesight.app.ui.home.CreditRow
+import app.sleevesight.app.ui.home.HomeFixtures
+import app.sleevesight.app.ui.home.UNBACKED_LABEL
+import app.sleevesight.app.ui.home.UNBACKED_NOTE_FLASHING_TAG
+import app.sleevesight.app.ui.home.Unbacked
+import app.sleevesight.app.ui.home.UnbackedNote
+import app.sleevesight.app.ui.home.WithUnbackedNote
 import app.sleevesight.app.ui.theme.DEVELOPER_MARK_TAG
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.Secret
@@ -37,6 +45,7 @@ import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.synthesis.LabMark
@@ -99,7 +108,10 @@ class PromptLabScreenTest {
 
     private fun reply(request: CompletionRequest) = "Written from " + LabPrompts.opening(request).takeLast(TAIL)
 
-    private fun subject(card: String) = LabSubject(PromptKind.SONG, "Sundown", "Gordon Lightfoot", null, card)
+    private fun subject(
+        card: String,
+        evidence: EvidenceSet? = null,
+    ) = LabSubject(PromptKind.SONG, "Sundown", "Gordon Lightfoot", null, card, evidence)
 
     // The song's request sent through the lab, as its pipeline would.
     private fun written() =
@@ -120,9 +132,12 @@ class PromptLabScreenTest {
 
     private fun count(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size
 
+    // [parentNote]: under an insight's note focus (#1437), with its note shown (true) or none (false).
     private fun show(
         card: String = CARD,
         variant: String? = null,
+        evidence: EvidenceSet? = null,
+        parentNote: Boolean? = null,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -132,7 +147,14 @@ class PromptLabScreenTest {
                         CompositionLocalProvider(LocalPromptLab provides lab) {
                             Column(Modifier.verticalScroll(rememberScrollState())) {
                                 CreditRow("Written by Claude Haiku 5.5.", variant = variant)
-                                LabCompare(subject(card))
+                                if (parentNote == null) {
+                                    LabCompare(subject(card, evidence))
+                                } else {
+                                    WithUnbackedNote {
+                                        if (parentNote) UnbackedNote(Unbacked(lines = emptyList(), uncited = true))
+                                        LabCompare(subject(card, evidence))
+                                    }
+                                }
                                 PromptLabBlock(lab)
                             }
                         }
@@ -185,6 +207,37 @@ class PromptLabScreenTest {
             compose.waitUntil(WAIT_MS) { count(text(R.string.lab_logged)) == 1 }
             compose.onNodeWithTag(LAB_EXPORT_TAG).performScrollTo().assertIsEnabled()
             compose.onNodeWithTag(LAB_CLEAR_TAG).assertIsEnabled()
+        }
+    }
+
+    @Test
+    fun aVersionsChipsGoToNoNoteWhetherTheInsightItSitsUnderHasOneOrNot() {
+        switchOn()
+        written()
+        for (parentNote in listOf(true, false)) {
+            // Checked against the evidence, each version cites nothing: dimmed, with a `?` chip.
+            show(evidence = HomeFixtures.evidence, parentNote = parentNote) {
+                compose.onNodeWithTag(LAB_COMPARE_ACTION_TAG).performScrollTo().performClick()
+                compose.waitUntil(WAIT_MS) {
+                    compose.onAllNodesWithTag(LAB_SHOW_TAG).fetchSemanticsNodes().isNotEmpty()
+                }
+                val versions =
+                    compose
+                        .onAllNodes(
+                            hasText("Written from", substring = true) and hasAnyAncestor(hasTestTag(LAB_COMPARE_TAG)),
+                            useUnmergedTree = true,
+                        ).fetchSemanticsNodes()
+                assertEquals(3, versions.size)
+                for (version in versions) {
+                    val text = version.config[SemanticsProperties.Text].first { "Written from" in it.text }
+                    assertTrue(text.text, UNBACKED_LABEL in text.text)
+                    // Its `?` chip is no link to the insight's note, nor an action going to it.
+                    assertEquals(emptyList<Any>(), text.getLinkAnnotations(0, text.length).map { it.item })
+                    val actions = version.config.getOrNull(SemanticsActions.CustomActions).orEmpty()
+                    assertEquals(emptyList<String>(), actions.map { it.label })
+                }
+                compose.onNodeWithTag(UNBACKED_NOTE_FLASHING_TAG, useUnmergedTree = true).assertDoesNotExist()
+            }
         }
     }
 

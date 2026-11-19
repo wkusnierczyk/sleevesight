@@ -38,8 +38,10 @@ internal fun GroundingLine(
     // Shown only when there is something to say (#437): text the sources do not back, which is
     // dimmed. A sentence from the model's own knowledge is not counted: it is not dimmed, and its own
     // chip says where it is from; nor is one taken out, or one that shows as nothing (#555).
-    val unbacked = remember(grounded, cites.evidence, cites.held) { unbacked(grounded, cites) }
-    unbacked?.let { UnbackedNote(it, modifier, cites.onCite) }
+    // The lines kept by their own ids, and named as *Sources* names them now ([NoteCites.label]),
+    // which may number them anew while the reply and its evidence stay as they are.
+    val ids = remember(grounded, cites.evidence, cites.held) { unbackedIds(grounded, cites.evidence, cites.held) }
+    ids?.shownAs(cites.label)?.let { UnbackedNote(it, modifier, cites.onCite) }
     // The full counts show only in developer mode, and are marked as such (#536); the note stays (#954).
     if (details) DeveloperMark { Meta(grounded, Modifier) }
 }
