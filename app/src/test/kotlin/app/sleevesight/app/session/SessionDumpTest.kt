@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowLog
 
 @RunWith(RobolectricTestRunner::class)
 class SessionDumpTest {
@@ -54,6 +55,30 @@ class SessionDumpTest {
         assertTrue(dump, "com.spotify.kind=text:ad" in dump)
         val zero = SessionDump.describe(MediaMetadata.Builder(metadata()).putLong("com.spotify.zero", 0).build())
         assertTrue(zero, "com.spotify.zero=long:0 (or not a long)" in zero)
+    }
+
+    @Test
+    fun explicitAndDownloadStatusAreReadAsLongsWithNoCastWarning() {
+        ShadowLog.clear()
+        val dump =
+            SessionDump.describe(
+                MediaMetadata
+                    .Builder(metadata())
+                    .putLong("android.media.IS_EXPLICIT", 1)
+                    .putLong("android.media.extra.DOWNLOAD_STATUS", 2)
+                    .build(),
+            )
+        assertTrue(dump, "android.media.IS_EXPLICIT=1" in dump)
+        assertTrue(dump, "android.media.extra.DOWNLOAD_STATUS=2" in dump)
+        assertEquals(emptyList<ShadowLog.LogItem>(), ShadowLog.getLogsForTag("Bundle"))
+    }
+
+    @Test
+    fun anUnknownLongKeyIsReadWithNoCastWarning() {
+        ShadowLog.clear()
+        val dump = SessionDump.describe(MediaMetadata.Builder(metadata()).putLong("com.spotify.ad", 1).build())
+        assertTrue(dump, "com.spotify.ad=long:1" in dump)
+        assertEquals(emptyList<ShadowLog.LogItem>(), ShadowLog.getLogsForTag("Bundle"))
     }
 
     @Test

@@ -75,8 +75,9 @@ internal object SessionDump {
 
     /**
      * Every key with its value, sorted: a known key read by its type, so no getter of another type
-     * logs a warning; a key Android does not name tried as text, bitmap, rating, then long, as the
-     * framework does not tell a value's type. A bitmap as its size, a rating as itself, a long text cut.
+     * logs a warning; a key Android does not name tried as a long first (the type such keys mostly
+     * hold), then text, bitmap and rating, as the framework does not tell a value's type: each wrong
+     * guess logs a `Bundle` cast warning. A bitmap as its size, a rating as itself, a long text cut.
      */
     fun describe(metadata: MediaMetadata?): String =
         metadata?.keySet()?.sorted()?.joinToString(prefix = "{", postfix = "}") { key ->
@@ -143,8 +144,10 @@ internal object SessionDump {
     // Under logcat's limit of about 4 kB a record, for text of up to three bytes a character.
     private const val PART_LENGTH = 1000
 
-    // The framework's long, bitmap and rating keys, and the long keys only `MediaMetadataCompat`
-    // names (`BT_FOLDER_TYPE`, `ADVERTISEMENT`, `DOWNLOAD_STATUS`); every other key is read as text.
+    // The framework's long, bitmap and rating keys, the long keys only `MediaMetadataCompat` names
+    // (`BT_FOLDER_TYPE`, `ADVERTISEMENT`, `DOWNLOAD_STATUS`), and the long keys AndroidX's
+    // `MediaConstants` and `MediaDescriptionCompat` name, which players put in their metadata
+    // (`IS_EXPLICIT`, `EXTRA_DOWNLOAD_STATUS`; read as text they flooded logcat with cast warnings).
     private val LONG_KEYS =
         setOf(
             MediaMetadata.METADATA_KEY_DURATION,
@@ -155,6 +158,8 @@ internal object SessionDump {
             "android.media.metadata.BT_FOLDER_TYPE",
             "android.media.metadata.ADVERTISEMENT",
             "android.media.metadata.DOWNLOAD_STATUS",
+            "android.media.IS_EXPLICIT",
+            "android.media.extra.DOWNLOAD_STATUS",
         )
     private val BITMAP_KEYS =
         setOf(
@@ -222,12 +227,17 @@ private fun bounded(text: CharSequence): String {
     return if (cut) "$kept…" else kept
 }
 
-/** A key of a type not known here, with the type it was read as. */
+/**
+ * A key of a type not known here, with the type it was read as: a long first, as such keys mostly
+ * hold one (a flag, a status), so it is read with no cast warning; a long of 0 is also what a value of
+ * another type reads as, so then the other types are tried.
+ */
 private fun unknown(
     metadata: MediaMetadata,
     key: String,
 ): String =
-    metadata.getText(key)?.let { "text:${bounded(it)}" }
+    metadata.getLong(key).takeIf { it != 0L }?.let { "long:$it" }
+        ?: metadata.getText(key)?.let { "text:${bounded(it)}" }
         ?: metadata.getBitmap(key)?.let { "bitmap ${it.width}x${it.height}" }
         ?: metadata.getRating(key)?.let { "rating:$it" }
-        ?: metadata.getLong(key).let { if (it == 0L) "long:0 (or not a long)" else "long:$it" }
+        ?: "long:0 (or not a long)"
