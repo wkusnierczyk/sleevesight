@@ -255,9 +255,11 @@
          edition aside: "Rumours (Remastered)" is "Rumours"), its date as above: "This edition was
          released in 2004." -->
     <string name="home_dates_edition">This edition was released %1$s.</string>
-    <!-- The same, an edition under another title: its title as the player gives it (in italics), then
-         its date as above: "Thriller 25 Super Deluxe Edition was released on 8 February 2008." -->
-    <string name="home_dates_edition_named">%1$s was released %2$s.</string>
+    <!-- The same, an edition under another title: its title as the player gives it (in italics), said
+         to be an edition of the album the sentence before names ("it"), so the two do not read as
+         unrelated albums (#1432), then its date as above: "Reception, an edition of it under a new
+         title, was released on 30 January 2026." -->
+    <string name="home_dates_edition_named">%1$s, an edition of it under a new title, was released %2$s.</string>
     <!-- The same, a remaster or an edition the title names with a year later than the edition
          MusicBrainz dates: home_dates_remaster_year or home_dates_edition_year, then the edition's
          title without it (in italics), then its date as above: "This is a 2018 remaster of Actually:
