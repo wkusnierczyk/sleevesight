@@ -27,13 +27,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withLink
-import androidx.compose.ui.text.withStyle
 import app.sleevesight.app.R
 import kotlinx.coroutines.delay
 
@@ -176,28 +171,6 @@ internal fun UnbackedNote(
 private const val CHIPS_AT = "\uE000"
 
 /**
- * The `?` chip after a dimmed sentence's [before] runs (#954), kept on the line of the word or chip
- * before it ([CHIP_GLUE]: a word joiner, then a no-break space unless they end in a space), so it
- * never wraps onto a line alone. On a tap, it goes to the note under the reply ([NoteFocus.go]); with
- * no [note] to go to, it only shows.
- */
-internal fun AnnotatedString.Builder.appendUnbacked(
-    before: List<ShownRun>,
-    styles: CiteStyles,
-    note: NoteFocus?,
-) {
-    val spaced = (before.lastOrNull() as? ShownRun.Text)?.text?.lastOrNull()?.isWhitespace() == true
-    if (before.isNotEmpty()) append(if (spaced) WORD_JOINER else CHIP_GLUE)
-    val label = UNBACKED_LABEL
-    if (note == null) {
-        withStyle(styles.unbacked) { append(label) }
-    } else {
-        val link = LinkAnnotation.Clickable(UNBACKED_LINK_TAG, TextLinkStyles(styles.unbacked)) { note.go() }
-        withLink(link) { append(label) }
-    }
-}
-
-/**
  * A dimmed sentence's look (#954): upright, in the text's own colour at [DIMMED_ALPHA], nothing behind
  * or under it, so it follows the theme and dims the same on the page and in a panel.
  */
@@ -249,11 +222,3 @@ internal const val UNBACKED_LABEL: String = "\u2009?\u2009"
 /** The test tags of the note on dimmed text (#954), and of it while it flashes. */
 const val UNBACKED_NOTE_TAG: String = "unbacked-note"
 const val UNBACKED_NOTE_FLASHING_TAG: String = "unbacked-note:flashing"
-
-// No break before the `?` chip (#954): a word joiner, which holds even after a citation chip's thin
-// space, where a line may break before a no-break space; then a no-break space, the space shown.
-private const val WORD_JOINER = "\u2060"
-private const val CHIP_GLUE = "$WORD_JOINER\u00A0"
-
-/** The link tag of the `?` chip after a dimmed sentence (#954), which goes to the note under the reply. */
-const val UNBACKED_LINK_TAG: String = "unbacked"
