@@ -30,6 +30,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.SentenceStatus
 import org.junit.Assert.assertEquals
@@ -57,12 +58,13 @@ class UnsupportedCitationScreenTest {
         written("It topped the charts in 1986 [W1]. Sundown was recorded in 1973 [MB1].", support = true)
 
     private fun show(
+        written: InsightState.Written = insight,
         settings: Settings = Settings(),
         block: () -> Unit,
     ) {
         val state =
             NowPlayingState(
-                PipelineView(track(insight = insight), aiReady = true),
+                PipelineView(track(insight = written), aiReady = true),
                 sundown,
                 PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING),
                 settings = settings,
@@ -79,9 +81,9 @@ class UnsupportedCitationScreenTest {
         }
     }
 
-    private fun prose() =
+    private fun prose(start: String = "It topped the charts") =
         compose.onNode(
-            hasText("It topped the charts", substring = true) and
+            hasText(start, substring = true) and
                 SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
         )
 
@@ -123,6 +125,27 @@ class UnsupportedCitationScreenTest {
                 "It topped the charts in 1986 (W1: does not say this). Sundown was recorded in 1973 (Source MB1).",
                 said,
             )
+        }
+
+    /**
+     * Codex, PR #1453: the last sentence of a run shows its lines' chips once each, as one group at
+     * its end, before its stop; none kept where it cited them, inline or repeated.
+     */
+    @Test
+    fun itsChipsShowOnceAtItsEndNotInline() =
+        show(
+            written(
+                "It sold in 1986 [W1], then again in 1990 [W1]. Sundown was recorded in 1973 [MB1].",
+                support = true,
+            ),
+        ) {
+            val text = prose("It sold").fetchSemanticsNode().config[SemanticsProperties.Text].first()
+            val chip = { id: String -> "\u2009$id\u2009" }
+            assertEquals(
+                "It sold in 1986, then again in 1990 ${chip("W1")}. Sundown was recorded in 1973 ${chip("MB1")}.",
+                text.text,
+            )
+            assertEquals(listOf("W1"), text.getStringAnnotations(OUTLINE_TAG, 0, text.length).map { it.item })
         }
 
     @Test
@@ -174,7 +197,7 @@ class UnsupportedCitationScreenTest {
 
     @Test
     fun theDeveloperCountsSayUnsupported() =
-        show(Settings(developerMode = true, showGroundingDetails = true)) {
+        show(settings = Settings(developerMode = true, showGroundingDetails = true)) {
             val grounded = app.resources.getQuantityString(R.plurals.home_meta_grounded, 2, 1, 2)
             val unsupported = app.getString(R.string.home_meta_unsupported, 1, "W1")
             assertEquals("1 of 2 sentences grounded · 1 unsupported (W1)", "$grounded · $unsupported")

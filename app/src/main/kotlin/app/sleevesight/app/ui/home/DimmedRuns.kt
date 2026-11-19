@@ -122,12 +122,7 @@ internal fun unbackedIds(
     evidence: EvidenceSet?,
     held: Set<String>?,
 ): Unbacked? {
-    val shown =
-        grounded.paragraphs.flatMap { paragraph ->
-            paragraph.zip(shown(paragraph.map { it.text }, checked = true)).filter { (sentence, runs) ->
-                !runs.isBlank() && !takenOut(sentence, runs, evidence, grounded.allowModel, held)
-            }
-        }
+    val shown = shownSentences(grounded, evidence, held)
     val lines =
         shown
             .filter { (sentence, _) -> sentence.status == SentenceStatus.UNSUPPORTED }

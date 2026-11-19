@@ -198,6 +198,21 @@ internal fun unbackedAt(runs: List<ShownRun>): Pair<List<ShownRun>, List<ShownRu
 }
 
 /**
+ * [runs] of the last sentence of a run of dimmed ones citing lines that do not back them (#1437):
+ * its citations taken out where they were ([withoutChips]), inline or repeated, and shown once each,
+ * in the order they first come, as one group at its end, before its final punctuation, where the `?`
+ * chip goes ([unbackedAt]).
+ */
+internal fun chipsAtEnd(runs: List<ShownRun>): List<ShownRun> {
+    val chips = runs.filterIsInstance<ShownRun.Cite>().distinct()
+    if (chips.isEmpty()) return runs
+    val (before, after) = unbackedAt(withoutChips(runs))
+    val last = (before.lastOrNull() as? ShownRun.Text)?.text
+    val gap = listOfNotNull(ShownRun.Text(" ").takeIf { last != null && last.lastOrNull()?.isWhitespace() != true })
+    return before + gap + chips + after
+}
+
+/**
  * What a screen reader says of a checked sentence that cites nothing, the last of its run, whose `?`
  * chip it hears (#954, #1437): [words] with "(not cited)" before its final punctuation, where a
  * citation would be: "It is great (not cited)." A closing quote keeps it out of the quotation:

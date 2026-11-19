@@ -41,4 +41,29 @@ class DimmedRunsTest {
         val mid = listOf(ShownRun.Text("It sold "), ShownRun.Cite("S2"), ShownRun.Text(" well."))
         assertEquals(listOf(ShownRun.Text("It sold"), ShownRun.Text(" well.")), withoutChips(mid))
     }
+
+    /** Codex, PR #1453: inline and repeated citations show once each, as one group before the stop. */
+    @Test
+    fun aRunsLastSentenceShowsItsChipsOnceAsOneGroupBeforeItsStop() {
+        val runs =
+            listOf(
+                ShownRun.Text("It sold "),
+                ShownRun.Cite("W2"),
+                ShownRun.Text(" in 1986, then again in 1990 "),
+                ShownRun.Cite("S1"),
+                ShownRun.Cite("W2"),
+                ShownRun.Text("."),
+            )
+        assertEquals(
+            listOf(
+                ShownRun.Text("It sold"),
+                ShownRun.Text(" in 1986, then again in 1990"),
+                ShownRun.Text(" "),
+                ShownRun.Cite("W2"),
+                ShownRun.Cite("S1"),
+                ShownRun.Text("."),
+            ),
+            chipsAtEnd(runs),
+        )
+    }
 }

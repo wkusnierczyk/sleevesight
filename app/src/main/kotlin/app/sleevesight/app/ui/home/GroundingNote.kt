@@ -12,6 +12,7 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.synthesis.CheckedSentence
 import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 
@@ -93,7 +94,8 @@ internal fun TranslatedLine(
 /**
  * The citations of [grounded] that point at a line of [evidence] found in another language (#902),
  * by its language's code, each language and each citation in the order they first come; a citation
- * outside [held], when given, is no line's ([citeKind]).
+ * outside [held], when given, is no line's ([citeKind]). Only the sentences shown cite
+ * ([shownSentences]): one taken out (#1437) names no line here, though the counts still count it.
  */
 internal fun translatedCites(
     grounded: GroundedText,
@@ -101,15 +103,30 @@ internal fun translatedCites(
     held: Set<String>? = null,
 ): List<Pair<String, List<String>>> {
     if (evidence == null) return emptyList()
-    return grounded.paragraphs
-        .flatten()
-        .flatMap { it.cites }
+    return shownSentences(grounded, evidence, held)
+        .flatMap { (sentence, _) -> sentence.cites }
         .distinct()
         .mapNotNull { id ->
             evidence[id]?.takeIf { held == null || id in held }?.language?.let { it to id }
         }.groupBy({ it.first }, { it.second })
         .toList()
 }
+
+/**
+ * The sentences of [grounded] that show, with their runs, read against [evidence] and [held] (#239),
+ * as [CheckedProse] shows them: those taken out ([takenOut], #1437) and those that show as nothing
+ * left out. The note on dimmed text and the one on what was translated name only these.
+ */
+internal fun shownSentences(
+    grounded: GroundedText,
+    evidence: EvidenceSet?,
+    held: Set<String>?,
+): List<Pair<CheckedSentence, List<ShownRun>>> =
+    grounded.paragraphs.flatMap { paragraph ->
+        paragraph.zip(shown(paragraph.map { it.text }, checked = true)).filter { (sentence, runs) ->
+            !runs.isBlank() && !takenOut(sentence, runs, evidence, grounded.allowModel, held)
+        }
+    }
 
 /** The test tag of the line on what an insight translated (#902), before the language's code. */
 const val TRANSLATED_PREFIX: String = "translated:"

@@ -53,9 +53,9 @@ private class ToNote(
     val uncited: Boolean,
 )
 
-// A checked paragraph's sentences as shown ([shown]: each with its runs, those of a dimmed one with its
-// chips only at its run's end, #1437, and whether it starts a line), which end with their run's mark
-// ([marked]), and how its citations read and show ([policy], [styles]).
+// A checked paragraph's sentences as shown ([shown]: each with its runs, those of a dimmed one with
+// its chips only at its run's end, once each before its stop, #1437, and whether it starts a line),
+// which end with their run's mark ([marked]), and how its citations read and show ([policy], [styles]).
 private class Marked(
     val shown: List<Triple<CheckedSentence, List<ShownRun>, Boolean>>,
     val marked: List<Boolean>,
@@ -114,18 +114,16 @@ internal fun CheckedProse(
         }
     if (shown.isEmpty()) return
     // The sentences that end with their run's mark (#1437): its `?` chip, or its outlined chips; a
-    // dimmed one's chips show only at its run's end.
+    // dimmed one's chips show only at its run's end, once each, as one group before its stop.
     val ends = runEnds(shown.map { (sentence, _, _) -> backing(sentence) })
     val marked =
         Marked(
             shown.mapIndexed { i, (sentence, runs, newLine) ->
                 val shownRuns =
-                    if (sentence.status == SentenceStatus.UNSUPPORTED &&
-                        !ends[i]
-                    ) {
-                        withoutChips(runs)
-                    } else {
-                        runs
+                    when {
+                        sentence.status != SentenceStatus.UNSUPPORTED -> runs
+                        ends[i] -> chipsAtEnd(runs)
+                        else -> withoutChips(runs)
                     }
                 Triple(sentence, shownRuns, newLine)
             },
