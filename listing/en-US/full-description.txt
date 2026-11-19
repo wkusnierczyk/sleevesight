@@ -3,7 +3,7 @@ Sleevesight shows short insights about the music you are playing on your phone: 
 HOW IT WORKS
 • Track. Sleevesight follows what your music player is playing, through the player's Android media session. It reads the title, artists, album, cover and playback state, and the queue up next. It never touches the audio.
 • Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia and Wikidata, Last.fm, LRCLIB and Exa web search, and, when needed, Wikipedia and the web in a track's language. A match that fails an identity check is never used.
-• Tell. Your AI service turns what the sources found into a few sentences, each citing its evidence. The app then checks its citations: a sentence without a source, or citing evidence that does not exist, is flagged. With the AI model's own knowledge on (off by default), the model may add what it knows, marked unverified.
+• Tell. Your AI service turns what the sources found into a few sentences, each citing its evidence. The app dims a sentence the sources do not back, with a note saying so. With the AI model's own knowledge on (off by default), it may add what it knows, marked unverified.
 
 ON SCREEN
 • The cover, title, artists, album and year of first release, in colors taken from the cover.
