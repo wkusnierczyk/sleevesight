@@ -16,7 +16,29 @@ import java.util.Locale
 internal class Passages(
     val kept: List<WebPage>,
     val repeated: List<Repeated>,
-)
+) {
+    /**
+     * Of [pages], those `withPages` lists, in their order: each passage [kept] (#1434), at an address
+     * a line has already too (#1435), and each of [bare], those without a passage, at an address no
+     * web line ([web], their addresses) has (#1205), nor a passage [kept] (#1435), nor an earlier of
+     * [bare], as `sameAddress` reads them: a page the list and a reason's search both found, one with
+     * a trailing slash, one an address alone (a list kept before passages were) and one a passage, is
+     * one line.
+     */
+    fun listed(
+        pages: List<WebPage>,
+        bare: List<WebPage>,
+        web: List<String>,
+    ): List<WebPage> {
+        val taken = web + kept.map { it.url }
+        return pages
+            .filter { page -> kept.any { it === page } || (page in bare && taken.none { sameAddress(it, page.url) }) }
+            .fold(listOf()) { shown, page ->
+                val again = page in bare && shown.any { it in bare && sameAddress(it.url, page.url) }
+                if (again || shown.any { it === page }) shown else shown + page
+            }
+    }
+}
 
 /**
  * A page left out as a repeat (#1434), [page], and what holds its passage: a line already listed,
@@ -70,6 +92,8 @@ internal fun passageKey(text: String): String = words(text).joinToString(" ")
  * (#1434): a page whose passage, case, punctuation and spaces aside ([repeats]), one of [listed]
  * (the lines already shown) holds whole, or a longer page of [pages] does (iHeart's page, AllMusic's
  * biography again, as a fragment of it). The longer page is the one kept; of two alike, the first.
+ * What it is left out for (#1435): a line at its own address, else a page kept at its own address,
+ * else the first line that holds it, else the first page.
  * Only the whole passage counts: one a word apart ("not", another year) is kept. The pages kept stay
  * in their order.
  */
@@ -80,13 +104,17 @@ internal fun withoutRepeats(
     val kept = mutableListOf<WebPage>()
     val repeated = mutableListOf<Repeated>()
     pages.sortedByDescending { words(it.text).size }.forEach { page ->
-        val line = listed.firstOrNull { repeats(page.text, it.text) }
-        val within = kept.firstOrNull { repeats(page.text, it.text) }
-        when {
-            line != null -> repeated += Repeated(page, line = line.id)
-            within != null -> repeated += Repeated(page, within = within)
-            else -> kept += page
-        }
+        // Who holds [page]'s passage whole, by one rule (#1435): the lines listed, then the pages kept
+        // (longer, read first), each as it would be held, with its address; of them, the first at the
+        // page's own address (`sameAddress`), else the first. So a line at its own address, else a page
+        // kept there, else the first line, else the first page kept: a passage Last.fm's line and
+        // Spotify's page of the same batch both hold is Spotify's, so its chip opens the cited page.
+        val holders =
+            listed.filter { repeats(page.text, it.text) }.map { Repeated(page, line = it.id) to it.url } +
+                kept.filter { repeats(page.text, it.text) }.map { Repeated(page, within = it) to it.url }
+        val holder =
+            holders.firstOrNull { (_, url) -> url?.let { sameAddress(it, page.url) } == true } ?: holders.firstOrNull()
+        if (holder == null) kept += page else repeated += holder.first
     }
     return Passages(pages.filter { page -> kept.any { it === page } }, repeated)
 }
