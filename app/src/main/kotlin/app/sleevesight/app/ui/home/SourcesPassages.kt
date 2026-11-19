@@ -92,8 +92,8 @@ internal fun passageKey(text: String): String = words(text).joinToString(" ")
  * (#1434): a page whose passage, case, punctuation and spaces aside ([repeats]), one of [listed]
  * (the lines already shown) holds whole, or a longer page of [pages] does (iHeart's page, AllMusic's
  * biography again, as a fragment of it). The longer page is the one kept; of two alike, the first.
- * Of the lines, or the pages, that hold it, one at its own address is the one it is left out for
- * (#1435), else the first.
+ * What it is left out for (#1435): a line at its own address, else a page kept at its own address,
+ * else the first line that holds it, else the first page.
  * Only the whole passage counts: one a word apart ("not", another year) is kept. The pages kept stay
  * in their order.
  */
@@ -103,28 +103,18 @@ internal fun withoutRepeats(
 ): Passages {
     val kept = mutableListOf<WebPage>()
     val repeated = mutableListOf<Repeated>()
-
-    // The first of [holders] that holds [page]'s passage whole, one at its own address (`sameAddress`)
-    // before any other (#1435): a passage Spotify's line and another source's both hold is Spotify's,
-    // so its chip opens the cited page.
-    fun <T> holder(
-        page: WebPage,
-        holders: List<T>,
-        url: (T) -> String?,
-        text: (T) -> String,
-    ): T? {
-        val holding = holders.filter { repeats(page.text, text(it)) }
-        return holding.firstOrNull { held -> url(held)?.let { sameAddress(it, page.url) } == true }
-            ?: holding.firstOrNull()
-    }
     pages.sortedByDescending { words(it.text).size }.forEach { page ->
-        val line = holder(page, listed, EvidenceLine::url, EvidenceLine::text)
-        val within = holder(page, kept, WebPage::url, WebPage::text)
-        when {
-            line != null -> repeated += Repeated(page, line = line.id)
-            within != null -> repeated += Repeated(page, within = within)
-            else -> kept += page
-        }
+        // Who holds [page]'s passage whole, by one rule (#1435): the lines listed, then the pages kept
+        // (longer, read first), each as it would be held, with its address; of them, the first at the
+        // page's own address (`sameAddress`), else the first. So a line at its own address, else a page
+        // kept there, else the first line, else the first page kept: a passage Last.fm's line and
+        // Spotify's page of the same batch both hold is Spotify's, so its chip opens the cited page.
+        val holders =
+            listed.filter { repeats(page.text, it.text) }.map { Repeated(page, line = it.id) to it.url } +
+                kept.filter { repeats(page.text, it.text) }.map { Repeated(page, within = it) to it.url }
+        val holder =
+            holders.firstOrNull { (_, url) -> url?.let { sameAddress(it, page.url) } == true } ?: holders.firstOrNull()
+        if (holder == null) kept += page else repeated += holder.first
     }
     return Passages(pages.filter { page -> kept.any { it === page } }, repeated)
 }

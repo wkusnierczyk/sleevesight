@@ -118,6 +118,28 @@ class SourcesCitedPassageTest {
     }
 
     @Test
+    fun aPassageAnotherLineAndAPageOfTheBatchAtItsOwnAddressBothHoldIsThatPagesLine() {
+        // Last.fm's line, or a web line at another address, holds the short passage, and so does the
+        // longer Spotify page of the same batch, listed as a new line: the passage is Spotify's line.
+        val others =
+            listOf(
+                EvidenceDraft(SourceId.LASTFM, Scope.SONG, song, null, at),
+                EvidenceDraft(SourceId.WEB, Scope.WEB, "Out now: $song", "https://example.org/turn", at),
+            )
+        others.forEach { other ->
+            val lines = SourcesLines(EvidenceSet.of(listOf(other), JvmHasher))
+            val pages = listOf(WebPage(spotify, null, play), WebPage(spotify, null, song))
+            val listed = withPages(lines, pages, LinePurpose.GENRES, passages = true)
+            val shown = listed.evidence!!.lines
+            assertEquals(2, shown.size)
+            val spotifys = shown.single { it.url == spotify }.id
+            assertEquals(mapOf(MovedPage(spotify, passageKey(song)) to spotifys), listed.moved)
+            assertEquals(spotifys, webLineOf(spotify, listed.evidence, listed.moved, song))
+            assertEquals(spotifys, shownLine("S2", reason(spotify, song), listed.evidence, listed.moved))
+        }
+    }
+
+    @Test
     fun aPassageTwoPagesOfTheBatchHoldIsHeldByThePageAtItsOwnAddress() {
         val other = WebPage("https://example.org/turn", null, "Listen: $song Out now on Secretly Canadian, on vinyl.")
         val part = WebPage(spotify, null, song)

@@ -80,13 +80,13 @@ internal fun SourcesLines.what(line: EvidenceLine): String =
 
 /**
  * [lines] with [pages] as web lines after them, each named [purpose] (#1205), numbered on from the
- * web lines they have (`S7` after `S6`); a page whose address a web line has already (`sameAddress`)
- * is that line, not listed twice, and keeps its own name. The song's explanation (#1067,
- * [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources (its Wikipedia
- * article): a page any line has the address of is that line ([lineOf]). With [passages], the pages'
- * texts being passages of them (#1434), a page whose passage a line already listed, or a longer page
- * of [pages], holds whole is left out ([withoutRepeats]), its address and passage kept in
- * [SourcesLines.moved] with that line's id, a line at its own address before any other (#1435); any
+ * web lines they have (`S7` after `S6`); a page without a passage whose address a web line has
+ * already (`sameAddress`) is that line, not listed twice, and keeps its own name. The song's
+ * explanation (#1067, [LinePurpose.EXPLANATION]) also cites the track's own pages of other sources
+ * (its Wikipedia article): a page any line has the address of is that line ([lineOf]). With
+ * [passages], the pages' texts being passages of them (#1434), a page whose passage a line already
+ * listed, or a longer page of [pages], holds whole is left out ([withoutRepeats], which picks the
+ * holder, #1435), its address and passage kept in [SourcesLines.moved] with that line's id; any
  * other passage is listed as a line of its own, at an address a line has already too (#1435), so a
  * citation of it lands on the words it cites, never on another passage of its page ([webLineOf]);
  * each passage shows whole, one cut mid-sentence after "…" ([shownPassage]). A page whose text is
