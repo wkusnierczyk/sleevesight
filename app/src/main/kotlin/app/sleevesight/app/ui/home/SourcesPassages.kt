@@ -16,7 +16,25 @@ import java.util.Locale
 internal class Passages(
     val kept: List<WebPage>,
     val repeated: List<Repeated>,
-)
+) {
+    /**
+     * Of [pages], those `withPages` lists, in their order: each passage [kept] (#1434), at an address
+     * a line has already too (#1435), and each of [bare], those without a passage, at an address no
+     * web line ([web], their addresses) has (#1205) nor an earlier of [bare], as `sameAddress` reads
+     * them: a page the list and a reason's search both found, one with a trailing slash, is one line.
+     */
+    fun listed(
+        pages: List<WebPage>,
+        bare: List<WebPage>,
+        web: List<String>,
+    ): List<WebPage> =
+        pages
+            .filter { page -> kept.any { it === page } || (page in bare && web.none { sameAddress(it, page.url) }) }
+            .fold(listOf()) { shown, page ->
+                val again = page in bare && shown.any { it in bare && sameAddress(it.url, page.url) }
+                if (again || shown.any { it === page }) shown else shown + page
+            }
+}
 
 /**
  * A page left out as a repeat (#1434), [page], and what holds its passage: a line already listed,
