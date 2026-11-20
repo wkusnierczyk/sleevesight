@@ -20,6 +20,7 @@ For each new output or piece of state this adds, what should the user see after 
 - Leaving and coming back: back navigation, Credits, Diagnostics, the app closed in the background
 - Offline and back online; a provider failing or changing its answer
 - Unexpected input: ads, podcasts, non-music, missing track details, a wrong page from a search
+
 Write "does not apply" against a line only with the reason.
 
 **Alternatives**
