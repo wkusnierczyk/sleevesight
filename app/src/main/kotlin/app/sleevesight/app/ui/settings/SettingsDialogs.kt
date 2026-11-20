@@ -60,7 +60,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.launch
 
-private val DIALOG_LIST_HEIGHT = 360.dp
+internal val DIALOG_LIST_HEIGHT = 360.dp
 
 /** Picks one of a setting's values; choosing one saves it and closes the dialog. */
 @Composable

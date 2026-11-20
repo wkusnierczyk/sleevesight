@@ -66,6 +66,10 @@ import kotlin.time.Duration.Companion.seconds
  *   insight's prompt leaves out the artist-level lines another insight of the listening session
  *   cited, and all of them for a track with enough lines of its own (#239, `PromptEvidence`); off,
  *   every insight is written from all its evidence, as before #239.
+ * @property readAloudVoice *Voice* (#787): the voice that reads insights aloud, one of the voices the
+ *   phone's text-to-speech engine has for English, chosen in place of the engine's own default.
+ *   Null, the default, is *The phone's choice*: the engine's default, as before #787. See
+ *   [ReadAloudVoice].
  * @property readAloudMusic *Music while reading aloud* (#325): what happens to the music playing while an
  *   insight is read aloud: lowered under the voice (the default, so the music is not interrupted),
  *   or paused and resumed after it. See [ReadAloudMusic].
@@ -241,6 +245,7 @@ data class Settings(
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
     val artistFactsOncePerSession: Boolean = true,
+    val readAloudVoice: ReadAloudVoice? = null,
     val readAloudMusic: ReadAloudMusic = ReadAloudMusic.LOWER,
     val readTrackLineFirst: Boolean = false,
     val readNewInsightsAloud: Boolean = false,
@@ -932,6 +937,17 @@ enum class WriteAutomatically {
     WHEN_I_SKIP,
     NEVER,
 }
+
+/**
+ * A voice chosen for *Read aloud* (#787): [id], the voice as the app finds it among the engine's
+ * voices (the engine's name for it, without the `-local` or `-network` that tells its phone and
+ * server versions apart, which are one choice), and [name], what the app called it when it was
+ * chosen ("Voice 2 (United Kingdom)"), said in the note when the engine no longer has it.
+ */
+data class ReadAloudVoice(
+    val id: String,
+    val name: String,
+)
 
 /**
  * *Music while reading aloud* (#325): what happens to the music playing while an insight is read aloud,

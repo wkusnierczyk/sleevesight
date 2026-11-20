@@ -45,6 +45,7 @@ import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.settings.saving
+import app.sleevesight.app.speech.ReadAloudVoices
 import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.CameraQrScanner
@@ -99,6 +100,8 @@ import kotlinx.coroutines.launch
  * mode as any setting.
  * [openRouter] runs the sign-in with OpenRouter under *AI services* (#1157), and says whether
  * OpenRouter refused the key saved since; null for neither (tests).
+ * [readAloudVoices] gives *Voice* under *Read aloud* (#787) the text-to-speech engine's voices and
+ * reads its samples; null for none (tests), the row then showing the voice stored.
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -119,6 +122,7 @@ fun SettingsScreen(
     landOn: SettingsTarget? = null,
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     openRouter: OpenRouterAccess? = null,
+    readAloudVoices: ReadAloudVoices? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -189,6 +193,7 @@ fun SettingsScreen(
                     CompositionLocalProvider(
                         LocalHistoryLifetime provides historyLifetime,
                         LocalOpenRouterSignIn provides signIn,
+                        LocalReadAloudVoices provides readAloudVoices,
                     ) {
                         SettingsContent(current, keys, navigation, unavailable, landOn, jump, { jump = null }, update) {
                             dialog = it
