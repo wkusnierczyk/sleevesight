@@ -45,8 +45,12 @@ interface Speech {
     /** The open engine's voices (#787); none before it has opened. */
     fun voices(): List<EngineVoice> = emptyList()
 
-    /** The engine's name of its default voice, the phone's choice (#787); null before it has opened. */
-    fun defaultVoice(): String? = null
+    /**
+     * The engine's name of the voice it reads [locale] in when none is chosen, the phone's choice
+     * (#787): its default for that language, which may differ from its default voice, that of the
+     * engine's own default language; null before it has opened.
+     */
+    fun defaultVoice(locale: Locale): String? = null
 }
 
 /**
@@ -66,8 +70,8 @@ interface SpeechEngine {
     /** `TextToSpeech.getVoices`, as [EngineVoice]s (#787); none where the engine lists none. */
     fun voices(): List<EngineVoice> = emptyList()
 
-    /** `TextToSpeech.getDefaultVoice`'s name (#787), if any. */
-    fun defaultVoice(): String? = null
+    /** `TextToSpeech.getVoice`'s name (#787): the voice set now, by [setLanguage] or [setVoice], if any. */
+    fun currentVoice(): String? = null
 
     /** `TextToSpeech.setVoice` with the voice the engine calls [name] (#787): whether it was set. */
     fun setVoice(name: String): Boolean = false
@@ -120,7 +124,7 @@ private class AndroidSpeechEngine(
             )
         }
 
-    override fun defaultVoice(): String? = runCatching { tts.defaultVoice?.name }.getOrNull()
+    override fun currentVoice(): String? = runCatching { tts.voice?.name }.getOrNull()
 
     override fun setVoice(name: String): Boolean {
         val voice = engineVoices.firstOrNull { it.name == name } ?: return false
@@ -263,7 +267,12 @@ class SystemSpeech(
 
     override fun voices(): List<EngineVoice> = engine?.takeIf { opened }?.voices().orEmpty()
 
-    override fun defaultVoice(): String? = engine?.takeIf { opened }?.defaultVoice()
+    // The language set, as a reading in it sets it, and the voice that brings, read back.
+    override fun defaultVoice(locale: Locale): String? =
+        engine?.takeIf { opened }?.let {
+            it.setLanguage(locale)
+            it.currentVoice()
+        }
 
     override fun close() {
         stop()

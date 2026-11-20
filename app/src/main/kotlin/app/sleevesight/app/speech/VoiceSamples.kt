@@ -2,6 +2,7 @@ package app.sleevesight.app.speech
 
 import app.sleevesight.core.settings.ReadAloudMusic
 import kotlinx.coroutines.flow.Flow
+import java.util.Locale
 
 /** What *Voice*'s row (#787) has read of the phone's text-to-speech engine. */
 sealed interface VoicesLoad {
@@ -11,7 +12,10 @@ sealed interface VoicesLoad {
     /** The phone has no engine, or it failed to start. */
     data object NoEngine : VoicesLoad
 
-    /** The engine's [voices], and the name of its default voice, the phone's choice, if it says. */
+    /**
+     * The engine's [voices], and the name of the voice it reads the readings' language in when none
+     * is chosen, the phone's choice ([default]), if it says.
+     */
     data class Loaded(
         val voices: List<EngineVoice>,
         val default: String?,
@@ -51,7 +55,9 @@ interface ReadAloudVoices {
 /**
  * [ReadAloudVoices] through an engine of its own ([speechOf], given the voice to read in), the
  * music lowered under a sample as under a reading ([focus]); [before] stops a reading under way
- * ([ReadAloud]), so a sample is not read over it. A sample's voice is chosen as a reading's is
+ * ([ReadAloud]), so a sample is not read over it; a reading that starts stops a sample in turn
+ * ([stopSample], [ReadAloud]'s `before`), one waiting for its engine too. Read in [locale], the
+ * readings' language, whose default voice is the phone's choice. A sample's voice is chosen as a reading's is
  * ([SystemSpeech]): a voice gone, or one with a server version only while offline, reads as the
  * phone's choice.
  */
@@ -60,6 +66,7 @@ class SystemReadAloudVoices(
     private val focus: MusicFocus,
     override val online: Flow<Boolean>,
     private val before: () -> Unit = {},
+    private val locale: () -> Locale = ::insightLocale,
 ) : ReadAloudVoices {
     private var sampled: String? = null
     private val speech = speechOf { sampled }
@@ -70,7 +77,10 @@ class SystemReadAloudVoices(
 
     override fun load(loaded: (VoicesLoad) -> Unit) =
         speech.open { opened ->
-            loaded(if (opened) VoicesLoad.Loaded(speech.voices(), speech.defaultVoice()) else VoicesLoad.NoEngine)
+            // The phone's choice as a reading meets it: the default for the readings' language.
+            loaded(
+                if (opened) VoicesLoad.Loaded(speech.voices(), speech.defaultVoice(locale())) else VoicesLoad.NoEngine,
+            )
         }
 
     override fun sample(
@@ -88,7 +98,7 @@ class SystemReadAloudVoices(
             if (!opened || !take()) return@open finish()
             speech.speak(
                 listOf(text),
-                insightLocale(),
+                locale(),
                 done = { if (this.ended === ended) finish() },
                 failed = { if (this.ended === ended) finish() },
             )

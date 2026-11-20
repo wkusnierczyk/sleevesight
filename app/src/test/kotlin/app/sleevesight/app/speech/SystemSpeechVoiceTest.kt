@@ -33,13 +33,17 @@ class SystemSpeechVoiceTest {
 
         override fun isLanguageAvailable(locale: Locale): Int = TextToSpeech.LANG_AVAILABLE
 
+        // The engine's default language is American English: its voice is set until a language is.
+        var current: String? = "en-us-x-sfg-local"
+
         override fun setLanguage(locale: Locale) {
             set += "language ${locale.toLanguageTag()}"
+            current = DEFAULTS[locale.toLanguageTag()]
         }
 
         override fun voices(): List<EngineVoice> = voices
 
-        override fun defaultVoice(): String = "en-gb-x-gbb-local"
+        override fun currentVoice(): String? = current
 
         override fun setVoice(name: String): Boolean {
             set += "voice $name"
@@ -125,9 +129,23 @@ class SystemSpeechVoiceTest {
     }
 
     @Test
-    fun theOpenEnginesVoicesAndDefaultAreListed() {
+    fun theOpenEnginesVoicesAreListed() {
         read()
         assertEquals(voices, speech.voices())
-        assertEquals("en-gb-x-gbb-local", speech.defaultVoice())
+    }
+
+    @Test
+    fun thePhonesChoiceIsTheDefaultForTheReadingsLanguageNotTheEnginesDefaultLanguage() {
+        speech.open { }
+        engine.onInit(TextToSpeech.SUCCESS)
+        shadowOf(Looper.getMainLooper()).idle()
+        // The engine set to American English, the phone (and so the readings) to British English.
+        assertEquals("en-us-x-sfg-local", engine.currentVoice())
+        assertEquals("en-gb-x-gbb-local", speech.defaultVoice(gb))
+    }
+
+    private companion object {
+        // The voice each language brings when set, as Google's engine has them.
+        val DEFAULTS = mapOf("en-GB" to "en-gb-x-gbb-local", "en-US" to "en-us-x-sfg-local")
     }
 }

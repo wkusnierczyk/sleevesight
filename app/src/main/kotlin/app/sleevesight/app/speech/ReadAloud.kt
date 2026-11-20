@@ -88,6 +88,9 @@ enum class ReadAloudProblem {
  * then the sentences as the card shows them ([spokenSentences]), in the insight's language
  * ([insightLocale]). A problem (no engine, no voice for the language, no audio focus, the engine
  * failing) is told ([tell]), never read past. Called on the main thread.
+ *
+ * [before] runs as each reading starts, before the engine opens: it stops a sample of *Voice*
+ * (#787) being read, or waiting for its engine, so the two are never heard together.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // Its seams each a parameter; one set of rules.
 class ReadAloud(
@@ -98,6 +101,7 @@ class ReadAloud(
     private val screenReader: () -> Boolean,
     private val tell: (ReadAloudProblem, Locale) -> Unit,
     private val scope: CoroutineScope,
+    private val before: () -> Unit = {},
     private val locale: () -> Locale = ::insightLocale,
 ) {
     private val readingState = MutableStateFlow<Reading?>(null)
@@ -208,6 +212,7 @@ class ReadAloud(
     /** Starts [reading], in place of the one under way. */
     fun read(reading: Reading) {
         if (reading.parts.isEmpty()) return stop()
+        before()
         // One under way is replaced, its focus kept: the music does not come up between the two.
         if (readingState.value != null) speech.stop()
         stopWatching()

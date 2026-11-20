@@ -80,6 +80,7 @@ import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.speech.MusicFocus
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.ReadAloudMessages
 import app.sleevesight.app.speech.ReadAloudMusicFocus
@@ -867,12 +868,7 @@ class AppGraph internal constructor(
                     voice = { latestSettings.value?.readAloudVoice?.id },
                     online = { appContext.getSystemService(ConnectivityManager::class.java).onlineNow() },
                 ),
-            // Music on another device (Spotify Connect) held through its session (#803), a followed
-            // player's only, as the settings now say.
-            focus =
-                ReadAloudMusicFocus(SystemMusicFocus(appContext)) {
-                    SystemRemoteMusic(appContext) { (latestSettings.value ?: Settings()).follows(it) }.playing()
-                },
+            focus = readAloudFocus(),
             settings = latestSettings,
             words =
                 SpokenWords(appContext.getString(R.string.read_aloud_unverified)) { title, artists ->
@@ -882,7 +878,20 @@ class AppGraph internal constructor(
             tell = ReadAloudMessages(appContext)::tell,
             // A genre's reason followed while it is read, on the main thread, as long as the process.
             scope = mainScope,
+            // A sample of *Voice* (#787), read or waiting for its engine, stops as a reading starts.
+            before = { readAloudVoices.stopSample() },
         )
+    }
+
+    /**
+     * The music while the app speaks (#325): its audio focus, and music on another device (Spotify
+     * Connect) held through its session (#803), a followed player's only, as the settings now say.
+     * One for the readings, and one for *Voice*'s samples (#787), which hold it the same way.
+     */
+    private val readAloudFocus: () -> MusicFocus = {
+        ReadAloudMusicFocus(SystemMusicFocus(appContext)) {
+            SystemRemoteMusic(appContext) { (latestSettings.value ?: Settings()).follows(it) }.playing()
+        }
     }
 
     /**
@@ -893,7 +902,7 @@ class AppGraph internal constructor(
         val connectivity = appContext.getSystemService(ConnectivityManager::class.java)
         SystemReadAloudVoices(
             speechOf = { voice -> SystemSpeech(appContext, voice = voice, online = { connectivity.onlineNow() }) },
-            focus = SystemMusicFocus(appContext),
+            focus = readAloudFocus(),
             online = connectivity.online(),
             before = { readAloud.stop() },
         )

@@ -32,6 +32,8 @@ class ReadAloudVoicesTest {
                 voicesAtSpeak += voiceOf()
                 speech.speak(parts, locale, done, failed)
             }
+
+            override fun defaultVoice(locale: java.util.Locale): String = "default for ${locale.toLanguageTag()}"
         }
 
     private val voices =
@@ -43,7 +45,7 @@ class ReadAloudVoicesTest {
             focus = focus,
             online = flowOf(true),
             before = { readingsStopped++ },
-        )
+        ) { java.util.Locale.UK }
 
     private var ends = 0
 
@@ -124,6 +126,46 @@ class ReadAloudVoicesTest {
         voices.load { told += it }
         speech.opens = false
         voices.load { told += it }
-        assertEquals(listOf(VoicesLoad.Loaded(emptyList(), null), VoicesLoad.NoEngine), told)
+        // The phone's choice as the readings' language has it, not the engine's default language.
+        assertEquals(listOf(VoicesLoad.Loaded(emptyList(), "default for en-GB"), VoicesLoad.NoEngine), told)
+    }
+
+    // Samples through the readings' music focus (#803): music on another device whose volume the
+    // phone cannot set is paused under a sample and played again however it ends.
+    private val remote = FakeRemoteMusic()
+    private val held = FakeFocus()
+    private val remoteVoices =
+        SystemReadAloudVoices(
+            speechOf = { recording },
+            focus = ReadAloudMusicFocus(held) { remote },
+            online = flowOf(true),
+        )
+
+    private fun remoteSample() = remoteVoices.sample("v", "line") { ends++ }
+
+    @Test
+    fun musicOnAnotherDeviceIsPausedUnderASampleAndPlayedAgainAtItsEnd() {
+        remoteSample()
+        assertEquals(listOf("pause"), remote.asked)
+        speech.finish()
+        assertEquals(listOf("pause", "play"), remote.asked)
+        assertFalse(held.held)
+    }
+
+    @Test
+    fun musicOnAnotherDeviceIsPlayedAgainWhenTheSampleIsStopped() {
+        remoteSample()
+        remoteVoices.stopSample()
+        assertEquals(listOf("pause", "play"), remote.asked)
+        assertFalse(held.held)
+    }
+
+    @Test
+    fun musicOnAnotherDeviceIsPlayedAgainOnLeavingSettings() {
+        remoteSample()
+        // Settings left: the row's engine is closed.
+        remoteVoices.close()
+        assertEquals(listOf("pause", "play"), remote.asked)
+        assertFalse(held.held)
     }
 }
