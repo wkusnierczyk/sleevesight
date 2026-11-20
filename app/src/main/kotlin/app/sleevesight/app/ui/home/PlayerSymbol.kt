@@ -1,6 +1,8 @@
 package app.sleevesight.app.ui.home
 
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,14 +16,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,7 +46,7 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
-import kotlinx.coroutines.delay
+import app.sleevesight.core.settings.SymbolOpens
 
 // The player symbol in Home's header (#1440): a neutral music note, in place of the followed
 // player's own icon (#1209), which looked foreign among the app's own marks.
@@ -66,21 +65,24 @@ private enum class SymbolState {
 
 /**
  * The player symbol in Home's header (#1440): the music note alone, 48 dp, in the header buttons'
- * colour, shown always. With a followed player's session ([SymbolState.PLAYER]), a tap opens the
- * player menu under it ([PlayerMenu]), or closes it, and a long press opens the player, as the menu's
- * *Open <player>* does. With players switched on but none playing, it is dimmed: a tap opens a panel
- * that says nothing is playing, and a long press opens the last player followed
+ * colour, shown always. One gesture opens the menu, the other the player: a tap the one *What the
+ * symbol opens* names ([SymbolOpens], #1445; the menu by default), a long press the other. With a
+ * followed player's session ([SymbolState.PLAYER]), the menu is the player menu under it
+ * ([PlayerMenu]), which the same gesture closes, and the player is opened as the menu's *Open
+ * <player>* opens it. With players switched on but none playing, it is dimmed: the menu's gesture
+ * opens a panel that says nothing is playing, and the player's opens the last player followed
  * ([HeaderPlayerFeed.lastPlayer]), else the first one switched on. With no player switched on, it
- * is dimmed too, and a tap or a long press opens a panel that says so and links to *Settings →
- * Players* ([onOpenPlayers]). A panel's *Dismiss*, a tap outside or Back closes it; the next tap
- * opens it again.
+ * is dimmed too, and either gesture opens a panel that says so and links to *Settings → Players*
+ * ([onOpenPlayers]). A panel's *Dismiss*, a tap outside or Back closes it; the next tap opens it again.
  *
- * Once, for a second, when a followed player starts playing or Home switches to another player, the
- * symbol shows that player's own icon ([PlayerIcon]) in place of the note ([flashesIcon]); not with
- * the phone's animations off, nor while *Spin the logo* holds the record still.
+ * For [FLASH_MS], when a followed player starts playing, Home switches to another player, or the
+ * track changes, the symbol shows that player's own icon ([PlayerIcon]) in place of the note
+ * ([flashesIcon], #1445), faded in and out, or swapped at once with the phone's animations off; never
+ * with *Show the current player's logo* off.
  *
- * A screen reader reads it as *Player menu*, a button, with what a tap and a long press do, and,
- * dimmed, *No player enabled* or *Nothing playing*.
+ * A screen reader reads it as *Player menu*, or *Player* while a tap opens the player, a button, with
+ * what a tap and a long press do, and, dimmed, *No player enabled* or *Nothing playing*; the flash is
+ * not read.
  */
 @Composable
 internal fun PlayerSymbol(
@@ -89,7 +91,9 @@ internal fun PlayerSymbol(
 ) {
     val playback by feed.playback.collectAsState()
     val settings by feed.settings.collectAsState()
+    val nowPlaying by feed.nowPlaying.collectAsState()
     val player = playback.player
+    val opens = settings?.symbolOpens ?: SymbolOpens.PLAYER_MENU
     val apps = remember(feed) { PlayerApps(feed.label, feed.launch, feed.installed) }
     // The players the menu lists; none switched on is said only once they have loaded.
     val listed = settings?.let { menuPlayers(it, apps) }
@@ -101,9 +105,10 @@ internal fun PlayerSymbol(
     var opened by rememberSaveable { mutableStateOf<SymbolState?>(null) }
     if (opened != null && opened != state) SideEffect { opened = null }
     val open = openApp(feed)
-    // The app a long press opens: the shown player's, else the last followed, else the first switched on.
+    // The app the player's gesture opens: the shown player's, else the last followed, else the first switched on.
     val target = player ?: last?.takeIf { settings?.follows(it) == true } ?: firstOn?.packageName
-    val onHold = {
+    val toMenu = { opened = if (opened == null) state else null }
+    val toPlayer = {
         if (state == SymbolState.NONE_ENABLED || target == null) {
             opened = state
         } else {
@@ -111,18 +116,19 @@ internal fun PlayerSymbol(
             open(target, state == SymbolState.PLAYER)
         }
     }
-    val flashing = flashesIcon(feed, player, playing(playback))
+    val flashing = flashesIcon(feed, player, playing(playback), trackOf(nowPlaying))
     // What the popup last showed, kept while it closes, so its content goes with it.
     var shown by remember { mutableStateOf<SymbolState?>(null) }
     opened?.let { if (it != shown) SideEffect { shown = it } }
     Box {
         SymbolButton(
             state,
+            opens,
             icon = flashing,
             apps = apps,
             label = feed.label,
-            onTap = { opened = if (opened == null) state else null },
-            onHold = onHold,
+            toMenu = toMenu,
+            toPlayer = toPlayer,
         )
         DropdownMenu(expanded = opened != null, onDismissRequest = { opened = null }) {
             SymbolPopup(opened ?: shown, feed, apps, close = { opened = null }, onOpenPlayers)
@@ -197,18 +203,24 @@ private fun openApp(feed: HeaderPlayerFeed): (String, Boolean) -> Unit {
 }
 
 // The symbol itself for [state]: the note, dimmed but for [SymbolState.PLAYER], or [icon]'s own icon
-// while it shows; [onTap] and [onHold] on a tap and a long press, each named for a screen reader.
-@Suppress("LongParameterList") // The state, what it draws, and its two gestures.
+// while it shows, faded in and out, or swapped at once with the phone's animations off (#1445);
+// [toMenu] on a tap and [toPlayer] on a long press, or the other way round as [opens] says, each
+// named for a screen reader, and the symbol named for what a tap opens.
+@Suppress("LongParameterList") // The state, the choice, what it draws, and its two gestures.
 @Composable
 private fun SymbolButton(
     state: SymbolState,
+    opens: SymbolOpens,
     icon: String?,
     apps: PlayerApps,
     label: (String) -> String,
-    onTap: () -> Unit,
-    onHold: () -> Unit,
+    toMenu: () -> Unit,
+    toPlayer: () -> Unit,
 ) {
-    val name = stringResource(R.string.home_player_symbol)
+    val menuFirst = opens == SymbolOpens.PLAYER_MENU
+    val name = stringResource(if (menuFirst) R.string.home_player_symbol else R.string.home_player_symbol_player)
+    val menuLabel = stringResource(R.string.home_player_symbol_open_menu)
+    val playerLabel = stringResource(R.string.home_player_symbol_open_player)
     val dimmedState =
         when (state) {
             SymbolState.PLAYER -> null
@@ -223,82 +235,34 @@ private fun SymbolButton(
                 interactionSource = null,
                 indication = ripple(bounded = false, radius = TARGET / 2),
                 role = Role.Button,
-                onClickLabel = stringResource(R.string.home_player_symbol_tap),
-                onLongClickLabel = stringResource(R.string.home_player_symbol_hold),
-                onLongClick = onHold,
-                onClick = onTap,
+                onClickLabel = if (menuFirst) menuLabel else playerLabel,
+                onLongClickLabel = if (menuFirst) playerLabel else menuLabel,
+                onLongClick = if (menuFirst) toPlayer else toMenu,
+                onClick = if (menuFirst) toMenu else toPlayer,
             ).semantics {
                 contentDescription = name
                 dimmedState?.let { stateDescription = it }
             },
         contentAlignment = Alignment.Center,
     ) {
-        if (icon != null) {
-            PlayerIcon(icon, label(icon), apps, ICON, Modifier.testTag(PLAYER_SYMBOL_ICON_TAG))
+        val content: @Composable (String?) -> Unit = { shown ->
+            if (shown != null) {
+                PlayerIcon(shown, label(shown), apps, ICON, Modifier.testTag(PLAYER_SYMBOL_ICON_TAG))
+            } else {
+                Icon(
+                    painterResource(R.drawable.ic_music_note),
+                    contentDescription = null,
+                    modifier = Modifier.testTag(PLAYER_SYMBOL_NOTE_TAG).alpha(if (dimmedState != null) DIMMED else 1f),
+                )
+            }
+        }
+        // With the phone's animations off, the icon still shows, swapped in and out at once (#1445).
+        if (animatorDurationScale() > 0f) {
+            Crossfade(icon, animationSpec = tween(FADE_MS), label = "player symbol") { content(it) }
         } else {
-            Icon(
-                painterResource(R.drawable.ic_music_note),
-                contentDescription = null,
-                modifier = Modifier.alpha(if (dimmedState != null) DIMMED else 1f),
-            )
+            content(icon)
         }
     }
-}
-
-/**
- * The player whose own icon the symbol shows now, or null for the note (#1440): [player], for
- * [FLASH_MS] once it starts playing ([playing]; null, a passing state, keeps what was before) or Home
- * switches to it from another player, never on the first look at Home, and only with motion: the
- * phone's animations on and *Spin the logo* on.
- * Noticing the change and timing the second are apart, so a pause or another report within the
- * second does not cut it short; it ends early only when Home leaves, the player goes, or motion is
- * switched off, and switching motion back on starts none. No timer of its own besides.
- */
-@Composable
-private fun flashesIcon(
-    feed: HeaderPlayerFeed,
-    player: String?,
-    playing: Boolean?,
-): String? {
-    val settings by feed.settings.collectAsState()
-    val motion = animatorDurationScale() > 0f && settings?.spinLogo == true
-    val moving by rememberUpdatedState(motion)
-    // The player whose icon shows, and each flash's own number, which its timer goes by.
-    var flashing by remember { mutableStateOf<String?>(null) }
-    var flash by remember { mutableIntStateOf(0) }
-    // What the last look saw: the player and whether it played; none before the first.
-    val seen = remember { arrayOfNulls<Pair<String?, Boolean>>(1) }
-    LaunchedEffect(player, playing) {
-        val before = seen[0]
-        val plays = playing ?: before?.second ?: false
-        seen[0] = player to plays
-        if (player != flashing) flashing = null
-        if (moving && before != null && flashes(before, player, plays)) {
-            flashing = player
-            flash++
-        }
-    }
-    LaunchedEffect(flash) {
-        if (flashing == null) return@LaunchedEffect
-        delay(FLASH_MS)
-        flashing = null
-    }
-    if (!motion && flashing != null) SideEffect { flashing = null }
-    return flashing.takeIf { motion && it == player }
-}
-
-// Whether a player [player], [playing] or not, after [before] (the player then, and whether it
-// played), calls for its icon: another player shown in place of one, or a player that starts playing.
-private fun flashes(
-    before: Pair<String?, Boolean>,
-    player: String?,
-    playing: Boolean,
-): Boolean {
-    val (was, wasPlaying) = before
-    if (player == null) return false
-    val switched = was != null && player != was
-    val started = playing && !(player == was && wasPlaying)
-    return switched || started
 }
 
 // A panel the dimmed symbol opens (#1440): its [text], and under it, on the right, *Dismiss*, which
@@ -337,6 +301,9 @@ const val PLAYER_SYMBOL_TAG: String = "home-player-symbol"
 /** The test tag of the player's own icon while it shows in the symbol's place (#1440). */
 const val PLAYER_SYMBOL_ICON_TAG: String = "home-player-symbol-icon"
 
+/** The test tag of the symbol's note, while it shows (#1445). */
+const val PLAYER_SYMBOL_NOTE_TAG: String = "home-player-symbol-note"
+
 /** The test tag of the panel the dimmed symbol opens (#1440). */
 const val SYMBOL_PANEL_TAG: String = "home-player-symbol-panel"
 
@@ -355,8 +322,8 @@ private val ICON = 26.dp
 /** How much of the symbol shows while dimmed: Material's disabled content. */
 private const val DIMMED = 0.38f
 
-/** How long the player's icon shows in the symbol's place. */
-private const val FLASH_MS = 1_000L
+/** How long the note and the player's icon take to fade into each other, with the phone's animations on. */
+internal const val FADE_MS = 220
 
 /** The panel's widest, so its text wraps as a note does. */
 private val PANEL_WIDTH = 280.dp

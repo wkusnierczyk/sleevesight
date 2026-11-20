@@ -85,11 +85,14 @@ import app.sleevesight.core.synthesis.SearchKind
  *   *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
  *   with its page, [FromSite]), then "Written by {model}." (#1162) on a line of its own, in italics,
- *   however it was asked, then from the model's knowledge "From the AI model's own knowledge, not verified", and,
+ *   by a tap, or "Written by {model}; asked automatically." asked by *Ask AI automatically*
+ *   ([AutoAskedLine], #956), then from the model's knowledge "From
+ *   the AI model's own knowledge, not verified", and,
  *   kept from before, when it was written ([KeptLine], #851); last, what the answer puts after
  *   these notes ([last], the explanation's *Read more*, #1067);
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
- *   its own knowledge." in the answer's place, after "Asked automatically: " for one asked by itself;
+ *   its own knowledge." in the answer's place; asked by itself, "; asked automatically" at its end
+ *   (#956: a link to the setting, [search]'s `openSettingsAt`);
  * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the
  *   error colour, with *Retry* at the right of the line,
  *   as a source that could not be reached has ([RetryLine]), which asks again, a paid call.
@@ -140,6 +143,8 @@ internal fun AiSearchBlock(
         handoff.moveTo(stop)
     }
     val searchButton = Modifier.handoffTarget(handoff, button)
+    // The note on what *Ask AI automatically* asked, a link to it (#956).
+    val note = autoNote(search, kind)
     when (val shown = state) {
         AiSearch.None -> Unit
         AiSearch.Unready -> SearchButton(texts, enabled = false, width, searchButton) {}
@@ -149,8 +154,8 @@ internal fun AiSearchBlock(
                 feed.stop(track, kind, about)
                 handoff.moveTo(button)
             }
-        is AiSearch.Answered -> Answered(texts, shown, last, answer, kind, track)
-        is AiSearch.NothingFound -> NothingFound(texts, shown)
+        is AiSearch.Answered -> Answered(texts, shown, last, answer, kind, track, note)
+        is AiSearch.NothingFound -> NothingFound(texts, shown, note)
         is AiSearch.Failed ->
             RetryLine(
                 askFailedText(shown.reason),
@@ -165,8 +170,9 @@ internal fun AiSearchBlock(
 }
 
 // What [shown] found, under a rule, as the panel shows it ([answer]); then its credit, "Written by
-// {model}." with the effort when not the default (#1162), asked by a tap or automatically (#801's
-// revised pick); from the model's knowledge marked so, as an insight's claim
+// {model}." with the effort when not the default (#1162), asked by a tap; asked automatically, with
+// [note] (the panels'), "; asked automatically" at its end, a link to the setting (#956); from the
+// model's knowledge marked so, as an insight's claim
 // from it is (#801); kept from before, when it was written (#851); and, last, what the answer puts
 // after its notes ([last]: the explanation's *Read more*, #1067).
 //
@@ -182,12 +188,16 @@ private fun Answered(
     answer: @Composable (SearchAnswer, String) -> Unit,
     kind: SearchKind,
     track: TrackState,
+    note: AutoNote?,
 ) {
     PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
     answer(shown.answer, shown.model)
-    val credit = creditString(Credit(shown.model, shown.effort))
+    val credited = Credit(shown.model, shown.effort)
+    val credit = creditString(credited)
     val byTag = Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG))
     // The prompt lab's variant that wrote it (#1003), in the debug build only, while the lab is on (#1388).
+    // Only *Explain the song*'s, which *Ask AI automatically* never asks: the lab's credit never needs
+    // the note on what it asked (#956).
     val variant =
         if (BuildConfig.DEBUG &&
             kind == SearchKind.EXPLAIN &&
@@ -202,6 +212,8 @@ private fun Answered(
         DeveloperMark(tag = stringResource(R.string.lab_mark_tag)) {
             SearchCredit(labCreditText(credit, variant, resources), byTag)
         }
+    } else if (note != null && shown.way.automatic) {
+        AutoAskedLine(autoCreditParts(credited, autoAskedLink(note.open)), italic = true, texts.tag(AI_SEARCH_BY_TAG))
     } else {
         SearchCredit(credit, byTag)
     }
@@ -216,20 +228,24 @@ private fun Answered(
     last(shown.answer)
 }
 
-// Nothing found, under a rule: on the web or from the model's knowledge, after "Asked
-// automatically: " for a question asked by itself (#801, #802); kept from before, when it was
-// written (#851).
+// Nothing found, under a rule: on the web or from the model's knowledge; for a question asked by
+// itself, "; asked automatically" at its end, a link to the setting ([note], #956); kept from
+// before, when it was written (#851).
 @Composable
 internal fun NothingFound(
     texts: SearchTexts,
     shown: AiSearch.NothingFound,
+    note: AutoNote?,
 ) {
     PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
-    val nothing = stringResource(if (shown.way.web) texts.nothingWeb else R.string.home_ai_nothing, shown.model)
-    QuietLine(
-        if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, nothing) else nothing,
-        Modifier.testTag(texts.tag(AI_SEARCH_NOTHING_TAG)),
-    )
+    val tag = texts.tag(AI_SEARCH_NOTHING_TAG)
+    if (note != null && shown.way.automatic) {
+        val line = if (shown.way.web) note.web else R.string.home_ai_nothing_known_auto
+        AutoAskedLine(autoNothingParts(line, shown.model, autoAskedLink(note.open)), italic = false, tag)
+    } else {
+        val nothing = stringResource(if (shown.way.web) texts.nothingWeb else R.string.home_ai_nothing, shown.model)
+        QuietLine(nothing, Modifier.testTag(tag))
+    }
     shown.keptAt?.let { KeptLine(it) }
 }
 
@@ -254,8 +270,10 @@ internal fun SearchCredit(
 /**
  * What a search's button and lines say (#908): its button's [label], with the AI mark when [marked]
  * (#624), and its [action] for a screen reader; while it runs on the web, [searching]; when it found
- * nothing there, [nothingWeb]. From the model's knowledge the lines are *Ask AI*'s whatever the kind.
+ * nothing there, [nothingWeb], and asked automatically [nothingWebAuto] (#956, the panels' only). From
+ * the model's knowledge the lines are *Ask AI*'s whatever the kind.
  */
+@Suppress("LongParameterList") // Each of its texts, and its tags.
 internal class SearchTexts(
     @StringRes val label: Int,
     val marked: Boolean,
@@ -263,6 +281,7 @@ internal class SearchTexts(
     @StringRes val searching: Int,
     @StringRes val nothingWeb: Int,
     private val tagOf: (String) -> String = { it },
+    @StringRes val nothingWebAuto: Int = R.string.home_ai_nothing_web_auto,
 ) {
     /**
      * The test tag [base] for this search: [explainTag]'s for *Explain the song*, [spellingTag]'s for the
@@ -294,6 +313,7 @@ internal class SearchTexts(
                 R.string.home_lyrics_find_action,
                 R.string.home_lyrics_finding,
                 R.string.home_lyrics_found_none,
+                nothingWebAuto = R.string.home_lyrics_found_none_auto,
             )
 
         // *Explain the song* (#908): an answer, from the web only.
@@ -316,6 +336,7 @@ internal class SearchTexts(
                 R.string.home_spelling_checking,
                 R.string.home_spelling_none,
                 ::spellingTag,
+                nothingWebAuto = R.string.home_spelling_none_auto,
             )
 
         /**

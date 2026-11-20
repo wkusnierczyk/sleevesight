@@ -126,7 +126,7 @@ internal fun UnderAlbum(
     val retries = Retries(shown.view, playing, actions.askAgain)
     val retry = retries.of(SourceId.MUSICBRAINZ)
     val openSources = { actions.openSettingsAt(SettingsTarget.sources) }
-    val search = PanelSearch(actions.aiSearches, track, header)
+    val search = PanelSearch(actions.aiSearches, track, header, actions.openSettingsAt)
     // The album's release group's first release, looked up when *Dates* opens (#1099).
     val firsts by actions.releaseGroups.firsts.collectAsState()
     val group = editionGroup(track, header)

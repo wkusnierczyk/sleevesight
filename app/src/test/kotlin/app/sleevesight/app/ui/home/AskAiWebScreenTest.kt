@@ -345,7 +345,7 @@ class AskAiWebScreenTest {
     }
 
     @Test
-    fun aQuestionAskedAutomaticallySaysSoInItsNothingLineOnly() =
+    fun aQuestionAskedAutomaticallySaysSoAtTheEndOfItsCreditAndItsNothingLine() =
         show {
             tap(DATES_CHIP_TAG)
             val auto = web.copy(automatic = true)
@@ -353,12 +353,14 @@ class AskAiWebScreenTest {
                 SearchKind.DATES,
                 AiSearch.Answered(SearchAnswer.Dates(album = "1974-01", albumSource = discogs), model, auto),
             )
-            // Found: the plain credit; only the nothing line says it was asked automatically.
-            compose.onNodeWithTag(AI_SEARCH_BY_TAG).assertTextEquals("Written by Claude Haiku 5.5.")
+            // Found or not, the line says so at its end (#956), no longer before the nothing line.
+            compose
+                .onNodeWithTag(AI_SEARCH_BY_TAG)
+                .assertTextEquals("Written by Claude Haiku 5.5; asked automatically.")
             set(SearchKind.DATES, AiSearch.NothingFound(model, auto))
             compose
                 .onNodeWithTag(AI_SEARCH_NOTHING_TAG)
-                .assertTextEquals("Asked automatically: Claude Haiku 5.5 found nothing on the web.")
+                .assertTextEquals("Claude Haiku 5.5 found nothing on the web; asked automatically.")
         }
 
     @Test

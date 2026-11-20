@@ -31,6 +31,8 @@
     <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
     <string name="home_guide_note_player">tap for controls</string>
+    <!-- home_guide_note_player with Settings → Players → What the symbol opens set to The player (#1445). -->
+    <string name="home_guide_note_player_app">tap to open the player</string>
     <string name="home_guide_note_cover">tap to see contents</string>
     <string name="home_guide_note_genres">tap to see the genres</string>
     <string name="home_guide_note_insight">read about what’s playing</string>
@@ -41,6 +43,8 @@
          name (home_guide_part_…). Each says what the app does; keep them in step with it. -->
     <string name="home_guide_about_settings">Opens Settings: the players Sleevesight follows, which sources it looks up, your AI service and the API keys, genres, when insights are written, history, and how the app looks (theme, font, layout).</string>
     <string name="home_guide_about_player">Tap the note symbol at the top for the player menu: play, pause, skip, or switch players. Hold it to open the player. A tap on the record after the logo plays or pauses.</string>
+    <!-- home_guide_about_player with Settings → Players → What the symbol opens set to The player (#1445). -->
+    <string name="home_guide_about_player_app">Tap the note symbol at the top to open the player. Hold it for the player menu: play, pause, skip, or switch players. A tap on the record after the logo plays or pauses.</string>
     <string name="home_guide_about_cover">The album’s cover. A tap turns it over to show the album’s tracklist from MusicBrainz: each track with its length, the playing song marked. An album of several discs has a page for each, swiped sideways, with the disc’s number at the top. A tap anywhere on the back turns it back. When there is no tracklist, the back says why: MusicBrainz is still looking, has no tracklist for the album, has several albums of that name, could not be reached, or is disabled.</string>
     <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
@@ -84,12 +88,15 @@
          a tap does, as a screen reader says it. -->
     <string name="home_record_play">Play</string>
     <string name="home_record_pause">Pause</string>
-    <!-- The header's player symbol (#1440), a music note, which opens the player menu: its name, what
-         a tap and a long press do ("Double-tap to …", "Double-tap and hold to …"), as a screen reader
-         says them, and its state while dimmed, with no player switched on or none playing. -->
+    <!-- The header's player symbol (#1440), a music note, which opens the player menu or the player
+         (#1445, Settings → Players → What the symbol opens): its name, Player menu or Player as a tap
+         opens either; what each gesture does ("Double-tap to …", "Double-tap and hold to …"), as a
+         screen reader says it, the tap one and the long press the other; and its state while dimmed,
+         with no player switched on or none playing. -->
     <string name="home_player_symbol">Player menu</string>
-    <string name="home_player_symbol_tap">open a play menu to control or switch the player</string>
-    <string name="home_player_symbol_hold">open the player</string>
+    <string name="home_player_symbol_player">Player</string>
+    <string name="home_player_symbol_open_menu">open a play menu to control or switch the player</string>
+    <string name="home_player_symbol_open_player">open the player</string>
     <string name="home_player_symbol_none_enabled_state">No player enabled</string>
     <string name="home_player_symbol_nothing_playing_state">Nothing playing</string>
     <!-- The panel a tap on the dimmed symbol opens (#1440), with Dismiss. With no player switched on,
@@ -339,11 +346,11 @@
     <string name="home_spelling_check_action">check the spelling on the web with your AI service, a paid call</string>
     <!-- The check under way, by a tap or by itself, with the small turning record and Stop (home_ai_stop). -->
     <string name="home_spelling_checking">Checking the spelling on the web…</string>
-    <!-- The check found no other spelling; %1$s is the model, as the AI settings name it. After
-         home_ai_nothing_auto's "Asked automatically: " when it ran by itself. Ask AI follows. -->
+    <!-- The check found no other spelling; %1$s is the model, as the AI settings name it. When it ran
+         by itself, home_spelling_none_auto. Ask AI follows. -->
     <string name="home_spelling_none">%1$s found no other spelling on the web.</string>
     <!-- The check found another spelling, %1$s, and MusicBrainz found nothing that agrees with the
-         player's under it either. After "Asked automatically: " when it ran by itself. Ask AI follows. -->
+         player's under it either. When it ran by itself, home_spelling_not_found_auto. Ask AI follows. -->
     <string name="home_spelling_not_found">MusicBrainz didn’t find it as “%1$s” either.</string>
     <!-- Under the title on Home, the track found under another spelling (#1293): %1$s is the title as
          the check spelled it; the title shown stays the player's. -->
@@ -465,8 +472,26 @@
          no button again. -->
     <string name="home_ai_nothing">%1$s couldn’t say from its own knowledge.</string>
     <string name="home_ai_nothing_web">%1$s found nothing on the web.</string>
-    <!-- Before the line above, for a question Ask AI automatically asked (#802); %1$s is that line. -->
-    <string name="home_ai_nothing_auto">Asked automatically: %1$s</string>
+    <!-- What Ask AI automatically asked says so, found or not (#956): in Dates, Genres and Lyrics, a
+         genre's definition and the spelling check (#1293), at the end of the credit or the nothing
+         line, "; " then this, a link that opens Settings → Insights → Ask AI automatically. Asked by
+         a tap, the lines above, with no note. -->
+    <string name="home_ai_auto_link">asked automatically</string>
+    <!-- The link's action, as a screen reader names it ("Double-tap to open the Ask AI automatically setting"). -->
+    <string name="home_ai_auto_link_action">open the Ask AI automatically setting</string>
+    <!-- The credit (home_credit_written, home_credit_written_with) of an answer asked automatically;
+         %1$s the model, %2$s the "with" list where the credit has one, last home_ai_auto_link. -->
+    <string name="home_credit_written_auto">Written by %1$s; %2$s.</string>
+    <string name="home_credit_written_with_auto">Written by %1$s with %2$s; %3$s.</string>
+    <!-- home_ai_nothing, home_ai_nothing_web and home_lyrics_found_none asked automatically; %1$s the
+         model, %2$s home_ai_auto_link. -->
+    <string name="home_ai_nothing_known_auto">%1$s couldn’t say from its own knowledge; %2$s.</string>
+    <string name="home_ai_nothing_web_auto">%1$s found nothing on the web; %2$s.</string>
+    <string name="home_lyrics_found_none_auto">%1$s found no lyrics on the web; %2$s.</string>
+    <!-- home_spelling_none and home_spelling_not_found for a check that ran by itself: %1$s the model,
+         or the title as the check spelled it; %2$s home_ai_auto_link. -->
+    <string name="home_spelling_none_auto">%1$s found no other spelling on the web; %2$s.</string>
+    <string name="home_spelling_not_found_auto">MusicBrainz didn’t find it as “%1$s” either; %2$s.</string>
     <!-- The question failed, in the error colour, with Retry (home_retry) at the right of the same line,
          as for a source that could not be reached; %1$s is why, as the insight says it (home_failure_*). -->
     <string name="home_ai_failed">Asking AI failed: %1$s.</string>
