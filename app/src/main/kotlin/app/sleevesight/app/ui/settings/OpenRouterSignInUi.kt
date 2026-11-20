@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -203,9 +204,34 @@ private fun SignedIn(open: (SettingsDialog) -> Unit) {
         modifier = Modifier.testTag(OPENROUTER_SIGNED_IN_TAG),
     )
     val manage = stringResource(R.string.settings_openrouter_manage)
-    ExternalLink(text = manage, description = manage, onClick = rememberOpenUrl(OPENROUTER_KEYS))
+    // On one line at the usual font, under the switch too, rather than wrapped in the text's column (#1396).
+    ExternalLink(
+        text = manage,
+        description = manage,
+        onClick = rememberOpenUrl(OPENROUTER_KEYS),
+        modifier = Modifier.reachingUnderSwitch(),
+    )
     SignOutButton(open)
 }
+
+/**
+ * Laid out as wide as its column and the [SwitchRow]'s switch side ([SWITCH_SIDE]) together, where
+ * nothing is under the switch's line: it takes no more of the column's width than fits, the rest
+ * reaching under the switch, drawn and tapped there too.
+ */
+internal fun Modifier.reachingUnderSwitch(): Modifier =
+    layout { measurable, constraints ->
+        val wider =
+            if (constraints.hasBoundedWidth) {
+                constraints.copy(maxWidth = constraints.maxWidth + SWITCH_SIDE.roundToPx())
+            } else {
+                constraints
+            }
+        val placeable = measurable.measure(wider)
+        layout(placeable.width.coerceAtMost(constraints.maxWidth), placeable.height) {
+            placeable.placeRelative(0, 0)
+        }
+    }
 
 @Composable
 private fun SignOutButton(open: (SettingsDialog) -> Unit) {
