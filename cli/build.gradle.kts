@@ -5,6 +5,7 @@
 plugins {
     id("sleevesight.kotlin-jvm")
     application
+    id("sleevesight.mutation")
 }
 
 application {
@@ -54,4 +55,22 @@ tasks.withType<Test>().configureEach {
     inputs.dir(fixturesDir).withPropertyName("fixtures").withPathSensitivity(PathSensitivity.RELATIVE)
     systemProperty("sleevesight.apiKeysVectors", apiKeysVectors.asFile.absolutePath)
     inputs.file(apiKeysVectors).withPropertyName("apiKeysVectors").withPathSensitivity(PathSensitivity.NONE)
+}
+
+// Mutation testing (`sleevesight.mutation`, `design/mutation-testing.md`) of the code that reads the
+// developer's keys and draws them as a setup code (`keys-qr`).
+pitest {
+    targetClasses =
+        listOf(
+            "app.sleevesight.cli.Keys",
+            "app.sleevesight.cli.Keys\$*",
+            "app.sleevesight.cli.KeysQr",
+            "app.sleevesight.cli.KeysQr\$*",
+            "app.sleevesight.cli.KeysQrKt",
+            "app.sleevesight.cli.WordsReader",
+            "app.sleevesight.cli.WordsReader\$*",
+        )
+    targetTests = listOf("app.sleevesight.cli.KeysTest", "app.sleevesight.cli.KeysQrTest")
+    // The API keys page's vectors, as the tests get them (above).
+    jvmArgs = listOf("-Dsleevesight.apiKeysVectors=${apiKeysVectors.asFile.absolutePath}")
 }

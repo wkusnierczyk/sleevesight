@@ -85,6 +85,13 @@ class KeySetupTest {
     }
 
     @Test
+    fun `a refused key of four characters keeps no ending, one of five keeps its last four`() {
+        val read = setup("sleevesight-keys:v1\nanthropic=abcd\nopenai=abcde")
+        assertEquals(setOf(KeyName.ANTHROPIC, KeyName.OPENAI), read.refused.keys)
+        assertEquals(mapOf(KeyName.OPENAI to "bcde"), read.refusedEndings)
+    }
+
+    @Test
     fun `a name given twice is refused, whichever value was meant`() {
         val read = setup("sleevesight-keys:v1\nlastfm=$lastFm\nlastfm=${lastFm.lowercase()}\nexa=$exa")
         assertEquals(setOf(KeyName.EXA), read.keys.keys)
@@ -97,6 +104,7 @@ class KeySetupTest {
         assertEquals(SetupRead.NotASetup, KeySetup.read(""))
         assertEquals(SetupRead.NotASetup, KeySetup.read("anthropic=$anthropic"))
         assertEquals(SetupRead.Unsupported("v3"), KeySetup.read("sleevesight-keys:v3\nanthropic=$anthropic"))
+        assertEquals("v3", assertIs<SetupRead.Unsupported>(KeySetup.read("sleevesight-keys:v3")).version)
         assertTrue(KeySetup.isSetup("  sleevesight-keys:v1\n"))
         assertFalse(KeySetup.isSetup(anthropic))
     }
@@ -125,5 +133,39 @@ class KeySetupTest {
         assertNull(KeyShape.check(KeyName.LASTFM, lastFm))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.LASTFM, lastFm.drop(1)))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.LASTFM, "g" + lastFm.drop(1)))
+    }
+
+    @Test
+    fun `each service's key is accepted at its shortest and longest, and refused one past either`() {
+        // [prefix] padded with key characters to [length].
+        fun key(
+            prefix: String,
+            length: Int,
+        ) = prefix + "a1B2_c3-D4".repeat(41).take(length - prefix.length)
+        val bounds =
+            listOf(
+                Triple(KeyName.OPENROUTER, "sk-or-v1-", 40..400),
+                Triple(KeyName.ANTHROPIC, "sk-ant-", 40..400),
+                Triple(KeyName.OPENAI, "sk-proj-", 40..400),
+                Triple(KeyName.GOOGLE, "AIza", 30..400),
+                Triple(KeyName.GOOGLE, "AQ.", 30..400),
+                Triple(KeyName.EXA, "", 16..200),
+            )
+        for ((name, prefix, lengths) in bounds) {
+            assertNull(KeyShape.check(name, key(prefix, lengths.first)), "$name, ${lengths.first}")
+            assertNull(KeyShape.check(name, key(prefix, lengths.last)), "$name, ${lengths.last}")
+            assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(name, key(prefix, lengths.first - 1)), "$name, short")
+            assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(name, key(prefix, lengths.last + 1)), "$name, long")
+        }
+    }
+
+    @Test
+    fun `an OpenRouter key starts sk-or-, and OpenAI's and Anthropic's are not one`() {
+        val openRouter = "sk-or-v1-" + "0123456789abcdef".repeat(4)
+        assertNull(KeyShape.check(KeyName.OPENROUTER, openRouter))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENROUTER, openAi))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENROUTER, anthropic))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, openRouter))
+        assertEquals(KeyProblem.BAD_CHARACTERS, KeyShape.check(KeyName.OPENROUTER, "$openRouter."))
     }
 }

@@ -5,13 +5,41 @@ import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SealedSetupTest {
     private val words = listOf("aardvark", "abandoned", "abbreviate", "abdomen", "abhorrence")
     private val setup = "sleevesight-keys:v1\nlastfm=0123456789abcdef0123456789abcdef"
     private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
+
+    /** [JvmKeyCrypto] with a fixed key, keeping each key it derived and each text it sealed or opened. */
+    private class Recording : KeyCrypto by JvmKeyCrypto {
+        val keys = mutableListOf<ByteArray>()
+        val texts = mutableListOf<ByteArray>()
+
+        override fun derive(
+            password: ByteArray,
+            salt: ByteArray,
+            iterations: Int,
+        ): ByteArray = ByteArray(SealedSetup.KEY_BYTES) { (it + 1).toByte() }.also { keys += it }
+
+        override fun seal(
+            key: ByteArray,
+            nonce: ByteArray,
+            aad: ByteArray,
+            plain: ByteArray,
+        ): ByteArray = JvmKeyCrypto.seal(key, nonce, aad, plain).also { texts += plain }
+
+        override fun open(
+            key: ByteArray,
+            nonce: ByteArray,
+            aad: ByteArray,
+            sealed: ByteArray,
+        ): ByteArray? = JvmKeyCrypto.open(key, nonce, aad, sealed)?.also { texts += it }
+    }
 
     private fun hex(bytes: ByteArray) = bytes.joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
 
@@ -94,5 +122,52 @@ class SealedSetupTest {
         assertEquals(SetupRead.Sealed, KeySetup.read("sleevesight-keys:v2\nlastfm=x"))
         assertEquals(SetupRead.Unsupported("v3"), KeySetup.read("sleevesight-keys:v3:c2VjcmV0"))
         assertTrue(KeySetup.isSetup("sleevesight-keys:v2:AAAA"))
+    }
+
+    @Test
+    fun `only a code that starts with the sealed prefix is sealed`() {
+        assertTrue(SealedSetup.isSealed("  sleevesight-keys:v2:AAAA"))
+        assertFalse(SealedSetup.isSealed(setup))
+        assertFalse(SealedSetup.isSealed("sleevesight-keys:v2"))
+        assertFalse(SealedSetup.isSealed(""))
+    }
+
+    @Test
+    fun `a code of no text, the shortest there is, opens`() {
+        val code = SealedSetup.seal("", words, JvmKeyCrypto)
+        assertEquals("", assertIs<Opened.Setup>(SealedSetup.open(code, words, JvmKeyCrypto)).text)
+    }
+
+    @Test
+    fun `the derived key and the setup code's text are wiped once sealed or opened`() {
+        val crypto = Recording()
+        val code = SealedSetup.seal(setup, words, crypto)
+        assertEquals(setup, assertIs<Opened.Setup>(SealedSetup.open(code, words, crypto)).text)
+        assertEquals(2, crypto.keys.size)
+        assertEquals(2, crypto.texts.size)
+        for (bytes in crypto.keys + crypto.texts) assertTrue(bytes.all { it == 0.toByte() }, hex(bytes))
+    }
+
+    @Test
+    fun `the password must be ASCII, NUL included`() {
+        val salt = "salt".encodeToByteArray()
+        assertFailsWith<IllegalArgumentException> { JvmKeyCrypto.derive("caf\u00e9".encodeToByteArray(), salt, 1) }
+        assertEquals(SealedSetup.KEY_BYTES, JvmKeyCrypto.derive(byteArrayOf(0), salt, 1).size)
+    }
+
+    @Test
+    fun `a sealed text opens only with the associated data it was sealed with`() {
+        val key = ByteArray(SealedSetup.KEY_BYTES) { it.toByte() }
+        val nonce = ByteArray(SealedSetup.NONCE_BYTES)
+        val sealed = JvmKeyCrypto.seal(key, nonce, "a".encodeToByteArray(), setup.encodeToByteArray())
+        assertEquals(setup, JvmKeyCrypto.open(key, nonce, "a".encodeToByteArray(), sealed)?.decodeToString())
+        assertNull(JvmKeyCrypto.open(key, nonce, "b".encodeToByteArray(), sealed))
+    }
+
+    @Test
+    fun `a pick is below its bound, and not always the same`() {
+        val picks = List(200) { JvmKeyCrypto.pick(1000) }
+        assertTrue(picks.all { it in 0 until 1000 })
+        assertTrue(picks.toSet().size > 1)
     }
 }

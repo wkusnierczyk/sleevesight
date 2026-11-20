@@ -1,6 +1,21 @@
 plugins {
     id("sleevesight.pipeline")
     `java-test-fixtures`
+    id("sleevesight.mutation")
+}
+
+// Mutation testing (`sleevesight.mutation`, `design/mutation-testing.md`) of the code that holds,
+// writes, reads, seals and opens the API keys' setup codes: the portable code and its JVM crypto.
+pitest {
+    mainSourceSets = listOf(sourceSets.main.get(), sourceSets.named("jvmMain").get())
+    targetClasses =
+        listOf(
+            "app.sleevesight.core.Secret",
+            "app.sleevesight.core.Secret\$*",
+            "app.sleevesight.core.keys.*",
+            "app.sleevesight.core.platform.JvmKeyCrypto",
+        )
+    targetTests = listOf("app.sleevesight.core.SecretTest", "app.sleevesight.core.keys.*")
 }
 
 // The shared fixtures (`fixtures/` at the root) are resources of the test-fixtures source set, so

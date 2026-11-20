@@ -25,6 +25,11 @@ junit4 = "4.13.2"
 # The instrumented tests' runner, on an emulator in CI (#1114).
 androidx-test-runner = "1.7.0"
 robolectric = "4.17"
+# Mutation testing of the code that stores, parses and moves the API keys (`sleevesight.mutation`):
+# the Gradle plugin, Pitest itself and its JUnit 5 runner, which the plugin fetches by these versions.
+pitest-gradle = "1.19.0"
+pitest = "1.30.2"
+pitest-junit5 = "1.2.3"
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
@@ -35,6 +40,7 @@ asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
 kotlin-serialization-plugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 sqldelight-gradle-plugin = { module = "app.cash.sqldelight:gradle-plugin", version.ref = "sqldelight" }
 kotlin-compose-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+pitest-gradle-plugin = { module = "info.solidsoft.gradle.pitest:gradle-pitest-plugin", version.ref = "pitest-gradle" }
 
 # Floors for the libraries the build's own tools bring in (the Gradle plugins, Android lint, ktlint,
 # the tests' Robolectric): the lowest version of each with no known vulnerability (#1087). They

@@ -12,6 +12,7 @@ import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
+import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -379,5 +380,89 @@ class KeysQrTest {
             "Standard input is the terminal: drop --words-from - and type the words at the prompt.\n",
             err.toString(Charsets.UTF_8),
         )
+    }
+
+    @Test
+    fun `a usage error says the usage`() {
+        val run = run("--mistral-from", "-")
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertTrue("Usage: sleevesight-cli keys-qr" in run.err)
+    }
+
+    @Test
+    fun `the message counts the keys drawn`() {
+        val one = run("--lastfm-from", "-", "--unsealed", stdin = lastFm)
+        assertTrue("Holds the Last.fm key.\n" in one.err, one.err)
+        val exaFile = File(dir, "exa-count").apply { writeText(exa) }
+        val two = run("--lastfm-from", "-", "--exa-from", exaFile.path, "--unsealed", stdin = lastFm)
+        assertTrue("Holds the Last.fm, Exa keys.\n" in two.err, two.err)
+    }
+
+    @Test
+    fun `the code is flushed before the command returns`() {
+        val bytes = ByteArrayOutputStream()
+        val out = PrintStream(BufferedOutputStream(bytes, 1 shl 16), false)
+        val err = PrintStream(ByteArrayOutputStream(), true)
+        val status =
+            KeysQr(out, err, emptyMap(), ByteArrayInputStream(lastFm.toByteArray())) { Terminal() }
+                .run(listOf("--lastfm-from", "-", "--unsealed"))
+        assertEquals(0, status)
+        val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(bytes.toString(Charsets.UTF_8))))
+        assertEquals(mapOf(KeyName.LASTFM to lastFm), read.keys.mapValues { it.value.reveal() })
+    }
+
+    @Test
+    fun `a first word not of the list draws nothing, and is named`() {
+        val run = run("--lastfm-from", "-", stdin = lastFm) { "xyz aba abb abd abh" }
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertEquals("", run.out)
+        assertTrue("Word 1 is not one of the phone's words." in run.err)
+    }
+
+    @Test
+    fun `the terminal is asked three times, no more`() {
+        var prompts = 0
+        val run =
+            run("--lastfm-from", "-", stdin = lastFm) {
+                prompts++
+                "aar aba abb abd xyz"
+            }
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertEquals(3, prompts)
+    }
+
+    @Test
+    fun `words that cannot be read draw nothing, and the message names neither where nor why`() {
+        val file = File(dir, "unread-words.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val failing =
+            object : InputStream() {
+                override fun read(): Int = throw IOException("cannot read ${words.first()}")
+            }
+        val err = ByteArrayOutputStream()
+        val out = ByteArrayOutputStream()
+        val status =
+            Cli(PrintStream(out, true), PrintStream(err, true), emptyMap(), failing) { Terminal() }
+                .run(listOf("keys-qr", "--keys", file.path, "--words-from", "-"))
+        assertEquals(Cli.EXIT_USAGE, status)
+        assertEquals("", out.toString(Charsets.UTF_8))
+        val said = err.toString(Charsets.UTF_8)
+        assertTrue("The words could not be read: the file given or standard input.\n" in said, said)
+        assertFalse(words.first() in said)
+    }
+
+    @Test
+    fun `a code is drawn two rows a line, one character a column, the last row alone`() {
+        // Columns: top only, bottom only, both, neither; three rows, so the second line is a top row.
+        val matrix = BitMatrix(4, 3)
+        matrix.set(0, 0)
+        matrix.set(1, 1)
+        matrix.set(2, 0)
+        matrix.set(2, 1)
+        matrix.set(1, 2)
+        matrix.set(2, 2)
+        val colours = "\u001b[30;107m"
+        val reset = "\u001b[0m"
+        assertEquals("$colours▀▄█ $reset\n$colours ▀▀ $reset\n", KeysQr.draw(matrix))
+        assertEquals("$colours▀$reset\n", KeysQr.draw(BitMatrix(1, 1).apply { set(0, 0) }))
     }
 }

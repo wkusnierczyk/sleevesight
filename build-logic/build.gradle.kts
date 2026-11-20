@@ -20,6 +20,8 @@ dependencies {
     // `:store`'s schema and queries (architecture, *Cache and history*).
     implementation(libs.sqldelight.gradle.plugin)
     implementation(libs.ktlint.gradle.plugin)
+    // Mutation testing of the key code (`sleevesight.mutation`); a scheduled workflow runs it.
+    implementation(libs.pitest.gradle.plugin)
     // Reads class files for `checkNetworkReferences`. BSD-3-Clause; build-time only, so outside
     // the app's dependency allowlist.
     implementation(libs.asm.commons)

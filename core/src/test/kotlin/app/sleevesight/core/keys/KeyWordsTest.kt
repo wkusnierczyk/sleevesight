@@ -71,4 +71,11 @@ class KeyWordsTest {
         assertFailsWith<IllegalArgumentException> { KeyWords(list.words.dropLast(1) + "aardwolf") }
         assertFailsWith<IllegalArgumentException> { KeyWords(list.words.dropLast(1)) }
     }
+
+    @Test
+    fun `a list with a word not of lower-case letters is refused`() {
+        for (word in listOf("Zucchini", "zucchin1", "zuc chini")) {
+            assertFailsWith<IllegalArgumentException>(word) { KeyWords(list.words.dropLast(1) + word) }
+        }
+    }
 }

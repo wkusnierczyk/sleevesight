@@ -2,6 +2,7 @@
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
 # To regenerate this file, run: ./gradlew :core:dependencies --write-locks
+antlr:antlr:2.7.7=pitest
 ch.qos.logback:logback-classic:1.6.6=ktlint
 ch.qos.logback:logback-core:1.6.6=ktlint
 com.android.tools.analytics-library:protos:32.4.1=androidLintTool
@@ -95,9 +96,12 @@ jakarta.xml.bind:jakarta.xml.bind-api:2.3.2=androidLintTool
 javax.inject:javax.inject:1=androidLintTool
 net.java.dev.jna:jna-platform:5.6.0=androidLintTool
 net.java.dev.jna:jna:5.6.0=androidLintTool
+net.sf.jopt-simple:jopt-simple:4.9=pitest
 net.sf.kxml:kxml2:2.3.0=androidLintTool
+org.antlr:stringtemplate:3.2.1=pitest
 org.apache.commons:commons-compress:1.27.1=androidLintTool
-org.apache.commons:commons-lang3:3.21.0=androidLintTool
+org.apache.commons:commons-lang3:3.21.0=androidLintTool,pitest
+org.apache.commons:commons-text:1.14.0=pitest
 org.apache.groovy:groovy-bom:4.0.29=androidLintTool
 org.apache.groovy:groovy:4.0.29=androidLintTool
 org.apache.httpcomponents:httpclient:4.5.14=androidLintTool
@@ -189,10 +193,20 @@ org.junit.platform:junit-platform-launcher:1.10.1=jvmTestRuntimeClasspathForLint
 org.junit:junit-bom:5.10.1=jvmTestCompileClasspathForLint,jvmTestRuntimeClasspathForLint,testCompileClasspath,testLintChecksClasspath,testRuntimeClasspath
 org.jvnet.staxex:stax-ex:1.8.1=androidLintTool
 org.opentest4j:opentest4j:1.3.0=jvmTestCompileClasspathForLint,jvmTestRuntimeClasspathForLint,testCompileClasspath,testLintChecksClasspath,testRuntimeClasspath
+org.ow2.asm:asm-analysis:9.11=pitest
 org.ow2.asm:asm-analysis:9.9=androidLintTool
+org.ow2.asm:asm-commons:9.11=pitest
 org.ow2.asm:asm-commons:9.9=androidLintTool
+org.ow2.asm:asm-tree:9.11=pitest
 org.ow2.asm:asm-tree:9.9=androidLintTool
+org.ow2.asm:asm-util:9.11=pitest
+org.ow2.asm:asm:9.11=pitest
 org.ow2.asm:asm:9.9=androidLintTool
+org.pitest:pitest-command-line:1.30.2=pitest
+org.pitest:pitest-entry:1.30.2=pitest
+org.pitest:pitest-html-report:1.30.2=pitest
+org.pitest:pitest-junit5-plugin:1.2.3=pitest
+org.pitest:pitest:1.30.2=pitest
 org.slf4j:slf4j-api:2.0.19=ktlint
 org.snakeyaml:snakeyaml-engine:2.7=detekt
 empty=annotationProcessor,detektPlugins,implementationDependenciesMetadata,jvmMainAnnotationProcessor,jvmMainImplementationDependenciesMetadata,jvmMainKotlinScriptDefExtensions,kotlinCompilerPluginClasspath,kotlinNativeCompilerPluginClasspath,kotlinScriptDefExtensions,lintChecks,testAnnotationProcessor,testFixturesAnnotationProcessor,testFixturesImplementationDependenciesMetadata,testFixturesKotlinScriptDefExtensions,testImplementationDependenciesMetadata,testKotlinScriptDefExtensions
