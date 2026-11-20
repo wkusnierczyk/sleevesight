@@ -45,6 +45,7 @@ import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.LogoSpeed
+import app.sleevesight.core.settings.ReadAloudVoice
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
@@ -445,6 +446,30 @@ class SettingsFileScreenTest {
             assertFalse(has("v".repeat(80)))
             assertFalse(has("m".repeat(80)))
             assertFalse(has("p".repeat(80)))
+        }
+    }
+
+    @Test
+    fun aVoiceLoadedFromAFileIsShownCutWhenTheNextFileChangesIt() {
+        // A first file's voice, stored as its load stores it (by its id, `SettingsFileTest`); the
+        // next file's preview names it as the voice now.
+        val id = "\u202E" + "v".repeat(200)
+        val first = """{"file": "Sleevesight settings", "format": 1, "settings": {"readAloudVoice": {"id": "$id"}}}"""
+        val loaded = SettingsFile.load(SettingsFile.read(first, APP_OFFERED)!!, settings.settings.now(), false)
+        move { loaded.settings }
+        assertEquals(ReadAloudVoice(id, id), settings.settings.now().readAloudVoice)
+        val second = """{"file": "Sleevesight settings", "format": 1, "settings": {"readAloudVoice": null}}"""
+        screen {
+            openPreview(second)
+            val line =
+                app.getString(
+                    R.string.settings_reset_line,
+                    app.getString(R.string.settings_read_aloud_voice),
+                    "v".repeat(79) + "\u2026",
+                    app.getString(R.string.settings_read_aloud_voice_phone),
+                )
+            assertTrue(shown(line))
+            assertFalse(compose.onAllNodesWithText("\u202E", substring = true).fetchSemanticsNodes().isNotEmpty())
         }
     }
 }
