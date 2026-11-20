@@ -148,6 +148,9 @@ internal val RESET_LINES: List<ResetLine> =
         switch("artistFactsOncePerSession", R.string.settings_artist_facts_once) { it.artistFactsOncePerSession },
         choice("aiWebSearch", R.string.settings_ai_web_search, { it.aiWebSearch }) { aiWebSearchChoices() },
         switch("searchWithAi", R.string.settings_search_with_ai) { it.searchWithAi },
+        valued("readAloudVoice", R.string.settings_read_aloud_voice, { it.readAloudVoice }) { voice ->
+            voice?.name ?: stringResource(R.string.settings_read_aloud_voice_phone)
+        },
         choice("readAloudMusic", R.string.settings_read_aloud_music, { it.readAloudMusic }) { readAloudMusics() },
         switch("readTrackLineFirst", R.string.settings_read_track_line) { it.readTrackLineFirst },
         switch("readNewInsightsAloud", R.string.settings_read_new_insights) { it.readNewInsightsAloud },

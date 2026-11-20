@@ -19,6 +19,7 @@ import app.sleevesight.core.settings.LookUpAfterClear
 import app.sleevesight.core.settings.NewTrackFold
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.ReadAloudMusic
+import app.sleevesight.core.settings.ReadAloudVoice
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
@@ -74,6 +75,7 @@ class SettingsResetTest {
             prepareNextTrack = PrepareNextTrack.OFF,
             lookUpInBackground = true,
             artistFactsOncePerSession = false,
+            readAloudVoice = ReadAloudVoice("en-gb-x-test", "Test voice"),
             readAloudMusic = ReadAloudMusic.PAUSE,
             readTrackLineFirst = true,
             readNewInsightsAloud = true,
@@ -140,13 +142,26 @@ class SettingsResetTest {
         assertTrue("$kept", fields.map { it.name }.containsAll(kept))
     }
 
+    private val developer = SettingsReset.DEVELOPER.map { it.name }.toSet()
+
     @Test
-    fun aResetPutsEverySettingBackToItsDefaultButThoseKept() {
+    fun aResetPutsEverySettingBackToItsDefaultButThoseKeptAndTheDeveloperSettings() {
         val reset = SettingsReset.reset(moved, defaults)
+        for (field in fields) {
+            val expected = if (field.name in kept || field.name in developer) moved else defaults
+            assertEquals(field.name, field.get(expected), field.get(reset))
+        }
+    }
+
+    @Test
+    fun aResetIncludingTheDeveloperSettingsPutsThemBackTooButNeverDeveloperMode() {
+        val reset = SettingsReset.reset(moved, defaults, includeDeveloper = true)
         for (field in fields) {
             val expected = if (field.name in kept) moved else defaults
             assertEquals(field.name, field.get(expected), field.get(reset))
         }
+        assertEquals(moved.developerMode, reset.developerMode)
+        assertTrue("developerMode" !in developer)
     }
 
     @Test
@@ -164,6 +179,12 @@ class SettingsResetTest {
                     dismissed = setOf(Dismissable.PLAYERS_NOTE),
                     // *Forever* kept: the default, shorter, would delete history.
                     historyLifetime = null,
+                    // The developer settings kept, unless asked to include them.
+                    showDiagnostics = true,
+                    showGroundingDetails = true,
+                    reportButton = ReportButton.SHOW,
+                    linkStyle = LinkStyle.HIGHLIGHT,
+                    markDeveloperItems = false,
                 ),
                 read,
             )
@@ -235,7 +256,7 @@ class SettingsResetTest {
                 val first = CompletableDeferred<Unit>()
                 val second = CompletableDeferred<Unit>()
                 store.saveOrder.launch(saves) { first.await() }
-                val reset = store.resetter(saves)(store.settings.first())
+                val reset = store.resetter(saves)(store.settings.first(), false)
                 store.saveOrder.launch(saves) { second.await() }
                 val asked = store.historyLifetimeAsked
                 asked.save(7.days, { change -> store.saving(saves, change) }, saves)

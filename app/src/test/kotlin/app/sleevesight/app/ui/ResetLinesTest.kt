@@ -34,4 +34,10 @@ class ResetLinesTest {
         assertEquals(listed.groupBy { it }.filterValues { it.size > 1 }.keys, emptySet<String>())
         assertEquals(emptySet<String>(), listed.toSet().intersect(UNLISTED_FIELDS))
     }
+
+    @Test
+    fun theDeveloperLinesAreTheDeveloperSettingsTheResetKeepsUnlessIncluded() {
+        val developerLines = RESET_LINES.filter { it.developer }.flatMap { it.fields }.toSet()
+        assertEquals(SettingsReset.DEVELOPER.map { it.name }.toSet(), developerLines)
+    }
 }

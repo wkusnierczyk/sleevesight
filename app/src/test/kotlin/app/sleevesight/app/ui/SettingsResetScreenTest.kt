@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -26,6 +28,7 @@ import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.RESET_CONFIRM_TAG
+import app.sleevesight.app.ui.settings.RESET_DEVELOPER_TAG
 import app.sleevesight.app.ui.settings.RESET_DIALOG_TAG
 import app.sleevesight.app.ui.settings.RESET_TAG
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -220,18 +223,6 @@ class SettingsResetScreenTest {
         }
 
     @Test
-    fun developerModeIsListedAsStayingWhileItIsOn() {
-        runBlocking { settings.update { it.copy(developerMode = true, showDiagnostics = true) } }
-        screen {
-            openDialog()
-            assertTrue(shown(text(R.string.settings_developer_mode)))
-            val diagnostics =
-                line(R.string.settings_diagnostics, R.string.settings_reset_on, R.string.settings_reset_off)
-            assertTrue(shown(diagnostics))
-        }
-    }
-
-    @Test
     fun theMessageIsSaidOnceByTheScreenShownWhenTheResetIsSavedAfterARecreation() {
         moveSome()
         // A recreation, as when the reset changes the theme: a new screen in place of the first.
@@ -325,33 +316,82 @@ class SettingsResetScreenTest {
     }
 
     @Test
-    fun developerSettingsAreNotListedWhileDeveloperModeIsOffThoughTheResetPutsThemBack() {
-        runBlocking {
-            settings.update {
-                it.copy(
-                    developerMode = false,
-                    showDiagnostics = true,
-                    theme = ThemeChoice.DARK,
-                )
-            }
-        }
-        screen {
-            openDialog()
-            val diagnostics =
-                line(R.string.settings_diagnostics, R.string.settings_reset_on, R.string.settings_reset_off)
-            assertTrue(!shown(diagnostics))
-            assertTrue(
-                shown(line(R.string.settings_theme, R.string.settings_theme_dark, R.string.settings_theme_system)),
-            )
-            compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
-            compose.waitUntil(WAIT_MS) { !settings.settings.now().showDiagnostics }
-        }
-    }
-
-    @Test
     fun thePanelSaysWhatTheSectionHolds() =
         screen {
             compose.openSection(SettingsSection.SAVE_AND_RESET)
             compose.waitUntil(WAIT_MS) { shown("All settings: reset to defaults, or kept in a file") }
         }
+
+    private val diagnosticsLine get() =
+        line(R.string.settings_diagnostics, R.string.settings_reset_on, R.string.settings_reset_off)
+
+    private fun developerOffered() = compose.onAllNodesWithTag(RESET_DEVELOPER_TAG).fetchSemanticsNodes().isNotEmpty()
+
+    private fun diagnosticsOn(
+        developerMode: Boolean,
+        theme: ThemeChoice = ThemeChoice.DARK,
+    ) = runBlocking {
+        settings.update { it.copy(developerMode = developerMode, showDiagnostics = true, theme = theme) }
+    }
+
+    @Test
+    fun theCheckboxIsHiddenWhileEveryDeveloperSettingIsAtItsDefault() {
+        moveSome()
+        screen {
+            openDialog()
+            assertTrue(!developerOffered())
+            assertTrue(!shown("Developer settings"))
+        }
+    }
+
+    @Test
+    fun uncheckedTheDeveloperSettingsStayAndAreListedAsStaying() {
+        diagnosticsOn(developerMode = true)
+        screen {
+            openDialog()
+            assertTrue(developerOffered())
+            assertTrue(shown("Include developer settings"))
+            compose.onNodeWithTag(RESET_DEVELOPER_TAG).assertIsOff()
+            assertTrue(!shown(diagnosticsLine))
+            assertTrue(shown("Developer settings"))
+            assertTrue(shown(text(R.string.settings_developer_mode)))
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
+            compose.waitUntil(WAIT_MS) { settings.settings.now().theme == ThemeChoice.SYSTEM }
+            assertTrue(settings.settings.now().showDiagnostics)
+            assertTrue(settings.settings.now().developerMode)
+        }
+    }
+
+    @Test
+    fun checkedTheDeveloperSettingsAreListedAndResetButDeveloperModeStays() {
+        diagnosticsOn(developerMode = true)
+        screen {
+            openDialog()
+            compose.onNodeWithTag(RESET_DEVELOPER_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(RESET_DEVELOPER_TAG).assertIsOn()
+            assertTrue(shown(diagnosticsLine))
+            assertTrue(!shown("Developer settings"))
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
+            compose.waitUntil(WAIT_MS) { !settings.settings.now().showDiagnostics }
+            assertTrue(settings.settings.now().developerMode)
+        }
+    }
+
+    @Test
+    fun withOnlyDeveloperSettingsOffTheirDefaultsResetWaitsForTheCheckbox() {
+        // Developer mode off: the checkbox shows all the same.
+        diagnosticsOn(developerMode = false, theme = ThemeChoice.SYSTEM)
+        screen {
+            openDialog()
+            assertTrue(developerOffered())
+            assertTrue(shown("Every setting is at its default already."))
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).assertIsNotEnabled()
+            compose.onNodeWithTag(RESET_DEVELOPER_TAG).performScrollTo().performClick()
+            assertTrue(shown(diagnosticsLine))
+            assertTrue(!shown("Every setting is at its default already."))
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).assertIsEnabled().performClick()
+            compose.waitUntil(WAIT_MS) { !settings.settings.now().showDiagnostics }
+            assertTrue(!settings.settings.now().developerMode)
+        }
+    }
 }

@@ -861,6 +861,7 @@ class AppGraph internal constructor(
      */
     val resetSettings: (
         Settings,
+        Boolean,
     ) -> Deferred<Boolean> by lazy { settings.resetter(settingsSaves, pipeline::modeChosen) }
 
     /**

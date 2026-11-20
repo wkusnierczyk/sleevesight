@@ -55,19 +55,47 @@ object SettingsReset {
             },
         )
 
-    /** [current] reset to [defaults], all but what [KEPT] keeps. */
+    /**
+     * The developer settings, those *Developer* lists but *Developer mode*, which [KEPT] keeps: a
+     * reset keeps them too unless asked to include them (*Include developer settings*). A developer
+     * setting added later joins here, as the dialog's test of its lines asks.
+     */
+    val DEVELOPER: List<Kept> =
+        listOf(
+            Kept("showDiagnostics") { from, into -> into.copy(showDiagnostics = from.showDiagnostics) },
+            Kept("showGroundingDetails") { from, into -> into.copy(showGroundingDetails = from.showGroundingDetails) },
+            Kept("reportButton") { from, into -> into.copy(reportButton = from.reportButton) },
+            Kept("linkStyle") { from, into -> into.copy(linkStyle = from.linkStyle) },
+            Kept("markDeveloperItems") { from, into -> into.copy(markDeveloperItems = from.markDeveloperItems) },
+        )
+
+    /**
+     * [current] reset to [defaults], all but what [KEPT] keeps, and the developer settings
+     * ([DEVELOPER]) unless [includeDeveloper].
+     */
     fun reset(
         current: Settings,
         defaults: Settings,
-    ): Settings = KEPT.fold(defaults) { into, kept -> kept.carry(current, into) }
+        includeDeveloper: Boolean = false,
+    ): Settings =
+        (KEPT + if (includeDeveloper) emptyList() else DEVELOPER).fold(defaults) { into, kept ->
+            kept.carry(current, into)
+        }
 }
 
-/** [current] as *Reset to the defaults* would leave it (#960): what its dialog lists. */
-fun SettingsStore.resetOf(current: Settings): Settings = SettingsReset.reset(current, defaults)
+/**
+ * [current] as *Reset to the defaults* would leave it (#960), the developer settings too with
+ * [includeDeveloper]: what its dialog lists.
+ */
+fun SettingsStore.resetOf(
+    current: Settings,
+    includeDeveloper: Boolean = false,
+): Settings = SettingsReset.reset(current, defaults, includeDeveloper)
 
 /**
  * *Reset to the defaults* (#960) on this store: each call, given the settings shown when it was asked
- * for, saves a reset in [saves], which outlives the screen, in line with the other saves ([saving]),
+ * for and whether it includes the developer settings, saves a reset in [saves], which outlives the
+ * screen, in line with the other saves ([saving]),
  * its result whether it was saved, and notes it in [SettingsStore.resets], so the screen showing
  * then, a new one after a recreation (a reset that changes the theme restarts the activity)
  * included, says once that it is done. *Keep history for* as last asked for at the call is dropped
@@ -83,25 +111,27 @@ fun SettingsStore.resetOf(current: Settings): Settings = SettingsReset.reset(cur
 fun SettingsStore.resetter(
     saves: CoroutineScope,
     chosen: (WriteAutomatically) -> (WriteAutomatically?) -> Unit = { {} },
-): (shown: Settings) -> Deferred<Boolean> =
-    { shown ->
+): (shown: Settings, includeDeveloper: Boolean) -> Deferred<Boolean> =
+    { shown, includeDeveloper ->
         val mark = historyLifetimeAsked.mark()
-        val mode = resetOf(shown).writeAutomatically
+        val mode = resetOf(shown, includeDeveloper).writeAutomatically
         val settled = if (mode != shown.writeAutomatically) chosen(mode) else null
-        saving(saves) { resetToDefaults(mark, settled) }.also { resets.saving(it) }
+        saving(saves) { resetToDefaults(mark, settled, includeDeveloper) }.also { resets.saving(it) }
     }
 
 /**
  * Every setting back to this store's defaults, but those [SettingsReset.KEPT] keeps (#960). Takes no
- * turn, as [SettingsStore.update]: [resetter] takes it, and tells [settled], if any, what the store
+ * turn, as [SettingsStore.update]: [resetter] takes it; the developer settings ([SettingsReset.DEVELOPER])
+ * too with [includeDeveloper]. It tells [settled], if any, what the store
  * holds for *Reactive* once the save has ended, saved or not.
  */
 internal suspend fun SettingsStore.resetToDefaults(
     mark: HistoryLifetimeAsked.Mark = historyLifetimeAsked.mark(),
     settled: ((WriteAutomatically?) -> Unit)? = null,
+    includeDeveloper: Boolean = false,
 ) {
     try {
-        update { resetOf(it) }
+        update { resetOf(it, includeDeveloper) }
         historyLifetimeAsked.forget(mark)
     } finally {
         settled?.invoke(storedMode())

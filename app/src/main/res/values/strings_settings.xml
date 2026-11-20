@@ -452,6 +452,9 @@
     <string name="settings_reset_keeps_history">Your history and kept insights</string>
     <string name="settings_reset_keeps_players">The players you follow</string>
     <string name="settings_reset_keeps_ai">Which AI service is switched on</string>
+    <string name="settings_reset_keeps_developer">Developer settings</string>
+    <!-- Shown while a developer setting differs from its default; ticked, a reset puts them back too. -->
+    <string name="settings_reset_include_developer">Include developer settings</string>
     <!-- %1$s is settings_section_appearance, %2$s settings_restore_dismissed. -->
     <string name="settings_reset_keeps_dismissed">Dismissed messages; %1$s → %2$s brings them back</string>
 </resources>

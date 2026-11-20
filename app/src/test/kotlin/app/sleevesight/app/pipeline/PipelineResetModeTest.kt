@@ -69,7 +69,7 @@ internal class PipelineResetModeTest : PipelineHostFixture() {
             play("Two")
             settle()
             assertEquals("On demand writes nothing unasked", 0, provider.requestsFor("Two"))
-            store.resetter(backgroundScope, host::modeChosen)(settings.value)
+            store.resetter(backgroundScope, host::modeChosen)(settings.value, false)
             settle()
             assertEquals(WriteAutomatically.ON_EVERY_TRACK_CHANGE, settings.value.writeAutomatically)
             play("Three")
@@ -85,7 +85,7 @@ internal class PipelineResetModeTest : PipelineHostFixture() {
             store.resetter(backgroundScope) { mode ->
                 told += mode
                 {}
-            }(settings.value)
+            }(settings.value, false)
             runCurrent()
             assertEquals(emptyList<WriteAutomatically>(), told)
         }
@@ -102,7 +102,7 @@ internal class PipelineResetModeTest : PipelineHostFixture() {
         settle()
         val gate = CompletableDeferred<Unit>()
         store.saveOrder.launch(backgroundScope) { gate.await() }
-        store.resetter(backgroundScope, host::modeChosen)(settings.value)
+        store.resetter(backgroundScope, host::modeChosen)(settings.value, false)
         return gate
     }
 

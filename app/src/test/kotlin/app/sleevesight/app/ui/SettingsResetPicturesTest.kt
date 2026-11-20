@@ -105,6 +105,7 @@ class SettingsResetPicturesTest {
                     theme = ThemeChoice.DARK,
                     logoSpeed = LogoSpeed.RPM_45,
                     sessionGap = 60.minutes,
+                    showDiagnostics = true,
                     followedPlayers = mapOf("org.example.tunes" to true),
                     aiProvider = ProviderId.ANTHROPIC,
                 )
