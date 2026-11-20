@@ -31,6 +31,23 @@ class HistoryLifetimeAsked internal constructor(
         return if (last != null) last.lifetime else stored
     }
 
+    /** The value last asked for as it is now, for [forget]. */
+    class Mark internal constructor(
+        internal val at: Any?,
+    )
+
+    /** What is asked for now, taken when a reset (#960) is asked for. */
+    fun mark(): Mark = Mark(asked.get())
+
+    /**
+     * Drops the value last asked for, once a reset (#960) has stored another, so [held] is the stored
+     * one; unless another was asked for since [mark] was taken: that one's save comes after the reset's.
+     */
+    internal fun forget(mark: Mark) {
+        @Suppress("UNCHECKED_CAST")
+        (asked as AtomicReference<Any?>).compareAndSet(mark.at, null)
+    }
+
     /**
      * Saves [lifetime] with [save] (the screen's, in line, [saving]), noted as asked for first; its
      * result whether it was saved, awaited in [saves], which outlives the screen.

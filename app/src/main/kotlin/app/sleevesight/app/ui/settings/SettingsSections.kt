@@ -45,7 +45,7 @@ import app.sleevesight.app.ui.theme.rememberFocusHandoff
 /**
  * The settings' sections (#444), in the order shown, each with its name, the short description
  * shown beside its chip, and the fuller explanation shown at the top of its panel. [DEVELOPER]
- * shows only in developer mode.
+ * shows only in developer mode. [SAVE_AND_RESET] holds what acts on the settings as a whole (#960).
  */
 enum class SettingsSection(
     @StringRes val title: Int,
@@ -63,6 +63,11 @@ enum class SettingsSection(
         R.string.settings_section_appearance,
         R.string.settings_appearance_short,
         R.string.settings_appearance_long,
+    ),
+    SAVE_AND_RESET(
+        R.string.settings_section_save_reset,
+        R.string.settings_save_reset_short,
+        R.string.settings_save_reset_long,
     ),
     ABOUT(R.string.settings_section_about, R.string.settings_about_short, R.string.settings_about_long),
     DEVELOPER(

@@ -209,6 +209,8 @@ class MainActivity : ComponentActivity() {
                                         landOn = links.landOn,
                                         // Reactive's choice (#625): an automatic mode is the first action.
                                         chooseWritingMode = graph.chooseWritingMode,
+                                        // Reset to the defaults (#960): a mode it changes reaches the pipeline.
+                                        resetSettings = graph.resetSettings,
                                         openRouter = OpenRouterAccess(graph.openRouterLogin, graph.keyRefusals),
                                         readAloudVoices = graph.readAloudVoices,
                                         playerLabel = graph::playerLabel,
