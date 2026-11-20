@@ -320,7 +320,7 @@ private fun CoroutineScope.resetting(
     failed: (Boolean) -> Unit,
 ): SettingsResetter {
     val resets = reset ?: store.resetter(saves)
-    return SettingsResetter(store::resetOf) {
+    return SettingsResetter(store.defaults, store::resetOf) {
         resets(it).also { saved -> launch { failed(!saved.await()) } }
     }
 }
@@ -401,11 +401,12 @@ internal sealed interface SettingsDialog {
 }
 
 /**
- * What *Reset to the defaults* works with: [preview] gives the settings as a reset would leave
- * them ([app.sleevesight.app.settings.resetOf]), for its dialog; [reset] makes it
- * from the settings shown, its result whether it was saved.
+ * What *Reset to the defaults* works with: [defaults] are the store's, which it resets to;
+ * [preview] gives the settings as a reset would leave them ([app.sleevesight.app.settings.resetOf]),
+ * for its dialog; [reset] makes it from the settings shown, its result whether it was saved.
  */
 internal class SettingsResetter(
+    val defaults: Settings,
     val preview: (Settings) -> Settings,
     val reset: (shown: Settings) -> Deferred<Boolean>,
 )

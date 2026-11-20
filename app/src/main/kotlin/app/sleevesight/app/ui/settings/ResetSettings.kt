@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.settings
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,7 +55,7 @@ internal fun SaveAndResetSection(
     if (asking) {
         ResetDialog(
             changes = resetChanges(settings, resetter.preview(settings), modelName),
-            stays = resetStays(settings, resetter.preview(settings)),
+            stays = resetStays(settings, resetter.defaults),
             onReset = {
                 asking = false
                 // Its message comes from [ResetNotice], which outlives a recreation.
@@ -68,13 +69,14 @@ internal fun SaveAndResetSection(
 /**
  * Says *Settings reset to the defaults.* ([LocalMessages]) once the last reset asked for ([resets])
  * is saved, once only: on this screen, or on the one made after a recreation, as when the reset
- * changed the theme and Android restarted the activity. A screen that goes before its message has
- * shown and gone gives it back, so the next screen says it.
+ * changed the theme and Android restarted the activity. A screen recreated before its message has
+ * shown and gone gives it back, so the new screen says it; one left for good does not.
  */
 @Composable
 internal fun ResetNotice(resets: Resets) {
     val pending by resets.pending.collectAsState()
     val messages = LocalMessages.current
+    val activity = LocalActivity.current
     val done = stringResource(R.string.settings_reset_done)
     LaunchedEffect(pending, messages) {
         val reset = pending ?: return@LaunchedEffect
@@ -82,8 +84,9 @@ internal fun ResetNotice(resets: Resets) {
         try {
             messages.showing(done)
         } catch (gone: CancellationException) {
-            // The screen went before the message had shown and gone: the next one says it.
-            resets.giveBack(reset)
+            // Recreated before the message had shown and gone (a reset of the theme): the new screen
+            // says it. Left (Back), the message goes with the screen, never to come up on a later visit.
+            if (activity?.isChangingConfigurations == true) resets.giveBack(reset)
             throw gone
         }
     }
@@ -155,16 +158,15 @@ private fun Bullet(text: String) {
 /**
  * What a reset keeps, as its dialog lists it ([SettingsReset.KEPT]): the API keys, the history, the
  * players followed, which AI service is on, *Developer mode* while it is on, what is dismissed, and
- * *Keep history for* where a reset to [reset] keeps it off its default.
+ * *Keep history for* where the reset keeps it off its default in [defaults], the store's.
  */
 @Composable
 internal fun resetStays(
     current: Settings,
-    reset: Settings,
+    defaults: Settings,
 ): List<String> {
     val history = stringResource(R.string.settings_keep_history)
-    val historyKept =
-        current.historyLifetime != Settings.DEFAULT_HISTORY_LIFETIME && reset.historyLifetime == current.historyLifetime
+    val historyKept = SettingsReset.shortens(current.historyLifetime, defaults.historyLifetime)
     return listOfNotNull(
         stringResource(R.string.settings_reset_keeps_keys),
         stringResource(R.string.settings_reset_keeps_history),

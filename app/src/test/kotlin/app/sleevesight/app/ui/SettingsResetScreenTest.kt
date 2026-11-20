@@ -47,6 +47,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.days
 
 /**
  * *Save and reset* (#960), a section last before *About*, and its *Reset to the defaults*: a dialog
@@ -258,7 +259,29 @@ class SettingsResetScreenTest {
     }
 
     @Test
-    fun aScreenGoneBeforeTheMessageHasShownAndGoneLeavesItToTheNext() {
+    fun aRecreationBeforeTheMessageHasShownAndGoneLeavesItToTheNewScreen() {
+        moveSome()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val content = {
+                scenario.onActivity { activity ->
+                    activity.setContent {
+                        SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                    }
+                }
+            }
+            content()
+            openDialog()
+            // Saved at once; the activity recreated while the message shows, as a reset of the theme does.
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
+            compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
+            scenario.recreate()
+            content()
+            compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
+        }
+    }
+
+    @Test
+    fun aScreenLeftBeforeTheMessageHasShownAndGoneTakesItAlong() {
         moveSome()
         var screens by mutableIntStateOf(0)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -270,12 +293,34 @@ class SettingsResetScreenTest {
                 }
             }
             openDialog()
-            // Saved at once; the screen goes while its message shows, as on a recreation.
             compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
             compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
+            // Left, as with Back, and the settings opened again later: no message out of the blue.
             compose.runOnUiThread { screens++ }
             compose.waitForIdle()
-            compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
+            assertTrue(!shown("Settings reset to the defaults."))
+        }
+    }
+
+    @Test
+    fun keepHistoryForIsListedAsStayingWhereTheStoresDefaultIsShorter() {
+        // The store's default, not `:core`'s, is what the reset would shorten it to.
+        val shorter = memorySettings(defaults = Settings(historyLifetime = 30.days))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    SettingsScreen(shorter, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                }
+            }
+            runBlocking { shorter.update { it.copy(historyLifetime = Settings.DEFAULT_HISTORY_LIFETIME) } }
+            openDialog()
+            val kept =
+                app.getString(
+                    R.string.settings_reset_kept_value,
+                    text(R.string.settings_keep_history),
+                    "90 days",
+                )
+            assertTrue(shown(kept))
         }
     }
 
