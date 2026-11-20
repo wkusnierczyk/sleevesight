@@ -132,7 +132,12 @@ class ReportButtonWiringTest {
             assertEquals("The write is held", ReportButton.SHOW, stored())
 
             scenario.recreate()
-            compose.waitForIdle()
+            // The new Home has read the settings, still at *Show*, before the save goes on: else
+            // the button it does not yet show could pass for one hidden.
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                buttons() == 1
+            }
             gate.complete(Unit)
             // The released save goes on in turns on the main thread and off it: run the main
             // thread's turns while waiting for the file.
