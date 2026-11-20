@@ -21,10 +21,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.text
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -114,6 +116,12 @@ private fun linkedString(
  * cannot be given: a screen reader reads the text whole ([tag] on it), with no link in it, then stops
  * on a node of the link's own over its words, a link named so. A tap on the words follows the text's
  * link, as in [LinkedText].
+ *
+ * The two are one traversal group, the text first and the link second, whatever their places: a
+ * link wrapped over two lines is a box as tall as the text and further left than its right end,
+ * which the screen reader's order by place would put first. The link's node fills the group and is
+ * placed by the text's own coordinates, which are physical, left to right, so in a right-to-left
+ * layout too it lies over its words.
  */
 @Suppress("LongParameterList") // The text, its link's name, and how it is drawn.
 @Composable
@@ -133,16 +141,20 @@ internal fun NamedLinkText(
     // new layout composing again would lay the text out again, without end.
     val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
     val named = buildAnnotatedString { withLink(annotation(link, linkStyles(ink), link.onClick)) { append(link.text) } }
-    Box {
+    Box(Modifier.semantics { isTraversalGroup = true }) {
         val words =
             Modifier.clearAndSetSemantics {
                 this.text = AnnotatedString(text.text)
                 testTag = tag
+                traversalIndex = 0f
             }
         MarkedText(text, links, style, ink, color, words) { layout.value = it }
         Box(
             Modifier
-                .layout { measurable, _ ->
+                // As large as the text, at its top left in either direction, so the box placed in it
+                // is where the text measured it.
+                .matchParentSize()
+                .layout { measurable, constraints ->
                     // Each letter's box, joined: over two lines, the box around both parts.
                     val bounds =
                         layout.value
@@ -152,12 +164,14 @@ internal fun NamedLinkText(
                     val width = bounds.width.roundToInt()
                     val height = bounds.height.roundToInt()
                     val placeable = measurable.measure(Constraints.fixed(width, height))
-                    layout(width, height) {
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        // Not mirrored: the text's coordinates are from its left whatever the direction.
                         placeable.place(bounds.left.roundToInt(), bounds.top.roundToInt())
                     }
                 }.semantics {
                     this.text = named
                     testTag = link.tag
+                    traversalIndex = 1f
                     onClick(label = onClickLabel) {
                         link.onClick()
                         true
