@@ -35,6 +35,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
@@ -152,6 +153,16 @@ class SourcesTableScreenTest {
     // The unmerged tree: a chip, a name or a status is part of its row's switch (#1223).
     private fun tap(tag: String) {
         compose.onNodeWithTag(tag, useUnmergedTree = true).performScrollTo().performClick()
+        compose.waitForIdle()
+    }
+
+    /**
+     * Toggles [key]'s row by its click action, with no touch: a tap's ripple spreads and fades over
+     * the row in real time, so a picture taken after one can catch the chip under it, the more so on
+     * a busy machine (#1479).
+     */
+    private fun toggle(key: String) {
+        compose.onNodeWithTag(ROW_PREFIX + key).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
     }
 
@@ -393,7 +404,7 @@ class SourcesTableScreenTest {
     fun aChipIsFilledWhileItsLinesShowOutlinedWhileHiddenAndDimmedWithNone() =
         show(mixed) {
             unfold()
-            tap(CHIP_PREFIX + "W")
+            toggle("W")
             val shown = picture(CHIP_PREFIX + "MB")
             val hidden = picture(CHIP_PREFIX + "W")
             val dimmed = picture(CHIP_PREFIX + "S")

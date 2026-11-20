@@ -30,6 +30,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -142,6 +143,16 @@ class SourcesUnverifiedScreenTest {
 
     private fun tap(tag: String) {
         compose.onNodeWithTag(tag, useUnmergedTree = true).performScrollTo().performClick()
+        compose.waitForIdle()
+    }
+
+    /**
+     * Toggles [key]'s row by its click action, with no touch: a tap's ripple spreads and fades over
+     * the row in real time, so a picture taken after one can catch the chip under it, the more so on
+     * a busy machine (#1479).
+     */
+    private fun toggle(key: String) {
+        compose.onNodeWithTag(ROW_PREFIX + key).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
     }
 
@@ -313,7 +324,7 @@ class SourcesUnverifiedScreenTest {
                 val ink = darkestOrLightest(grey, fillOf(grey))
                 val ratio = contrast(ComposeColor(ink), ComposeColor(fillOf(grey)))
                 assertTrue("letter ${hex(ink)} on ${hex(fillOf(grey))}: $ratio", ratio >= 4.5f)
-                tap(CHIP_PREFIX + "L")
+                toggle("L")
                 val hidden = picture(CHIP_PREFIX + "L")
                 val fill = fillOf(hidden)
                 assertTrue("not filled: ${hex(fill)}", distance(fill, groundOf(hidden)) <= TOLERANCE)

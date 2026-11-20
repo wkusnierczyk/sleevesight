@@ -20,7 +20,6 @@ import app.sleevesight.app.ui.report.TESTER_REPORT_TAG
 import app.sleevesight.core.settings.ReportButton
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -74,10 +73,9 @@ class ReportButtonWiringTest {
     private val store by lazy { GatedStore(stores.open("settings")) }
 
     private fun stored() =
-        runBlocking {
-            app.graph.settings.settings
-                .first()
-        }.reportButton
+        app.graph.settings
+            .now()
+            .reportButton
 
     private fun buttons() = compose.onAllNodesWithTag(TESTER_REPORT_TAG).fetchSemanticsNodes().size
 
@@ -112,9 +110,22 @@ class ReportButtonWiringTest {
             hide()
             compose.waitUntil(WAIT_MS) { shown(TESTER_REPORT_HIDDEN_TAG) }
             assertEquals(ReportButton.HIDE, stored())
-            assertEquals(0, buttons())
+            // The message shows once the save ends; the button goes once Home's read of the
+            // settings hears of it, on DataStore's thread first (#1479).
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                buttons() == 0
+            }
 
             scenario.recreate()
+            // The new Home shows no button before its first read of the settings either: wait
+            // until it has been drawn from them.
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                var shown = false
+                scenario.onActivity { shown = it.testerReport.settingsShown }
+                shown
+            }
             compose.waitForIdle()
             assertEquals(ReportButton.HIDE, stored())
             assertEquals(0, buttons())
@@ -130,7 +141,12 @@ class ReportButtonWiringTest {
             assertEquals("The write is held", ReportButton.SHOW, stored())
 
             scenario.recreate()
-            compose.waitForIdle()
+            // The new Home has read the settings, still at *Show*, before the save goes on: else
+            // the button it does not yet show could pass for one hidden.
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                buttons() == 1
+            }
             gate.complete(Unit)
             // The released save goes on in turns on the main thread and off it: run the main
             // thread's turns while waiting for the file.
@@ -138,8 +154,13 @@ class ReportButtonWiringTest {
                 shadowOf(Looper.getMainLooper()).idle()
                 stored() == ReportButton.HIDE
             }
-            compose.waitForIdle()
-            assertEquals(0, buttons())
+            // The file holds *Hide* before the new Home, which follows the settings, hears so: it
+            // is told on DataStore's thread before the main one, which `waitForIdle` does not wait
+            // for (#1479). So wait for the button to go, as for the file.
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                buttons() == 0
+            }
             assertFalse("No message on the new Home", shown(TESTER_REPORT_HIDDEN_TAG))
         }
 }
