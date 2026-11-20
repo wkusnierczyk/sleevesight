@@ -73,13 +73,14 @@ internal fun voiceState(
     online: Boolean,
 ): VoiceState =
     when {
-        load == null || load == VoicesLoad.Loading -> VoiceState.Stored(chosen?.name)
+        // A name stored from a settings file is the file's text (its id): shown as [fileText] has it.
+        load == null || load == VoicesLoad.Loading -> VoiceState.Stored(chosen?.name?.let(::fileText))
         load == VoicesLoad.NoEngine -> VoiceState.NoEngine
         groups.isEmpty() -> VoiceState.NoVoice
         chosen == null -> VoiceState.PhoneChoice
         else ->
             groups.entry(chosen.id)?.let { VoiceState.Chosen(it, offline = !online && it.needsTheInternet) }
-                ?: VoiceState.Gone(chosen.name)
+                ?: VoiceState.Gone(fileText(chosen.name))
     }
 
 /** A country's name, by its ISO [code], in English as the app's texts are; a voice with none, "English". */
