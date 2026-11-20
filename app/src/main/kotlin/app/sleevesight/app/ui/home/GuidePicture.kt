@@ -117,8 +117,8 @@ internal val ShantellSans: FontFamily = FontFamily(Font(R.font.shantell_sans_reg
 @Suppress("LongMethod") // The picture's parts, its notes, marks, magnifier and panel, laid out as one.
 @Composable
 internal fun GuidePicture(
+    opens: SymbolOpens,
     modifier: Modifier = Modifier,
-    opens: SymbolOpens = SymbolOpens.PLAYER_MENU,
 ) {
     var magnified by rememberSaveable { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf<GuidePart?>(null) }
@@ -140,15 +140,15 @@ internal fun GuidePicture(
                     .pointerInput(Unit) { detectTapGestures { magnified = true } },
                 picture::report,
             )
-            for (part in GuidePart.entries) GuideNoteText(part, hand, Modifier.layoutId(GuideNoteSlot(part)), opens)
+            for (part in GuidePart.entries) GuideNoteText(part, hand, opens, Modifier.layoutId(GuideNoteSlot(part)))
             for (part in GuidePart.entries) {
                 GuideNote(
                     part,
+                    opens,
                     Modifier
                         .layoutId(part)
                         .semantics { traversalIndex = part.ordinal.toFloat() }
                         .handoffTarget(handoff, notes[part.ordinal]),
-                    opens,
                 ) { open = if (open == part) null else part }
             }
             GuideMarks(

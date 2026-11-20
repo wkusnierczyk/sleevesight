@@ -52,8 +52,8 @@ import app.sleevesight.core.settings.SymbolOpens
 internal fun GuideNoteText(
     part: GuidePart,
     style: TextStyle,
+    opens: SymbolOpens,
     modifier: Modifier = Modifier,
-    opens: SymbolOpens = SymbolOpens.PLAYER_MENU,
 ) {
     Box(modifier.testTag(guideNoteTextTag(part)).clearAndSetSemantics {}) {
         LinkLook(stringResource(part.note(opens)), style)
@@ -71,8 +71,8 @@ internal fun GuideNoteText(
 @Composable
 internal fun GuideNote(
     part: GuidePart,
+    opens: SymbolOpens,
     modifier: Modifier = Modifier,
-    opens: SymbolOpens = SymbolOpens.PLAYER_MENU,
     onClick: () -> Unit,
 ) {
     val note = stringResource(part.note(opens))

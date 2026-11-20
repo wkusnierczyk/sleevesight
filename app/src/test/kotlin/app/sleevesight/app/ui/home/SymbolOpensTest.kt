@@ -128,7 +128,7 @@ class SymbolOpensTest {
         for ((opens, note) in notes) {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 scenario.onActivity {
-                    it.setContent { SleevesightTheme { GuidePicture(Modifier.fillMaxWidth(), opens) } }
+                    it.setContent { SleevesightTheme { GuidePicture(opens, Modifier.fillMaxWidth()) } }
                 }
                 // As drawn, and as a screen reader reads its button.
                 compose.onNodeWithText(note, useUnmergedTree = true).assertExists()
@@ -151,7 +151,7 @@ class SymbolOpensTest {
         for ((opens, line) in listOf(SymbolOpens.PLAYER_MENU to menu, SymbolOpens.PLAYER to player)) {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 scenario.onActivity {
-                    it.setContent { SleevesightTheme { GuidePicture(Modifier.fillMaxWidth(), opens) } }
+                    it.setContent { SleevesightTheme { GuidePicture(opens, Modifier.fillMaxWidth()) } }
                 }
                 compose.onNodeWithTag(guideNoteTag(GuidePart.PLAYER)).performClick()
                 compose.onNodeWithText(line, substring = true).assertExists()

@@ -168,6 +168,32 @@ class HeaderLogoFlashTest {
             iconShown(false)
         }
 
+    // Claude review of #1463: a pause within the flash does not cut it short (#1441's guard).
+    @Test
+    fun aPauseWithinTheFlashKeepsTheLogoForTheWholeThreeSeconds() =
+        paused {
+            change { home.playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL) }
+            iconShown(true)
+            compose.mainClock.advanceTimeBy(FLASH_MS / 2)
+            change { home.playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PAUSED, actions = ALL) }
+            compose.mainClock.advanceTimeBy(FLASH_MS / 2 - MARGIN_MS)
+            iconShown(true)
+            pastTheFlash()
+            iconShown(false)
+        }
+
+    // Claude review of #1463: the player gone within the flash ends it at once.
+    @Test
+    fun thePlayerGoingWithinTheFlashEndsIt() =
+        paused {
+            change { home.playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL) }
+            iconShown(true)
+            change { home.nothingPlaying() }
+            compose.mainClock.advanceTimeBy(FADE_MS + MARGIN_MS)
+            iconShown(false)
+            noteShown(true)
+        }
+
     @Test
     fun withTheLogoSwitchedOffTheNoteStaysStill() {
         home.settings.value = home.settings.value?.copy(showPlayerLogo = false)

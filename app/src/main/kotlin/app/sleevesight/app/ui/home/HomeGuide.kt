@@ -26,10 +26,10 @@ import app.sleevesight.core.settings.SymbolOpens
 internal fun HomeGuide(
     onHideOnce: () -> Unit,
     onDismiss: () -> Unit,
-    opens: SymbolOpens = SymbolOpens.PLAYER_MENU,
+    opens: SymbolOpens,
 ) {
     Column(Modifier.fillMaxWidth().testTag(HOME_GUIDE_TAG), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        GuidePicture(Modifier.fillMaxWidth(), opens)
+        GuidePicture(opens, Modifier.fillMaxWidth())
         ActionButtonGroup(
             listOf(
                 GroupAction(
