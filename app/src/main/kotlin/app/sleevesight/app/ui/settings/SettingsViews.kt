@@ -301,7 +301,8 @@ internal class ViewSearch(
  * What a visit to the settings shows outside the view (#1447), until the view changes: the [rows],
  * each by its section and title, a section's hidden changes' *Show* showed ([reveal]) and a link
  * landed on ([land]). Kept by title, not by whether a row is still changed, so one set back to its
- * default stays in sight while it is being changed. Saved with the screen, so a rotation keeps them.
+ * default stays in sight while it is being changed. Saved with the screen, so a rotation keeps them;
+ * leaving for a page the settings open clears them ([clear]).
  */
 @Stable
 internal class ViewReveals(
@@ -316,6 +317,15 @@ internal class ViewReveals(
         titles: List<String>,
     ) {
         rows = rows + titles.map { section to it }
+    }
+
+    /**
+     * Shows nothing outside the view any more: the settings are left for a page they open (*Credits*,
+     * *Diagnostics*, *What leaves the device*), which coming back from does not undo. A rotation
+     * keeps them.
+     */
+    fun clear() {
+        rows = emptySet()
     }
 
     /** Shows [section]'s row [title], which a link landed on. */

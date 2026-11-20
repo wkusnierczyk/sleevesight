@@ -84,6 +84,7 @@ class SettingsViewsScreenTest {
 
     private fun show(
         landOn: SettingsTarget? = null,
+        onOpenCredits: () -> Unit = {},
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -95,6 +96,7 @@ class SettingsViewsScreenTest {
                         emptyMap(),
                         { CompletableDeferred(true) },
                         saves,
+                        onOpenCredits = onOpenCredits,
                         landOn = landOn,
                     ) {
                         it
@@ -239,6 +241,24 @@ class SettingsViewsScreenTest {
             compose.waitForIdle()
             assertEquals(0, count(SEARCH_NONE_TAG))
             assertEquals("1 more in All. Show\u00A0them", lineOf(SEARCH_MORE_TAG))
+        }
+    }
+
+    @Test
+    fun leavingForAPageHidesWhatWasShownOutsideTheViewAgain() {
+        set { it.copy(settingsView = SettingsView.BASIC, logoSpeed = LogoSpeed.RPM_45) }
+        var opened = false
+        show(onOpenCredits = { opened = true }) {
+            tap(SettingsSection.APPEARANCE.tag)
+            follow(HIDDEN_SHOW_TAG)
+            assertTrue(text(R.string.settings_logo_speed) in rowsOf(SettingsSection.APPEARANCE))
+            // *Credits*, under *About*: as the page opens, and back from it, the settings as drawn.
+            tap(SettingsSection.ABOUT.tag)
+            compose.onNode(hasText(text(R.string.credits_title))).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertTrue(opened)
+            assertFalse(text(R.string.settings_logo_speed) in rowsOf(SettingsSection.APPEARANCE))
+            assertEquals("1 changed setting hidden. Show", lineOf(HIDDEN_LINE_TAG))
         }
     }
 

@@ -496,9 +496,10 @@ private class Navigation(
     val reset: SettingsResetter,
     val files: SettingsFileAccess,
 ) {
-    /** These ways out, [leave] called before each that opens a page coming back to the settings (#874). */
-    fun leaving(leave: () -> Unit): Navigation =
-        Navigation(
+    /** These ways out, each of [leaves] called before each that opens a page coming back to the settings (#874). */
+    fun leaving(vararg leaves: () -> Unit): Navigation {
+        val leave = { leaves.forEach { it() } }
+        return Navigation(
             players,
             modelName,
             openCredits = {
@@ -519,6 +520,7 @@ private class Navigation(
             reset,
             files,
         )
+    }
 }
 
 /**
@@ -658,7 +660,8 @@ private fun SettingsContent(
         found?.let { SearchAnnouncement(folds.query, it.sections.size, it.more.takeIf { !showMore }, it.home) }
         CompositionLocalProvider(LocalDescriptionFolds provides descriptionsShown) {
             // Left for a page, the descriptions show on the way back as on opening the settings (#874).
-            val leaving = navigation.leaving(descriptions::leave)
+            // The rows shown outside the view (#1447) go too: the settings are left.
+            val leaving = navigation.leaving(descriptions::leave, reveals::clear)
             val shown = Found(listed, found, byView, showMore, reveals::reveal) { showMore = true }
             SettingsColumn(settings, keys, leaving, unavailable, shown, folds, update, open)
         }
