@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +41,30 @@ class VideoThumbnailTest {
         assertEquals(WIDTH, trimmed.width)
         assertEquals(270, trimmed.height)
         assertEquals(16f / 9f, videoCoverRatio(trimmed), 0.001f)
+    }
+
+    @Test
+    fun aHardwareThumbnailIsReadFromACopyInMemory() {
+        // A hardware bitmap's pixels cannot be read (`getPixels` throws on the phone), and the player's
+        // art can be one (#1257). Robolectric makes no hardware bitmap, so the branch is taken by hand.
+        val art = thumbnail(bar = 45)
+        val copy = readablePixels(art, hardware = true)
+        assertNotSame(art, copy)
+        assertEquals(Bitmap.Config.ARGB_8888, copy?.config)
+        assertSame(art, readablePixels(art))
+    }
+
+    @Test
+    fun aThumbnailWhosePixelsCannotBeReadIsShownUntrimmed() {
+        val gone = thumbnail(bar = 45).apply { recycle() }
+        assertSame(gone, safeTrimBars(gone))
+    }
+
+    @Test
+    fun aWideThumbnailIsScannedNarrowAndCutAtItsFullWidth() {
+        val wide = trimBars(thumbnail(bar = 90, width = 1280, height = 900))
+        assertEquals(1280, wide.width)
+        assertEquals(720, wide.height)
     }
 
     @Test

@@ -136,7 +136,7 @@ internal fun openPlayerScreen(
  *
  * From a [video] source ([app.sleevesight.app.session.VideoSources], #1257), the art is the video's
  * thumbnail, shown whole as a wide strip, as wide as the square would be, with the black bars above
- * and below it trimmed ([trimBars], [videoCoverRatio]), and read as "Video thumbnail".
+ * and below it trimmed ([trimmedThumbnail], [videoCoverRatio]), and read as "Video thumbnail".
  */
 @Suppress("LongParameterList") // The art, the playback, the cover's turn, and how it is laid out.
 @Composable
@@ -149,9 +149,10 @@ internal fun ArtAndProgress(
     video: Boolean = false,
 ) {
     val shape = RoundedCornerShape(16.dp)
-    // Trimmed once per thumbnail, not at every recomposition.
-    val shown = remember(art, video) { if (video && art != null) trimBars(art) else art }
-    val ratio = if (video) videoCoverRatio(shown) else 1f
+    // Trimmed off the main thread, once per thumbnail; until then the thumbnail as it is, cropped to 16:9.
+    val trimmed = if (video && art != null) trimmedThumbnail(art) else null
+    val shown = trimmed ?: art
+    val ratio = if (video) videoCoverRatio(trimmed) else 1f
     val cover: @Composable (Modifier) -> Unit = { box ->
         if (turn == null) {
             Art(shown, box.clip(shape), stringResource(artName(video)))
