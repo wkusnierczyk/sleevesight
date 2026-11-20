@@ -89,7 +89,9 @@ pitest {
         )
 }
 
-tasks.named("pitest") {
+tasks.named<info.solidsoft.gradle.pitest.PitestTask>("pitest") {
     inputs.file(apiKeysVectors).withPropertyName("apiKeysVectors").withPathSensitivity(PathSensitivity.NONE)
     dependsOn(":core:jvmMainClasses")
+    // `JvmKeyCrypto`'s source, for the report to show beside its mutants.
+    sourceDirs.from(rootProject.file("core/src/jvmMain/kotlin"))
 }
