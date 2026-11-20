@@ -29,12 +29,7 @@ internal fun AiWebSearchRows(
 ) {
     val exa = settings.aiWebSearchOn
     val limit = Settings.AI_WEB_SEARCH_LIMIT
-    val choices =
-        listOf(
-            AiWebSearch.OFF to stringResource(R.string.settings_ai_web_search_off),
-            AiWebSearch.ONCE to stringResource(R.string.settings_ai_web_search_once),
-            AiWebSearch.UP_TO to pluralStringResource(R.plurals.settings_ai_web_search_up_to, limit, limit),
-        )
+    val choices = aiWebSearchChoices()
     val details =
         mapOf(
             AiWebSearch.OFF to stringResource(R.string.settings_ai_web_search_off_detail),
@@ -108,4 +103,15 @@ internal fun aiWebSearchIndexRows(settings: Settings): List<IndexedRow> {
                 choices + off,
         )
     return listOf(web)
+}
+
+/** *AI web search*'s choices, in the group's order, each with its label. */
+@Composable
+internal fun aiWebSearchChoices(): List<Pair<AiWebSearch, String>> {
+    val limit = Settings.AI_WEB_SEARCH_LIMIT
+    return listOf(
+        AiWebSearch.OFF to stringResource(R.string.settings_ai_web_search_off),
+        AiWebSearch.ONCE to stringResource(R.string.settings_ai_web_search_once),
+        AiWebSearch.UP_TO to pluralStringResource(R.plurals.settings_ai_web_search_up_to, limit, limit),
+    )
 }

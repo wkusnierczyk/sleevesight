@@ -28,7 +28,7 @@ internal fun TrackLanguageRow(
 }
 
 // *Search in the track’s language*'s values, in the group's order, each with its label and what it does.
-private val TRACK_LANGUAGE_CHOICES: List<Triple<TrackLanguageSearch, Int, Int>> =
+internal val TRACK_LANGUAGE_CHOICES: List<Triple<TrackLanguageSearch, Int, Int>> =
     listOf(
         Triple(
             TrackLanguageSearch.OFF,

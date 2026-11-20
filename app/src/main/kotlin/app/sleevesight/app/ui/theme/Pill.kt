@@ -1,12 +1,15 @@
 package app.sleevesight.app.ui.theme
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
@@ -77,4 +80,23 @@ internal fun PillButton(
             },
         content = content,
     )
+}
+
+/**
+ * A dialog's actions as pills (#960), in one row at its end, never stacked: [dismiss] ([onDismiss]),
+ * then [confirm] ([onConfirm]; null disables it), [confirmModifier] on the latter. For a dialog's
+ * `confirmButton`, with no `dismissButton`; the other dialogs come to it with #1468.
+ */
+@Composable
+internal fun DialogPills(
+    dismiss: String,
+    onDismiss: () -> Unit,
+    confirm: String,
+    onConfirm: (() -> Unit)?,
+    confirmModifier: Modifier = Modifier,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        PillButton(dismiss, onDismiss)
+        PillButton(confirm, onConfirm, confirmModifier)
+    }
 }
