@@ -26,9 +26,11 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 files=(gradle/verification-metadata.xml gradle/verification-keyring.keys)
+# `checkVerificationMetadata` reads the metadata these passes are still writing (reset in step 1, and
+# written only when the build ends), so it is left out of them and run once they are done.
 tasks=(
   resolveAndLockAll build checkDependencies checkDependencyPage checkManifest checkModuleGraph
-  :app:assembleDebugAndroidTest :app:bundleRelease -x test
+  :app:assembleDebugAndroidTest :app:bundleRelease -x test -x :app:checkVerificationMetadata
 )
 
 backup=$(mktemp -d)
@@ -53,5 +55,8 @@ SLEEVESIGHT_WRITE_VERIFICATION_METADATA=pgp,sha256 ./gradlew --console=plain :bu
 SLEEVESIGHT_WRITE_VERIFICATION_METADATA=sha256 ./gradlew --console=plain :build-logic:functionalTest --rerun
 
 python3 -I tools/dependency-verification.py finish
+
+# Every locked version has its entry now (the check left out of the passes above).
+./gradlew --console=plain :app:checkVerificationMetadata
 
 echo "Done: review the changes to the lockfiles, ${files[*]}."
