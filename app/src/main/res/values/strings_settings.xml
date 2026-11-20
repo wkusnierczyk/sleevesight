@@ -457,4 +457,47 @@
     <string name="settings_reset_include_developer">Include developer settings</string>
     <!-- %1$s is settings_section_appearance, %2$s settings_restore_dismissed. -->
     <string name="settings_reset_keeps_dismissed">Dismissed messages; %1$s → %2$s brings them back</string>
+    <!-- Save to a file and Load from a file (#815), under Save and reset. -->
+    <string name="settings_save_file">Save to a file</string>
+    <string name="settings_save_file_summary">Saves your settings to a file you choose, to load here or on another phone. API keys, your history and the insights are never in it; keys move by the key QR code.</string>
+    <string name="settings_save_file_button">Save</string>
+    <!-- %1$s is the file's name. -->
+    <string name="settings_save_file_done">Settings saved to %1$s.</string>
+    <string name="settings_save_file_failed">The settings could not be saved to the file.</string>
+    <string name="settings_load_file">Load from a file</string>
+    <string name="settings_load_file_summary">Loads settings saved by Sleevesight. You see what changes before anything does; settings the file doesn’t have keep their values.</string>
+    <string name="settings_load_file_button">Load</string>
+    <string name="settings_load_file_title">Load settings?</string>
+    <!-- The preview's first line: %1$s the file's name, %2$s the version of Sleevesight that saved it. -->
+    <string name="settings_load_file_from">From %1$s, saved by Sleevesight %2$s.</string>
+    <!-- The preview's first line, for a file that does not say which version saved it: %1$s its name. -->
+    <string name="settings_load_file_from_unknown">From %1$s.</string>
+    <!-- Before the list of what a load changes. -->
+    <plurals name="settings_load_file_changes">
+        <item quantity="one">%d setting changes:</item>
+        <item quantity="other">%d settings change:</item>
+    </plurals>
+    <string name="settings_load_file_same">The file matches your settings; nothing changed.</string>
+    <string name="settings_load_file_skipped">Not loaded:</string>
+    <string name="settings_load_file_never">Your API keys and history are never in a settings file.</string>
+    <!-- A line under Not loaded: %1$s the name in the file, of a setting this version does not know. -->
+    <string name="settings_load_file_unknown">%1$s: not a setting this version knows</string>
+    <!-- A line under Not loaded: %1$s the setting's title, %2$s the value in the file. -->
+    <string name="settings_load_file_invalid">%1$s: %2$s: not one of its choices</string>
+    <!-- A setting under Not loaded where it has several items: %1$s its title, %2$s the item. -->
+    <string name="settings_load_file_item">%1$s (%2$s)</string>
+    <string name="settings_load_file_developer">Developer settings (Developer mode is off)</string>
+    <!-- A line under Not loaded: %1$s Keep history for, %2$s the file's value, %3$s History. -->
+    <string name="settings_load_file_history">%1$s: %2$s: it would delete history; choose it under %3$s</string>
+    <string name="settings_load_file_unreadable">The file could not be read.</string>
+    <string name="settings_load_file_not_settings">This file holds no Sleevesight settings.</string>
+    <plurals name="settings_load_file_done">
+        <item quantity="one">%d setting loaded.</item>
+        <item quantity="other">%d settings loaded.</item>
+    </plurals>
+    <!-- %1$d the settings loaded, %2$d those skipped. -->
+    <plurals name="settings_load_file_done_skipped">
+        <item quantity="one">%1$d setting loaded, %2$d skipped.</item>
+        <item quantity="other">%1$d settings loaded, %2$d skipped.</item>
+    </plurals>
 </resources>

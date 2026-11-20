@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.RefusedModels
@@ -44,6 +45,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.settings.loader
 import app.sleevesight.app.settings.resetOf
 import app.sleevesight.app.settings.resetter
 import app.sleevesight.app.settings.saving
@@ -58,6 +60,7 @@ import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.LookUpAfterClear
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SettingsFile
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -106,6 +109,9 @@ import kotlinx.coroutines.launch
  * [resetSettings] makes *Reset to the defaults* (#960), telling the pipeline of a mode it changes;
  * null resets through [settingsStore] alone ([resetter]). Its message is said by whichever screen
  * shows once it is saved, after a recreation too ([ResetNotice]).
+ * [loadSettings] makes *Load from a file* (#815), telling the pipeline of a mode it changes; null
+ * loads through [settingsStore] alone ([loader]). [settingsFiles] reads and writes the file the user
+ * picks; null through the app's content resolver.
  * [readAloudVoices] gives *Voice* under *Read aloud* (#787) the text-to-speech engine's voices and
  * reads its samples; null for none (tests), the row then showing the voice stored.
  */
@@ -129,6 +135,8 @@ fun SettingsScreen(
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     openRouter: OpenRouterAccess? = null,
     resetSettings: ((Settings, Boolean) -> Deferred<Boolean>)? = null,
+    loadSettings: ((Settings, SettingsFile.Contents, String) -> Deferred<Boolean>)? = null,
+    settingsFiles: SettingsFiles? = null,
     readAloudVoices: ReadAloudVoices? = null,
     playerLabel: (String) -> String,
 ) {
@@ -169,6 +177,9 @@ fun SettingsScreen(
     // *Reset to the defaults* (#960): its dialog's preview, and the reset through the app's resetter,
     // which tells the pipeline of a mode it changes, its save announced as any change's is.
     val reset = scope.resetting(settingsStore, resetSettings, saves, failed)
+    // *Save to a file* and *Load from a file* (#815): a load through the app's loader, which tells
+    // the pipeline of a mode it changes, its save announced as any change's is.
+    val files = scope.fileAccess(settingsStore, loadSettings, settingsFiles, saves, failed)
     // *Reactive*'s mode through the app's chooser (#625), its save announced as any change's is.
     val chooseMode: ((WriteAutomatically) -> Unit)? =
         chooseWritingMode?.let { choose ->
@@ -201,6 +212,7 @@ fun SettingsScreen(
                             dismissals,
                             restoreDismissed,
                             reset,
+                            files,
                         )
                     CompositionLocalProvider(
                         LocalHistoryLifetime provides historyLifetime,
@@ -331,6 +343,32 @@ private fun CoroutineScope.resetting(
 }
 
 /**
+ * *Save to a file* and *Load from a file* (#815) on [store]: [load], or without one the store's own
+ * loader saving in [saves], each load's save waited for in this scope, the screen's, telling [failed]
+ * whether it could not be saved; the files through [files], or the app's content resolver.
+ */
+@Composable
+private fun CoroutineScope.fileAccess(
+    store: SettingsStore,
+    load: ((Settings, SettingsFile.Contents, String) -> Deferred<Boolean>)?,
+    files: SettingsFiles?,
+    saves: CoroutineScope,
+    failed: (Boolean) -> Unit,
+): SettingsFileAccess {
+    val resolver = LocalContext.current.contentResolver
+    val loads = load ?: store.loader(saves)
+    return SettingsFileAccess(
+        files ?: SettingsFiles.of(
+            resolver,
+        ),
+        BuildConfig.VERSION_NAME,
+        { shown, contents, message ->
+            loads(shown, contents, message).also { saved -> launch { failed(!saved.await()) } }
+        },
+    )
+}
+
+/**
  * How the last *Clear history* ended: [ended] is null until one does. Its result is awaited in
  * [scope], the screen's: the clear itself is made whatever happens to the screen, but if the screen
  * goes, or is recreated (a rotation), before the clear ends, its notice is not shown. Nothing shows
@@ -446,6 +484,7 @@ private class Navigation(
     val dismissals: Dismissals,
     val restoreDismissed: () -> Deferred<Boolean>,
     val reset: SettingsResetter,
+    val files: SettingsFileAccess,
 ) {
     /** These ways out, [leave] called before each that opens a page coming back to the settings (#874). */
     fun leaving(leave: () -> Unit): Navigation =
@@ -468,6 +507,7 @@ private class Navigation(
             dismissals,
             restoreDismissed,
             reset,
+            files,
         )
 }
 
@@ -661,7 +701,13 @@ private fun SettingsColumn(
         Section(SettingsSection.HISTORY) { HistorySection(settings, update, open) }
         Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update, navigation.restoreDismissed) }
         Section(SettingsSection.SAVE_AND_RESET) {
-            SaveAndResetSection(settings, navigation.reset, navigation.modelName)
+            SaveAndResetSection(
+                settings,
+                navigation.reset,
+                navigation.files,
+                navigation.modelName,
+                navigation.players.label,
+            )
         }
         Section(SettingsSection.ABOUT) {
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)

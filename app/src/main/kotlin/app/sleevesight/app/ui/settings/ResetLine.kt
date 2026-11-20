@@ -14,10 +14,13 @@ import app.sleevesight.core.settings.Settings
  * One or more settings as *Reset settings?* lists them: [fields] are their properties in [Settings];
  * [lines] gives a line for each that differs between the settings now and after the reset, as
  * *Title: value now → default*, a model named by the function given, as its row names it.
- * [developer] for one under *Developer*, listed only while developer mode is on.
+ * [developer] for one under *Developer*. [title] names the setting, or the settings' section for
+ * several, where a line about it is not one of [lines]: a value of it a settings file has that is
+ * not loaded (#815).
  */
 internal class ResetLine(
     val fields: List<String>,
+    @StringRes val title: Int,
     val developer: Boolean = false,
     val lines: @Composable (now: Settings, reset: Settings, modelName: (String) -> String) -> List<String>,
 )
@@ -44,7 +47,7 @@ private fun <T> line(
 
 /** *On* or *Off*, as a switch is. */
 @Composable
-private fun onOff(on: Boolean): String =
+internal fun onOff(on: Boolean): String =
     stringResource(if (on) R.string.settings_reset_on else R.string.settings_reset_off)
 
 /** A switch, [field], titled [title]. */
@@ -53,7 +56,7 @@ private fun switch(
     @StringRes title: Int,
     of: (Settings) -> Boolean,
 ): ResetLine =
-    ResetLine(listOf(field)) { now, reset, _ -> line(stringResource(title), of(now), of(reset)) { onOff(it) } }
+    ResetLine(listOf(field), title) { now, reset, _ -> line(stringResource(title), of(now), of(reset)) { onOff(it) } }
 
 /** A setting, [field], titled [title], each value as [label] has it. */
 private fun <T> valued(
@@ -61,7 +64,8 @@ private fun <T> valued(
     @StringRes title: Int,
     of: (Settings) -> T,
     label: @Composable (T) -> String,
-): ResetLine = ResetLine(listOf(field)) { now, reset, _ -> line(stringResource(title), of(now), of(reset), label) }
+): ResetLine =
+    ResetLine(listOf(field), title) { now, reset, _ -> line(stringResource(title), of(now), of(reset), label) }
 
 /** A choice, [field], titled [title], each value by its label among [choices]. */
 private fun <T> choice(
@@ -90,7 +94,7 @@ internal val RESET_LINES: List<ResetLine> =
         switch("showPlayerLogo", R.string.settings_player_logo) { it.showPlayerLogo },
         choice("symbolOpens", R.string.settings_symbol_opens, { it.symbolOpens }) { symbolOpenings() },
         // Sources: a row per source, a web search engine's on while web search is on with it.
-        ResetLine(listOf("enabledSources", "webEngines")) { now, reset, _ ->
+        ResetLine(listOf("enabledSources", "webEngines"), R.string.settings_section_sources) { now, reset, _ ->
             SOURCE_SWITCHES.flatMap { (name, on) -> line(stringResource(name), on(now), on(reset)) { onOff(it) } }
         },
         valued("musicBrainzWait", R.string.settings_musicbrainz_wait, { it.musicBrainzWait }) {
@@ -100,7 +104,7 @@ internal val RESET_LINES: List<ResetLine> =
             TRACK_LANGUAGE_CHOICES.map { (value, label, _) -> value to stringResource(label) }
         },
         // AI services: each service's model and reasoning effort.
-        ResetLine(listOf("aiModels")) { now, reset, modelName ->
+        ResetLine(listOf("aiModels"), R.string.settings_section_ai) { now, reset, modelName ->
             OFFERED_PROVIDERS.flatMap { provider ->
                 val title = stringResource(R.string.settings_ai_model_of, stringResource(providerName(provider)))
                 if (now.model(provider) == reset.model(provider)) {
@@ -112,7 +116,7 @@ internal val RESET_LINES: List<ResetLine> =
                 }
             }
         },
-        ResetLine(listOf("aiEfforts")) { now, reset, _ ->
+        ResetLine(listOf("aiEfforts"), R.string.settings_section_ai) { now, reset, _ ->
             OFFERED_PROVIDERS.flatMap { provider ->
                 val options = efforts(provider).orEmpty()
                 val title = stringResource(R.string.settings_ai_effort_of, stringResource(providerName(provider)))
@@ -128,7 +132,7 @@ internal val RESET_LINES: List<ResetLine> =
         switch("showPhoneName", R.string.settings_show_phone_name) { it.showPhoneName },
         // Genres
         switch("showGenres", R.string.settings_show_genres) { it.showGenres },
-        ResetLine(listOf("labelSources")) { now, reset, _ ->
+        ResetLine(listOf("labelSources"), R.string.settings_section_labels) { now, reset, _ ->
             labelSourcesByName().flatMap { source ->
                 val title = inSection(labelSourceName(source), R.string.settings_section_labels)
                 line(title, source in now.labelSources, source in reset.labelSources) { onOff(it) }
@@ -158,7 +162,7 @@ internal val RESET_LINES: List<ResetLine> =
         valued("historyLifetime", R.string.settings_keep_history, { it.historyLifetime }) { lifetimeLabel(it) },
         choice("lookUpAfterClear", R.string.settings_look_up_again, { it.lookUpAfterClear }) { lookUpAgainChoices() },
         valued("sessionGap", R.string.settings_session_gap, { it.sessionGap }) { durationLabel(it) },
-        ResetLine(listOf("cacheLifetimes")) { now, reset, _ ->
+        ResetLine(listOf("cacheLifetimes"), R.string.settings_cache_lifetimes) { now, reset, _ ->
             SHOWN_LIFETIMES.flatMap { (source, name) ->
                 val from = now.cacheLifetimes[source]
                 val to = reset.cacheLifetimes[source]
@@ -197,4 +201,4 @@ internal val RESET_LINES: List<ResetLine> =
             choice("reportButton", R.string.settings_report_button, { it.reportButton }) { reportButtons() },
             choice("linkStyle", R.string.settings_link_style, { it.linkStyle }) { linkStyles() },
             switch("markDeveloperItems", R.string.settings_mark_developer) { it.markDeveloperItems },
-        ).map { ResetLine(it.fields, developer = true, lines = it.lines) }
+        ).map { ResetLine(it.fields, it.title, developer = true, lines = it.lines) }

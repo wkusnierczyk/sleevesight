@@ -139,16 +139,20 @@ internal suspend fun SettingsStore.resetToDefaults(
 }
 
 /**
- * The last *Reset to the defaults* asked for (#960), kept with the store, so its message is shown
- * once, by whichever screen is showing when it is saved ([take]), or by the next if that screen goes
- * before the message has shown ([giveBack]).
+ * The last *Reset to the defaults* (#960) or *Load from a file* (#815) asked for, kept with the store,
+ * so its message is shown once, by whichever screen is showing when it is saved ([take]), or by the
+ * next if that screen goes before the message has shown ([giveBack]).
  */
 class Resets {
     private val last = MutableStateFlow<Pending?>(null)
 
-    /** A reset, [saved] its result, not yet said to be done while [told] is false. */
+    /**
+     * A reset or a load, [saved] its result, not yet said to be done while [told] is false; [message]
+     * what to say then, null for a reset's own.
+     */
     class Pending(
         val saved: Deferred<Boolean>,
+        val message: String? = null,
     ) {
         internal val told = AtomicBoolean(false)
     }
@@ -156,8 +160,11 @@ class Resets {
     /** The last reset asked for, and each one after it. */
     val pending: StateFlow<Pending?> = last
 
-    internal fun saving(saved: Deferred<Boolean>) {
-        last.value = Pending(saved)
+    internal fun saving(
+        saved: Deferred<Boolean>,
+        message: String? = null,
+    ) {
+        last.value = Pending(saved, message)
     }
 
     /**
