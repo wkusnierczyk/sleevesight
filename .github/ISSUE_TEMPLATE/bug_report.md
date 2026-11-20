@@ -28,5 +28,8 @@ If applicable, add screenshots to help explain your problem.
  - Sources enabled: [e.g. MusicBrainz, Wikipedia]
  - Model's own knowledge: [on/off]
 
+**After a change?**
+Did it happen after you changed something: a setting, *Clear history*, going back to a screen, going offline? If so, which.
+
 **Context**
 Add any other context about the problem here.
