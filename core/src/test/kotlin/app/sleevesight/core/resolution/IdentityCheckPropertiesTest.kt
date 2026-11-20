@@ -6,12 +6,14 @@ import app.sleevesight.core.resolution.IdentityCheck.Route
 import app.sleevesight.core.resolution.IdentityCheck.Verdict
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
+import io.kotest.common.ExperimentalKotest
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.bind
 import io.kotest.property.arbitrary.boolean
 import io.kotest.property.arbitrary.element
 import io.kotest.property.arbitrary.filter
+import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.map
 import io.kotest.property.checkAll
@@ -74,15 +76,49 @@ class IdentityCheckPropertiesTest {
         return runs.first() + between + runs.last()
     }
 
+    // Two names, mostly related, from one base name: unrelated; the same name in another case and
+    // punctuation; with and without a leading `The`; with and without an honorific; one honorific
+    // spelled two ways. In either order.
+    private val pair: Arb<Pair<String, String>> =
+        Arb.bind(
+            words(roundTrip),
+            written,
+            Arb.int(0..4),
+            Arb.list(separator, 1..MAX_WORDS + 1),
+            Arb.boolean(),
+        ) { parts, other, kind, separators, swap ->
+            // An honorific's variant needs at least two words after it.
+            val base = if (parts.size < VARIANT_WORDS) parts + "band" else parts
+            val plain = base.joinToString(" ")
+            val related =
+                when (kind) {
+                    0 -> plain to other
+                    1 -> punctuated(base, separators, apostrophe = true) to plain.uppercase()
+                    2 -> "The $plain" to plain
+                    3 -> "Mr. $plain" to plain
+                    else -> "Dr. $plain" to "Doctor $plain"
+                }
+            if (swap) related.second to related.first else related
+        }
+
     @Test
     fun `the name comparisons are symmetric`() =
         runTest {
-            checkAll(CONFIG, written, written) { a, b ->
-                assertEquals(names.sameName(a, b), names.sameName(b, a), "sameName(\"$a\", \"$b\")")
+            var same = 0
+            var variants = 0
+            checkAll(CONFIG, pair) { (a, b) ->
+                val sameName = names.sameName(a, b)
+                val variant = names.honorificVariant(a, b)
                 val pair = "(\"$a\", \"$b\")"
-                assertEquals(names.honorificVariant(a, b), names.honorificVariant(b, a), "honorificVariant$pair")
+                assertEquals(sameName, names.sameName(b, a), "sameName$pair")
+                assertEquals(variant, names.honorificVariant(b, a), "honorificVariant$pair")
                 assertEquals(names.titleSimilarity(a, b), names.titleSimilarity(b, a), "titleSimilarity$pair")
+                if (sameName) same++
+                if (variant) variants++
             }
+            // Matching pairs among them, not only names that compare unequal either way.
+            assertTrue(same > ITERATIONS / 4, "only $same of $ITERATIONS pairs the same name")
+            assertTrue(variants > ITERATIONS / 4, "only $variants of $ITERATIONS pairs honorific variants")
         }
 
     @Test
@@ -178,7 +214,13 @@ class IdentityCheckPropertiesTest {
     }
 
     private companion object {
-        val CONFIG = PropTestConfig(seed = 76L, iterations = 300)
+        const val ITERATIONS = 300
+
+        @OptIn(ExperimentalKotest::class)
+        val CONFIG = PropTestConfig(seed = 76L, iterations = ITERATIONS)
+
+        // The fewest words `honorificVariant` takes after an honorific.
+        const val VARIANT_WORDS = 2
         const val MAX_WORD = 6
         const val MAX_WORDS = 4
 

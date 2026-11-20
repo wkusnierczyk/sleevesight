@@ -6,6 +6,7 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.synthesis.InsightReply
 import app.sleevesight.core.synthesis.SelfCorrection
 import app.sleevesight.core.synthesis.SelfRevision
+import io.kotest.common.ExperimentalKotest
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.bind
@@ -119,6 +120,8 @@ class RevisionPropertiesTest {
 
     private companion object {
         const val ITERATIONS = 200
+
+        @OptIn(ExperimentalKotest::class)
         val CONFIG = PropTestConfig(seed = 798L, iterations = ITERATIONS)
 
         // The broken first draft of #798's reply, which no fresh version repeats.

@@ -1,6 +1,7 @@
 package app.sleevesight.core.genres
 
 import app.sleevesight.core.platform.JvmResourceReader
+import io.kotest.common.ExperimentalKotest
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.bind
@@ -127,6 +128,7 @@ class GenreWeightingPropertiesTest {
 
                 val was = rank(before)
                 val now = rank(after)
+                assertTrue(was >= 0 && now >= 0, "$voted ranked ${was + 1}, then ${now + 1}: a genre left out")
                 assertTrue(now <= was, "$voted fell from ${was + 1} to ${now + 1} with a vote more")
             }
         }
@@ -151,6 +153,7 @@ class GenreWeightingPropertiesTest {
         }
 
     private companion object {
+        @OptIn(ExperimentalKotest::class)
         val CONFIG = PropTestConfig(seed = 799L, iterations = 300)
         const val ARTIST = "Emily Jane White"
         const val TAGS = 5

@@ -1,5 +1,6 @@
 package app.sleevesight.sources.wikipedia
 
+import io.kotest.common.ExperimentalKotest
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.choice
@@ -84,6 +85,7 @@ class TidyPropertiesTest {
         }
 
     private companion object {
+        @OptIn(ExperimentalKotest::class)
         val CONFIG = PropTestConfig(seed = 850L, iterations = 500)
         const val MAX_PIECES = 16
 
