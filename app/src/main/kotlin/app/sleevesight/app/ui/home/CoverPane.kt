@@ -24,8 +24,10 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.session.VideoSources
 import app.sleevesight.core.model.NowPlaying
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 // Home split in two from [SPLIT_WIDTH] wide (#1097): the cover and the playback position on the left,
 // in a pane of their own that does not scroll, and on the right the header over what scrolls, as in
@@ -94,7 +96,8 @@ internal fun CoverSlot(pane: CoverPane) {
  * The art with the playback position ([ArtAndProgress]), turned over as [turn] says, from [state], as
  * long as [header] says, first under the header: the player row that was above it went into the
  * header's player menu (#1209). Home split in two ([LocalCoverPane], #1097), they go to the cover's
- * side, the art as large as it fits there.
+ * side, the art as large as it fits there. From a video source ([VideoSources], #1257), the art is the
+ * video's thumbnail, a wide strip.
  */
 @Composable
 internal fun TrackCover(
@@ -104,23 +107,26 @@ internal fun TrackCover(
 ) {
     val pane = LocalCoverPane.current
     val duration = header.duration
+    val video = VideoSources.isVideo(header.player)
     if (pane == null) {
-        ArtAndProgress(state.art, state.playback, duration, turn)
+        ArtAndProgress(state.art, state.playback, duration, turn, video = video)
     } else {
-        CoverInPane(pane) { ArtAndProgress(state.art, state.playback, duration, turn, fitHeight = true) }
+        CoverInPane(pane) { ArtAndProgress(state.art, state.playback, duration, turn, fitHeight = true, video = video) }
     }
 }
 
 /**
- * The art, square, as large as the space given fits it with [progress] under it, [gap] apart: as wide
- * as that space at most, and as tall as it less the position's height at the art's own width (a
- * narrower art can put the position's times on two lines); the position as wide as the art.
+ * The art, square or [ratio] wide to its height (a video's thumbnail, #1257), as large as the space
+ * given fits it with [progress] under it, [gap] apart: as wide as that space at most, and as tall as
+ * it less the position's height at the art's own width (a narrower art can put the position's times
+ * on two lines); the position as wide as the art.
  */
 @Composable
 internal fun FittedArt(
     cover: @Composable (Modifier) -> Unit,
     progress: (@Composable (Modifier) -> Unit)?,
     gap: Dp,
+    ratio: Float = 1f,
 ) {
     Layout(
         contents = listOf({ cover(Modifier.fillMaxSize()) }, { progress?.invoke(Modifier.fillMaxWidth()) }),
@@ -129,23 +135,26 @@ internal fun FittedArt(
         val position = positions.firstOrNull()
         val width = constraints.maxWidth
         val height = if (constraints.hasBoundedHeight) constraints.maxHeight else Constraints.Infinity
-        // The largest side whose art and position under it fit the height. The position never grows as
-        // the side grows (its times go side by side once they fit), but it can shrink by steps, so the
-        // fitting sides are not one range: from the widest, the side steps down to what the height
-        // leaves under its own position until it fits, which is the largest side that fits.
+        // The largest width whose art and position under it fit the height. The position never grows
+        // as the width grows (its times go side by side once they fit), but it can shrink by steps, so
+        // the fitting widths are not one range: from the widest, the width steps down to what the
+        // height leaves under its own position until it fits, which is the largest width that fits.
         val under = { side: Int -> position?.let { space + it.maxIntrinsicHeight(side) } ?: 0 }
-        var side = min(width, height)
+        val tall = { side: Int -> (side / ratio).roundToInt() }
+        val wide = { room: Int -> if (room >= Constraints.Infinity) room else (room * ratio).toInt() }
+        var side = min(width, wide(height))
         var steps = 0
         while (steps++ < MAX_FIT_STEPS) {
-            val next = min(side, height - under(side)).coerceAtLeast(0)
+            val next = min(side, wide(height - under(side))).coerceAtLeast(0)
             if (next == side) break
             side = next
         }
-        val art = covers.first().measure(Constraints.fixed(side, side))
+        val artHeight = tall(side)
+        val art = covers.first().measure(Constraints.fixed(side, artHeight))
         val bar = position?.measure(Constraints(minWidth = side, maxWidth = side))
-        layout(side, side + (bar?.let { space + it.height } ?: 0)) {
+        layout(side, artHeight + (bar?.let { space + it.height } ?: 0)) {
             art.placeRelative(0, 0)
-            bar?.placeRelative(0, side + space)
+            bar?.placeRelative(0, artHeight + space)
         }
     }
 }
