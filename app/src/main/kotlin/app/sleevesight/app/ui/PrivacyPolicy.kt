@@ -2,6 +2,7 @@ package app.sleevesight.app.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -58,7 +59,7 @@ internal fun WebLink(
  * A link that opens another app or a web page ([onClick]): [text] drawn as every link is
  * ([LinkLook], #442) and the Material *open in new* symbol after it, in the text colour, with at
  * least the minimum touch target. A screen reader reads it as [description] ("Open Spotify"), a
- * button, not the symbol.
+ * button, not the symbol. Where the text wraps, the symbol keeps its room after it (#1396).
  */
 @Composable
 internal fun ExternalLink(
@@ -83,7 +84,8 @@ internal fun ExternalLink(
                     }
                 },
     ) {
-        LinkLook(text, style = MaterialTheme.typography.bodyMedium)
+        // Not filling the row, so the symbol after it is not squeezed out when the text wraps.
+        Box(Modifier.weight(1f, fill = false)) { LinkLook(text, style = MaterialTheme.typography.bodyMedium) }
         Icon(
             painterResource(R.drawable.ic_open_in_new),
             contentDescription = null,
