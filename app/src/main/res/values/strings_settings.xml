@@ -42,6 +42,13 @@
     <!-- Under the players (#674): whether Home, with nothing playing, lists only the players switched on. -->
     <string name="settings_players_on_home">Only enabled players on Home</string>
     <string name="settings_players_on_home_summary">Home lists only the players Sleevesight follows, not every player it has recognized.</string>
+    <!-- After Only enabled players on Home (#1445): the header's note symbol, its flash of the player's logo and what a tap on it opens. -->
+    <string name="settings_player_logo">Show the current player’s logo</string>
+    <string name="settings_player_logo_summary">The note symbol at the top of Home shows the current player’s logo for 3 seconds when a player starts, when Home switches to another player, and when the track changes.</string>
+    <string name="settings_symbol_opens">What the symbol opens</string>
+    <string name="settings_symbol_opens_summary">What a tap on the note symbol at the top of Home opens. A long press opens the other.</string>
+    <string name="settings_symbol_opens_menu">Player menu</string>
+    <string name="settings_symbol_opens_player">The player</string>
     <string name="settings_sources_short">External services providing information on artists and music</string>
     <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
     <string name="settings_ai_short">Large Language Model (LLM) services</string>

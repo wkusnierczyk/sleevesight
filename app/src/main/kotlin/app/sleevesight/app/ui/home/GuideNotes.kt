@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkLook
 import app.sleevesight.app.ui.theme.PillButton
+import app.sleevesight.core.settings.SymbolOpens
 
 // The guide's notes as buttons, each opening a panel about its part (#673), and the pen's marks.
 
@@ -82,11 +83,13 @@ internal fun GuideNote(
  * heading, its fuller description in the app's own type, and *Close* ([onClose], with
  * [closeModifier]; #759: not *Dismiss*, which is for good). Opaque, so the drawn Home under it
  * does not show through, and taps on it stay in it. A screen reader reads the name and description
- * as one region as it opens.
+ * as one region as it opens. The player's description follows what a tap on the symbol opens
+ * ([opens], #1445).
  */
 @Composable
 internal fun GuideNotePanel(
     part: GuidePart,
+    opens: SymbolOpens,
     modifier: Modifier = Modifier,
     closeModifier: Modifier = Modifier,
     onClose: () -> Unit,
@@ -111,7 +114,7 @@ internal fun GuideNotePanel(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.semantics { heading() },
                 )
-                Text(stringResource(part.about), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(part.about(opens)), style = MaterialTheme.typography.bodyMedium)
             }
             PillButton(
                 stringResource(R.string.home_guide_note_close),

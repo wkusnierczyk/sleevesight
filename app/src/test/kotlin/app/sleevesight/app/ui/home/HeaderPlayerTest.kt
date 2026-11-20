@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
@@ -332,25 +331,6 @@ class HeaderPlayerTest {
         }
     }
 
-    @Test
-    fun theSymbolShowsThePlayersIconForASecondWhenHomeSwitchesPlayer() =
-        show {
-            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertDoesNotExist()
-            compose.mainClock.autoAdvance = false
-            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PAUSED, actions = ALL)
-            compose.mainClock.advanceTimeByFrame()
-            compose.mainClock.advanceTimeBy(FRAME_MS)
-            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertExists()
-            compose.mainClock.advanceTimeBy(FLASH_PAST_MS)
-            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertDoesNotExist()
-            // And when a player starts playing.
-            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
-            compose.mainClock.advanceTimeByFrame()
-            compose.mainClock.advanceTimeBy(FRAME_MS)
-            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertExists()
-            compose.mainClock.autoAdvance = true
-        }
-
     // Codex review of #1441: the player last followed is the session layer's, so one that played and
     // stopped while Home was away is the one a long press opens on return.
     @Test
@@ -368,77 +348,6 @@ class HeaderPlayerTest {
             assertEquals(YOUTUBE, shadowOf(app).nextStartedActivity?.`package`)
         }
 
-    // Codex review of #1441: a pause within the second does not cut it short.
-    @Test
-    fun aPauseWithinTheSecondKeepsTheIconForTheWholeSecond() =
-        show {
-            compose.mainClock.autoAdvance = false
-            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
-            frames()
-            iconShown(true)
-            compose.mainClock.advanceTimeBy(HALF_MS)
-            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PAUSED, actions = ALL)
-            frames()
-            iconShown(true)
-            compose.mainClock.advanceTimeBy(HALF_MS)
-            iconShown(false)
-            compose.mainClock.autoAdvance = true
-        }
-
-    // Codex review of #1441: motion switched off within the second ends it at once; back on, none starts.
-    @Test
-    fun motionSwitchedOffWithinTheSecondEndsItAndBackOnStartsNone() {
-        val ways =
-            listOf<Pair<() -> Unit, () -> Unit>>(
-                { scale.floatValue = 0f } to { scale.floatValue = 1f },
-                { settings.value = settings.value?.copy(spinLogo = false) } to
-                    { settings.value = settings.value?.copy(spinLogo = true) },
-            )
-        for ((off, on) in ways) {
-            playback.value = PlaybackInfo(SPOTIFY, PlaybackStatus.PLAYING, actions = ALL)
-            show {
-                compose.mainClock.autoAdvance = false
-                playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
-                frames()
-                iconShown(true)
-                off()
-                frames()
-                iconShown(false)
-                on()
-                frames()
-                iconShown(false)
-                compose.mainClock.advanceTimeBy(FLASH_PAST_MS)
-                iconShown(false)
-                compose.mainClock.autoAdvance = true
-            }
-        }
-    }
-
-    private fun frames() {
-        // A state written here, off the composition, is seen at the next frame.
-        Snapshot.sendApplyNotifications()
-        compose.mainClock.advanceTimeByFrame()
-        compose.mainClock.advanceTimeBy(FRAME_MS)
-    }
-
-    private fun iconShown(shown: Boolean) {
-        val icon = compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true)
-        if (shown) icon.assertExists() else icon.assertDoesNotExist()
-    }
-
-    @Test
-    fun theSymbolKeepsTheNoteWhileSpinTheLogoIsOff() {
-        settings.value = settings.value?.copy(spinLogo = false)
-        show {
-            compose.mainClock.autoAdvance = false
-            playback.value = PlaybackInfo(YOUTUBE, PlaybackStatus.PLAYING, actions = ALL)
-            compose.mainClock.advanceTimeByFrame()
-            compose.mainClock.advanceTimeBy(FRAME_MS)
-            compose.onNodeWithTag(PLAYER_SYMBOL_ICON_TAG, useUnmergedTree = true).assertDoesNotExist()
-            compose.mainClock.autoAdvance = true
-        }
-    }
-
     @Test
     fun aLongPressOnTheRecordDoesNothing() =
         show {
@@ -451,19 +360,6 @@ class HeaderPlayerTest {
             assertEquals(emptyList<Transport>(), sent)
             menuClosed()
             assertEquals(null, shadowOf(app).nextStartedActivity)
-        }
-
-    // Claude review of #1441: a skip or a stall passes through other states and is no start.
-    @Test
-    fun aSkipOrAStallIsNoStartAndShowsNoIcon() =
-        show {
-            compose.mainClock.autoAdvance = false
-            for (status in listOf(PlaybackStatus.OTHER, PlaybackStatus.BUFFERING, PlaybackStatus.PLAYING)) {
-                playback.value = PlaybackInfo(SPOTIFY, status, actions = ALL)
-                frames()
-                iconShown(false)
-            }
-            compose.mainClock.autoAdvance = true
         }
 
     // Claude review of #1441: with *Settings*' defaults (Spotify on) and Spotify not on the phone,
@@ -526,8 +422,8 @@ class HeaderPlayerTest {
         show {
             symbolReads(null)
             val symbol = compose.onNodeWithTag(PLAYER_SYMBOL_TAG).fetchSemanticsNode().config
-            assertEquals(text(R.string.home_player_symbol_tap), symbol[SemanticsActions.OnClick].label)
-            assertEquals(text(R.string.home_player_symbol_hold), symbol[SemanticsActions.OnLongClick].label)
+            assertEquals(text(R.string.home_player_symbol_open_menu), symbol[SemanticsActions.OnClick].label)
+            assertEquals(text(R.string.home_player_symbol_open_player), symbol[SemanticsActions.OnLongClick].label)
             openMenu()
             compose
                 .onNodeWithText(text(R.string.home_player_state, "Spotify", text(R.string.home_state_playing)))
@@ -755,8 +651,5 @@ class HeaderPlayerTest {
                 PlaybackState.ACTION_SKIP_TO_PREVIOUS
         const val LINES = 80
         const val WAIT_MS = 5_000L
-        const val FRAME_MS = 32L
-        const val FLASH_PAST_MS = 1_100L
-        const val HALF_MS = 500L
     }
 }

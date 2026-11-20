@@ -408,6 +408,8 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
                 .ifEmpty { NONE }
         },
         "onlyEnabledPlayersOnHome" to { onOff(it.onlyEnabledPlayersOnHome) },
+        "showPlayerLogo" to { onOff(it.showPlayerLogo) },
+        "symbolOpens" to { it.symbolOpens.name },
         "enabledSources" to { s -> s.enabledSources.joinToString { it.name }.ifEmpty { NONE } },
         "webEngines" to { s -> s.webEngines.joinToString { it.name }.ifEmpty { NONE } },
         "labelSources" to { s -> s.labelSources.joinToString { it.name }.ifEmpty { NONE } },

@@ -38,6 +38,13 @@ import kotlin.time.Duration.Companion.seconds
  *   nothing playing, lists only the players switched on in [followedPlayers], rather than every
  *   player *Players* lists, the ones not followed dimmed. Off by default, so a new user sees every
  *   player recognized, and how to switch one on.
+ * @property showPlayerLogo *Show the current player's logo* (#1445): whether the note symbol at
+ *   the top of Home shows the current player's logo for a few seconds when a player starts, when
+ *   Home switches to another player, and when the track changes. On by default; off, the note
+ *   stays still.
+ * @property symbolOpens *What the symbol opens* (#1445): what a tap on the note symbol at the top
+ *   of Home opens, the player menu (the default) or the player; a long press opens the other. See
+ *   [SymbolOpens].
  * @property enabledSources the user's *Sources* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
@@ -221,6 +228,8 @@ data class Settings(
     val aiEfforts: Map<ProviderId, ReasoningEffort?> = emptyMap(),
     val followedPlayers: Map<String, Boolean> = mapOf(SPOTIFY to true),
     val onlyEnabledPlayersOnHome: Boolean = false,
+    val showPlayerLogo: Boolean = true,
+    val symbolOpens: SymbolOpens = SymbolOpens.PLAYER_MENU,
     val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
     val webEngines: Set<WebEngine> = DEFAULT_WEB_ENGINES,
     val labelSources: Set<LabelSource> = DEFAULT_LABEL_SOURCES,
@@ -799,6 +808,18 @@ enum class LogoSpeed(
 
 private const val LP_RPM = 100f / 3
 private const val SINGLE_RPM = 45f
+
+/**
+ * *What the symbol opens* (#1445): what a tap on the note symbol at the top of Home opens; a long
+ * press opens the other.
+ */
+enum class SymbolOpens {
+    /** The player menu: play, pause, skip, or switch players; the default. */
+    PLAYER_MENU,
+
+    /** The player's own app. */
+    PLAYER,
+}
 
 /** *Theme* (#444): whether the app is light or dark. */
 enum class ThemeChoice {

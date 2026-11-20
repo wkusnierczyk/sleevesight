@@ -48,6 +48,7 @@ import app.sleevesight.app.ui.theme.GroupAction
 import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SymbolOpens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -88,7 +89,8 @@ class InstalledPlayers(
  * good when the phone has none to give. With no [PlayerApps.installed] (tests, previews), every
  * stored player is listed, without an icon. Under the players, *Can’t see your player?*
  * ([MissingPlayerNote], #758), until its *Hide once* puts it away until the section is opened
- * again, or its *Dismiss* for good ([dismissals], #759), then *Only enabled players on Home* (#674).
+ * again, or its *Dismiss* for good ([dismissals], #759), then *Only enabled players on Home* (#674),
+ * and last the header symbol's two settings ([SymbolRows], #1445).
  */
 @Composable
 internal fun PlayersSection(
@@ -118,7 +120,39 @@ internal fun PlayersSection(
         summary = stringResource(R.string.settings_players_on_home_summary),
         checked = settings.onlyEnabledPlayersOnHome,
     ) { on -> update { it.copy(onlyEnabledPlayersOnHome = on) } }
+    SymbolRows(settings, update)
 }
+
+/**
+ * The note symbol at the top of Home (#1445): *Show the current player’s logo*, on by default, whether
+ * it flashes the player's logo; and *What the symbol opens*, *Player menu* (the default) or *The
+ * player* as a one-row button group, what a tap opens, a long press opening the other.
+ */
+@Composable
+private fun SymbolRows(
+    settings: Settings,
+    update: Update,
+) {
+    SwitchRow(
+        title = stringResource(R.string.settings_player_logo),
+        summary = stringResource(R.string.settings_player_logo_summary),
+        checked = settings.showPlayerLogo,
+    ) { on -> update { it.copy(showPlayerLogo = on) } }
+    ChoiceButtonsRow(
+        title = stringResource(R.string.settings_symbol_opens),
+        summary = stringResource(R.string.settings_symbol_opens_summary),
+        choices = symbolOpenings(),
+        selected = settings.symbolOpens,
+    ) { choice -> update { it.copy(symbolOpens = choice) } }
+}
+
+/** *What the symbol opens*' choices (#1445). */
+@Composable
+internal fun symbolOpenings(): List<Pair<SymbolOpens, String>> =
+    listOf(
+        SymbolOpens.PLAYER_MENU to stringResource(R.string.settings_symbol_opens_menu),
+        SymbolOpens.PLAYER to stringResource(R.string.settings_symbol_opens_player),
+    )
 
 /**
  * *Can’t see your player?* (#758): what a player needs to be listed, in a panel of the theme's

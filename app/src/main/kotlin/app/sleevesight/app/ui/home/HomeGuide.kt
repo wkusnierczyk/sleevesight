@@ -12,21 +12,24 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.ActionButtonGroup
 import app.sleevesight.app.ui.theme.GroupAction
+import app.sleevesight.core.settings.SymbolOpens
 
 /**
  * The guide to Home (#627), under the players while nothing plays: the picture ([GuidePicture]),
  * and under it, at the end, its two actions as one connected group (#759): *Hide once*
  * ([onHideOnce]), which hides the guide until Home is left and visited again, and *Dismiss*
  * ([onDismiss]), which puts it away for good, until *Restore dismissed messages* in the settings.
- * Each acts at once; a screen reader reads two buttons by their labels.
+ * Each acts at once; a screen reader reads two buttons by their labels. The player's note says what
+ * a tap on the note symbol opens ([opens], #1445).
  */
 @Composable
 internal fun HomeGuide(
     onHideOnce: () -> Unit,
     onDismiss: () -> Unit,
+    opens: SymbolOpens = SymbolOpens.PLAYER_MENU,
 ) {
     Column(Modifier.fillMaxWidth().testTag(HOME_GUIDE_TAG), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        GuidePicture(Modifier.fillMaxWidth())
+        GuidePicture(Modifier.fillMaxWidth(), opens)
         ActionButtonGroup(
             listOf(
                 GroupAction(
