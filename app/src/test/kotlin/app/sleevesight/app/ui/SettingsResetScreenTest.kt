@@ -256,4 +256,26 @@ class SettingsResetScreenTest {
             assertEquals(1, compose.onAllNodesWithText("Settings reset to the defaults.").fetchSemanticsNodes().size)
         }
     }
+
+    @Test
+    fun aScreenGoneBeforeTheMessageHasShownAndGoneLeavesItToTheNext() {
+        moveSome()
+        var screens by mutableIntStateOf(0)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    key(screens) {
+                        SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                    }
+                }
+            }
+            openDialog()
+            // Saved at once; the screen goes while its message shows, as on a recreation.
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
+            compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
+            compose.runOnUiThread { screens++ }
+            compose.waitForIdle()
+            compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
+        }
+    }
 }

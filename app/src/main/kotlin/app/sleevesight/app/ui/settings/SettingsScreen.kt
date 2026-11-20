@@ -125,7 +125,7 @@ fun SettingsScreen(
     landOn: SettingsTarget? = null,
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     openRouter: OpenRouterAccess? = null,
-    resetSettings: (() -> Deferred<Boolean>)? = null,
+    resetSettings: ((Settings) -> Deferred<Boolean>)? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -315,13 +315,13 @@ private fun CoroutineScope.saver(
  */
 private fun CoroutineScope.resetting(
     store: SettingsStore,
-    reset: (() -> Deferred<Boolean>)?,
+    reset: ((Settings) -> Deferred<Boolean>)?,
     saves: CoroutineScope,
     failed: (Boolean) -> Unit,
 ): SettingsResetter {
     val resets = reset ?: store.resetter(saves)
     return SettingsResetter(store::resetOf) {
-        resets().also { saved -> launch { failed(!saved.await()) } }
+        resets(it).also { saved -> launch { failed(!saved.await()) } }
     }
 }
 
@@ -402,12 +402,12 @@ internal sealed interface SettingsDialog {
 
 /**
  * What *Reset to the defaults* works with: [preview] gives the settings as a reset would leave
- * them ([app.sleevesight.app.settings.resetOf]), for its dialog; [reset] makes it,
- * its result whether it was saved.
+ * them ([app.sleevesight.app.settings.resetOf]), for its dialog; [reset] makes it
+ * from the settings shown, its result whether it was saved.
  */
 internal class SettingsResetter(
     val preview: (Settings) -> Settings,
-    val reset: () -> Deferred<Boolean>,
+    val reset: (shown: Settings) -> Deferred<Boolean>,
 )
 
 /**

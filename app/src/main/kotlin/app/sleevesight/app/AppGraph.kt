@@ -854,7 +854,9 @@ class AppGraph internal constructor(
      * *Reset to the defaults* (#960), saved in [settingsSaves], in line with the other saves; a mode
      * it changes is told to the pipeline as a choice of the mode is, so the pipeline writes by it.
      */
-    val resetSettings: () -> Deferred<Boolean> by lazy { settings.resetter(settingsSaves, pipeline::modeChosen) }
+    val resetSettings: (
+        Settings,
+    ) -> Deferred<Boolean> by lazy { settings.resetter(settingsSaves, pipeline::modeChosen) }
 
     /**
      * *Read aloud* (#325): the insight, or a genre's reason, read by the phone's text-to-speech

@@ -27,6 +27,7 @@ import app.sleevesight.app.settings.Resets
 import app.sleevesight.app.settings.SettingsReset
 import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CancellationException
 
 // *Save and reset* (#960): *Reset to the defaults*, and its dialog. *Save to a file* and *Load from a
 // file* (#815) join the section's rows here.
@@ -57,7 +58,7 @@ internal fun SaveAndResetSection(
             onReset = {
                 asking = false
                 // Its message comes from [ResetNotice], which outlives a recreation.
-                resetter.reset()
+                resetter.reset(settings)
             },
             onDismiss = { asking = false },
         )
@@ -67,7 +68,8 @@ internal fun SaveAndResetSection(
 /**
  * Says *Settings reset to the defaults.* ([LocalMessages]) once the last reset asked for ([resets])
  * is saved, once only: on this screen, or on the one made after a recreation, as when the reset
- * changed the theme and Android restarted the activity.
+ * changed the theme and Android restarted the activity. A screen that goes before its message has
+ * shown and gone gives it back, so the next screen says it.
  */
 @Composable
 internal fun ResetNotice(resets: Resets) {
@@ -76,7 +78,14 @@ internal fun ResetNotice(resets: Resets) {
     val done = stringResource(R.string.settings_reset_done)
     LaunchedEffect(pending, messages) {
         val reset = pending ?: return@LaunchedEffect
-        if (messages != null && reset.saved.await() && resets.take(reset)) messages.show(done)
+        if (messages == null || !reset.saved.await() || !resets.take(reset)) return@LaunchedEffect
+        try {
+            messages.showing(done)
+        } catch (gone: CancellationException) {
+            // The screen went before the message had shown and gone: the next one says it.
+            resets.giveBack(reset)
+            throw gone
+        }
     }
 }
 

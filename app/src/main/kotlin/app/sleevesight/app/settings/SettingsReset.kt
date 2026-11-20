@@ -66,37 +66,40 @@ object SettingsReset {
 fun SettingsStore.resetOf(current: Settings): Settings = SettingsReset.reset(current, defaults)
 
 /**
- * *Reset to the defaults* (#960) on this store: each call saves a reset in [saves], which outlives
- * the screen, in line with the other saves ([saving]), its result whether it was saved, and notes it
- * in [SettingsStore.resets], so the screen showing then, a new one after a recreation (a reset that
- * changes the theme restarts the activity) included, says once that it is done. *Keep history for*
- * as last asked for at the call is dropped once the reset is saved, unless chosen again since
- * ([HistoryLifetimeAsked.mark]). A reset that changes *Reactive*'s mode tells [chosen], as the mode's
- * own choice does ([SettingsStore.writingModeChooser]): the pipeline, which follows the store's mode only until
- * the first choice in the process, then writes by the reset's mode.
+ * *Reset to the defaults* (#960) on this store: each call, given the settings shown when it was asked
+ * for, saves a reset in [saves], which outlives the screen, in line with the other saves ([saving]),
+ * its result whether it was saved, and notes it in [SettingsStore.resets], so the screen showing
+ * then, a new one after a recreation (a reset that changes the theme restarts the activity)
+ * included, says once that it is done. *Keep history for* as last asked for at the call is dropped
+ * once the reset is saved, unless chosen again since ([HistoryLifetimeAsked.mark]).
+ *
+ * A reset that changes *Reactive*'s mode from the one shown is a choice of the mode, told to
+ * [chosen] at the call, as [SettingsStore.writingModeChooser] tells one: its place among the choices
+ * is taken then, so a mode chosen after it, its save still waiting behind the reset's, is never
+ * overridden by it. The function [chosen] returns is told what the store holds once the reset's save
+ * has ended, saved or not. The pipeline, which follows the store's mode only until the first choice
+ * in the process, then writes by the reset's mode.
  */
 fun SettingsStore.resetter(
     saves: CoroutineScope,
     chosen: (WriteAutomatically) -> (WriteAutomatically?) -> Unit = { {} },
-): () -> Deferred<Boolean> =
-    {
+): (shown: Settings) -> Deferred<Boolean> =
+    { shown ->
         val mark = historyLifetimeAsked.mark()
-        saving(saves) { resetToDefaults(mark, chosen) }.also { resets.saving(it) }
+        val mode = resetOf(shown).writeAutomatically
+        val settled = if (mode != shown.writeAutomatically) chosen(mode) else null
+        saving(saves) { resetToDefaults(mark, settled) }.also { resets.saving(it) }
     }
 
 /**
  * Every setting back to this store's defaults, but those [SettingsReset.KEPT] keeps (#960). Takes no
- * turn, as [SettingsStore.update]: [resetter] takes it. A mode it changes is told to [chosen] before
- * the save, and the function that returns is told what the store holds once it has ended, saved or
- * not.
+ * turn, as [SettingsStore.update]: [resetter] takes it, and tells [settled], if any, what the store
+ * holds for *Reactive* once the save has ended, saved or not.
  */
 internal suspend fun SettingsStore.resetToDefaults(
     mark: HistoryLifetimeAsked.Mark = historyLifetimeAsked.mark(),
-    chosen: (WriteAutomatically) -> (WriteAutomatically?) -> Unit = { {} },
+    settled: ((WriteAutomatically?) -> Unit)? = null,
 ) {
-    val before = storedMode()
-    val after = before?.let { resetOf(defaults.copy(writeAutomatically = it)).writeAutomatically }
-    val settled = if (after != null && after != before) chosen(after) else null
     try {
         update { resetOf(it) }
         historyLifetimeAsked.forget(mark)
@@ -107,7 +110,8 @@ internal suspend fun SettingsStore.resetToDefaults(
 
 /**
  * The last *Reset to the defaults* asked for (#960), kept with the store, so its message is shown
- * once, by whichever screen is showing when it is saved ([take]).
+ * once, by whichever screen is showing when it is saved ([take]), or by the next if that screen goes
+ * before the message has shown ([giveBack]).
  */
 class Resets {
     private val last = MutableStateFlow<Pending?>(null)
@@ -126,6 +130,14 @@ class Resets {
         last.value = Pending(saved)
     }
 
-    /** Whether [pending], once saved, is to be said done now: true once only, for one screen. */
+    /**
+     * Whether [pending], once saved, is to be said done now, by the screen asking: true for one
+     * screen at a time, until it gives it back ([giveBack]).
+     */
     fun take(pending: Pending): Boolean = pending.told.compareAndSet(false, true)
+
+    /** [pending] not said after all (the screen went before its message showed): another screen may. */
+    fun giveBack(pending: Pending) {
+        pending.told.set(false)
+    }
 }

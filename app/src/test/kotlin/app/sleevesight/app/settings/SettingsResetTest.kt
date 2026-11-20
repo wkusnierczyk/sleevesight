@@ -232,7 +232,7 @@ class SettingsResetTest {
                 val first = CompletableDeferred<Unit>()
                 val second = CompletableDeferred<Unit>()
                 store.saveOrder.launch(saves) { first.await() }
-                val reset = store.resetter(saves)()
+                val reset = store.resetter(saves)(store.settings.first())
                 store.saveOrder.launch(saves) { second.await() }
                 val asked = store.historyLifetimeAsked
                 asked.save(7.days, { change -> store.saving(saves, change) }, saves)
