@@ -71,6 +71,9 @@ class OpenRouterSignInTest {
         assertEquals("Sleevesight", query["key_label"])
         assertFalse(start.verifier in start.url)
         assertFalse(start.verifier in start.toString())
+        // Nor the state, which the URL's query carries twice.
+        assertFalse(start.state in start.toString())
+        assertEquals("SignInStart(url=https://openrouter.ai/auth)", start.toString())
     }
 
     @Test
