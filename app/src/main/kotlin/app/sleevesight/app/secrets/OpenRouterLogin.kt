@@ -45,8 +45,26 @@ enum class SignInFailure {
     /** OpenRouter refused the code after its ten minutes. */
     EXPIRED,
 
-    /** OpenRouter refused the code, or answered with no key, or the key could not be saved. */
+    /**
+     * OpenRouter refused the code, or answered with no key, or the key could not be saved; or its
+     * answer carried another sign-in's state.
+     */
     REFUSED,
+}
+
+/** How an answer at the callback stood to the sign-in under way, for the log (#1396). */
+enum class StateMatch {
+    /** It carried the sign-in's state back. */
+    MATCHED,
+
+    /** It carried no state, taken while one sign-in is under way: the code needs its verifier. */
+    MISSING,
+
+    /** It carried another state: not taken, and the sign-in ends as not finished. */
+    DIFFERED,
+
+    /** No sign-in was under way: ignored. */
+    NO_SIGN_IN,
 }
 
 /**
@@ -59,7 +77,9 @@ enum class SignInFailure {
  * The verifier is kept only here, in memory, and in the activity's saved state ([pending],
  * [restore]), so a process ended while the browser is open still finishes; it is dropped once a code
  * comes or the sign-in fails, so a code sent again, or with no sign-in under way, is ignored. One
- * sign-in at a time: a new one replaces the one before.
+ * sign-in at a time: a new one replaces the one before. An answer with no state is taken for the one
+ * under way (#1396: the redirect may drop the callback's own query): with PKCE, a code is of no use
+ * without the verifier, which never leaves the phone but to OpenRouter.
  *
  * @param signIn OpenRouter's sign-in.
  * @param save stores the key and switches OpenRouter on; false when the key could not be stored.
@@ -121,20 +141,39 @@ class OpenRouterLogin(
 
     /**
      * What came to the callback: a [code], or none (OpenRouter's page sent back no code: not
-     * approved), with the [state] it carried back. Ignored with no sign-in under way, or with another
-     * sign-in's state (or none), which the one under way still waits past.
+     * approved), with the [state] it carried back, or none. Ignored with no sign-in under way. With
+     * the sign-in's state, or none (#1396), it is the sign-in's answer. With another state it is not
+     * taken, and the sign-in ends as not finished ([SignInFailure.REFUSED]), not as closed: an answer
+     * did come, and the browser, its authorisation spent, has nothing more to send.
+     *
+     * @return how the answer stood to the sign-in under way, for the log.
      */
-    @Suppress("TooGenericExceptionCaught") // Any failure ends the sign-in as one not finished.
     fun callback(
         code: String?,
         state: String?,
-    ) {
-        val under = pending?.takeIf { it.state == state } ?: return
+    ): StateMatch {
+        val under = pending ?: return StateMatch.NO_SIGN_IN
+        val match =
+            when {
+                state.isNullOrEmpty() -> StateMatch.MISSING
+                state == under.state -> StateMatch.MATCHED
+                else -> StateMatch.DIFFERED
+            }
         pending = null
-        if (code.isNullOrBlank()) {
-            now.value = SignInStep.Failed(SignInFailure.DECLINED)
-            return
+        when {
+            match == StateMatch.DIFFERED -> now.value = SignInStep.Failed(SignInFailure.REFUSED)
+            code.isNullOrBlank() -> now.value = SignInStep.Failed(SignInFailure.DECLINED)
+            else -> exchange(code, under)
         }
+        return match
+    }
+
+    // The key for [code] fetched and saved, for the sign-in [under] way.
+    @Suppress("TooGenericExceptionCaught") // Any failure ends the sign-in as one not finished.
+    private fun exchange(
+        code: String,
+        under: Pending,
+    ) {
         now.value = SignInStep.Exchanging
         scope.launch {
             now.value =
@@ -193,15 +232,74 @@ class OpenRouterLogin(
         val CODE_LIFETIME: Duration = 10.minutes
 
         /**
-         * The parameters of a callback's [query] (`s=…&code=…`), each value as given; split at `?`
-         * too, should OpenRouter add its own `?code=` after the state the callback already carries.
+         * The parameters of a callback's [query] (`s=…&code=…`), names and values percent-decoded;
+         * split at `?` too, should OpenRouter add its own `?code=` after the state the callback
+         * already carries. A part with no `=` that decodes to parameters (`s%3D…%26code%3D…`, the
+         * query encoded once more) is read as these. The first of a name counts.
          */
-        fun answerOf(query: String?): Map<String, String> =
-            query
-                .orEmpty()
-                .split('&', '?')
-                .filter { '=' in it }
-                .associate { it.substringBefore('=') to it.substringAfter('=') }
+        fun answerOf(query: String?): Map<String, String> {
+            val answer = LinkedHashMap<String, String>()
+
+            fun read(
+                text: String,
+                again: Boolean,
+            ) {
+                text.split('&', '?').forEach { part ->
+                    if ('=' in part) {
+                        val name = decoded(part.substringBefore('='))
+                        if (name !in answer) answer[name] = decoded(part.substringAfter('='))
+                    } else if (again) {
+                        decoded(part).takeIf { it != part && '=' in it }?.let { read(it, again = false) }
+                    }
+                }
+            }
+            read(query.orEmpty(), again = true)
+            return answer
+        }
+
+        /**
+         * The answer at a callback [uri] (as a string): the parameters of its query, and of its
+         * fragment, which OpenRouter may use instead (#1396).
+         */
+        fun answerAt(uri: String): Answer {
+            val beforeFragment = uri.substringBefore('#')
+            return Answer(
+                query = answerOf(beforeFragment.substringAfter('?', "")),
+                fragment = answerOf(uri.substringAfter('#', "")),
+            )
+        }
+
+        // [text] percent-decoded as UTF-8 (`+` kept as it is), or as given when a `%` is not
+        // followed by two hex digits.
+        private fun decoded(text: String): String {
+            val bytes = ArrayList<Byte>(text.length)
+            var at = 0
+            var wellFormed = true
+            while (at < text.length && wellFormed) {
+                val high = text.getOrNull(at + 1)?.digitToIntOrNull(HEX)
+                val low = text.getOrNull(at + 2)?.digitToIntOrNull(HEX)
+                when {
+                    text[at] != '%' -> {
+                        bytes += text[at].toString().encodeToByteArray().asList()
+                        at++
+                    }
+
+                    high == null || low == null -> {
+                        wellFormed = false
+                    }
+
+                    else -> {
+                        bytes += (high * HEX + low).toByte()
+                        at += PERCENT_ESCAPE
+                    }
+                }
+            }
+            return if (wellFormed) bytes.toByteArray().decodeToString() else text
+        }
+
+        // Hex digits, and the length of an escape (`%2F`).
+        private const val HEX = 16
+        private const val PERCENT_ESCAPE = 3
 
         /**
          * Whether [uri] (as a string) is a sign-in's callback at [callback]: the same address up to
@@ -213,6 +311,21 @@ class OpenRouterLogin(
             callback: String,
         ): Boolean = uri != null && uri.substringBefore('?').substringBefore('#') == callback
     }
+}
+
+/**
+ * What came to a sign-in's callback (#1396): the parameters of its [query] and of its [fragment].
+ * Shown ([toString], for the log) by the parameters' names only, never their values: the code and
+ * the state stay out of the log.
+ */
+class Answer(
+    val query: Map<String, String>,
+    val fragment: Map<String, String>,
+) {
+    /** The parameter [name]: from the query, or failing that from the fragment. */
+    operator fun get(name: String): String? = query[name] ?: fragment[name]
+
+    override fun toString(): String = "query [${query.keys.joinToString()}], fragment [${fragment.keys.joinToString()}]"
 }
 
 /**

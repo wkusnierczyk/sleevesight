@@ -173,17 +173,60 @@ class OpenRouterLoginTest {
         }
 
     @Test
-    fun anAnswerWithAnotherSignInsStateIsIgnoredAndTheSignInWaitsOn() =
+    fun anAnswerWithNoStateIsTakenForTheSignInUnderWay() =
+        runTest {
+            // #1396: the redirect may drop the callback's own `?s=`; the code needs the verifier anyway.
+            val signIn = FakeSignIn()
+            val login = login(signIn)
+            login.start()
+            assertEquals(StateMatch.MISSING, login.callback("code", null))
+            assertEquals(listOf("code" to "verifier-1"), signIn.exchanged)
+            assertEquals(SignInStep.Idle, login.step.value)
+            // Taken once: the same answer again belongs to no sign-in under way.
+            assertEquals(StateMatch.NO_SIGN_IN, login.callback("code", null))
+            assertEquals(1, signIn.exchanged.size)
+
+            login.start()
+            assertEquals(StateMatch.MISSING, login.callback("code", ""))
+            assertEquals(2, signIn.exchanged.size)
+        }
+
+    @Test
+    fun anAnswerWithNoStateAndNoCodeIsASignInNotApproved() =
         runTest {
             val signIn = FakeSignIn()
             val login = login(signIn)
             login.start()
-            login.callback("forged", "another")
-            login.callback("forged", null)
+            assertEquals(StateMatch.MISSING, login.callback(null, null))
+            assertEquals(SignInStep.Failed(SignInFailure.DECLINED), login.step.value)
             assertTrue(signIn.exchanged.isEmpty())
-            assertEquals(SignInStep.InBrowser, login.step.value)
-            login.callback("code", "state-1")
-            assertEquals(listOf("code" to "verifier-1"), signIn.exchanged)
+        }
+
+    @Test
+    fun anAnswerWithAnotherStateIsNotTakenAndEndsTheSignInAsNotFinishedNotAsClosed() =
+        runTest {
+            val signIn = FakeSignIn()
+            val login = login(signIn)
+            login.start()
+            assertEquals(StateMatch.DIFFERED, login.callback("forged", "another"))
+            assertTrue(signIn.exchanged.isEmpty())
+            assertEquals(SignInStep.Failed(SignInFailure.REFUSED), login.step.value)
+            // The app comes to the front with that answer: an answer came, so the browser was not closed.
+            login.resumed()
+            assertEquals(SignInStep.Failed(SignInFailure.REFUSED), login.step.value)
+            // The sign-in has ended: its own answer after that is not taken either.
+            assertEquals(StateMatch.NO_SIGN_IN, login.callback("code", "state-1"))
+            assertTrue(signIn.exchanged.isEmpty())
+            assertTrue(saved.isEmpty())
+        }
+
+    @Test
+    fun anAnswerWithTheSignInsStateIsMatched() =
+        runTest {
+            val login = login(FakeSignIn())
+            assertEquals(StateMatch.NO_SIGN_IN, login.callback("code", "state-1"))
+            login.start()
+            assertEquals(StateMatch.MATCHED, login.callback("code", "state-1"))
         }
 
     @Test
@@ -206,6 +249,49 @@ class OpenRouterLoginTest {
         assertEquals(mapOf("s" to "abc", "code" to "xyz"), OpenRouterLogin.answerOf("s=abc&code=xyz"))
         assertEquals(mapOf("s" to "abc", "code" to "xyz"), OpenRouterLogin.answerOf("s=abc?code=xyz"))
         assertEquals(emptyMap<String, String>(), OpenRouterLogin.answerOf(null))
+    }
+
+    @Test
+    fun theAnswersParametersArePercentDecoded() {
+        assertEquals(mapOf("s" to "a-b_c", "code" to "x y+z"), OpenRouterLogin.answerOf("%73=a%2Db_c&code=x%20y+z"))
+        // The query encoded once more, as a whole.
+        assertEquals(mapOf("s" to "abc", "code" to "xyz"), OpenRouterLogin.answerOf("s%3Dabc%26code%3Dxyz"))
+        // Not well formed: kept as given.
+        assertEquals(mapOf("code" to "x%zz"), OpenRouterLogin.answerOf("code=x%zz"))
+        // The first of a name counts.
+        assertEquals(mapOf("s" to "first"), OpenRouterLogin.answerOf("s=first&s=second"))
+    }
+
+    @Test
+    fun theAnswerIsReadFromTheQueryOrFailingThatTheFragment() {
+        val callback = "https://sleevesight.app/auth/openrouter/"
+        val kept = OpenRouterLogin.answerAt("$callback?s=abc&code=xyz")
+        assertEquals("abc", kept[OpenRouterLogin.STATE])
+        assertEquals("xyz", kept["code"])
+        val dropped = OpenRouterLogin.answerAt("$callback?code=xyz")
+        assertNull(dropped[OpenRouterLogin.STATE])
+        assertEquals("xyz", dropped["code"])
+        val naive = OpenRouterLogin.answerAt("$callback?s=abc?code=xyz")
+        assertEquals("abc", naive[OpenRouterLogin.STATE])
+        assertEquals("xyz", naive["code"])
+        val fragment = OpenRouterLogin.answerAt("$callback?s=abc#code=xyz")
+        assertEquals("abc", fragment[OpenRouterLogin.STATE])
+        assertEquals("xyz", fragment["code"])
+        val both = OpenRouterLogin.answerAt("$callback?code=query#code=fragment&s=abc")
+        assertEquals("query", both["code"])
+        assertEquals("abc", both[OpenRouterLogin.STATE])
+        val none = OpenRouterLogin.answerAt(callback)
+        assertNull(none["code"])
+        assertNull(none[OpenRouterLogin.STATE])
+    }
+
+    @Test
+    fun theAnswerShowsItsParametersNamesNeverTheirValues() {
+        val answer = OpenRouterLogin.answerAt("https://sleevesight.app/auth/openrouter/?s=the-state#code=the-code")
+        assertEquals("query [s], fragment [code]", answer.toString())
+        val line = SignInCallbacks.logLine(answer, StateMatch.MATCHED)
+        assertEquals("OpenRouter sign-in answer: query [s], fragment [code]; state matched", line)
+        assertTrue(line, "the-state" !in line && "the-code" !in line)
     }
 
     @Test
