@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
+import app.sleevesight.app.session.VideoSources
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ArtistSplit
@@ -132,7 +133,12 @@ internal fun openPlayerScreen(
  * #984); without (an ad's), it is the art alone. With [fitHeight] (Home split in two, #1097), the art
  * is as large as the space it is given lets it be, the position under it included, rather than at
  * most [ART_WIDTH] wide.
+ *
+ * From a [video] source ([app.sleevesight.app.session.VideoSources], #1257), the art is the video's
+ * thumbnail, shown whole as a wide strip, as wide as the square would be, with the black bars above
+ * and below it trimmed ([trimBars], [videoCoverRatio]), and read as "Video thumbnail".
  */
+@Suppress("LongParameterList") // The art, the playback, the cover's turn, and how it is laid out.
 @Composable
 internal fun ArtAndProgress(
     art: Bitmap?,
@@ -140,14 +146,18 @@ internal fun ArtAndProgress(
     duration: Duration?,
     turn: CoverTurn? = null,
     fitHeight: Boolean = false,
+    video: Boolean = false,
 ) {
     val shape = RoundedCornerShape(16.dp)
-    val cover: @Composable (Modifier) -> Unit = { square ->
+    // Trimmed once per thumbnail, not at every recomposition.
+    val shown = remember(art, video) { if (video && art != null) trimBars(art) else art }
+    val ratio = if (video) videoCoverRatio(shown) else 1f
+    val cover: @Composable (Modifier) -> Unit = { box ->
         if (turn == null) {
-            Art(art, square.clip(shape), stringResource(R.string.home_art))
+            Art(shown, box.clip(shape), stringResource(artName(video)))
         } else {
             // The cover that turns names itself, as the art or as the tracklist.
-            FlippingCover(square, shape, turn) { Art(art, Modifier.fillMaxSize(), description = null) }
+            FlippingCover(box, shape, turn, video) { Art(shown, Modifier.fillMaxSize(), description = null) }
         }
     }
     val progress: (@Composable (Modifier) -> Unit)? =
@@ -157,7 +167,7 @@ internal fun ArtAndProgress(
             null
         }
     if (fitHeight) {
-        FittedArt(cover, progress, ART_GAP)
+        FittedArt(cover, progress, ART_GAP, ratio)
         return
     }
     Column(
@@ -169,11 +179,14 @@ internal fun ArtAndProgress(
             Modifier
                 .widthIn(max = ART_WIDTH)
                 .fillMaxWidth()
-                .aspectRatio(1f),
+                .aspectRatio(ratio),
         )
         progress?.invoke(Modifier.widthIn(max = ART_WIDTH).fillMaxWidth())
     }
 }
+
+/** What a screen reader calls the cover's art: a [video] source's thumbnail (#1257), else the album's art. */
+internal fun artName(video: Boolean): Int = if (video) R.string.home_art_video else R.string.home_art
 
 // [art] in [modifier], cropped to it, read as [description]; or the placeholder, a note on the surface.
 @Composable
@@ -238,7 +251,8 @@ private fun Progress(
  * alone when only it is known, no line when neither is. The title is as
  * normalized, with the source work and the variant it named under it; the artists are the credited
  * ones, featured artists included. A screen reader reads the album and the line under it as one, a
- * sentence: "Rubber Soul, released by Parlophone in 1965."; with no album reported, the line says so.
+ * sentence: "Rubber Soul, released by Parlophone in 1965."; with no album reported, the line says so,
+ * except for a video source's track ([VideoSources], #1257), which has no line in the album's place.
  * No year when the album's name gives its
  * edition's ([albumLineYear], #1116: "Material Girl (2024 Remaster)"). When the recording first came out is
  * in the *Dates* panel under it ([DatesPanel], #724), never in the album's place. While
@@ -278,11 +292,13 @@ internal fun KeyData(
     labelHeld: Boolean = false,
 ) {
     val album = header.album?.takeIf(String::isNotBlank)
-    Box(Modifier.heightIn(min = keyDataMinimum())) {
+    // A video with no album has neither the album's line nor the one under it (#1257), nor room for them.
+    val albumLines = album != null || !VideoSources.isVideo(header.player)
+    Box(Modifier.heightIn(min = keyDataMinimum(albumLines))) {
         // What a test finds while a line is held back: no height, nothing a screen reader stops on.
         if (held) Box(Modifier.testTag(ARTISTS_HELD_TAG))
         if (labelHeld && album != null) Box(Modifier.testTag(RELEASE_HELD_TAG))
-        KeyLines(normalized, header, years, split, held, notes, foundAs, labels, labelHeld, album)
+        KeyLines(normalized, header, years, split, held, notes, foundAs, labels, labelHeld, album, albumLines)
     }
 }
 
@@ -301,6 +317,7 @@ private fun KeyLines(
     labels: AlbumLabels,
     labelHeld: Boolean,
     album: String?,
+    albumLines: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(KEY_LINE_GAP)) {
         Text(
@@ -336,7 +353,7 @@ private fun KeyLines(
             }
         }
         if (album == null) {
-            Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
+            if (albumLines) Text(stringResource(R.string.home_album_none), style = MaterialTheme.typography.bodyLarge)
         } else {
             // Read once per album, year and labels, not at every recomposition (#1147).
             val line = remember(album, years.album, labels) { releaseLine(album, years.album, labels) }

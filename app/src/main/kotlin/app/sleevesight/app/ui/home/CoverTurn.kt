@@ -167,14 +167,16 @@ internal fun coverTurn(
  * comes, or shows its front at once when Home comes back with the back kept ([rememberSaveable]) while
  * *Settings* cleared; turning it over again asks. The back stays while [CoverTurn.album] is
  * the same, the playing song's mark moving with the track, and gives way to the cover on another
- * album. A screen reader reads the cover as a button, "Album art", "Double-tap to show tracklist",
- * and the back as "Tracklist", "Double-tap to show cover", its tracks a list in it.
+ * album. A screen reader reads the cover as a button, "Album art" ("Video thumbnail" from a [video]
+ * source, #1257, [artName]), "Double-tap to show tracklist", and the back as "Tracklist",
+ * "Double-tap to show cover", its tracks a list in it.
  */
 @Composable
 internal fun FlippingCover(
     square: Modifier,
     shape: Shape,
     turn: CoverTurn,
+    video: Boolean = false,
     front: @Composable () -> Unit,
 ) {
     // The album whose back shows, saved with it, so a back restored after another album has come
@@ -212,7 +214,7 @@ internal fun FlippingCover(
         turnedFor = album
     }
     val angle = if (turnedFor == album) turning.value else 0f
-    val name = stringResource(if (flipped) R.string.home_tracklist else R.string.home_art)
+    val name = stringResource(if (flipped) R.string.home_tracklist else artName(video))
     val action = stringResource(if (flipped) R.string.home_tracklist_show_cover else R.string.home_art_show_tracklist)
     val density = LocalDensity.current.density
     Box(

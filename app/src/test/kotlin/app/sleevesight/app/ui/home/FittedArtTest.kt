@@ -82,7 +82,33 @@ class FittedArtTest {
         }
     }
 
+    @Test
+    fun aVideosWideCoverIsAsWideAsTheHeightLeavesAtItsOwnRatio() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    CompositionLocalProvider(LocalDensity provides Density(1f)) {
+                        Box(Modifier.size(WIDTH.dp, WIDE_HEIGHT.dp)) {
+                            FittedArt(
+                                cover = { modifier -> Box(modifier.testTag(ART)) },
+                                progress = { modifier -> Layout({}, modifier, Position) },
+                                gap = GAP.dp,
+                                ratio = 16f / 9f,
+                            )
+                        }
+                    }
+                }
+            }
+            compose.waitForIdle()
+            // 200 - 8 - 42 = 150 tall leaves a 16:9 cover 266 wide (#1257), not a square 150 one.
+            val art = compose.onNodeWithTag(ART).fetchSemanticsNode().size
+            assertEquals(WIDE_HEIGHT - GAP - BESIDE_HEIGHT, art.height)
+            assertEquals(266, art.width)
+        }
+    }
+
     private companion object {
+        const val WIDE_HEIGHT = 200
         const val ART = "art"
         const val WIDTH = 400
         const val HEIGHT = 236

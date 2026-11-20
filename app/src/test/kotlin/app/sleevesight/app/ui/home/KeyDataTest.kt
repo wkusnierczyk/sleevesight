@@ -14,6 +14,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.session.VideoSources
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.core.model.NowPlaying
@@ -187,4 +188,24 @@ class KeyDataTest {
             assertEquals("Album not reported", app.getString(R.string.home_album_none))
         }
     }
+
+    @Test
+    fun aVideoSourcesTrackWithNoAlbumHasNoLineInTheAlbumsPlace() {
+        // An interview on YouTube (#1257): the title and the channel only.
+        val interview = sundown.copy(title = "On Low Tide", artists = "Northside Sessions", album = null)
+        show(interview.copy(player = VideoSources.YOUTUBE), HeaderYears()) {
+            compose.onNodeWithText("Northside Sessions").assertExists()
+            compose.onNodeWithText(app.getString(R.string.home_album_none)).assertDoesNotExist()
+        }
+        // YouTube Music is a music player: the line stays.
+        show(interview.copy(player = "com.google.android.apps.youtube.music"), HeaderYears()) {
+            compose.onNodeWithText(app.getString(R.string.home_album_none)).assertExists()
+        }
+    }
+
+    @Test
+    fun aVideoSourcesTrackWithAnAlbumKeepsTheAlbum() =
+        show(gold.copy(player = VideoSources.YOUTUBE), HeaderYears()) {
+            assertEquals(listOf("Gord's Gold"), italics("Gord's Gold"))
+        }
 }

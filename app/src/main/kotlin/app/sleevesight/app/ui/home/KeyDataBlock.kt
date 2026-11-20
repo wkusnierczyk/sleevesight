@@ -13,19 +13,20 @@ import androidx.compose.ui.unit.dp
 
 /**
  * The least height of [KeyData]'s block (#1407): the title, the artists, the album and the release
- * line on one line each, in their styles at the font size shown, and the gaps between them.
+ * line on one line each, in their styles at the font size shown, and the gaps between them; without
+ * [album], the title and the artists alone (a video source's track with no album, #1257).
  */
 @Composable
-internal fun keyDataMinimum(): Dp {
+internal fun keyDataMinimum(album: Boolean = true): Dp {
     val measurer = rememberTextMeasurer()
     val type = MaterialTheme.typography
     val density = LocalDensity.current
     val styles =
-        listOf(
+        listOfNotNull(
             type.headlineMedium.copy(fontWeight = FontWeight.Bold),
             type.bodyLarge,
-            type.bodyLarge,
-            type.bodyMedium,
+            type.bodyLarge.takeIf { album },
+            type.bodyMedium.takeIf { album },
         )
     return remember(measurer, styles, density) {
         val lines = styles.sumOf { measurer.measure(ONE_LINE, it, maxLines = 1).size.height }
