@@ -239,6 +239,17 @@ class SettingsSettingLinksTest {
         }
 
     @Test
+    fun theSettingsOpenedAtAskAiAutomaticallyLandOnItsRow() =
+        // From the note on what it asked in Home's *Dates*, *Genres* and *Lyrics* (#956).
+        show(landOn = SettingsTarget.searchWithAi) {
+            landedOnRow(SettingsTarget.searchWithAi)
+            compose
+                .onNode(
+                    hasAnyAncestor(hasTestTag(SettingsTarget.searchWithAi.tag)) and hasText("Ask AI automatically"),
+                ).assertExists()
+        }
+
+    @Test
     fun theSettingsOpenedAtTheGeniusSearchLandOnItsRow() =
         // From Home's *Lyrics*, where the search is off: "See Settings → Appearance." (#728).
         show(landOn = SettingsTarget.lyricsSearch) {
