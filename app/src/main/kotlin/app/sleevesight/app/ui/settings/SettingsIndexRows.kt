@@ -169,7 +169,7 @@ internal fun historyRows(settings: Settings): List<IndexedRow> {
 
 /**
  * *Players*' rows after the players themselves: *Can’t see your player?* (#758), unless it is
- * dismissed (#759), and #674's switch.
+ * dismissed (#759), #674's switch, and the header symbol's two settings (#1445).
  */
 @Composable
 internal fun playerRows(settings: Settings): List<IndexedRow> =
@@ -186,6 +186,15 @@ internal fun playerRows(settings: Settings): List<IndexedRow> =
         indexRow(
             stringResource(R.string.settings_players_on_home),
             stringResource(R.string.settings_players_on_home_summary),
+        ),
+        indexRow(
+            stringResource(R.string.settings_player_logo),
+            stringResource(R.string.settings_player_logo_summary),
+        ),
+        choices(
+            R.string.settings_symbol_opens,
+            R.string.settings_symbol_opens_summary,
+            symbolOpenings().map { it.second },
         ),
     )
 
