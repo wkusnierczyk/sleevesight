@@ -31,6 +31,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
 
 /**
  * *What the symbol opens* (#1445): with *The player* chosen, a tap on the note symbol opens the
@@ -90,14 +91,32 @@ class SymbolOpensTest {
         home.nothingPlaying()
         home.lastPlayer.value = null
         home.show {
-            // The players load off the main thread.
-            compose.waitForIdle()
             symbol().performClick()
-            compose.waitForIdle()
-            // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
-            assertEquals(CASTBOX, shadowOf(app).nextStartedActivity?.`package`)
+            // Castbox, Spotify, YouTube Music, A to Z: Castbox first, once the players have loaded.
+            assertEquals(CASTBOX, home.nextStarted())
             symbol().performTouchInput { longClick(center) }
             compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
+        }
+    }
+
+    // #1469: a tap before the players have loaded opened the panel, as if none were switched on.
+    @Test
+    fun aTapBeforeThePlayersHaveLoadedOpensTheFirstSwitchedOnOnceTheyHave() {
+        home.nothingPlaying()
+        home.lastPlayer.value = null
+        val loading = CountDownLatch(1)
+        home.loading = loading
+        home.show {
+            try {
+                symbol().performClick()
+                compose.waitForIdle()
+                compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
+                assertEquals(null, shadowOf(app).nextStartedActivity)
+            } finally {
+                loading.countDown()
+            }
+            assertEquals(CASTBOX, home.nextStarted())
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
         }
     }
 

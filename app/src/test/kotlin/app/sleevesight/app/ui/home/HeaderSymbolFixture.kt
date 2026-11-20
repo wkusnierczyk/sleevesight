@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import android.app.Application
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.Bitmap
@@ -14,7 +15,9 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.session.AdPlaying
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -24,7 +27,10 @@ import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.robolectric.Shadows.shadowOf
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Home's header with a followed player (#1440, #1445), for the tests of the note symbol: Spotify
@@ -46,6 +52,9 @@ internal class HeaderSymbolFixture(
     val askedScreen = mutableListOf<String>()
     var activity: PendingIntent? = null
 
+    /** Holds the players' load, off the main thread, while it is not released (#1469). */
+    var loading: CountDownLatch? = null
+
     val feed =
         HeaderPlayerFeed(
             playback = playback,
@@ -56,7 +65,10 @@ internal class HeaderSymbolFixture(
                 askedScreen += player
                 activity.takeIf { player == SPOTIFY }
             },
-            launch = { Intent(Intent.ACTION_MAIN).setPackage(it) },
+            launch = {
+                loading?.await(WAIT_MS, TimeUnit.MILLISECONDS)
+                Intent(Intent.ACTION_MAIN).setPackage(it)
+            },
             installed = null,
             send = {},
             follow = { playback.value = PlaybackInfo(it, followed.value.getValue(it), actions = ALL) },
@@ -96,6 +108,19 @@ internal class HeaderSymbolFixture(
         playback.value = PlaybackInfo.NONE.copy(actions = ALL)
         followed.value = emptyMap()
         track.value = null
+    }
+
+    /**
+     * The package of the next app started, waited for: the players load off the main thread, and a
+     * gesture made before they have is done once they have (#1469).
+     */
+    fun nextStarted(): String? {
+        var started: Intent? = null
+        compose.waitUntil(WAIT_MS) {
+            started = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
+            started != null
+        }
+        return started?.`package`
     }
 
     /** A state written off the composition, seen at the next frames, on a paused clock. */
