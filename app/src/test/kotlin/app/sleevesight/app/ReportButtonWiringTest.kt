@@ -112,7 +112,10 @@ class ReportButtonWiringTest {
             assertEquals(ReportButton.HIDE, stored())
             // The message shows once the save ends; the button goes once Home's read of the
             // settings hears of it, on DataStore's thread first (#1479).
-            compose.waitUntil(WAIT_MS) { buttons() == 0 }
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                buttons() == 0
+            }
 
             scenario.recreate()
             // The new Home shows no button before its first read of the settings either: wait

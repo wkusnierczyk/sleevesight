@@ -99,7 +99,7 @@ fun WithTesterReport(
     var hidden by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val scope = rememberCoroutineScope()
     val choice = settings?.takeIf { it.developerMode }?.reportButton ?: ReportButton.HIDE
-    SideEffect { if (settings != null) feed.settingsShown = true }
+    SideEffect { if (settings != null && !feed.settingsShown) feed.settingsShown = true }
     content(
         if (choice == ReportButton.HIDE) {
             null
