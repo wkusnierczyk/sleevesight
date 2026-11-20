@@ -112,28 +112,6 @@ internal class HeaderSymbolFixture(
         track.value = null
     }
 
-    /**
-     * Waits until the note symbol takes a gesture: while none plays, not before the players have
-     * loaded, off the main thread (#1469).
-     */
-    fun symbolReady() =
-        compose.waitUntil(WAIT_MS) {
-            compose
-                .onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
-                .fetchSemanticsNodes()
-                .any { SemanticsProperties.Disabled !in it.config }
-        }
-
-    /** The package of the next app started, waited for. */
-    fun nextStarted(): String? {
-        var started: Intent? = null
-        compose.waitUntil(WAIT_MS) {
-            started = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
-            started != null
-        }
-        return started?.`package`
-    }
-
     /** A state written off the composition, seen at the next frames, on a paused clock. */
     fun frames() {
         Snapshot.sendApplyNotifications()
@@ -167,4 +145,25 @@ internal class HeaderSymbolFixture(
             artists: String = "Gordon Lightfoot",
         ) = NowPlaying(title, artists, player = player, play = play)
     }
+}
+
+/**
+ * Waits until the note symbol takes a gesture: while none plays, not before the players have loaded,
+ * off the main thread (#1469).
+ */
+internal fun ComposeTestRule.symbolReady() =
+    waitUntil(WAIT_MS) {
+        onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
+            .fetchSemanticsNodes()
+            .any { SemanticsProperties.Disabled !in it.config }
+    }
+
+/** The package of the next app started, waited for. */
+internal fun ComposeTestRule.nextStarted(): String? {
+    var started: Intent? = null
+    waitUntil(WAIT_MS) {
+        started = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
+        started != null
+    }
+    return started?.`package`
 }

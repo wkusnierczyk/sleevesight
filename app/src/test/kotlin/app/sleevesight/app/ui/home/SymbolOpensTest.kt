@@ -79,7 +79,7 @@ class SymbolOpensTest {
     fun withNothingPlayingATapOpensTheLastPlayerFollowed() {
         home.nothingPlaying()
         home.show {
-            home.symbolReady()
+            compose.symbolReady()
             symbol().performClick()
             compose.waitForIdle()
             assertEquals(SPOTIFY, shadowOf(app).nextStartedActivity?.`package`)
@@ -92,10 +92,10 @@ class SymbolOpensTest {
         home.nothingPlaying()
         home.lastPlayer.value = null
         home.show {
-            home.symbolReady()
+            compose.symbolReady()
             symbol().performClick()
             // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
-            assertEquals(CASTBOX, home.nextStarted())
+            assertEquals(CASTBOX, compose.nextStarted())
             symbol().performTouchInput { longClick(center) }
             compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
         }
@@ -118,9 +118,9 @@ class SymbolOpensTest {
             } finally {
                 loading.countDown()
             }
-            home.symbolReady()
+            compose.symbolReady()
             symbol().performClick()
-            assertEquals(CASTBOX, home.nextStarted())
+            assertEquals(CASTBOX, compose.nextStarted())
         }
     }
 

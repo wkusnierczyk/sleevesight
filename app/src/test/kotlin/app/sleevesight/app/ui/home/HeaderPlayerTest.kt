@@ -261,7 +261,7 @@ class HeaderPlayerTest {
         show {
             symbolReads(text(R.string.home_player_symbol_nothing_playing_state))
             assertEquals(0, buttons(R.string.home_record_pause) + buttons(R.string.home_record_play))
-            symbolReady()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performClick()
             compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
             menuClosed()
@@ -278,10 +278,10 @@ class HeaderPlayerTest {
         nothingPlaying()
         lastPlayer.value = null
         show {
-            symbolReady()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
             // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
-            assertEquals(CASTBOX, nextStarted())
+            assertEquals(CASTBOX, compose.nextStarted())
             compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
         }
     }
@@ -290,9 +290,9 @@ class HeaderPlayerTest {
     fun aLongPressOnceAPlayerStoppedOpensTheLastPlayerFollowed() =
         show {
             nothingPlaying()
-            symbolReady()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            assertEquals(SPOTIFY, nextStarted())
+            assertEquals(SPOTIFY, compose.nextStarted())
         }
 
     @Test
@@ -342,9 +342,9 @@ class HeaderPlayerTest {
             lastPlayer.value = YOUTUBE
             nothingPlaying()
             homeShown.value = true
-            symbolReady()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            assertEquals(YOUTUBE, nextStarted())
+            assertEquals(YOUTUBE, compose.nextStarted())
         }
 
     @Test
@@ -386,9 +386,9 @@ class HeaderPlayerTest {
         lastPlayer.value = YOUTUBE
         settings.value = Settings(followedPlayers = mapOf(SPOTIFY to true, YOUTUBE to false, CASTBOX to true))
         show {
-            symbolReady()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            assertEquals(CASTBOX, nextStarted())
+            assertEquals(CASTBOX, compose.nextStarted())
         }
     }
 
@@ -400,7 +400,7 @@ class HeaderPlayerTest {
         lastPlayer.value = null
         val phone = InstalledPlayers(icon = { null }, visible = { false }, seen = MutableStateFlow(emptySet()))
         show(shownFeed = feedOf(phone)) {
-            symbolReady()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
             // The panel that says none is enabled.
             compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
@@ -419,25 +419,6 @@ class HeaderPlayerTest {
                 .fetchSemanticsNodes()
                 .any { it.config.getOrElseNullable(SemanticsProperties.StateDescription) { null } == state }
         }
-
-    // Waits until the symbol takes a gesture: while none plays, not before the players have loaded (#1469).
-    private fun symbolReady() =
-        compose.waitUntil(WAIT_MS) {
-            compose
-                .onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
-                .fetchSemanticsNodes()
-                .any { SemanticsProperties.Disabled !in it.config }
-        }
-
-    // The package of the next app started, waited for.
-    private fun nextStarted(): String? {
-        var started: Intent? = null
-        compose.waitUntil(WAIT_MS) {
-            started = shadowOf(app).nextStartedActivity
-            started != null
-        }
-        return started?.`package`
-    }
 
     @Test
     fun theSymbolIsReadAsPlayerMenuWithItsActionsAndOpensTheMenu() =
