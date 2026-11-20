@@ -87,6 +87,8 @@ internal val RESET_LINES: List<ResetLine> =
     listOf(
         // Players
         switch("onlyEnabledPlayersOnHome", R.string.settings_players_on_home) { it.onlyEnabledPlayersOnHome },
+        switch("showPlayerLogo", R.string.settings_player_logo) { it.showPlayerLogo },
+        choice("symbolOpens", R.string.settings_symbol_opens, { it.symbolOpens }) { symbolOpenings() },
         // Sources: a row per source, a web search engine's on while web search is on with it.
         ResetLine(listOf("enabledSources", "webEngines")) { now, reset, _ ->
             SOURCE_SWITCHES.flatMap { (name, on) -> line(stringResource(name), on(now), on(reset)) { onOff(it) } }

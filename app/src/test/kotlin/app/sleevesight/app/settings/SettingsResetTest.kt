@@ -22,6 +22,7 @@ import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.SymbolOpens
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WriteAutomatically
@@ -60,6 +61,8 @@ class SettingsResetTest {
             aiEfforts = mapOf(ProviderId.ANTHROPIC to ReasoningEffort.HIGH),
             followedPlayers = mapOf("org.example.tunes" to true, Settings.SPOTIFY to false),
             onlyEnabledPlayersOnHome = true,
+            showPlayerLogo = false,
+            symbolOpens = SymbolOpens.PLAYER,
             enabledSources = setOf(SourceSwitch.MUSICBRAINZ, SourceSwitch.MODEL),
             webEngines = emptySet(),
             labelSources = setOf(LabelSource.LASTFM),
