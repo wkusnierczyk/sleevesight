@@ -36,20 +36,22 @@ import app.sleevesight.app.ui.theme.plainCheckboxColors
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CancellationException
 
-// *Save and reset* (#960): *Reset to the defaults*, and its dialog. *Save to a file* and *Load from a
-// file* (#815) join the section's rows here.
+// *Save and reset* (#960): *Reset to the defaults*, and its dialog; then *Save to a file* and *Load
+// from a file* (#815, [SettingsFileRows]).
 
 /**
  * *Save and reset*'s rows: *Reset to the defaults*, whose button opens [ResetDialog] for
  * [settings], *Include developer settings* unticked; once the reset is saved, [ResetNotice] says
- * so. [modelName] names a
- * model as its row does.
+ * so. Then *Save to a file* and *Load from a file* ([SettingsFileRows], through [files]). [modelName]
+ * names a model as its row does, [playerLabel] a player.
  */
 @Composable
 internal fun SaveAndResetSection(
     settings: Settings,
     resetter: SettingsResetter,
+    files: SettingsFileAccess,
     modelName: (String) -> String,
+    playerLabel: (String) -> String,
 ) {
     var asking by rememberSaveable { mutableStateOf(false) }
     var includeDeveloper by rememberSaveable { mutableStateOf(false) }
@@ -87,13 +89,15 @@ internal fun SaveAndResetSection(
             onDismiss = { asking = false },
         )
     }
+    SettingsFileRows(settings, files, modelName, playerLabel)
 }
 
 /**
  * Says *Settings reset to the defaults.* ([LocalMessages]) once the last reset asked for ([resets])
- * is saved, once only: on this screen, or on the one made after a recreation, as when the reset
- * changed the theme and Android restarted the activity. A screen recreated before its message has
- * shown and gone gives it back, so the new screen says it; one left for good does not.
+ * is saved, or a load's own message (#815), once only: on this screen, or on the one made after a
+ * recreation, as when the reset changed the theme and Android restarted the activity. A screen
+ * recreated before its message has shown and gone gives it back, so the new screen says it; one left
+ * for good does not.
  */
 @Composable
 internal fun ResetNotice(resets: Resets) {
@@ -105,7 +109,7 @@ internal fun ResetNotice(resets: Resets) {
         val reset = pending ?: return@LaunchedEffect
         if (messages == null || !reset.saved.await() || !resets.take(reset)) return@LaunchedEffect
         try {
-            messages.showing(done)
+            messages.showing(reset.message ?: done)
         } catch (gone: CancellationException) {
             // Recreated before the message had shown and gone (a reset of the theme): the new screen
             // says it. Left (Back), the message goes with the screen, never to come up on a later visit.
@@ -118,7 +122,11 @@ internal fun ResetNotice(resets: Resets) {
 /** *Save and reset*'s rows as the settings' search finds them. */
 @Composable
 internal fun saveAndResetRows(): List<IndexedRow> =
-    listOf(indexRow(stringResource(R.string.settings_reset), stringResource(R.string.settings_reset_summary)))
+    listOf(
+        indexRow(stringResource(R.string.settings_reset), stringResource(R.string.settings_reset_summary)),
+        indexRow(stringResource(R.string.settings_save_file), stringResource(R.string.settings_save_file_summary)),
+        indexRow(stringResource(R.string.settings_load_file), stringResource(R.string.settings_load_file_summary)),
+    )
 
 /**
  * *Reset settings?* (#960): [changes], the settings that go back to their defaults, each as its

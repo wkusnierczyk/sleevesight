@@ -58,6 +58,7 @@ import app.sleevesight.app.secrets.OpenRouterLogin
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.missing
 import app.sleevesight.app.secrets.saveAndSwitchOn
 import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
@@ -76,10 +77,12 @@ import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.ListedModelNames
+import app.sleevesight.app.settings.LoadMessage
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.settings.loader
 import app.sleevesight.app.settings.resetter
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.ReadAloudMessages
@@ -112,6 +115,7 @@ import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SettingsFile
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.AiSearchAnswers
@@ -863,6 +867,16 @@ class AppGraph internal constructor(
         Settings,
         Boolean,
     ) -> Deferred<Boolean> by lazy { settings.resetter(settingsSaves, pipeline::modeChosen) }
+
+    /**
+     * *Load from a file* (#815), saved in [settingsSaves], in line with the other saves; a mode it
+     * changes is told to the pipeline as a reset's is.
+     */
+    val loadSettings: (
+        Settings,
+        SettingsFile.Contents,
+        LoadMessage,
+    ) -> Deferred<Boolean> by lazy { settings.loader(settingsSaves, { secrets.missing() }, pipeline::modeChosen) }
 
     /**
      * *Read aloud* (#325): the insight, or a genre's reason, read by the phone's text-to-speech

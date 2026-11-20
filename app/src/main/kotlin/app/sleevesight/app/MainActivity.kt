@@ -211,6 +211,8 @@ class MainActivity : ComponentActivity() {
                                         chooseWritingMode = graph.chooseWritingMode,
                                         // Reset to the defaults (#960): a mode it changes reaches the pipeline.
                                         resetSettings = graph.resetSettings,
+                                        // Load from a file (#815): a mode it changes reaches the pipeline.
+                                        loadSettings = graph.loadSettings,
                                         openRouter = OpenRouterAccess(graph.openRouterLogin, graph.keyRefusals),
                                         readAloudVoices = graph.readAloudVoices,
                                         playerLabel = graph::playerLabel,
