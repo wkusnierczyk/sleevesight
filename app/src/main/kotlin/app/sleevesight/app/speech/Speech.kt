@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.Locale
@@ -40,6 +41,12 @@ interface Speech {
 
     /** Stops, and releases the engine, which [open] opens again. */
     fun close()
+
+    /** The open engine's voices (#787); none before it has opened. */
+    fun voices(): List<EngineVoice> = emptyList()
+
+    /** The engine's name of its default voice, the phone's choice (#787); null before it has opened. */
+    fun defaultVoice(): String? = null
 }
 
 /**
@@ -55,6 +62,15 @@ interface SpeechEngine {
     fun isLanguageAvailable(locale: Locale): Int
 
     fun setLanguage(locale: Locale)
+
+    /** `TextToSpeech.getVoices`, as [EngineVoice]s (#787); none where the engine lists none. */
+    fun voices(): List<EngineVoice> = emptyList()
+
+    /** `TextToSpeech.getDefaultVoice`'s name (#787), if any. */
+    fun defaultVoice(): String? = null
+
+    /** `TextToSpeech.setVoice` with the voice the engine calls [name] (#787): whether it was set. */
+    fun setVoice(name: String): Boolean = false
 
     /** `TextToSpeech.speak`: `TextToSpeech.SUCCESS`, or `TextToSpeech.ERROR` when it was not queued. */
     fun speak(
@@ -89,6 +105,28 @@ private class AndroidSpeechEngine(
         tts.language = locale
     }
 
+    // An engine may throw from its voice list (a service gone), or give null: no voices then.
+    private val engineVoices: Set<Voice>
+        get() = runCatching { tts.voices.orEmpty() }.getOrDefault(emptySet())
+
+    override fun voices(): List<EngineVoice> =
+        engineVoices.map { voice ->
+            EngineVoice(
+                name = voice.name,
+                locale = voice.locale,
+                quality = voice.quality,
+                network = voice.isNetworkConnectionRequired,
+                installed = TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in voice.features.orEmpty(),
+            )
+        }
+
+    override fun defaultVoice(): String? = runCatching { tts.defaultVoice?.name }.getOrNull()
+
+    override fun setVoice(name: String): Boolean {
+        val voice = engineVoices.firstOrNull { it.name == name } ?: return false
+        return tts.setVoice(voice) == TextToSpeech.SUCCESS
+    }
+
     override fun speak(
         text: String,
         queueMode: Int,
@@ -103,10 +141,14 @@ private class AndroidSpeechEngine(
 }
 
 /**
- * [Speech] through Android's `TextToSpeech` ([make], a seam), with the engine and voice chosen in
- * the phone's settings: no engine of the app's own, no permission and no dependency. The engine
- * decides where the text goes: some (Google's network voices) send it to their server to be spoken,
- * which the privacy policy says. Spoken as an assistant's voice ([ATTRIBUTES]), at the media
+ * [Speech] through Android's `TextToSpeech` ([make], a seam), with the engine chosen in the phone's
+ * settings: no engine of the app's own, no permission and no dependency. The voice is the engine's
+ * default for the reading's language, unless *Voice* (#787) has one chosen ([voice], its id) for
+ * English: that one is set before each English reading, its server version while [online], else
+ * its phone version; a voice the engine no longer has, or one with a server version only while
+ * offline, leaves the engine's default, with nothing said. The engine decides where the text goes:
+ * some (Google's network voices) send it to their server to be spoken, which the privacy policy
+ * says. Spoken as an assistant's voice ([ATTRIBUTES]), at the media
  * volume, which [MusicFocus] lowers or pauses the music under. The engine's callbacks come on a
  * thread of its own and are handed to the main thread.
  *
@@ -117,6 +159,8 @@ private class AndroidSpeechEngine(
  */
 class SystemSpeech(
     context: Context,
+    private val voice: () -> String? = { null },
+    private val online: () -> Boolean = { true },
     private val make: (onInit: (Int) -> Unit) -> SpeechEngine = { onInit -> AndroidSpeechEngine(context, onInit) },
 ) : Speech {
     private val main = Handler(Looper.getMainLooper())
@@ -189,7 +233,11 @@ class SystemSpeech(
         val tts = engine ?: return failed()
         // Whatever it was reading ends unannounced: QUEUE_FLUSH drops it.
         forget()
+        // The language's default voice, which a voice set for the last reading does not outlast.
         tts.setLanguage(locale)
+        if (locale.language == Locale.ENGLISH.language) {
+            chosenVoice(voice(), tts.voices(), online())?.let { tts.setVoice(it) }
+        }
         onDone = done
         onFailed = failed
         for ((i, part) in parts.withIndex()) {
@@ -212,6 +260,10 @@ class SystemSpeech(
         forget()
         engine?.stop()
     }
+
+    override fun voices(): List<EngineVoice> = engine?.takeIf { opened }?.voices().orEmpty()
+
+    override fun defaultVoice(): String? = engine?.takeIf { opened }?.defaultVoice()
 
     override fun close() {
         stop()

@@ -353,6 +353,35 @@
     <!-- Read aloud (#325), at the end of Insights: a heading drawn as a setting's title, with what reads (#946), then its three settings. -->
     <string name="settings_read_aloud">Read aloud</string>
     <string name="settings_read_aloud_summary">The speaker button beside insights triggers your phone’s text-to-speech engine to read the text aloud. The engine is the one chosen in Android’s settings. Note: some, such as Google’s network voices, send the text to their server to be spoken.</string>
+    <!-- Read aloud → Voice (#787), the first row under it: a row with its value, opening a dialog of radio buttons. %1$s in the summary is settings_read_aloud_voice_link, a link to Android's text-to-speech settings. -->
+    <string name="settings_read_aloud_voice">Voice</string>
+    <string name="settings_read_aloud_voice_summary">The voice that reads insights aloud, from the voices your phone’s text-to-speech engine has for English. The phone’s choice is the engine’s own default. A voice marked higher quality online, or needing the internet, is spoken by the engine’s server, which the text is sent to. Voices are added, and the engine chosen, in %1$s.</string>
+    <string name="settings_read_aloud_voice_link">Android’s text-to-speech settings</string>
+    <string name="settings_read_aloud_voice_phone">The phone’s choice</string>
+    <!-- The pill on the row, which reads the sample in the voice chosen; Stop while it reads. -->
+    <string name="settings_read_aloud_voice_listen">Listen</string>
+    <string name="settings_read_aloud_voice_stop">Stop</string>
+    <!-- A voice's play button in the dialog, to a screen reader; %1$s is the voice's name, settings_read_aloud_voice_named or settings_read_aloud_voice_phone. -->
+    <string name="settings_read_aloud_voice_listen_to">Listen to %1$s</string>
+    <string name="settings_read_aloud_voice_sample">This is how your insights will sound in this voice.</string>
+    <!-- A voice in the dialog, under its country's heading: %1$d is its number among that country's voices. -->
+    <string name="settings_read_aloud_voice_number">Voice %1$d</string>
+    <!-- A voice as the row and its notes name it: %1$d its number, %2$s its country. -->
+    <string name="settings_read_aloud_voice_named">Voice %1$d (%2$s)</string>
+    <!-- Under The phone's choice in the dialog: %1$s is the engine's default voice, as settings_read_aloud_voice_named. -->
+    <string name="settings_read_aloud_voice_now">Now %1$s</string>
+    <!-- What a voice is marked with, under its name in the dialog, joined by " · ". -->
+    <string name="settings_read_aloud_voice_higher_online">higher quality online</string>
+    <string name="settings_read_aloud_voice_higher">higher quality</string>
+    <string name="settings_read_aloud_voice_internet">needs the internet</string>
+    <!-- The notes under the row. %1$s is the chosen voice's name, as settings_read_aloud_voice_named. -->
+    <string name="settings_read_aloud_voice_offline">%1$s needs the internet. While offline, the phone’s choice reads.</string>
+    <string name="settings_read_aloud_voice_gone">%1$s is no longer on this phone. The phone’s choice reads instead.</string>
+    <!-- %1$s is settings_read_aloud_voice_link, a link. -->
+    <string name="settings_read_aloud_voice_no_voice">Your phone’s text-to-speech engine has no English voice. One can be added in %1$s.</string>
+    <!-- %1$s is settings_read_aloud_voice_no_engine_link, a link to Android's text-to-speech settings. -->
+    <string name="settings_read_aloud_voice_no_engine">This phone has no text-to-speech engine. One can be set up in Android’s settings, under Accessibility, %1$s.</string>
+    <string name="settings_read_aloud_voice_no_engine_link">Text-to-speech output</string>
     <string name="settings_read_aloud_music">Music while reading aloud</string>
     <string name="settings_read_aloud_music_summary">When an insight is read aloud while music is playing, the app can temporarily lower the volume or pause the playback.</string>
     <string name="settings_read_aloud_lower">Lower</string>

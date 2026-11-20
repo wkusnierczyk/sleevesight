@@ -70,3 +70,6 @@ private fun validated(capabilities: NetworkCapabilities?): Boolean =
     capabilities != null &&
         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+
+/** Whether the phone is online now, as [online] tells it: its default network validated (#787). */
+fun ConnectivityManager.onlineNow(): Boolean = validated(getNetworkCapabilities(activeNetwork))

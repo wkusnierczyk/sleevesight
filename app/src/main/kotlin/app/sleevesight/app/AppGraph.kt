@@ -45,6 +45,7 @@ import app.sleevesight.app.pipeline.SpellingTargets
 import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
+import app.sleevesight.app.pipeline.onlineNow
 import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.pipeline.rebuilds
 import app.sleevesight.app.pipeline.samePlay
@@ -82,7 +83,9 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.ReadAloudMessages
 import app.sleevesight.app.speech.ReadAloudMusicFocus
+import app.sleevesight.app.speech.ReadAloudVoices
 import app.sleevesight.app.speech.SystemMusicFocus
+import app.sleevesight.app.speech.SystemReadAloudVoices
 import app.sleevesight.app.speech.SystemRemoteMusic
 import app.sleevesight.app.speech.SystemSpeech
 import app.sleevesight.app.speech.screenReaderOn
@@ -857,7 +860,13 @@ class AppGraph internal constructor(
      */
     val readAloud: ReadAloud by lazy {
         ReadAloud(
-            speech = SystemSpeech(appContext),
+            // In the voice chosen under *Voice* (#787), if any, its server version while online.
+            speech =
+                SystemSpeech(
+                    appContext,
+                    voice = { latestSettings.value?.readAloudVoice?.id },
+                    online = { appContext.getSystemService(ConnectivityManager::class.java).onlineNow() },
+                ),
             // Music on another device (Spotify Connect) held through its session (#803), a followed
             // player's only, as the settings now say.
             focus =
@@ -873,6 +882,20 @@ class AppGraph internal constructor(
             tell = ReadAloudMessages(appContext)::tell,
             // A genre's reason followed while it is read, on the main thread, as long as the process.
             scope = mainScope,
+        )
+    }
+
+    /**
+     * *Voice*'s row and dialog (#787): the engine's voices, whether the phone is online, and a
+     * sample read in a voice, by an engine of their own, which stops any reading aloud first.
+     */
+    val readAloudVoices: ReadAloudVoices by lazy {
+        val connectivity = appContext.getSystemService(ConnectivityManager::class.java)
+        SystemReadAloudVoices(
+            speechOf = { voice -> SystemSpeech(appContext, voice = voice, online = { connectivity.onlineNow() }) },
+            focus = SystemMusicFocus(appContext),
+            online = connectivity.online(),
+            before = { readAloud.stop() },
         )
     }
 
