@@ -96,7 +96,7 @@ class IdentityCheckPropertiesTest {
         }
 
     // Fails: "1vın本" against "1VIN本" (shrunk from "íãóíå 1vın本"): the dotless "ı" upper-cases to "I",
-    // which `key` lowercases to "i". See <TBD issue>.
+    // which `key` lowercases to "i". See #1490.
     @Ignore
     @Test
     fun `a name in any script is the same name in upper and lower case`() =

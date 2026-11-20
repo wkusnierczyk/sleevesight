@@ -50,7 +50,7 @@ class TidyPropertiesTest {
     private val line = Arb.list(piece, 0..MAX_PIECES).map { it.joinToString("") }
 
     // Fails: "a((, ))" (shrunk from ")(,)Basia a((, ))((("), is tidied to "a()": emptied brackets inside
-    // brackets leave the outer pair empty, and one pass takes out only the inner. See <TBD issue>.
+    // brackets leave the outer pair empty, and one pass takes out only the inner. See #1489.
     @Ignore
     @Test
     fun `a tidied line has no empty brackets but those that open it`() =
@@ -63,7 +63,7 @@ class TidyPropertiesTest {
 
     // Fails: "a((, ))" (shrunk from ")(,)Basia a((, ))((("), is tidied to "a()", which is tidied to "a":
     // emptied brackets inside brackets leave the outer pair empty, and one pass takes out only the
-    // inner. See <TBD issue>.
+    // inner. See #1489.
     @Ignore
     @Test
     fun `tidying is idempotent`() =
