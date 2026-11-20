@@ -1,5 +1,6 @@
 package app.sleevesight.core.resolution
 
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.IdentityCheck.Route
@@ -169,7 +170,9 @@ class IdentityCheckPropertiesTest {
                 val plain = parts.joinToString(" ")
                 val punctuated = punctuated(parts, separators, apostrophe = false)
                 val variant = if (upper) punctuated.uppercase() else punctuated
-                assertEquals(verdict(plain, plain), verdict(plain, variant), "\"$plain\" and \"$variant\"")
+                // The track's own song, accepted by its performer's name: as written, and in any such variant.
+                assertEquals(Scope.SONG.name, verdict(plain, plain), "\"$plain\"")
+                assertEquals(Scope.SONG.name, verdict(plain, variant), "\"$plain\" and \"$variant\"")
             }
         }
 
