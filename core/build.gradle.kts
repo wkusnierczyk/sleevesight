@@ -35,4 +35,5 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     testFixturesApi(libs.kotlinx.serialization.json)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotest.property)
 }

@@ -450,6 +450,24 @@ ZlI/ojefaZkRseFrtl3X
 =qnqR
 -----END PGP PUBLIC KEY BLOCK-----
 
+pub    A6EA2E2BF22E0543
+uid    Tobias Warneke (for development purposes) <t.warneke@gmx.net>
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+xsDNBFJQhigBDADpuhND/VUQwJT0nnJxfjAIur59hyaZZ3Ph/KIgmCneyq7lzYO6
+xa1ucH8mqNBVNLLBhs4CjihBddU/ZKTX3WnZyhQKQMZr3Tg+TCNFmAR4/hnZ3NjZ
+N5N5gUj/dqVI2rIvypIuxUApl88BYMsxYpn2+8FKeMd8oBJLqFRJ3WNjB4Op2tRO
+XRWoxs1ypubS/IV1zkphHHpi6VSABlTyTWu4kXEj/1/GpsdtHRa9kvdWw7yKQbnM
+XuwOxtzZFJcyu0P2jYVfHHvxcjxuklc9edmCGdNxgKIoo0LXZOeFIi6OWtwzD0pn
+O6ovJ+PL9QscMdnQlPwsiCwjNUNue20GBv3aUIYc+Z8Gq0SqSan5V0IiKRHMJkzd
+FAhnpkSFBvHhPJn07BCcb1kctqL+xnLxIdi7arq3WNA/6bJjsojc/x3FdIvORIeP
+sqejhtL8mCBvbMAMHSBrFxclMp+HSz2ouHEEPIQam0KeN8t1yEqIy3/aYKMzHj9c
+C3s8XOaBCbJbKpMAEQEAAbQ9VG9iaWFzIFdhcm5la2UgKGZvciBkZXZlbG9wbWVu
+dCBwdXJwb3NlcykgPHQud2FybmVrZUBnbXgubmV0Pg==
+=A+ij
+-----END PGP PUBLIC KEY BLOCK-----
+
 pub    A8E3B39F19E1CCE7
 sub    EDA271CFC1A83A61
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -1611,6 +1629,22 @@ scTgM0PI7/L1eFP/iCgZIBHhpllVV6v5IGXx3P5Q7YQUy32zCrht4t9fdtdLct1j
 6eNaAQdPAU91auSbYhuVCpjgKNpwOv1ULoSWLUUPMNW5Qc4ZDKq+ywOElvONMnX4
 oaQ1
 =uNY7
+-----END PGP PUBLIC KEY BLOCK-----
+
+pub    10C81B79DBFF09EA
+uid    Vladislavs Varslavans (Signature for signing a software.) <vlad.varslavans@gmail.com>
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+xsBNBF3Jnn8BCAC/LWF16JudkApdVim0LYU2eZGvhzxPltfmC+7lw5s3bcSgwkrK
+JarRcEiXJibb6618bgEElapRAIzUtUbX9jYCoeQLZeDVoYv3BWQ9oM2YXn9z6AOh
+DwUoRRho4R4NXQ+KdRAm3IvgN0CyV3zER97p4O4Yxmdn3rqXAho2V5gaLj+YcAbT
+t+FnaJFNaHp3oh8bG05QON85jvD4FeWvLvZ6phGfY13Pt7glTG71Ao0jSsSbOyP/
+9myD9fSE1nEEZ9BwAjfqOg7csy3OBvBTxnMhO2pTkvDp4jhpmrRU6GdOL/lkOtzd
+l3Yll1g12j8dZxPRuePYOWN/w+gNSewvd/e9ABEBAAG0VVZsYWRpc2xhdnMgVmFy
+c2xhdmFucyAoU2lnbmF0dXJlIGZvciBzaWduaW5nIGEgc29mdHdhcmUuKSA8dmxh
+ZC52YXJzbGF2YW5zQGdtYWlsLmNvbT4=
+=k2ot
 -----END PGP PUBLIC KEY BLOCK-----
 
 pub    15C71C0A4E0B8EDD
