@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -269,19 +270,21 @@ class OpenRouterLogin(
             )
         }
 
-        // [text] percent-decoded as UTF-8 (`+` kept as it is), or as given when a `%` is not
-        // followed by two hex digits.
+        // [text] percent-decoded as UTF-8 (`+` kept as it is), or as given when a `%` is not followed
+        // by two ASCII hex digits or the bytes are not well-formed UTF-8. Text between escapes is
+        // encoded a span at a time, so a character outside the BMP (a surrogate pair) stays whole.
         private fun decoded(text: String): String {
-            val bytes = ArrayList<Byte>(text.length)
+            val bytes = ByteArrayOutputStream(text.length)
             var at = 0
             var wellFormed = true
             while (at < text.length && wellFormed) {
-                val high = text.getOrNull(at + 1)?.digitToIntOrNull(HEX)
-                val low = text.getOrNull(at + 2)?.digitToIntOrNull(HEX)
+                val escape = text.indexOf('%', at).takeIf { it >= 0 } ?: text.length
+                val high = hexDigit(text.getOrNull(at + 1))
+                val low = hexDigit(text.getOrNull(at + 2))
                 when {
-                    text[at] != '%' -> {
-                        bytes += text[at].toString().encodeToByteArray().asList()
-                        at++
+                    escape > at -> {
+                        bytes.write(text.substring(at, escape).encodeToByteArray())
+                        at = escape
                     }
 
                     high == null || low == null -> {
@@ -289,13 +292,25 @@ class OpenRouterLogin(
                     }
 
                     else -> {
-                        bytes += (high * HEX + low).toByte()
+                        bytes.write(high * HEX + low)
                         at += PERCENT_ESCAPE
                     }
                 }
             }
-            return if (wellFormed) bytes.toByteArray().decodeToString() else text
+            return bytes.toByteArray().takeIf { wellFormed }?.let(::utf8) ?: text
         }
+
+        // [char]'s value as an ASCII hex digit, or null (not `４`, which `digitToIntOrNull` takes).
+        private fun hexDigit(char: Char?): Int? =
+            char?.takeIf { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }?.digitToInt(HEX)
+
+        // [bytes] as UTF-8, or null when they are not well formed.
+        private fun utf8(bytes: ByteArray): String? =
+            try {
+                bytes.decodeToString(throwOnInvalidSequence = true)
+            } catch (_: CharacterCodingException) {
+                null
+            }
 
         // Hex digits, and the length of an escape (`%2F`).
         private const val HEX = 16
@@ -315,8 +330,9 @@ class OpenRouterLogin(
 
 /**
  * What came to a sign-in's callback (#1396): the parameters of its [query] and of its [fragment].
- * Shown ([toString], for the log) by the parameters' names only, never their values: the code and
- * the state stay out of the log.
+ * Shown ([toString], for the log) by the names it expects only ([NAMES]), with a count of any
+ * others, never by values: the code and the state stay out of the log, and so does a name made of
+ * decoded text (`s%3D…%26code%3D…=`), which could carry them.
  */
 class Answer(
     val query: Map<String, String>,
@@ -325,7 +341,19 @@ class Answer(
     /** The parameter [name]: from the query, or failing that from the fragment. */
     operator fun get(name: String): String? = query[name] ?: fragment[name]
 
-    override fun toString(): String = "query [${query.keys.joinToString()}], fragment [${fragment.keys.joinToString()}]"
+    override fun toString(): String = "query ${names(query)}, fragment ${names(fragment)}"
+
+    private companion object {
+        // The names shown: the callback's state, OpenRouter's code, and what an OAuth answer may add.
+        val NAMES = listOf(OpenRouterLogin.STATE, "code", "state", "error", "error_description")
+
+        // [parameters]' expected names, in their order, and how many others came: `[s, code, 1 other]`.
+        fun names(parameters: Map<String, String>): String {
+            val known = parameters.keys.filter { it in NAMES }
+            val others = (parameters.size - known.size).takeIf { it > 0 }?.let { "$it other" }
+            return (known + listOfNotNull(others)).joinToString(prefix = "[", postfix = "]")
+        }
+    }
 }
 
 /**
