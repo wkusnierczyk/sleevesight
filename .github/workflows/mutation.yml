@@ -3,7 +3,8 @@ name: Mutation testing
 # Pitest on the code that stores, parses and moves the users' API keys (`sleevesight.mutation`;
 # `design/mutation-testing.md`): it changes that code on purpose, a condition flipped or a call
 # dropped, and checks that a test fails each time. Too slow for every pull request, so nightly and by
-# hand. A mutant no test kills leaves the run green; the report, uploaded either way, lists it.
+# hand. Each module's score must reach its `mutationThreshold`, so a new mutant no test kills fails
+# the run; the report, uploaded either way, lists it.
 #
 # Every action is pinned to a commit, with its version in a comment, as in `ci.yml` (#1037).
 
@@ -27,11 +28,17 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
+      # Reads Gradle's cache and leaves it as it is: nothing else uses this job's outputs.
       - uses: ./.github/actions/java-gradle
+        with:
+          cache-read-only: "true"
 
       - name: Mutation testing
-        run: ./gradlew :core:pitest :cli:pitest --console=plain
+        # `--continue`: one module under its threshold still lets the other run and report.
+        run: ./gradlew :core:pitest :cli:pitest --continue --console=plain
 
       # The score of each module, from the XML report, in the run's summary.
       - name: Scores

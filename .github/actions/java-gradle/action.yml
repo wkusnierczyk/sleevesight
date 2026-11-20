@@ -1,6 +1,14 @@
 name: Java and Gradle
 description: The JDK and Gradle every Gradle job of `ci.yml` builds with, and Gradle's cache.
 
+inputs:
+  cache-read-only:
+    description: >-
+      "true" to read Gradle's cache and never write it, for a job whose outputs no other job needs
+      (`mutation.yml`); by default only pull requests read it alone.
+    required: false
+    default: "false"
+
 runs:
   using: composite
   steps:
@@ -13,4 +21,5 @@ runs:
       with:
         # Pushes to `main` and `dev-*` write the cache, since an integration branch's dependencies
         # run ahead of `main`'s. Each job keeps an entry of its own, with the outputs of its tasks.
-        cache-read-only: ${{ github.event_name == 'pull_request' }}
+        # A caller may ask for it read-only itself (`inputs.cache-read-only`).
+        cache-read-only: ${{ inputs.cache-read-only == 'true' || github.event_name == 'pull_request' }}

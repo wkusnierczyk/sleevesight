@@ -22,7 +22,7 @@ Left out, for now:
 
 ## When it runs
 
-`./gradlew :core:pitest :cli:pitest` (a few minutes); not part of `check`, since it runs the tests once per mutant. `.github/workflows/mutation.yml` runs it nightly on `main` and by hand (*Run workflow*), not on pull requests, uploads the reports as the artifact `mutation-reports`, and writes each module's score to the run's summary. A surviving mutant leaves the run green: the report says which.
+`./gradlew :core:pitest :cli:pitest` (a few minutes); not part of `check`, since it runs the tests once per mutant. `.github/workflows/mutation.yml` runs it nightly on `main` and by hand (*Run workflow*), not on pull requests, uploads the reports as the artifact `mutation-reports`, and writes each module's score to the run's summary. Each module has a `mutationThreshold`, its score of 2026-11-20 rounded down (`:core` 97 %, `:cli` 93 %), which Pitest compares with the share of mutants killed: a new mutant that survives fails the run, and the report says which. A test that kills it mends the run, or, for an equivalent one, its reason under *Equivalent mutants* and the threshold set again. A change to the key code adds or removes mutants, and so moves the score: the threshold is checked with it.
 
 ## The first run
 

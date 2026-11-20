@@ -15,6 +15,9 @@ pitest {
             "app.sleevesight.core.keys.*",
         )
     targetTests = listOf("app.sleevesight.core.SecretTest", "app.sleevesight.core.keys.*")
+    // The score of 2026-11-20 (146 of 149, every survivor equivalent), rounded down: a new survivor
+    // fails the run.
+    mutationThreshold = 97
 }
 
 // The shared fixtures (`fixtures/` at the root) are resources of the test-fixtures source set, so

@@ -80,6 +80,9 @@ pitest {
     targetTests =
         listOf("app.sleevesight.cli.KeysTest", "app.sleevesight.cli.KeysQrTest", "app.sleevesight.cli.JvmKeyCryptoTest")
     // `JvmKeyCrypto`'s classes, built by `:core:jvmMainClasses` (below).
+    // The score of 2026-11-20 (173 of 185, every survivor equivalent), rounded down: a new survivor
+    // fails the run.
+    mutationThreshold = 93
     additionalMutableCodePaths = listOf(rootProject.file("core/build/classes/kotlin/jvmMain"))
     // As the tests get them (above): the API keys page's vectors, and a home of their own.
     jvmArgs =
