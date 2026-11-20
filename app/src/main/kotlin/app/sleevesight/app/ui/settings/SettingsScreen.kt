@@ -650,6 +650,9 @@ private fun SettingsContent(
         // them as soon as it begins (#649).
         val listed = listedPlayers(settings.followedPlayers.keys, navigation.players)
         val players = listed.orEmpty().map { it.name }
+        // Both built at each composition, not remembered: they read the string resources as they are
+        // drawn (`stringResource`, a composable call, which `remember`'s block cannot make), so a
+        // change of the app's language or configuration shows in them at once, as in the rows.
         val index = settingsIndex(settings, keys, players, navigation.modelName, unavailable)
         val reveals = rememberViewReveals(view)
         val views = settingViews(settings, navigation.reset.defaults, players)

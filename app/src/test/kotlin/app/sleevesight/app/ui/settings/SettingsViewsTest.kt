@@ -1,14 +1,28 @@
 package app.sleevesight.app.ui.settings
 
+import android.app.Application
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.core.settings.AiWebSearch
+import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.DescriptionsOnReturn
 import app.sleevesight.core.settings.LogoSpeed
+import app.sleevesight.core.settings.LookUpAfterClear
+import app.sleevesight.core.settings.NewTrackFold
+import app.sleevesight.core.settings.PrepareNextTrack
+import app.sleevesight.core.settings.ReadAloudMusic
+import app.sleevesight.core.settings.ReadAloudVoice
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsView
+import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.SymbolOpens
+import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -17,6 +31,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The views' one declaration (#1447, [settingViews]) against the settings' index ([settingsIndex]),
@@ -98,6 +115,26 @@ class SettingsViewsTest {
     }
 
     @Test
+    fun everySettingOutsideBasicIsChangedOnceItsValueIsAndOnlyThen() {
+        val (_, moved) = declared(movedOutsideBasic)
+        val (_, defaults) = declared(Settings())
+        val actions =
+            setOf(
+                R.string.settings_restore_dismissed,
+                R.string.settings_docs,
+                R.string.settings_source_code,
+                R.string.settings_licence,
+            ).map { app.getString(it) }
+        for ((section, rows) in moved) {
+            for ((title, row) in rows) {
+                if (row.view == SettingsView.BASIC || title in actions) continue
+                assertTrue("$section: $title is changed", row.changed)
+                assertFalse("$section: $title at its default", defaults.getValue(section).getValue(title).changed)
+            }
+        }
+    }
+
+    @Test
     fun aViewShowsItsSettingsAndTheChangedOnesOnlyOnceShown() {
         val (index, views) = declared(everything.copy(logoSpeed = LogoSpeed.RPM_45))
         val section = SettingsSection.APPEARANCE
@@ -140,6 +177,51 @@ class SettingsViewsTest {
         // In *All*, nothing is outside.
         assertEquals(0, ViewShown(SettingsView.ALL, views, index).search(matches(index, "theme"), false).more)
     }
+
+    private val app = ApplicationProvider.getApplicationContext<Application>()
+
+    // Every setting with a row outside *Basic* off its default (and *Reactive* on a skip, so
+    // *Crossfade* is drawn).
+    private val movedOutsideBasic =
+        everything.copy(
+            onlyEnabledPlayersOnHome = true,
+            showPlayerLogo = false,
+            symbolOpens = SymbolOpens.PLAYER,
+            enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.LRCLIB + SourceSwitch.MODEL,
+            musicBrainzWait = 1.minutes,
+            trackLanguageSearch = TrackLanguageSearch.ALWAYS,
+            aiModels = OFFERED_PROVIDERS.associateWith { "other-model" },
+            aiEfforts =
+                Settings.EFFORT_SCALES.mapValues { (_, scale) -> scale.levels.first { it != scale.default } },
+            aiRetry = 15.seconds,
+            showPhoneName = true,
+            labelSources = emptySet(),
+            prepareNextTrack = PrepareNextTrack.OFF,
+            lookUpInBackground = true,
+            crossfade = Crossfade.Fixed(4.seconds),
+            pauseAutoWriteAfter = null,
+            artistFactsOncePerSession = false,
+            aiWebSearch = AiWebSearch.UP_TO,
+            readAloudVoice = ReadAloudVoice("en-gb-x-test", "Test voice"),
+            readAloudMusic = ReadAloudMusic.PAUSE,
+            readTrackLineFirst = true,
+            readNewInsightsAloud = true,
+            lookUpAfterClear = LookUpAfterClear.ON_REQUEST,
+            sessionGap = 120.minutes,
+            cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES.mapValues { (_, it) -> it + 1.days },
+            keepArtistResults = true,
+            themeButton = false,
+            onePanel = false,
+            sourcesOnNewTrack = NewTrackFold.AS_LEFT,
+            itemsOnNewTrack = NewTrackFold.UNFOLDED,
+            foldDescriptions = false,
+            descriptionsOnReturn = DescriptionsOnReturn.FOLDED,
+            lyricsLinks = false,
+            lyricsSearch = false,
+            introAtStart = false,
+            spinLogo = false,
+            logoSpeed = LogoSpeed.RPM_45,
+        )
 
     private companion object {
         const val PLAYER = "Tunes"

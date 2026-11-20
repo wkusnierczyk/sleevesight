@@ -476,9 +476,9 @@
     <string name="settings_reset_keeps_developer">Developer settings</string>
     <!-- Shown while a developer setting differs from its default; ticked, a reset puts them back too. -->
     <string name="settings_reset_include_developer">Include developer settings</string>
-    <!-- %1$s is settings_section_appearance, %2$s settings_restore_dismissed. -->
     <!-- %1$s is the view's name: Basic, Advanced or All (#1447). -->
     <string name="settings_reset_keeps_view">The view (%1$s)</string>
+    <!-- %1$s is settings_section_appearance, %2$s settings_restore_dismissed. -->
     <string name="settings_reset_keeps_dismissed">Dismissed messages; %1$s → %2$s brings them back</string>
     <!-- Save to a file and Load from a file (#815), under Save and reset. -->
     <string name="settings_save_file">Save to a file</string>
