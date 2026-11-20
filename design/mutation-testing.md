@@ -10,8 +10,10 @@ Sleevesight stores and moves the users' API keys: the CLI's keys file, the setup
 
 The convention plugin `sleevesight.mutation` (`build-logic/`) applies Pitest with its JUnit 5 runner, writes HTML and XML reports to `<module>/build/reports/pitest/`, and fails a run whose targets match no class. Each module names its classes and the tests that cover them:
 
-- `:core`: `Secret`; `KeyName`, `KeyShape`, `KeySetup`, `SetupRead` (`core.keys`, `KeySetup.kt`); `SealedSetup` and `Opened`; `KeyWords`; and `JvmKeyCrypto` (`jvmMain`), the PBKDF2 and AES-GCM the sealed code uses.
-- `:cli`: `Keys` (the environment and the keys file), `KeysQr` (`keys-qr`, with `readable`), and `WordsReader` (the words a code is sealed with).
+- `:core`: `Secret`; `KeyName`, `KeyShape`, `KeySetup`, `SetupRead` (`core.keys`, `KeySetup.kt`); `SealedSetup` and `Opened`; and `KeyWords`.
+- `:cli`: `Keys` (the environment and the keys file), `KeysQr` (`keys-qr`, with `readable`), and `WordsReader` (the words a code is sealed with); and `:core`'s `JvmKeyCrypto` (`jvmMain`), the PBKDF2 and AES-GCM the sealed code uses. Its tests (`JvmKeyCryptoTest`) are in `:cli` because they need JVM APIs, which `:core`'s tests may not use (`config/detekt/pipeline.yml`): one puts a security provider ahead of the JDK's, to check that the password spec PBKDF2 is handed is cleared.
+
+The tests run with `user.home` set to an empty directory under `cli/build/`, under Gradle and under Pitest alike, so that no test, nor a mutant that takes another path through `KeysQr` or `Keys`, can read the developer's keys file (`~/.config/sleevesight/keys.env`).
 
 Left out, for now:
 
@@ -24,7 +26,7 @@ Left out, for now:
 
 ## The first run
 
-On 2026-11-20, before the tests added with the plugin, 282 of 334 mutants were killed (84 %): `:core` 134 of 166, `:cli` 148 of 168. The survivors showed gaps: OpenRouter's key shape untested, no key at any length bound, `SealedSetup.isSealed` never false, the wiping of the derived key and the setup text unchecked, AES-GCM's associated data never checked, the CLI's usage, message and flush unchecked, and the word reader's first word, its third try and its read failure. With the tests for them, 318 of 334 (95 %): `:core` 161 of 166, `:cli` 157 of 168. Every mutant left is equivalent, below.
+On 2026-11-20, before the tests added with the plugin, 282 of 334 mutants were killed (84 %): `:core` 134 of 166, `:cli` 148 of 168. The survivors showed gaps: OpenRouter's key shape untested, no key at any length bound, `SealedSetup.isSealed` never false, the wiping of the derived key and the setup text unchecked, AES-GCM's associated data never checked, the CLI's usage, message and flush unchecked, and the word reader's first word, its third try and its read failure. With the tests for them, and with `JvmKeyCrypto` moved to `:cli`'s run and its password spec's clearing tested, 319 of 334 (95.5 %): `:core` 146 of 149, `:cli` 173 of 185. Every mutant left is equivalent, below.
 
 ## Equivalent mutants
 
@@ -32,5 +34,5 @@ A mutant is equivalent when no input can tell it from the code: no test can kill
 
 - **Inlined standard library code.** Kotlin inlines `any`, `all` and `count`, so Pitest mutates their bodies inside the caller, at line numbers past the file's end. Each one's `if (this is Collection && isEmpty())` shortcut gives what its loop gives, and `count`'s overflow check needs more than `Int.MAX_VALUE` elements: in `KeyShape.shaped` (`GOOGLE_PREFIXES.any`), the `KeyWords` constructor (`words.all`), and `KeysQr.check` (`from.values.count`, five mutants).
 - **A progression's own checks.** `KeysQr.draw`'s `for (y in 0 until matrix.height step 2)` builds a progression whose step is always 2: the mutants of its `step > 0` test, and of the branch for a negative step, which never runs.
-- **Wiping a copy no one else holds.** `SealedSetup.openBytes` wipes the decoded code (`bytes.fill(0)`) after reading copies of it, and `JvmKeyCrypto.derive` clears its `PBEKeySpec` and the password's characters. Each is a local array that nothing returns or keeps, so dropping the call changes no result; the wipes that can be seen, of the derived key and the setup code's text, are tested (`SealedSetupTest`).
+- **Wiping a copy no one else holds.** `SealedSetup.openBytes` wipes the decoded code (`bytes.fill(0)`) after reading copies of it, and `JvmKeyCrypto.derive` the password's characters (`chars.fill`), of which `PBEKeySpec` keeps a copy of its own. Each is a local array that nothing returns or keeps, so dropping the call changes no result. The wipes that can be seen are tested: the derived key and the setup code's text (`SealedSetupTest`), and the spec, which a provider is handed and may keep (`JvmKeyCryptoTest`).
 - **`Keys.parse`'s empty line.** `isNotEmpty()` with its bound moved lets an empty line through, which the next check, a `=` in the line, drops all the same.

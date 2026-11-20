@@ -50,7 +50,12 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
+// A home of the tests' own, empty, so that no test, nor a mutant of one under `pitest`, reads the
+// developer's keys file (`~/.config/sleevesight/keys.env`, `Keys.DEFAULT_FILE`).
+val testHome = layout.buildDirectory.dir("test-home")
+
 tasks.withType<Test>().configureEach {
+    systemProperty("user.home", testHome.get().asFile.absolutePath)
     systemProperty("sleevesight.fixtures", fixturesDir.asFile.absolutePath)
     inputs.dir(fixturesDir).withPropertyName("fixtures").withPathSensitivity(PathSensitivity.RELATIVE)
     systemProperty("sleevesight.apiKeysVectors", apiKeysVectors.asFile.absolutePath)
@@ -58,7 +63,8 @@ tasks.withType<Test>().configureEach {
 }
 
 // Mutation testing (`sleevesight.mutation`, `design/mutation-testing.md`) of the code that reads the
-// developer's keys and draws them as a setup code (`keys-qr`).
+// developer's keys and draws them as a setup code (`keys-qr`), and of `:core`'s JVM cryptography for
+// the sealed code (`JvmKeyCrypto`), whose tests use JVM APIs `:core`'s may not (`JvmKeyCryptoTest`).
 pitest {
     targetClasses =
         listOf(
@@ -69,8 +75,21 @@ pitest {
             "app.sleevesight.cli.KeysQrKt",
             "app.sleevesight.cli.WordsReader",
             "app.sleevesight.cli.WordsReader\$*",
+            "app.sleevesight.core.platform.JvmKeyCrypto",
         )
-    targetTests = listOf("app.sleevesight.cli.KeysTest", "app.sleevesight.cli.KeysQrTest")
-    // The API keys page's vectors, as the tests get them (above).
-    jvmArgs = listOf("-Dsleevesight.apiKeysVectors=${apiKeysVectors.asFile.absolutePath}")
+    targetTests =
+        listOf("app.sleevesight.cli.KeysTest", "app.sleevesight.cli.KeysQrTest", "app.sleevesight.cli.JvmKeyCryptoTest")
+    // `JvmKeyCrypto`'s classes, built by `:core:jvmMainClasses` (below).
+    additionalMutableCodePaths = listOf(rootProject.file("core/build/classes/kotlin/jvmMain"))
+    // As the tests get them (above): the API keys page's vectors, and a home of their own.
+    jvmArgs =
+        listOf(
+            "-Dsleevesight.apiKeysVectors=${apiKeysVectors.asFile.absolutePath}",
+            "-Duser.home=${testHome.get().asFile.absolutePath}",
+        )
+}
+
+tasks.named("pitest") {
+    inputs.file(apiKeysVectors).withPropertyName("apiKeysVectors").withPathSensitivity(PathSensitivity.NONE)
+    dependsOn(":core:jvmMainClasses")
 }

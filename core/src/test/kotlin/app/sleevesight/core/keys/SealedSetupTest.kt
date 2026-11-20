@@ -7,7 +7,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SealedSetupTest {
@@ -146,28 +145,5 @@ class SealedSetupTest {
         assertEquals(2, crypto.keys.size)
         assertEquals(2, crypto.texts.size)
         for (bytes in crypto.keys + crypto.texts) assertTrue(bytes.all { it == 0.toByte() }, hex(bytes))
-    }
-
-    @Test
-    fun `the password must be ASCII, NUL included`() {
-        val salt = "salt".encodeToByteArray()
-        assertFailsWith<IllegalArgumentException> { JvmKeyCrypto.derive("caf\u00e9".encodeToByteArray(), salt, 1) }
-        assertEquals(SealedSetup.KEY_BYTES, JvmKeyCrypto.derive(byteArrayOf(0), salt, 1).size)
-    }
-
-    @Test
-    fun `a sealed text opens only with the associated data it was sealed with`() {
-        val key = ByteArray(SealedSetup.KEY_BYTES) { it.toByte() }
-        val nonce = ByteArray(SealedSetup.NONCE_BYTES)
-        val sealed = JvmKeyCrypto.seal(key, nonce, "a".encodeToByteArray(), setup.encodeToByteArray())
-        assertEquals(setup, JvmKeyCrypto.open(key, nonce, "a".encodeToByteArray(), sealed)?.decodeToString())
-        assertNull(JvmKeyCrypto.open(key, nonce, "b".encodeToByteArray(), sealed))
-    }
-
-    @Test
-    fun `a pick is below its bound, and not always the same`() {
-        val picks = List(200) { JvmKeyCrypto.pick(1000) }
-        assertTrue(picks.all { it in 0 until 1000 })
-        assertTrue(picks.toSet().size > 1)
     }
 }

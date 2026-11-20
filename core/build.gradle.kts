@@ -5,15 +5,14 @@ plugins {
 }
 
 // Mutation testing (`sleevesight.mutation`, `design/mutation-testing.md`) of the code that holds,
-// writes, reads, seals and opens the API keys' setup codes: the portable code and its JVM crypto.
+// writes, reads, seals and opens the API keys' setup codes. Its JVM cryptography, `JvmKeyCrypto`, is
+// mutated in `:cli`'s run, whose tests may use JVM APIs.
 pitest {
-    mainSourceSets = listOf(sourceSets.main.get(), sourceSets.named("jvmMain").get())
     targetClasses =
         listOf(
             "app.sleevesight.core.Secret",
             "app.sleevesight.core.Secret\$*",
             "app.sleevesight.core.keys.*",
-            "app.sleevesight.core.platform.JvmKeyCrypto",
         )
     targetTests = listOf("app.sleevesight.core.SecretTest", "app.sleevesight.core.keys.*")
 }
