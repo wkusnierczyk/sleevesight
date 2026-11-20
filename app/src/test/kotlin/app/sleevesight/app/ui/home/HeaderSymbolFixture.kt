@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import android.app.Application
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.Bitmap
@@ -10,11 +11,15 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.session.AdPlaying
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -24,7 +29,10 @@ import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.robolectric.Shadows.shadowOf
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Home's header with a followed player (#1440, #1445), for the tests of the note symbol: Spotify
@@ -46,6 +54,9 @@ internal class HeaderSymbolFixture(
     val askedScreen = mutableListOf<String>()
     var activity: PendingIntent? = null
 
+    /** Holds the players' load, off the main thread, while it is not released (#1469). */
+    var loading: CountDownLatch? = null
+
     val feed =
         HeaderPlayerFeed(
             playback = playback,
@@ -56,7 +67,10 @@ internal class HeaderSymbolFixture(
                 askedScreen += player
                 activity.takeIf { player == SPOTIFY }
             },
-            launch = { Intent(Intent.ACTION_MAIN).setPackage(it) },
+            launch = {
+                loading?.await(WAIT_MS, TimeUnit.MILLISECONDS)
+                Intent(Intent.ACTION_MAIN).setPackage(it)
+            },
             installed = null,
             send = {},
             follow = { playback.value = PlaybackInfo(it, followed.value.getValue(it), actions = ALL) },
@@ -131,4 +145,25 @@ internal class HeaderSymbolFixture(
             artists: String = "Gordon Lightfoot",
         ) = NowPlaying(title, artists, player = player, play = play)
     }
+}
+
+/**
+ * Waits until the note symbol takes a gesture: while none plays, not before the players have loaded,
+ * off the main thread (#1469).
+ */
+internal fun ComposeTestRule.symbolReady() =
+    waitUntil(WAIT_MS) {
+        onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
+            .fetchSemanticsNodes()
+            .any { SemanticsProperties.Disabled !in it.config }
+    }
+
+/** The package of the next app started, waited for. */
+internal fun ComposeTestRule.nextStarted(): String? {
+    var started: Intent? = null
+    waitUntil(WAIT_MS) {
+        started = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
+        started != null
+    }
+    return started?.`package`
 }

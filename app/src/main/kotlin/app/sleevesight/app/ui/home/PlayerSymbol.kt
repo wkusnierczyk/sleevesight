@@ -74,6 +74,8 @@ private enum class SymbolState {
  * ([HeaderPlayerFeed.lastPlayer]), else the first one switched on. With no player switched on, it
  * is dimmed too, and either gesture opens a panel that says so and links to *Settings → Players*
  * ([onOpenPlayers]). A panel's *Dismiss*, a tap outside or Back closes it; the next tap opens it again.
+ * While none plays, it takes no gesture until the players have loaded, which decide what one opens
+ * (#1469).
  *
  * For [FLASH_MS], when a followed player starts playing, Home switches to another player, or the
  * track changes, the symbol shows that player's own icon ([PlayerIcon]) in place of the note
@@ -129,6 +131,8 @@ internal fun PlayerSymbol(
             label = feed.label,
             toMenu = toMenu,
             toPlayer = toPlayer,
+            // While none plays, the players decide what a gesture opens: none before they have loaded (#1469).
+            enabled = player != null || listed != null,
         )
         DropdownMenu(expanded = opened != null, onDismissRequest = { opened = null }) {
             SymbolPopup(opened ?: shown, feed, apps, close = { opened = null }, onOpenPlayers)
@@ -205,7 +209,7 @@ private fun openApp(feed: HeaderPlayerFeed): (String, Boolean) -> Unit {
 // The symbol itself for [state]: the note, dimmed but for [SymbolState.PLAYER], or [icon]'s own icon
 // while it shows, faded in and out, or swapped at once with the phone's animations off (#1445);
 // [toMenu] on a tap and [toPlayer] on a long press, or the other way round as [opens] says, each
-// named for a screen reader, and the symbol named for what a tap opens.
+// named for a screen reader, and the symbol named for what a tap opens; neither unless [enabled].
 @Suppress("LongParameterList") // The state, the choice, what it draws, and its two gestures.
 @Composable
 private fun SymbolButton(
@@ -216,6 +220,7 @@ private fun SymbolButton(
     label: (String) -> String,
     toMenu: () -> Unit,
     toPlayer: () -> Unit,
+    enabled: Boolean,
 ) {
     val menuFirst = opens == SymbolOpens.PLAYER_MENU
     val name = stringResource(if (menuFirst) R.string.home_player_symbol else R.string.home_player_symbol_player)
@@ -234,6 +239,7 @@ private fun SymbolButton(
             .combinedClickable(
                 interactionSource = null,
                 indication = ripple(bounded = false, radius = TARGET / 2),
+                enabled = enabled,
                 role = Role.Button,
                 onClickLabel = if (menuFirst) menuLabel else playerLabel,
                 onLongClickLabel = if (menuFirst) playerLabel else menuLabel,

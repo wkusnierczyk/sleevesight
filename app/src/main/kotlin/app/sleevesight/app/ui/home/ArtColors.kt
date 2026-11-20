@@ -26,8 +26,9 @@ import kotlinx.coroutines.withContext
  * The colours of the now-playing screen, taken from the album art (design, *User interface*):
  * material-color-utilities picks the art's most suitable colour as the seed of a Material 3
  * scheme, light or dark as the app is (*Theme*). Worked out off the main thread, once per bitmap; until
- * then, and without art, the app's own colours. Under it, the app's own stay at hand as
- * [LocalAppColors], for what takes nothing from the art (the back of the cover, #984).
+ * then, and without art, the app's own colours, and what is under it is kept as it is when they come.
+ * Under it, the app's own stay at hand as [LocalAppColors], for what takes nothing from the art (the
+ * back of the cover, #984).
  */
 @Composable
 internal fun ArtTheme(
@@ -41,7 +42,9 @@ internal fun ArtTheme(
     }
     val current = scheme
     CompositionLocalProvider(LocalAppColors provides app) {
-        if (current == null) content() else MaterialTheme(colorScheme = current, content = content)
+        // One call either way: content under two calls would be a new composition when the colours
+        // come, its state reset and a tap in progress dropped (#1469).
+        MaterialTheme(colorScheme = current ?: app, content = content)
     }
 }
 
