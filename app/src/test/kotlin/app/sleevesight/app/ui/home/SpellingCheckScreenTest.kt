@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -32,6 +33,7 @@ import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.track
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.FoundAs
@@ -113,7 +115,11 @@ class SpellingCheckScreenTest {
             ) = Unit
         }
 
-    private val actions = NowPlayingActions(normalizer::normalize, aiSearches = feed)
+    // Where the links opened the settings.
+    private val opened = mutableListOf<SettingsTarget>()
+
+    private val actions =
+        NowPlayingActions(normalizer::normalize, aiSearches = feed, openSettingsAt = { opened += it })
     private val playback = PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING)
     private val playing = HomeFixtures.sundown.copy(title = "Sundwon")
 
@@ -192,13 +198,37 @@ class SpellingCheckScreenTest {
     fun noOtherSpellingSaysSoAndAskAiFollows() =
         show {
             tap(DATES_CHIP_TAG)
-            set(SearchKind.SPELLING, AiSearch.NothingFound(model, SearchWay(automatic = true, web = true)))
+            set(SearchKind.SPELLING, AiSearch.NothingFound(model, SearchWay(web = true)))
             compose
                 .onNodeWithTag(spellingTag(AI_SEARCH_NOTHING_TAG))
-                .assertTextEquals("Asked automatically: Claude Haiku 5.5 found no other spelling on the web.")
+                .assertTextEquals("Claude Haiku 5.5 found no other spelling on the web.")
+            assertEquals(0, count(AUTO_ASKED_LINK_TAG))
             assertEquals(1, count(AI_SEARCH_TAG))
             assertEquals(0, count(check))
         }
+
+    @Test
+    fun noOtherSpellingFromACheckThatRanByItselfSaysSoAtItsEndLinkedToTheSetting() =
+        show {
+            tap(DATES_CHIP_TAG)
+            set(SearchKind.SPELLING, AiSearch.NothingFound(model, SearchWay(automatic = true, web = true)))
+            compose
+                .onNodeWithTag(spellingTag(AI_SEARCH_NOTHING_TAG))
+                .assertTextEquals("Claude Haiku 5.5 found no other spelling on the web; asked automatically.")
+            followAutoAskedLink()
+        }
+
+    // The note's link (#956): read "asked automatically", named with where it goes, and opening the
+    // settings at *Ask AI automatically*.
+    private fun followAutoAskedLink() {
+        val link = compose.onNodeWithTag(AUTO_ASKED_LINK_TAG)
+        link.assertTextEquals("asked automatically")
+        val click = link.fetchSemanticsNode().config[SemanticsActions.OnClick]
+        assertEquals("open the Ask AI automatically setting", click.label)
+        link.performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        assertEquals(listOf(SettingsTarget.searchWithAi), opened)
+    }
 
     @Test
     fun aSpellingMusicBrainzDidNotFindSaysSoAndAskAiFollows() =
@@ -214,7 +244,22 @@ class SpellingCheckScreenTest {
             compose
                 .onNodeWithTag(spellingTag(AI_SEARCH_NOTHING_TAG))
                 .assertTextEquals("MusicBrainz didn’t find it as “Sundown” either.")
+            assertEquals(0, count(AUTO_ASKED_LINK_TAG))
             assertEquals(1, count(AI_SEARCH_TAG))
+        }
+
+    @Test
+    fun aSpellingMusicBrainzDidNotFindFromACheckThatRanByItselfSaysSoAtItsEnd() =
+        show {
+            tap(DATES_CHIP_TAG)
+            val spelling = SearchAnswer.Spelling("Sundown", emptyList(), "https://en.wikipedia.org/wiki/Sundown")
+            set(SearchKind.SPELLING, AiSearch.Answered(spelling, model, SearchWay(automatic = true, web = true)))
+            feed.outcome.value = SpellingOutcome.NotFound
+            compose.waitForIdle()
+            compose
+                .onNodeWithTag(spellingTag(AI_SEARCH_NOTHING_TAG))
+                .assertTextEquals("MusicBrainz didn’t find it as “Sundown” either; asked automatically.")
+            followAutoAskedLink()
         }
 
     @Test

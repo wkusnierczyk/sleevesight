@@ -97,7 +97,8 @@ internal fun GenresSearch(
 ) {
     ask ?: return
     val weighed = ask.weighed
-    AiSearchBlock(PanelSearch(ask.feed, search.track, search.header), SearchKind.GENRES) { answer, model ->
+    val asking = PanelSearch(ask.feed, search.track, search.header, search.openSettingsAt)
+    AiSearchBlock(asking, SearchKind.GENRES) { answer, model ->
         val asked = weighed.track
         if (answer is SearchAnswer.Genres && asked != null) {
             AiGenres(asked, answer, notes, search, model)

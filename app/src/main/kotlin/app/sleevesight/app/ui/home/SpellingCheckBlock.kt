@@ -12,7 +12,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.AiSearch
-import app.sleevesight.app.pipeline.AiSearchFeed
 import app.sleevesight.app.pipeline.SpellingOutcome
 import app.sleevesight.app.ui.theme.PanelRule
 import app.sleevesight.app.ui.theme.handoffTarget
@@ -38,7 +37,7 @@ import app.sleevesight.core.synthesis.SearchKind
  *   what MusicBrainz found, *Stop* until then cancelling it; not found, a rule, "MusicBrainz didn’t
  *   find it as “{title}” either.", then [then]; stopped, [then];
  * - no other spelling: a rule, "{model} found no other spelling on the web.", then [then]; each line
- *   after "Asked automatically: " for a check that ran by itself;
+ *   ending "; asked automatically." for a check that ran by itself, a link to the setting (#956);
  * - failed: as *Ask AI*'s failure, with *Retry*, then [then].
  *
  * [then] alone when no check can be asked (no AI service ready, *AI web search* off) or the track was
@@ -74,9 +73,9 @@ internal fun SpellingCheckBlock(
                 handoff.moveTo(button)
             }
         is AiSearch.Answered ->
-            Spelled(feed, track, shown, texts, Modifier.handoffTarget(handoff, stop), then)
+            Spelled(search, shown, texts, Modifier.handoffTarget(handoff, stop), then)
         is AiSearch.NothingFound -> {
-            NothingFound(texts, shown)
+            NothingFound(texts, shown, autoNote(search, kind))
             then()
         }
         is AiSearch.Failed -> {
@@ -97,27 +96,31 @@ internal fun SpellingCheckBlock(
 // Another spelling found ([shown]): "Checking the spelling on the web…" with *Stop* (under
 // [stopModifier]) while MusicBrainz is asked with it, or once confirmed, until the track is looked up
 // again, *Stop* then cancelling the question or the spelling's use; not found, a rule and that
-// MusicBrainz did not find it either, then [then]; stopped, [then].
+// MusicBrainz did not find it either, ending "; asked automatically." for a check that ran by itself
+// (#956), then [then]; stopped, [then].
 @Suppress("LongParameterList") // The search, its answer, its texts, where *Stop* sits, and what follows.
 @Composable
 private fun Spelled(
-    feed: AiSearchFeed,
-    track: TrackState,
+    search: PanelSearch,
     shown: AiSearch.Answered,
     texts: SearchTexts,
     stopModifier: Modifier,
     then: @Composable () -> Unit,
 ) {
+    val feed = search.feed
+    val track = search.track ?: return then()
     val spelling = shown.answer as? SearchAnswer.Spelling ?: return then()
     val outcome by remember(feed, track.played, spelling) { feed.spelled(track, spelling) }.collectAsState(null)
     when (outcome) {
         SpellingOutcome.NotFound -> {
             PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
-            val line = stringResource(R.string.home_spelling_not_found, spelling.title)
-            QuietLine(
-                if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, line) else line,
-                Modifier.testTag(texts.tag(AI_SEARCH_NOTHING_TAG)),
-            )
+            val tag = texts.tag(AI_SEARCH_NOTHING_TAG)
+            if (shown.way.automatic) {
+                val link = autoAskedLink(search.openSettingsAt)
+                AutoAskedLine(autoNothingParts(R.string.home_spelling_not_found_auto, spelling.title, link), false, tag)
+            } else {
+                QuietLine(stringResource(R.string.home_spelling_not_found, spelling.title), Modifier.testTag(tag))
+            }
             then()
         }
         SpellingOutcome.Stopped -> then()
