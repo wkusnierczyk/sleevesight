@@ -1,0 +1,88 @@
+name: CodeQL
+
+# Static security analysis by CodeQL (sleevesight-dev#6), of the languages GitHub's default setup
+# found here: the workflows, the Kotlin, the pages' JavaScript and the Python tools. In place of the
+# default setup, which analyses only the default branch and pull requests into protected branches,
+# and so skipped every pull request into a `dev-*` branch, where the work lands first. The default
+# query suite, as the default setup ran. Results go to the repository's code scanning alerts. Not a
+# required check: an alert is triaged into the open release, not left to block unrelated work.
+#
+# GitHub refuses this workflow's results while the default setup is on: it has to be switched off in
+# the repository's settings (*Code security*, *CodeQL analysis*) when this lands.
+on:
+  pull_request:
+    branches: [main, "dev-*"]
+  push:
+    branches: [main, "dev-*"]
+  schedule:
+    # Mondays at 04:41 UTC: an analysis of `main` with the week's new queries, on unchanged code.
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  # As `ci.yml`: a pull request's new push cancels its superseded run; branch pushes are never
+  # cancelled, so each merge gets its analysis.
+  group: codeql-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.timeout }}
+    permissions:
+      contents: read
+      # To upload the results to code scanning.
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+            timeout: 15
+          # Built by hand, below: the autobuilder runs Gradle with dependency verification off, on
+          # the runner's newest JDK rather than the build's, and compiles no Android code (`:app`).
+          - language: java-kotlin
+            build-mode: manual
+            timeout: 30
+          - language: javascript-typescript
+            build-mode: none
+            timeout: 15
+          - language: python
+            build-mode: none
+            timeout: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The JDK and Gradle `ci.yml` builds with, and its dependency cache, before CodeQL starts
+      # tracing, so that only the compile below is traced.
+      - if: matrix.build-mode == 'manual'
+        uses: ./.github/actions/java-gradle
+
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # The compile of every module's code: the pipeline modules' `main`, `jvmMain` and tests, and
+      # the app's release variant, which is what ships. Gradle's build logic is compiled on the way.
+      # CodeQL reads the Kotlin as the compiler sees it, so every compile must run here: no task
+      # taken from the build cache, which `setup-gradle` restores, and the Kotlin compiler in the
+      # traced process rather than in a daemon started outside it. With dependency verification
+      # on, as in every other build.
+      - name: Compile
+        if: matrix.build-mode == 'manual'
+        run: |
+          ./gradlew classes jvmMainClasses testClasses :app:compileReleaseKotlin \
+            --no-daemon --no-build-cache -Pkotlin.compiler.execution.strategy=in-process \
+            --console=plain
+
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
