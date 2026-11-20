@@ -187,18 +187,23 @@ internal fun rememberSectionFolds(): SectionFolds = rememberSaveable(saver = Sec
  * While a search finds the section ([found], [SectionFolds.searching]), it is open unless closed
  * since the search began, its rows those [found] names, or all of them when the section's own name
  * or a description has the query; the query is marked in its name and in its rows' ([RowSearch]).
+ * Its rows are those [view] has (#1447; [LocalRowView]), every one without it.
  */
+@Suppress("LongParameterList") // The section, its folds and width, and what a search and the view show of it.
 @Composable
 internal fun FoldedSection(
     section: SettingsSection,
     folds: SectionFolds,
     chipWidth: Dp = sectionChipWidth(),
     found: SectionMatch? = null,
+    view: RowView? = null,
     content: @Composable () -> Unit,
 ) {
     val mark = searchMarkColour()
     val search = found?.takeIf { folds.searching }?.let { RowSearch(folds.query, it.rows, mark) }
-    CompositionLocalProvider(LocalRowSearch provides search) { SectionBox(section, folds, chipWidth, content) }
+    CompositionLocalProvider(LocalRowSearch provides search, LocalRowView provides view) {
+        SectionBox(section, folds, chipWidth, content)
+    }
 }
 
 // [FoldedSection]'s chip or panel, with the search, if any, as [LocalRowSearch] has it.

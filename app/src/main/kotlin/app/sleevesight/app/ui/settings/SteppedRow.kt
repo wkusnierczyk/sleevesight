@@ -178,6 +178,7 @@ internal fun <T> SteppedRow(
     val (valueLabel, valueSpoken) = shownValue(look.between, index, stored, !release.moved && asking == null, stops)
     Column(Modifier.fillMaxWidth().padding(start = look.start, top = 8.dp, bottom = 8.dp)) {
         SteppedTitle(title, valueLabel, look.leading, alpha, tags.value)
+        NotInViewMark(title)
         summary?.let { Description(title, it(stops.values[index], labels[index]), color = color) }
         StopsSlider(
             value = shown,

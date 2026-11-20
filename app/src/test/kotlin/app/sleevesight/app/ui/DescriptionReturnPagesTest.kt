@@ -34,6 +34,7 @@ import app.sleevesight.app.ui.home.awaitIdleHome
 import app.sleevesight.app.ui.settings.DESCRIPTION_TAG
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.settings.DescriptionsOnReturn
+import app.sleevesight.core.settings.SettingsView
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -90,7 +91,13 @@ class DescriptionReturnPagesTest {
     ) {
         runBlocking {
             app.graph.settings.update {
-                it.copy(descriptionsOnReturn = mode, developerMode = true, showDiagnostics = true)
+                // *All* (#1447): a new install's *Basic* would hide *Spin the logo while music plays*.
+                it.copy(
+                    descriptionsOnReturn = mode,
+                    developerMode = true,
+                    showDiagnostics = true,
+                    settingsView = SettingsView.ALL,
+                )
             }
         }
         FirstRunAcknowledgement(app).acknowledge()

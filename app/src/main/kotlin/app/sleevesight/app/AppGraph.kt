@@ -82,6 +82,7 @@ import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.settings.SettingsViewMigration
 import app.sleevesight.app.settings.loader
 import app.sleevesight.app.settings.resetter
 import app.sleevesight.app.speech.ReadAloud
@@ -169,7 +170,7 @@ import java.io.File
 class AppGraph internal constructor(
     context: Context,
     settingsData: DataStore<Preferences> =
-        preferences(context.applicationContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
+        preferences(context.applicationContext, SETTINGS_FILE, listOf(SettingsViewMigration, PrunePlayersMigration)),
     secretCipher: SecretCipher = SecretCipher(AndroidKeystoreKey()),
     musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
     settingsDispatcher: CoroutineDispatcher = Dispatchers.IO,

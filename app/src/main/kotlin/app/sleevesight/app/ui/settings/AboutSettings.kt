@@ -145,6 +145,7 @@ private fun LinkRow(
     if (!shownInSearch(name)) return
     Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(searchMarked(name), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag(ROW_TITLE_TAG))
+        NotInViewMark(name)
         // Folded as any setting's description (#847); the address and the link stay in full.
         Description(name, stringResource(summary))
         Text(

@@ -22,6 +22,7 @@ import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.ReadAloudVoice
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SettingsView
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.SymbolOpens
 import app.sleevesight.core.settings.ThemeChoice
@@ -113,6 +114,7 @@ class SettingsResetTest {
             spinLogo = false,
             logoSpeed = LogoSpeed.RPM_45,
             dismissed = setOf(Dismissable.PLAYERS_NOTE),
+            settingsView = SettingsView.BASIC,
         )
 
     /** The properties of [Settings], each its field: a data class's fields are its properties. */
@@ -165,7 +167,7 @@ class SettingsResetTest {
     }
 
     @Test
-    fun theStoreResetsToItsOwnDefaultsAndKeepsThePlayersTheAiServiceDeveloperModeAndWhatIsDismissed() =
+    fun theStoreResetsToItsOwnDefaultsAndKeepsThePlayersTheAiServiceDeveloperModeWhatIsDismissedAndTheView() =
         runBlocking {
             val store = memorySettings(defaults = defaults)
             store.update { moved }
@@ -177,6 +179,7 @@ class SettingsResetTest {
                     aiProvider = ProviderId.OPENAI,
                     developerMode = false,
                     dismissed = setOf(Dismissable.PLAYERS_NOTE),
+                    settingsView = SettingsView.BASIC,
                     // *Forever* kept: the default, shorter, would delete history.
                     historyLifetime = null,
                     // The developer settings kept, unless asked to include them.

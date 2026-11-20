@@ -218,8 +218,9 @@ private fun Bullet(text: String) {
 
 /**
  * What a reset keeps, as its dialog lists it ([SettingsReset.KEPT]): the API keys, the history, the
- * players followed, which AI service is on, *Developer mode* while it is on, what is dismissed, and
- * *Keep history for* where the reset keeps it off its default in [defaults], the store's.
+ * players followed, which AI service is on, the settings' view (#1447), *Developer mode* while it is
+ * on, what is dismissed, and *Keep history for* where the reset keeps it off its default in
+ * [defaults], the store's.
  */
 @Composable
 internal fun resetStays(
@@ -239,6 +240,7 @@ internal fun resetStays(
         },
         stringResource(R.string.settings_reset_keeps_players),
         stringResource(R.string.settings_reset_keeps_ai),
+        stringResource(R.string.settings_reset_keeps_view, stringResource(viewName(current.settingsView))),
         if (current.developerMode) stringResource(R.string.settings_developer_mode) else null,
         stringResource(
             R.string.settings_reset_keeps_dismissed,
