@@ -55,6 +55,7 @@ Every choice is a setting, with a reasoned default:
 - **History:** what is kept on the phone, for how long, and *Clear history*, after which the track on Home is looked up again by itself or only when you tap *Look up again* (*Look up the track again*: *Automatically*, the default, or *On request*).
 - **Keys:** typed, scanned from a QR code, or typed on a computer; kept encrypted on the phone. Saving them asks which of their services to switch on.
 - **Reset:** *Reset to the defaults*, under *Save and reset*, puts every setting back to what a new install starts with, after a dialog listing what changes and what stays; your API keys, your history, the players you follow and the AI service switched on stay.
+- **Save and load:** *Save to a file*, under *Save and reset*, writes your settings to a readable JSON file you choose, to load on this phone or another with *Load from a file*, which first shows what would change and what it cannot load; API keys, history and insights are never in the file.
 
 [Setting up external services](https://sleevesight.app/docs/services/) gets the keys and switches the services on; [Settings](https://sleevesight.app/docs/tutorials/settings/) explains every setting; [What it costs you](https://sleevesight.app/docs/costs/) lists each service's prices and free tier. Sleevesight itself charges nothing.
 
