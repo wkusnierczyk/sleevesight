@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -31,6 +32,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
 
 /**
  * *What the symbol opens* (#1445): with *The player* chosen, a tap on the note symbol opens the
@@ -77,7 +79,7 @@ class SymbolOpensTest {
     fun withNothingPlayingATapOpensTheLastPlayerFollowed() {
         home.nothingPlaying()
         home.show {
-            compose.waitForIdle()
+            compose.symbolReady()
             symbol().performClick()
             compose.waitForIdle()
             assertEquals(SPOTIFY, shadowOf(app).nextStartedActivity?.`package`)
@@ -90,14 +92,35 @@ class SymbolOpensTest {
         home.nothingPlaying()
         home.lastPlayer.value = null
         home.show {
-            // The players load off the main thread.
-            compose.waitForIdle()
+            compose.symbolReady()
             symbol().performClick()
-            compose.waitForIdle()
             // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
-            assertEquals(CASTBOX, shadowOf(app).nextStartedActivity?.`package`)
+            assertEquals(CASTBOX, compose.nextStarted())
             symbol().performTouchInput { longClick(center) }
             compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
+        }
+    }
+
+    // #1469: a tap before the players have loaded opened the panel, as if none were switched on; it
+    // does nothing now, and the symbol says it takes none (disabled) until they have.
+    @Test
+    fun beforeThePlayersHaveLoadedATapDoesNothing() {
+        home.nothingPlaying()
+        home.lastPlayer.value = null
+        val loading = CountDownLatch(1)
+        home.loading = loading
+        home.show {
+            try {
+                symbol().assertIsNotEnabled().performClick()
+                compose.waitForIdle()
+                compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
+                assertEquals(null, shadowOf(app).nextStartedActivity)
+            } finally {
+                loading.countDown()
+            }
+            compose.symbolReady()
+            symbol().performClick()
+            assertEquals(CASTBOX, compose.nextStarted())
         }
     }
 
