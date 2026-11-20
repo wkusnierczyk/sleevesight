@@ -13,4 +13,5 @@ dependencies {
     // The shared fixtures (`fixtures/`), recorded responses included, are resources of `:core`'s test fixtures.
     testFixturesApi(testFixtures(project(":core")))
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotest.property)
 }
