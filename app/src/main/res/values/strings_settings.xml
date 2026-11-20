@@ -425,4 +425,36 @@
     <string name="settings_ai_web_search_exa_off">Exa web search is disabled.</string>
     <string name="settings_ai_web_search_exa_see">See %1$s.</string>
     <string name="settings_sources_link">Settings\u00A0→\u00A0Sources</string>
+
+    <!-- Save and reset (#960; #815 and #1447 add their rows here): the section, last before About. -->
+    <string name="settings_section_save_reset">Save and reset</string>
+    <string name="settings_save_reset_short">Back to the defaults, or the settings in a file</string>
+    <string name="settings_save_reset_long">All settings: reset to defaults, or kept in a file</string>
+    <string name="settings_reset">Reset to the defaults</string>
+    <string name="settings_reset_summary">Puts every setting back to what a new install starts with. Your API keys and your history stay.</string>
+    <string name="settings_reset_button">Reset</string>
+    <string name="settings_reset_title">Reset settings?</string>
+    <string name="settings_reset_changes">These go back to their defaults:</string>
+    <string name="settings_reset_none">Every setting is at its default already.</string>
+    <string name="settings_reset_stays">These stay as they are:</string>
+    <string name="settings_reset_done">Settings reset to the defaults.</string>
+    <!-- A line of the reset dialog: %1$s the setting's title, %2$s its value now, %3$s its default. -->
+    <string name="settings_reset_line">%1$s: %2$s → %3$s</string>
+    <!-- A setting whose title alone is another's too (MusicBrainz): %1$s its title, %2$s its section. -->
+    <string name="settings_reset_in_section">%1$s (%2$s)</string>
+    <!-- A switch's value in the reset dialog's lines. -->
+    <string name="settings_reset_on">On</string>
+    <!-- A setting a reset keeps at a value other than its default: %1$s its title, %2$s its value. -->
+    <string name="settings_reset_kept_value">%1$s: %2$s</string>
+    <string name="settings_reset_off">Off</string>
+    <!-- What a reset keeps, in its dialog. -->
+    <string name="settings_reset_keeps_keys">Your API keys</string>
+    <string name="settings_reset_keeps_history">Your history and kept insights</string>
+    <string name="settings_reset_keeps_players">The players you follow</string>
+    <string name="settings_reset_keeps_ai">Which AI service is switched on</string>
+    <string name="settings_reset_keeps_developer">Developer settings</string>
+    <!-- Shown while a developer setting differs from its default; ticked, a reset puts them back too. -->
+    <string name="settings_reset_include_developer">Include developer settings</string>
+    <!-- %1$s is settings_section_appearance, %2$s settings_restore_dismissed. -->
+    <string name="settings_reset_keeps_dismissed">Dismissed messages; %1$s → %2$s brings them back</string>
 </resources>

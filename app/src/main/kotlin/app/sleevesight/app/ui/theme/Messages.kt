@@ -49,6 +49,15 @@ class Messages(
     }
 
     /**
+     * Shows [message], as [show] does with no action, in the caller's coroutine: returns once it has
+     * shown and gone, or been put away by another; a cancellation before then takes it away.
+     */
+    suspend fun showing(message: String) {
+        host.currentSnackbarData?.dismiss()
+        host.showSnackbar(message, duration = SnackbarDuration.Short)
+    }
+
+    /**
      * Shows [message] as [show] does once [saved] says the change it is about was saved; else
      * [failed], when given, or nothing.
      */

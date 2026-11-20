@@ -44,6 +44,8 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.settings.resetOf
+import app.sleevesight.app.settings.resetter
 import app.sleevesight.app.settings.saving
 import app.sleevesight.app.speech.ReadAloudVoices
 import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
@@ -68,7 +70,8 @@ import kotlinx.coroutines.launch
  * description beside it, which opens the section's panel in their place, any number open at once,
  * all closed when the screen opens ([SettingsSection], [FoldedSection], #649):
  * *Players*, *Sources*, *AI services* ([AiSection], #227), *Secrets*, *Genres* (D12, #84),
- * *Insights* (D5, D13), *History* (#148, D9), *Appearance* (#377), *About*, and *Developer*, shown
+ * *Insights* (D5, D13), *History* (#148, D9), *Appearance* (#377), *Save and reset* (#960),
+ * *About*, and *Developer*, shown
  * only in developer mode, which seven taps on *Version* turn on ([VersionRow]). Each change is saved
  * at once. The rows show the stored settings, so a change that cannot be saved (the settings file
  * cannot be read or written) leaves its row at the stored value, and the screen says so above the
@@ -100,6 +103,9 @@ import kotlinx.coroutines.launch
  * mode as any setting.
  * [openRouter] runs the sign-in with OpenRouter under *AI services* (#1157), and says whether
  * OpenRouter refused the key saved since; null for neither (tests).
+ * [resetSettings] makes *Reset to the defaults* (#960), telling the pipeline of a mode it changes;
+ * null resets through [settingsStore] alone ([resetter]). Its message is said by whichever screen
+ * shows once it is saved, after a recreation too ([ResetNotice]).
  * [readAloudVoices] gives *Voice* under *Read aloud* (#787) the text-to-speech engine's voices and
  * reads its samples; null for none (tests), the row then showing the voice stored.
  */
@@ -122,6 +128,7 @@ fun SettingsScreen(
     landOn: SettingsTarget? = null,
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     openRouter: OpenRouterAccess? = null,
+    resetSettings: ((Settings, Boolean) -> Deferred<Boolean>)? = null,
     readAloudVoices: ReadAloudVoices? = null,
     playerLabel: (String) -> String,
 ) {
@@ -159,6 +166,9 @@ fun SettingsScreen(
             undo = { item -> save { settingsStore.undismiss(item) } },
         )
     val restoreDismissed = { save { settingsStore.restoreDismissed() } }
+    // *Reset to the defaults* (#960): its dialog's preview, and the reset through the app's resetter,
+    // which tells the pipeline of a mode it changes, its save announced as any change's is.
+    val reset = scope.resetting(settingsStore, resetSettings, saves, failed)
     // *Reactive*'s mode through the app's chooser (#625), its save announced as any change's is.
     val chooseMode: ((WriteAutomatically) -> Unit)? =
         chooseWritingMode?.let { choose ->
@@ -178,6 +188,7 @@ fun SettingsScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 // Above the list, so it shows wherever the list is scrolled to.
                 Notices(changeFailures, clearing.ended, clearing.looksUp)
+                ResetNotice(settingsStore.resets)
                 settings?.let { current ->
                     val navigation =
                         Navigation(
@@ -189,6 +200,7 @@ fun SettingsScreen(
                             chooseMode,
                             dismissals,
                             restoreDismissed,
+                            reset,
                         )
                     CompositionLocalProvider(
                         LocalHistoryLifetime provides historyLifetime,
@@ -302,6 +314,23 @@ private fun CoroutineScope.saver(
     }
 
 /**
+ * *Reset to the defaults* (#960) on [store]: its dialog's preview, and [reset], or without one the
+ * store's own reset saved in [saves], each one's save waited for in this scope, the screen's,
+ * telling [failed] whether it could not be saved.
+ */
+private fun CoroutineScope.resetting(
+    store: SettingsStore,
+    reset: ((Settings, Boolean) -> Deferred<Boolean>)?,
+    saves: CoroutineScope,
+    failed: (Boolean) -> Unit,
+): SettingsResetter {
+    val resets = reset ?: store.resetter(saves)
+    return SettingsResetter(store.defaults, store::resetOf) { shown, includeDeveloper ->
+        resets(shown, includeDeveloper).also { saved -> launch { failed(!saved.await()) } }
+    }
+}
+
+/**
  * How the last *Clear history* ended: [ended] is null until one does. Its result is awaited in
  * [scope], the screen's: the clear itself is made whatever happens to the screen, but if the screen
  * goes, or is recreated (a rotation), before the clear ends, its notice is not shown. Nothing shows
@@ -377,6 +406,18 @@ internal sealed interface SettingsDialog {
 }
 
 /**
+ * What *Reset to the defaults* works with: [defaults] are the store's, which it resets to;
+ * [preview] gives the settings as a reset would leave them ([app.sleevesight.app.settings.resetOf]),
+ * for its dialog; [reset] makes it from the settings shown, its result whether it was saved; each
+ * the developer settings too when asked to include them.
+ */
+internal class SettingsResetter(
+    val defaults: Settings,
+    val preview: (Settings, includeDeveloper: Boolean) -> Settings,
+    val reset: (shown: Settings, includeDeveloper: Boolean) -> Deferred<Boolean>,
+)
+
+/**
  * How the settings name a player and open it: [label] names it by its package; [launch] is the
  * intent that opens it from its launcher entry, or null for a player with none, which offers no
  * link; [installed] gives its icon, whether the phone shows it, and the players seen (#535), or is
@@ -391,7 +432,8 @@ internal class PlayerApps(
 /**
  * How the screen names players and models, where it leads, how it saves a mode chosen for
  * *Reactive* ([chooseMode], #625; null: as any setting), and how it saves a *Dismiss* and its *Undo*
- * ([dismissals], #759) and *Restore dismissed messages* ([restoreDismissed]).
+ * ([dismissals], #759) and *Restore dismissed messages* ([restoreDismissed]), and *Reset to the
+ * defaults* ([reset], #960).
  */
 @Suppress("LongParameterList") // Each one of the screen's ways out.
 private class Navigation(
@@ -403,6 +445,7 @@ private class Navigation(
     val chooseMode: ((WriteAutomatically) -> Unit)?,
     val dismissals: Dismissals,
     val restoreDismissed: () -> Deferred<Boolean>,
+    val reset: SettingsResetter,
 ) {
     /** These ways out, [leave] called before each that opens a page coming back to the settings (#874). */
     fun leaving(leave: () -> Unit): Navigation =
@@ -424,6 +467,7 @@ private class Navigation(
             chooseMode,
             dismissals,
             restoreDismissed,
+            reset,
         )
 }
 
@@ -616,6 +660,9 @@ private fun SettingsColumn(
         Section(SettingsSection.INSIGHTS) { InsightsSection(settings, update, navigation.chooseMode) }
         Section(SettingsSection.HISTORY) { HistorySection(settings, update, open) }
         Section(SettingsSection.APPEARANCE) { AppearanceSection(settings, update, navigation.restoreDismissed) }
+        Section(SettingsSection.SAVE_AND_RESET) {
+            SaveAndResetSection(settings, navigation.reset, navigation.modelName)
+        }
         Section(SettingsSection.ABOUT) {
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
         }
