@@ -1,6 +1,23 @@
 plugins {
     id("sleevesight.pipeline")
     `java-test-fixtures`
+    id("sleevesight.mutation")
+}
+
+// Mutation testing (`sleevesight.mutation`, `design/mutation-testing.md`) of the code that holds,
+// writes, reads, seals and opens the API keys' setup codes. Its JVM cryptography, `JvmKeyCrypto`, is
+// mutated in `:cli`'s run, whose tests may use JVM APIs.
+pitest {
+    targetClasses =
+        listOf(
+            "app.sleevesight.core.Secret",
+            "app.sleevesight.core.Secret\$*",
+            "app.sleevesight.core.keys.*",
+        )
+    targetTests = listOf("app.sleevesight.core.SecretTest", "app.sleevesight.core.keys.*")
+    // The score of 2026-11-20 (146 of 149, every survivor equivalent), rounded down: a new survivor
+    // fails the run.
+    mutationThreshold = 97
 }
 
 // The shared fixtures (`fixtures/` at the root) are resources of the test-fixtures source set, so

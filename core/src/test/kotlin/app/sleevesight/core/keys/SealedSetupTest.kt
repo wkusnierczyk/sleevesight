@@ -5,6 +5,7 @@ import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -12,6 +13,32 @@ class SealedSetupTest {
     private val words = listOf("aardvark", "abandoned", "abbreviate", "abdomen", "abhorrence")
     private val setup = "sleevesight-keys:v1\nlastfm=0123456789abcdef0123456789abcdef"
     private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
+
+    /** [JvmKeyCrypto] with a fixed key, keeping each key it derived and each text it sealed or opened. */
+    private class Recording : KeyCrypto by JvmKeyCrypto {
+        val keys = mutableListOf<ByteArray>()
+        val texts = mutableListOf<ByteArray>()
+
+        override fun derive(
+            password: ByteArray,
+            salt: ByteArray,
+            iterations: Int,
+        ): ByteArray = ByteArray(SealedSetup.KEY_BYTES) { (it + 1).toByte() }.also { keys += it }
+
+        override fun seal(
+            key: ByteArray,
+            nonce: ByteArray,
+            aad: ByteArray,
+            plain: ByteArray,
+        ): ByteArray = JvmKeyCrypto.seal(key, nonce, aad, plain).also { texts += plain }
+
+        override fun open(
+            key: ByteArray,
+            nonce: ByteArray,
+            aad: ByteArray,
+            sealed: ByteArray,
+        ): ByteArray? = JvmKeyCrypto.open(key, nonce, aad, sealed)?.also { texts += it }
+    }
 
     private fun hex(bytes: ByteArray) = bytes.joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
 
@@ -94,5 +121,29 @@ class SealedSetupTest {
         assertEquals(SetupRead.Sealed, KeySetup.read("sleevesight-keys:v2\nlastfm=x"))
         assertEquals(SetupRead.Unsupported("v3"), KeySetup.read("sleevesight-keys:v3:c2VjcmV0"))
         assertTrue(KeySetup.isSetup("sleevesight-keys:v2:AAAA"))
+    }
+
+    @Test
+    fun `only a code that starts with the sealed prefix is sealed`() {
+        assertTrue(SealedSetup.isSealed("  sleevesight-keys:v2:AAAA"))
+        assertFalse(SealedSetup.isSealed(setup))
+        assertFalse(SealedSetup.isSealed("sleevesight-keys:v2"))
+        assertFalse(SealedSetup.isSealed(""))
+    }
+
+    @Test
+    fun `a code of no text, the shortest there is, opens`() {
+        val code = SealedSetup.seal("", words, JvmKeyCrypto)
+        assertEquals("", assertIs<Opened.Setup>(SealedSetup.open(code, words, JvmKeyCrypto)).text)
+    }
+
+    @Test
+    fun `the derived key and the setup code's text are wiped once sealed or opened`() {
+        val crypto = Recording()
+        val code = SealedSetup.seal(setup, words, crypto)
+        assertEquals(setup, assertIs<Opened.Setup>(SealedSetup.open(code, words, crypto)).text)
+        assertEquals(2, crypto.keys.size)
+        assertEquals(2, crypto.texts.size)
+        for (bytes in crypto.keys + crypto.texts) assertTrue(bytes.all { it == 0.toByte() }, hex(bytes))
     }
 }

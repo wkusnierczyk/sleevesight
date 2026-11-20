@@ -5,6 +5,7 @@
 plugins {
     id("sleevesight.kotlin-jvm")
     application
+    id("sleevesight.mutation")
 }
 
 application {
@@ -49,9 +50,51 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
+// A home of the tests' own, empty, so that no test, nor a mutant of one under `pitest`, reads the
+// developer's keys file (`~/.config/sleevesight/keys.env`, `Keys.DEFAULT_FILE`).
+val testHome = layout.buildDirectory.dir("test-home")
+
 tasks.withType<Test>().configureEach {
+    systemProperty("user.home", testHome.get().asFile.absolutePath)
     systemProperty("sleevesight.fixtures", fixturesDir.asFile.absolutePath)
     inputs.dir(fixturesDir).withPropertyName("fixtures").withPathSensitivity(PathSensitivity.RELATIVE)
     systemProperty("sleevesight.apiKeysVectors", apiKeysVectors.asFile.absolutePath)
     inputs.file(apiKeysVectors).withPropertyName("apiKeysVectors").withPathSensitivity(PathSensitivity.NONE)
+}
+
+// Mutation testing (`sleevesight.mutation`, `design/mutation-testing.md`) of the code that reads the
+// developer's keys and draws them as a setup code (`keys-qr`), and of `:core`'s JVM cryptography for
+// the sealed code (`JvmKeyCrypto`), whose tests use JVM APIs `:core`'s may not (`JvmKeyCryptoTest`).
+pitest {
+    targetClasses =
+        listOf(
+            "app.sleevesight.cli.Keys",
+            "app.sleevesight.cli.Keys\$*",
+            "app.sleevesight.cli.KeysQr",
+            "app.sleevesight.cli.KeysQr\$*",
+            "app.sleevesight.cli.KeysQrKt",
+            "app.sleevesight.cli.WordsReader",
+            "app.sleevesight.cli.WordsReader\$*",
+            "app.sleevesight.core.platform.JvmKeyCrypto",
+        )
+    targetTests =
+        listOf("app.sleevesight.cli.KeysTest", "app.sleevesight.cli.KeysQrTest", "app.sleevesight.cli.JvmKeyCryptoTest")
+    // `JvmKeyCrypto`'s classes, built by `:core:jvmMainClasses` (below).
+    // The score of 2026-11-20 (173 of 185, every survivor equivalent), rounded down: a new survivor
+    // fails the run.
+    mutationThreshold = 93
+    additionalMutableCodePaths = listOf(rootProject.file("core/build/classes/kotlin/jvmMain"))
+    // As the tests get them (above): the API keys page's vectors, and a home of their own.
+    jvmArgs =
+        listOf(
+            "-Dsleevesight.apiKeysVectors=${apiKeysVectors.asFile.absolutePath}",
+            "-Duser.home=${testHome.get().asFile.absolutePath}",
+        )
+}
+
+tasks.named<info.solidsoft.gradle.pitest.PitestTask>("pitest") {
+    inputs.file(apiKeysVectors).withPropertyName("apiKeysVectors").withPathSensitivity(PathSensitivity.NONE)
+    dependsOn(":core:jvmMainClasses")
+    // `JvmKeyCrypto`'s source, for the report to show beside its mutants.
+    sourceDirs.from(rootProject.file("core/src/jvmMain/kotlin"))
 }

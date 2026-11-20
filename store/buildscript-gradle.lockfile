@@ -66,6 +66,7 @@ commons-io:commons-io:2.16.1=classpath
 commons-logging:commons-logging:1.2=classpath
 dev.lysine.sql-psi:core:0.8.1=classpath
 dev.lysine.sql-psi:environment:0.8.1=classpath
+info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.19.0=classpath
 io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.8=classpath
 jakarta.activation:jakarta.activation-api:1.2.1=classpath
 jakarta.xml.bind:jakarta.xml.bind-api:2.3.2=classpath
