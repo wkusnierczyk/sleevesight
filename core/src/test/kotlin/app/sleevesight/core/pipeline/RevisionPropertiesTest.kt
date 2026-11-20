@@ -11,7 +11,6 @@ import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.bind
 import io.kotest.property.arbitrary.element
-import io.kotest.property.arbitrary.filter
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.map
 import io.kotest.property.checkAll
@@ -111,7 +110,7 @@ class RevisionPropertiesTest {
     @Test
     fun `an insight written once is shown whole`() =
         runTest {
-            checkAll(CONFIG, insight.filter { it.isNotEmpty() }, gap) { sentences, between ->
+            checkAll(CONFIG, insight, gap) { sentences, between ->
                 val reply = sentences.joinToString(between)
                 val shown = assertIs<InsightReply.Written>(readReply(reply, evidence, allowModel = false))
                 assertEquals(reply.trim(), shown.grounded.text)

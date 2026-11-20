@@ -26,7 +26,8 @@ junit4 = "4.13.2"
 androidx-test-runner = "1.7.0"
 robolectric = "4.17"
 # Property-based tests of the pure logic (`checkAll`, generators and shrinking), run by the JUnit 5
-# runner as plain `kotlin.test` tests: the property module only, not Kotest's own test framework.
+# runner as plain `kotlin.test` tests. Kotest's own runner is not used; its engine and assertions
+# come along transitively on the test classpaths (no JUnit Platform engine is registered).
 kotest = "6.2.7"
 
 [libraries]

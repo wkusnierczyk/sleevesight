@@ -133,6 +133,8 @@ class GenreWeightingPropertiesTest {
             }
         }
 
+    // A regression guard: `rankLabels` walks `LABEL_TIE_ORDER`, never the map, so this holds by
+    // construction today and fails only if the ranking comes to depend on the map's order.
     @Test
     fun `the order the sources are given in does not change the ranking`() =
         runTest {
