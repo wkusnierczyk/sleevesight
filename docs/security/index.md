@@ -5,7 +5,7 @@
 # Linked from the docs index (How it is made) and `SECURITY.md`.
 title: Security checks
 permalink: /docs/security/
-docs_version: 0.9.2
+docs_version: 0.10.0
 nav:
   - id: results-for-090
     label: Results
@@ -20,14 +20,14 @@ provenance: [ai-wrote, human-reviewed]
 
 Sleevesight keeps your API keys on your phone and sends each only to its own service. This page says how the app and its code are checked for security problems, and what the checks found for the latest release.
 
-## Results for 0.9.2
+## Results for 0.10.0
 
-Checked on 19 November 2026, on the code of release 0.9.2.
+Checked on 20 November 2026, on the code of release 0.10.0.
 
-- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app; none of them changed since 0.9.1.
+- **Libraries:** no known vulnerability in any of the libraries the app and its command-line tool use, nor in the tools that build the app; none of them changed since 0.9.2.
 - **Secrets:** no API key or other credential in the code or anywhere in its history.
 - **Code checks:** Android lint's security checks found nothing, in the app or in the modules beside it.
-- **Security review:** no way found to reach your keys or your data in the new code. The release changes how Home and Sources show what the sources found and what they back; it sends nothing new anywhere and reads nothing new. The two slowdowns found in 0.8.0 on unusual text are still left, as is the nuisance that another app on the phone can cancel a sign-in while it is under way. None of these reaches keys or data.
+- **Security review:** no way found to reach your keys or your data in the new code. The OpenRouter sign-in now also takes an answer whose state was lost on the way back, but its code is worthless without the secret that stays on the phone, so another app or a web page can at most cancel a sign-in under way, as before. A settings file you load is read with size limits, can never hold or change your API keys or delete your history, and shows every change before it is made. Three small points the review found were fixed before the release: a chosen read-aloud voice is now spoken on the engine's server only when it is marked as better online, a saved settings file holds only the players you follow, and the load names a voice as the phone knows it, not as the file calls it. The two slowdowns found in 0.8.0 on unusual text are still left; neither reaches keys or data.
 
 ## What is checked
 

@@ -1,0 +1,7 @@
+What's new in 0.10.0:
+- Settings: choose a view (Basic, Advanced or All); reset to the defaults; save your settings to a file and load them back.
+- Read aloud: choose the voice.
+- A YouTube video shows its thumbnail whole, with no album line.
+- The player's logo shows for 3 seconds on every track change; tap the symbol to open the player.
+- An answer asked for automatically says so, with a link to the setting.
+- Sign in with OpenRouter works again.
