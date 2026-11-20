@@ -54,6 +54,7 @@ Every choice is a setting, with a reasoned default:
 - **Ask AI:** whether a panel with nothing from its sources asks your AI service by itself (*Ask AI automatically*, off by default; never *Explain the song*), and how it searches the web with Exa (*AI web search*: *Off*, *Once*, the default, or *Up to 3 times*).
 - **History:** what is kept on the phone, for how long, and *Clear history*, after which the track on Home is looked up again by itself or only when you tap *Look up again* (*Look up the track again*: *Automatically*, the default, or *On request*).
 - **Keys:** typed, scanned from a QR code, or typed on a computer; kept encrypted on the phone. Saving them asks which of their services to switch on.
+- **Reset:** *Reset to the defaults*, under *Save and reset*, puts every setting back to what a new install starts with, after a dialog listing what changes and what stays; your API keys, your history, the players you follow and the AI service switched on stay.
 
 [Setting up external services](https://sleevesight.app/docs/services/) gets the keys and switches the services on; [Settings](https://sleevesight.app/docs/tutorials/settings/) explains every setting; [What it costs you](https://sleevesight.app/docs/costs/) lists each service's prices and free tier. Sleevesight itself charges nothing.
 
