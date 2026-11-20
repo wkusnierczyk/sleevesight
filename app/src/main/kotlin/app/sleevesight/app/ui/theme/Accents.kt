@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.theme
 
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -13,12 +14,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -29,15 +34,17 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Constraints
 import app.sleevesight.app.ui.openWebLink
 import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.core.settings.LinkStyle
+import kotlin.math.roundToInt
 
 // Links without the palette's accent colour (#442): the system's dynamic accent (on
 // Android 12 and later, from the wallpaper or the chosen colour theme) looked out of place, and
-// links were styled two ways. Every link in the app is drawn here, by [LinkedText] or [LinkLabel],
-// so none can take another look or lose its line (`LinkSourcesTest` holds the rest of the app to
-// that). How a link is marked, a line below it or a highlight behind it, is *Link style* (#519),
+// links were styled two ways. Every link in the app is drawn here, by [LinkedText], [NamedLinkText]
+// or [LinkLabel], so none can take another look or lose its line (`LinkSourcesTest` holds the rest of
+// the app to that). How a link is marked, a line below it or a highlight behind it, is *Link style* (#519),
 // which [SleevesightTheme] provides as [LocalLinkStyle].
 
 /**
@@ -63,6 +70,19 @@ internal fun LinkedText(
     marks: List<AnnotatedString.Range<SpanStyle>> = emptyList(),
 ) {
     val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
+    val (text, links) = linkedString(parts, ink, marks)
+    MarkedText(text, links, style, ink, color, modifier)
+}
+
+/**
+ * [parts] as one text, as [LinkedText] has it, and where its links are; [marks] over the whole text.
+ */
+@Composable
+private fun linkedString(
+    parts: List<TextPart>,
+    ink: Color,
+    marks: List<AnnotatedString.Range<SpanStyle>> = emptyList(),
+): Pair<AnnotatedString, List<IntRange>> {
     val styles = linkStyles(ink)
     // A link opens only through [openWebLink] (#1040), never by Compose's own handling of the address.
     val uris = LocalUriHandler.current
@@ -85,8 +105,73 @@ internal fun LinkedText(
             // Over the whole text, the links' parts too (a search's marks, #847).
             for (mark in marks) addStyle(mark.item, mark.start, mark.end)
         }
-    MarkedText(text, links, style, ink, color, modifier)
+    return text to links
 }
+
+/**
+ * [parts], a text with one link in it, a [TextPart.Action], drawn as [LinkedText] draws it, the link
+ * named for a screen reader with what a tap does ([onClickLabel], #956), which a link inside a text
+ * cannot be given: a screen reader reads the text whole ([tag] on it), with no link in it, then stops
+ * on a node of the link's own over its words, a link named so. A tap on the words follows the text's
+ * link, as in [LinkedText].
+ */
+@Suppress("LongParameterList") // The text, its link's name, and how it is drawn.
+@Composable
+internal fun NamedLinkText(
+    parts: List<TextPart>,
+    onClickLabel: String,
+    style: TextStyle,
+    tag: String,
+    color: Color = Color.Unspecified,
+) {
+    val link = parts.filterIsInstance<TextPart.Action>().single()
+    val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
+    val (text, links) = linkedString(parts, ink)
+    val start = parts.takeWhile { it !== link }.sumOf { it.text.length }
+    val end = start + link.text.length
+    // The text's layout, read only to measure and place the link's node, never in composition: a
+    // new layout composing again would lay the text out again, without end.
+    val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
+    val named = buildAnnotatedString { withLink(annotation(link, linkStyles(ink), link.onClick)) { append(link.text) } }
+    Box {
+        val words =
+            Modifier.clearAndSetSemantics {
+                this.text = AnnotatedString(text.text)
+                testTag = tag
+            }
+        MarkedText(text, links, style, ink, color, words) { layout.value = it }
+        Box(
+            Modifier
+                .layout { measurable, _ ->
+                    // Each letter's box, joined: over two lines, the box around both parts.
+                    val bounds =
+                        layout.value
+                            ?.takeIf { end <= it.layoutInput.text.length }
+                            ?.let { laid -> (start until end).map(laid::getBoundingBox).reduce(::around) }
+                            ?: Rect.Zero
+                    val width = bounds.width.roundToInt()
+                    val height = bounds.height.roundToInt()
+                    val placeable = measurable.measure(Constraints.fixed(width, height))
+                    layout(width, height) {
+                        placeable.place(bounds.left.roundToInt(), bounds.top.roundToInt())
+                    }
+                }.semantics {
+                    this.text = named
+                    testTag = link.tag
+                    onClick(label = onClickLabel) {
+                        link.onClick()
+                        true
+                    }
+                },
+        )
+    }
+}
+
+// The box around [a] and [b].
+private fun around(
+    a: Rect,
+    b: Rect,
+): Rect = Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom))
 
 /**
  * [link] as a text of its own, all of it the link, marked as [LinkedText]'s are: one link

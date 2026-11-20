@@ -463,8 +463,25 @@
          no button again. -->
     <string name="home_ai_nothing">%1$s couldn’t say from its own knowledge.</string>
     <string name="home_ai_nothing_web">%1$s found nothing on the web.</string>
-    <!-- Before the line above, for a question Ask AI automatically asked (#802); %1$s is that line. -->
+    <!-- Before the spelling check's line (home_spelling_none, home_spelling_not_found), for a check Ask
+         AI automatically started (#802, #1293); %1$s is that line. Dates, Genres and Lyrics say it at
+         the end instead (#956, home_ai_auto_link), and a genre's definition here, as before. -->
     <string name="home_ai_nothing_auto">Asked automatically: %1$s</string>
+    <!-- What Ask AI automatically asked in Dates, Genres and Lyrics says so, found or not (#956): at
+         the end of the credit or the nothing line, "; " then this, a link that opens Settings →
+         Insights → Ask AI automatically. Asked by a tap, the lines above, with no note. -->
+    <string name="home_ai_auto_link">asked automatically</string>
+    <!-- The link's action, as a screen reader names it ("Double-tap to open the Ask AI automatically setting"). -->
+    <string name="home_ai_auto_link_action">open the Ask AI automatically setting</string>
+    <!-- The credit (home_credit_written, home_credit_written_with) of an answer asked automatically;
+         %1$s the model, %2$s the "with" list where the credit has one, last home_ai_auto_link. -->
+    <string name="home_credit_written_auto">Written by %1$s; %2$s.</string>
+    <string name="home_credit_written_with_auto">Written by %1$s with %2$s; %3$s.</string>
+    <!-- home_ai_nothing, home_ai_nothing_web and home_lyrics_found_none asked automatically; %1$s the
+         model, %2$s home_ai_auto_link. -->
+    <string name="home_ai_nothing_known_auto">%1$s couldn’t say from its own knowledge; %2$s.</string>
+    <string name="home_ai_nothing_web_auto">%1$s found nothing on the web; %2$s.</string>
+    <string name="home_lyrics_found_none_auto">%1$s found no lyrics on the web; %2$s.</string>
     <!-- The question failed, in the error colour, with Retry (home_retry) at the right of the same line,
          as for a source that could not be reached; %1$s is why, as the insight says it (home_failure_*). -->
     <string name="home_ai_failed">Asking AI failed: %1$s.</string>

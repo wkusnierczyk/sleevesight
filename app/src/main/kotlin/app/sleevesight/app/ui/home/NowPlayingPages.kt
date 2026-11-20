@@ -80,7 +80,12 @@ internal fun NowPlayingPageContent(
                             genreNotes(shown, actions, lines),
                             GenresWays(retries::ofAll, actions.openSettingsAt) { handoff.moveTo(back) },
                             // *Search with AI* under no genre (#773), as in the panel on Home.
-                            PanelSearch(actions.aiSearches, shown.track, shown.track?.nowPlaying ?: playing),
+                            PanelSearch(
+                                actions.aiSearches,
+                                shown.track,
+                                shown.track?.nowPlaying ?: playing,
+                                actions.openSettingsAt,
+                            ),
                         )
                     }
 

@@ -91,14 +91,17 @@ internal fun InsightsSection(
     // *AI web search* first, then the toggle whose text names it (#801's revised pick).
     AiWebSearchRows(settings, update)
     val web = stringResource(R.string.settings_ai_web_search)
-    SwitchRow(
-        title = stringResource(R.string.settings_search_with_ai),
-        summary = stringResource(R.string.settings_search_with_ai_summary, web),
-        checked = settings.searchWithAi,
-        summaryLink = settingsLink(web, SettingsTarget.aiWebSearch),
-        // With *Show insights* off nothing is written: the setting does not apply.
-        applies = settings.writeInsights,
-    ) { on -> update { it.copy(searchWithAi = on) } }
+    // Landed on from the note on what it asked, on Home (#956).
+    LandingSpot(SettingsTarget.searchWithAi) {
+        SwitchRow(
+            title = stringResource(R.string.settings_search_with_ai),
+            summary = stringResource(R.string.settings_search_with_ai_summary, web),
+            checked = settings.searchWithAi,
+            summaryLink = settingsLink(web, SettingsTarget.aiWebSearch),
+            // With *Show insights* off nothing is written: the setting does not apply.
+            applies = settings.writeInsights,
+        ) { on -> update { it.copy(searchWithAi = on) } }
+    }
 
     ReadAloudRows(settings, update)
 }

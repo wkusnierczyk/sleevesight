@@ -103,6 +103,12 @@ data class SettingsTarget(
         /** *AI web search*'s row under *Insights*, from *Ask AI automatically*'s description (#801). */
         internal val aiWebSearch: SettingsTarget = SettingsTarget(SettingsSection.INSIGHTS, "ai_web_search")
 
+        /**
+         * *Ask AI automatically*'s row under *Insights*, from the note on what it asked in *Dates*,
+         * *Genres* and *Lyrics* on Home (#956).
+         */
+        internal val searchWithAi: SettingsTarget = SettingsTarget(SettingsSection.INSIGHTS, "search_with_ai")
+
         /** The section *Sources* itself, its panel's heading, from a panel on Home whose source is off (#724). */
         internal val sources: SettingsTarget = SettingsTarget(SettingsSection.SOURCES)
 

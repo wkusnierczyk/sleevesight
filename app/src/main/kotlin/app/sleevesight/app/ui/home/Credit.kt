@@ -60,6 +60,23 @@ internal fun creditText(
     credit: Credit,
     resources: Resources,
 ): String {
+    val joined = creditWith(credit, resources)
+    return when {
+        joined == null && credit.rewritten -> resources.getString(R.string.home_credit_rewritten, credit.model)
+        joined == null -> resources.getString(R.string.home_credit_written, credit.model)
+        credit.rewritten -> resources.getString(R.string.home_credit_rewritten_with, credit.model, joined)
+        else -> resources.getString(R.string.home_credit_written_with, credit.model, joined)
+    }
+}
+
+/**
+ * What else [credit]'s text was written with, as the credit says it after "with" ([creditText]):
+ * joined with ", " and a last "and"; null for nothing else.
+ */
+internal fun creditWith(
+    credit: Credit,
+    resources: Resources,
+): String? {
     val with =
         buildList {
             credit.effort?.let {
@@ -73,17 +90,10 @@ internal fun creditText(
                     .forEach { add(resources.getString(it)) }
             }
         }
-    val joined =
-        when (with.size) {
-            0 -> null
-            1 -> with.single()
-            else -> resources.getString(R.string.home_rewrite_and, with.dropLast(1).joinToString(", "), with.last())
-        }
-    return when {
-        joined == null && credit.rewritten -> resources.getString(R.string.home_credit_rewritten, credit.model)
-        joined == null -> resources.getString(R.string.home_credit_written, credit.model)
-        credit.rewritten -> resources.getString(R.string.home_credit_rewritten_with, credit.model, joined)
-        else -> resources.getString(R.string.home_credit_written_with, credit.model, joined)
+    return when (with.size) {
+        0 -> null
+        1 -> with.single()
+        else -> resources.getString(R.string.home_rewrite_and, with.dropLast(1).joinToString(", "), with.last())
     }
 }
 
