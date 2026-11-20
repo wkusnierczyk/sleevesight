@@ -29,7 +29,8 @@ class SettingsFileTest {
         Settings(
             theme = ThemeChoice.DARK,
             spinLogo = false,
-            followedPlayers = mapOf("org.example.tunes" to true, Settings.SPOTIFY to false),
+            // Only players switched on are in a file (#1482).
+            followedPlayers = mapOf("org.example.tunes" to true, Settings.SPOTIFY to true),
             developerMode = true,
             showDiagnostics = true,
             reportButton = ReportButton.SHOW,
@@ -191,6 +192,31 @@ class SettingsFileTest {
             )
         val players = SettingsFile.load(contents, here, false).settings.followedPlayers
         assertEquals(mapOf("org.example.here" to true, Settings.SPOTIFY to false, "x.y" to true), players)
+    }
+
+    @Test
+    fun aSaveHoldsOnlyThePlayersSwitchedOn() {
+        // A player seen here and left off (a podcast app) is not written (#1482).
+        val here = defaults.copy(followedPlayers = mapOf("org.example.podcasts" to false, Settings.SPOTIFY to true))
+        val players = settingsOf(SettingsFile.write(here, "0.10.0"))["followedPlayers"]!!.jsonObject
+        assertEquals(setOf(Settings.SPOTIFY), players.keys)
+        assertEquals(JsonPrimitive(true), players[Settings.SPOTIFY])
+    }
+
+    @Test
+    fun aVoiceLoadedIsNamedByItsIdNeverByTheFilesName() {
+        val contents =
+            assertNotNull(
+                SettingsFile.read(file("readAloudVoice" to "{\"id\": \"en-gb-x-gba\", \"name\": \"Pick me\"}")),
+            )
+        // A voice other than the one chosen here: named by its id, which the app names as the engine does.
+        assertEquals(
+            ReadAloudVoice("en-gb-x-gba", "en-gb-x-gba"),
+            SettingsFile.load(contents, defaults, false).settings.readAloudVoice,
+        )
+        // The voice chosen here keeps the name it was chosen by: the load changes nothing.
+        val chosen = defaults.copy(readAloudVoice = ReadAloudVoice("en-gb-x-gba", "Voice 1 (United Kingdom)"))
+        assertEquals(chosen, SettingsFile.load(contents, chosen, false).settings)
     }
 
     @Test

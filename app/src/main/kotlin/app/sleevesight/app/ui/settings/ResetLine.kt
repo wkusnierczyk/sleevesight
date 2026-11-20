@@ -153,7 +153,8 @@ internal val RESET_LINES: List<ResetLine> =
         choice("aiWebSearch", R.string.settings_ai_web_search, { it.aiWebSearch }) { aiWebSearchChoices() },
         switch("searchWithAi", R.string.settings_search_with_ai) { it.searchWithAi },
         valued("readAloudVoice", R.string.settings_read_aloud_voice, { it.readAloudVoice }) { voice ->
-            voice?.name ?: stringResource(R.string.settings_read_aloud_voice_phone)
+            // A voice loaded from a file is named by its id, which the file gave (#1481, #1482).
+            voice?.name?.let(::fileText) ?: stringResource(R.string.settings_read_aloud_voice_phone)
         },
         choice("readAloudMusic", R.string.settings_read_aloud_music, { it.readAloudMusic }) { readAloudMusics() },
         switch("readTrackLineFirst", R.string.settings_read_track_line) { it.readTrackLineFirst },

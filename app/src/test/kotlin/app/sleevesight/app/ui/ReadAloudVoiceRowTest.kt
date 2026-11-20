@@ -240,6 +240,20 @@ class ReadAloudVoiceRowTest {
         }
 
     @Test
+    fun aVoiceNamedByAFileIsShownCutWithNoFormatCharacter() {
+        // Loaded from a settings file: named by its id, the file's text (#1482).
+        val id = "\u202E" + "v".repeat(200)
+        val cut = "v".repeat(79) + "\u2026"
+        show(FakeVoices(VoicesLoad.Loading), ReadAloudVoice(id, id)) {
+            waitFor(hasText(cut))
+        }
+        show(FakeVoices(VoicesLoad.Loaded(engine, null)), ReadAloudVoice(id, id)) {
+            waitFor(hasText(app.getString(R.string.settings_read_aloud_voice_gone, cut)))
+            assertTrue(compose.onAllNodes(hasText("\u202E", substring = true)).fetchSemanticsNodes().isEmpty())
+        }
+    }
+
+    @Test
     fun noEnglishVoiceDimsTheRowWithANote() =
         show(FakeVoices(VoicesLoad.Loaded(engine.filter { it.locale.language == "de" }, null))) {
             waitFor(hasText(NO_VOICE))

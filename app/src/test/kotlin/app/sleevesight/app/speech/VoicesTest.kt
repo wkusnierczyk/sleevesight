@@ -139,6 +139,18 @@ class VoicesTest {
     }
 
     @Test
+    fun aVoiceWhoseServerVersionIsNoBetterReadsByItsPhoneVersionOnline() {
+        // Not marked higher quality online: the text stays on the phone (#1481).
+        val same = listOf(local("en-gb-x-gba", gb, 400), network("en-gb-x-gba", gb, 400))
+        assertEquals("en-gb-x-gba-local", chosenVoice("en-gb-x-gba", same, online = true))
+        val plain = listOf(local("en-gb-x-gbb", gb, 300), network("en-gb-x-gbb", gb, 300))
+        assertEquals("en-gb-x-gbb-local", chosenVoice("en-gb-x-gbb", plain, online = true))
+        // Marked higher quality online: the server's while online.
+        val better = listOf(local("en-gb-x-gbc", gb, 300), network("en-gb-x-gbc", gb, 400))
+        assertEquals("en-gb-x-gbc-network", chosenVoice("en-gb-x-gbc", better, online = true))
+    }
+
+    @Test
     fun aVoiceGoneOrOneNeedingTheInternetWhileOfflineReadsAsThePhonesChoice() {
         val voices = listOf(network("en-gb-x-gbd", gb), local("en-gb-x-gba", gb))
         assertNull(chosenVoice("en-gb-x-gbd", voices, online = false))

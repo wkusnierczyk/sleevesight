@@ -51,7 +51,10 @@ interface ReadAloudVoices {
     /** Whether a sample is starting, waiting for its engine, or being read. */
     val sampling: Boolean get() = false
 
-    /** Stops the sample, and releases the engine, which [load] opens again. */
+    /**
+     * Lets go of the engine one [load] held: the last holder to let go stops the sample and releases
+     * the engine, which [load] opens again.
+     */
     fun close()
 }
 
@@ -85,13 +88,19 @@ class SystemReadAloudVoices(
 
     override val sampling: Boolean get() = starting || ended != null
 
-    override fun load(loaded: (VoicesLoad) -> Unit) =
+    // Who holds the engine: each [load] (*Voice*'s row, *Load settings?*' preview), until its
+    // [close]. Only the last one's close releases it, so another's load waiting for it is told.
+    private var holders = 0
+
+    override fun load(loaded: (VoicesLoad) -> Unit) {
+        holders++
         speech.open { opened ->
             // The phone's choice as a reading meets it: the default for the readings' language.
             loaded(
                 if (opened) VoicesLoad.Loaded(speech.voices(), speech.defaultVoice(locale())) else VoicesLoad.NoEngine,
             )
         }
+    }
 
     override fun sample(
         id: String?,
@@ -124,6 +133,8 @@ class SystemReadAloudVoices(
     }
 
     override fun close() {
+        holders = maxOf(holders - 1, 0)
+        if (holders > 0) return
         stopSample()
         speech.close()
     }

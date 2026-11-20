@@ -50,7 +50,8 @@ class SettingsFileFieldsTest {
             aiProvider = ProviderId.OPENAI,
             aiModels = mapOf(ProviderId.ANTHROPIC to "claude-other"),
             aiEfforts = mapOf(ProviderId.ANTHROPIC to ReasoningEffort.HIGH, ProviderId.GOOGLE to null),
-            followedPlayers = mapOf("org.example.tunes" to true, Settings.SPOTIFY to false),
+            // Only players switched on are in a file (#1482): one more than the default's.
+            followedPlayers = mapOf("org.example.tunes" to true, Settings.SPOTIFY to true),
             onlyEnabledPlayersOnHome = true,
             showPlayerLogo = false,
             symbolOpens = SymbolOpens.PLAYER,
@@ -65,7 +66,8 @@ class SettingsFileFieldsTest {
             prepareNextTrack = PrepareNextTrack.OFF,
             lookUpInBackground = true,
             artistFactsOncePerSession = false,
-            readAloudVoice = ReadAloudVoice("en-gb-x-test", "Test voice"),
+            // A voice loaded is named by its id (#1481), which the app names as the engine does.
+            readAloudVoice = ReadAloudVoice("en-gb-x-test", "en-gb-x-test"),
             readAloudMusic = ReadAloudMusic.PAUSE,
             readTrackLineFirst = true,
             readNewInsightsAloud = true,
