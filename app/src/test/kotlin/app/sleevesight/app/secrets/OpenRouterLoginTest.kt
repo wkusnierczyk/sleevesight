@@ -280,6 +280,31 @@ class OpenRouterLoginTest {
         }
 
     @Test
+    fun theStateCountsFromEitherParameterAndBothMustAgree() =
+        runTest {
+            val signIn = FakeSignIn()
+            val login = login(signIn)
+            // OpenRouter's `state` alone (the callback's `s` dropped).
+            login.start()
+            assertEquals(StateMatch.MATCHED, login.callback("code", null, "state-1"))
+            // Both, agreeing.
+            login.start()
+            assertEquals(StateMatch.MATCHED, login.callback("code", "state-2", "state-2"))
+            assertEquals(listOf("code" to "verifier-1", "code" to "verifier-2"), signIn.exchanged)
+            // Both, disagreeing, either way round: not taken.
+            login.start()
+            assertEquals(StateMatch.DIFFERED, login.callback("code", "state-3", "other"))
+            assertEquals(SignInStep.Failed(SignInFailure.REFUSED), login.step.value)
+            login.start()
+            assertEquals(StateMatch.DIFFERED, login.callback("code", "other", "state-4"))
+            assertEquals(SignInStep.Failed(SignInFailure.REFUSED), login.step.value)
+            assertEquals(2, signIn.exchanged.size)
+            // Neither (or both empty): the state-less fallback.
+            login.start()
+            assertEquals(StateMatch.MISSING, login.callback("code", "", null))
+        }
+
+    @Test
     fun aFailureWhileSavingEndsTheSignInAsNotFinished() =
         runTest {
             val login =

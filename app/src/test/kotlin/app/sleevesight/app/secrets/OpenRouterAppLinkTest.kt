@@ -197,6 +197,21 @@ class OpenRouterAppLinkTest {
             assertEquals(SignInStep.Idle, fragment.step.value)
             assertEquals("OpenRouter sign-in answer: query [], fragment [code, s]; state matched", fragmentLog)
 
+            val (openRouters, openRoutersLog) = answered("$CALLBACK?code=the-code&state=state-4")
+            assertEquals(SignInStep.Idle, openRouters.step.value)
+            assertEquals("OpenRouter sign-in answer: query [code, state], fragment []; state matched", openRoutersLog)
+
+            val (both, bothLog) = answered("$CALLBACK?s=state-5&code=the-code&state=state-5")
+            assertEquals(SignInStep.Idle, both.step.value)
+            assertEquals("OpenRouter sign-in answer: query [s, code, state], fragment []; state matched", bothLog)
+
+            val (disagreeing, disagreeingLog) = answered("$CALLBACK?s=state-6&code=the-code&state=state-other")
+            assertEquals(SignInStep.Failed(SignInFailure.REFUSED), disagreeing.step.value)
+            assertEquals(
+                "OpenRouter sign-in answer: query [s, code, state], fragment []; state differed",
+                disagreeingLog,
+            )
+
             val (differed, differedLog) = answered("$CALLBACK?s=state-other&code=the-code")
             assertEquals(SignInStep.Failed(SignInFailure.REFUSED), differed.step.value)
             assertEquals(
@@ -209,7 +224,7 @@ class OpenRouterAppLinkTest {
             assertEquals("OpenRouter sign-in answer: query [code], fragment []; state no_sign_in", noneLog)
 
             assertEquals(
-                listOf("the-code" to "verifier-1", "the-code" to "verifier-2", "the-code" to "verifier-3"),
+                listOf(1, 2, 3, 4, 5).map { "the-code" to "verifier-$it" },
                 signIn.exchanged,
             )
         }

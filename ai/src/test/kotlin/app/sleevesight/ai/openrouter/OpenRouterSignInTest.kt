@@ -63,6 +63,8 @@ class OpenRouterSignInTest {
         // The callback, an https App Link on the app's site (#1396), with the sign-in's state, which the
         // answer carries back.
         assertEquals("https://sleevesight.app/auth/openrouter/?s=${start.state}", query["callback_url"])
+        // And the same state as OpenRouter's own parameter, which it returns as `?state=` (#1396).
+        assertEquals(start.state, query["state"])
         assertEquals(22, start.state.length)
         assertEquals(OpenRouterSignIn.challengeOf(start.verifier, JvmHasher), query["code_challenge"])
         assertEquals("S256", query["code_challenge_method"])
@@ -84,6 +86,7 @@ class OpenRouterSignInTest {
         assertEquals(OpenRouterSignIn.DEBUG_CALLBACK, signIn.callback)
         val start = signIn.begin()
         assertEquals("${OpenRouterSignIn.DEBUG_CALLBACK}?s=${start.state}", query(start.url)["callback_url"])
+        assertEquals(start.state, query(start.url)["state"])
     }
 
     @Test

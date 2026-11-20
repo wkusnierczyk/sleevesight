@@ -55,13 +55,16 @@ enum class SignInFailure {
 
 /** How an answer at the callback stood to the sign-in under way, for the log (#1396). */
 enum class StateMatch {
-    /** It carried the sign-in's state back. */
+    /** It carried the sign-in's state back (as `s`, as `state`, or as both, agreeing). */
     MATCHED,
 
     /** It carried no state, taken while one sign-in is under way: the code needs its verifier. */
     MISSING,
 
-    /** It carried another state: not taken, and the sign-in ends as not finished. */
+    /**
+     * It carried another state (as either parameter, or the two disagreeing): not taken, and the
+     * sign-in ends as not finished.
+     */
     DIFFERED,
 
     /** No sign-in was under way: ignored. */
@@ -142,22 +145,25 @@ class OpenRouterLogin(
 
     /**
      * What came to the callback: a [code], or none (OpenRouter's page sent back no code: not
-     * approved), with the [state] it carried back, or none. Ignored with no sign-in under way. With
-     * the sign-in's state, or none (#1396), it is the sign-in's answer. With another state it is not
-     * taken, and the sign-in ends as not finished ([SignInFailure.REFUSED]), not as closed: an answer
-     * did come, and the browser, its authorisation spent, has nothing more to send.
+     * approved), with the [states] it carried back: the callback's own `s` and OpenRouter's `state`
+     * ([OPENROUTER_STATE]), each null when absent, compared as one. Ignored with no sign-in under
+     * way. With the sign-in's state, or with none at all (#1396: the fallback, should OpenRouter
+     * drop both), it is the sign-in's answer. With another state, in either parameter, it is not
+     * taken, and the sign-in ends as not finished ([SignInFailure.REFUSED]), not as closed: an
+     * answer did come, and the browser, its authorisation spent, has nothing more to send.
      *
      * @return how the answer stood to the sign-in under way, for the log.
      */
     fun callback(
         code: String?,
-        state: String?,
+        vararg states: String?,
     ): StateMatch {
         val under = pending ?: return StateMatch.NO_SIGN_IN
+        val carried = states.filterNot { it.isNullOrEmpty() }
         val match =
             when {
-                state.isNullOrEmpty() -> StateMatch.MISSING
-                state == under.state -> StateMatch.MATCHED
+                carried.isEmpty() -> StateMatch.MISSING
+                carried.all { it == under.state } -> StateMatch.MATCHED
                 else -> StateMatch.DIFFERED
             }
         pending = null
@@ -228,6 +234,9 @@ class OpenRouterLogin(
     companion object {
         /** The callback's parameter that carries a sign-in's state back (`OpenRouterSignIn.STATE`). */
         const val STATE: String = "s"
+
+        /** OpenRouter's own parameter for the state (`OpenRouterSignIn.OPENROUTER_STATE`). */
+        const val OPENROUTER_STATE: String = "state"
 
         /** How long OpenRouter takes a code: ten minutes from its issue. */
         val CODE_LIFETIME: Duration = 10.minutes
@@ -345,7 +354,8 @@ class Answer(
 
     private companion object {
         // The names shown: the callback's state, OpenRouter's code, and what an OAuth answer may add.
-        val NAMES = listOf(OpenRouterLogin.STATE, "code", "state", "error", "error_description")
+        val NAMES =
+            listOf(OpenRouterLogin.STATE, "code", OpenRouterLogin.OPENROUTER_STATE, "error", "error_description")
 
         // [parameters]' expected names, in their order, and how many others came: `[s, code, 1 other]`.
         fun names(parameters: Map<String, String>): String {

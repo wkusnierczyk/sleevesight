@@ -80,7 +80,8 @@ class SignInCallbacks(
                 ?.takeIf { OpenRouterLogin.isCallback(it.toString(), login.callback) }
                 ?: return
         val answer = OpenRouterLogin.answerAt(data.toString())
-        val match = login.callback(answer[CODE], answer[OpenRouterLogin.STATE])
+        val match =
+            login.callback(answer[CODE], answer[OpenRouterLogin.STATE], answer[OpenRouterLogin.OPENROUTER_STATE])
         // Which parameters came, and how the state stood: names only, never the code or the state.
         Log.i(TAG, logLine(answer, match))
     }
