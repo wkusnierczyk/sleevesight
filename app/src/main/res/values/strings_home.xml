@@ -126,6 +126,8 @@
 
     <!-- Album art, progress and key data. -->
     <string name="home_art">Album art</string>
+    <!-- The cover of a video source's track (YouTube, #1257): the video's thumbnail. -->
+    <string name="home_art_video">Video thumbnail</string>
     <string name="home_progress">Playback position</string>
     <!-- A tap on the album art turns it over to show the album's tracklist on its back (#984). The
          art's action, as a screen reader names it ("Double-tap to show tracklist"). -->
