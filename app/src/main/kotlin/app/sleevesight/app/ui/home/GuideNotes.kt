@@ -46,14 +46,18 @@ import app.sleevesight.core.settings.SymbolOpens
 /**
  * The note on [part] (#627) as drawn, in the hand-drawn [style], marked as a link is ([LinkLook]),
  * since a tap on it opens its panel; its button is [GuideNote], laid over it. Not read on its own.
+ * The player's note follows what a tap on the symbol opens ([opens], #1445).
  */
 @Composable
 internal fun GuideNoteText(
     part: GuidePart,
     style: TextStyle,
     modifier: Modifier = Modifier,
+    opens: SymbolOpens = SymbolOpens.PLAYER_MENU,
 ) {
-    Box(modifier.testTag(guideNoteTextTag(part)).clearAndSetSemantics {}) { LinkLook(stringResource(part.note), style) }
+    Box(modifier.testTag(guideNoteTextTag(part)).clearAndSetSemantics {}) {
+        LinkLook(stringResource(part.note(opens)), style)
+    }
 }
 
 /**
@@ -61,15 +65,18 @@ internal fun GuideNoteText(
  * 48 dp high, reaching halfway to the notes above and below ([guideLayout]), whose tap opens the
  * note's panel ([onClick]; a second tap closes it). A screen reader reads it as a button, the part's
  * name before the note ("Settings: tap to configure, button"). [modifier] goes on the outside: a
- * focus requester, so the focus can come back to it from the panel's *Close*.
+ * focus requester, so the focus can come back to it from the panel's *Close*. The player's note
+ * follows what a tap on the symbol opens ([opens], #1445).
  */
 @Composable
 internal fun GuideNote(
     part: GuidePart,
     modifier: Modifier = Modifier,
+    opens: SymbolOpens = SymbolOpens.PLAYER_MENU,
     onClick: () -> Unit,
 ) {
-    val named = stringResource(R.string.home_guide_named_note, stringResource(part.label), stringResource(part.note))
+    val note = stringResource(part.note(opens))
+    val named = stringResource(R.string.home_guide_named_note, stringResource(part.label), note)
     Box(
         modifier
             .testTag(guideNoteTag(part))

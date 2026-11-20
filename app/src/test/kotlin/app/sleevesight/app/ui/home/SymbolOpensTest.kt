@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -49,7 +51,10 @@ class SymbolOpensTest {
             settings.value = settings.value?.copy(symbolOpens = SymbolOpens.PLAYER)
         }
 
-    private fun text(id: Int) = app.getString(id)
+    private fun text(
+        id: Int,
+        vararg args: Any,
+    ) = app.getString(id, *args)
 
     private fun symbol() = compose.onNodeWithTag(PLAYER_SYMBOL_TAG)
 
@@ -117,6 +122,25 @@ class SymbolOpensTest {
     }
 
     @Test
+    fun theGuidesShortNoteOnThePlayerFollowsTheChoice() {
+        val notes =
+            listOf(SymbolOpens.PLAYER_MENU to "tap for controls", SymbolOpens.PLAYER to "tap to open the player")
+        for ((opens, note) in notes) {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity {
+                    it.setContent { SleevesightTheme { GuidePicture(Modifier.fillMaxWidth(), opens) } }
+                }
+                // As drawn, and as a screen reader reads its button.
+                compose.onNodeWithText(note, useUnmergedTree = true).assertExists()
+                val named = text(R.string.home_guide_named_note, text(R.string.home_guide_part_player), note)
+                compose
+                    .onNodeWithTag(guideNoteTag(GuidePart.PLAYER))
+                    .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(named)))
+            }
+        }
+    }
+
+    @Test
     fun theGuidesNoteOnThePlayerHasALinePerChoice() {
         val menu =
             "Tap the note symbol at the top for the player menu: play, pause, skip, or switch players. " +
@@ -131,6 +155,8 @@ class SymbolOpensTest {
                 }
                 compose.onNodeWithTag(guideNoteTag(GuidePart.PLAYER)).performClick()
                 compose.onNodeWithText(line, substring = true).assertExists()
+                // The sentence on the record stays after either line.
+                compose.onNodeWithText("$line A tap on the record after the logo plays or pauses.").assertExists()
             }
         }
     }

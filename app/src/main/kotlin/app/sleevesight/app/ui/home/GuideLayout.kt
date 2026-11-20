@@ -42,6 +42,11 @@ internal enum class GuidePart(
     SOURCES(R.string.home_guide_note_sources, R.string.home_guide_part_sources, R.string.home_guide_about_sources),
     ;
 
+    /** [note], for the player as a tap on the note symbol opens the player menu or the player ([opens], #1445). */
+    @StringRes
+    fun note(opens: SymbolOpens): Int =
+        if (this == PLAYER && opens == SymbolOpens.PLAYER) R.string.home_guide_note_player_app else note
+
     /** [about], for the player as a tap on the note symbol opens the player menu or the player ([opens], #1445). */
     @StringRes
     fun about(opens: SymbolOpens): Int =

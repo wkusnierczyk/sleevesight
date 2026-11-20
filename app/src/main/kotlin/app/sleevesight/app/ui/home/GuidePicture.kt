@@ -140,7 +140,7 @@ internal fun GuidePicture(
                     .pointerInput(Unit) { detectTapGestures { magnified = true } },
                 picture::report,
             )
-            for (part in GuidePart.entries) GuideNoteText(part, hand, Modifier.layoutId(GuideNoteSlot(part)))
+            for (part in GuidePart.entries) GuideNoteText(part, hand, Modifier.layoutId(GuideNoteSlot(part)), opens)
             for (part in GuidePart.entries) {
                 GuideNote(
                     part,
@@ -148,6 +148,7 @@ internal fun GuidePicture(
                         .layoutId(part)
                         .semantics { traversalIndex = part.ordinal.toFloat() }
                         .handoffTarget(handoff, notes[part.ordinal]),
+                    opens,
                 ) { open = if (open == part) null else part }
             }
             GuideMarks(

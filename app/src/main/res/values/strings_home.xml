@@ -31,6 +31,8 @@
     <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
     <string name="home_guide_note_player">tap for controls</string>
+    <!-- home_guide_note_player with Settings → Players → What the symbol opens set to The player (#1445). -->
+    <string name="home_guide_note_player_app">tap to open the player</string>
     <string name="home_guide_note_cover">tap to see contents</string>
     <string name="home_guide_note_genres">tap to see the genres</string>
     <string name="home_guide_note_insight">read about what’s playing</string>
