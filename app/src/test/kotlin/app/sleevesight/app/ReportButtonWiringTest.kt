@@ -20,7 +20,6 @@ import app.sleevesight.app.ui.report.TESTER_REPORT_TAG
 import app.sleevesight.core.settings.ReportButton
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -74,10 +73,9 @@ class ReportButtonWiringTest {
     private val store by lazy { GatedStore(stores.open("settings")) }
 
     private fun stored() =
-        runBlocking {
-            app.graph.settings.settings
-                .first()
-        }.reportButton
+        app.graph.settings
+            .now()
+            .reportButton
 
     private fun buttons() = compose.onAllNodesWithTag(TESTER_REPORT_TAG).fetchSemanticsNodes().size
 
@@ -117,6 +115,14 @@ class ReportButtonWiringTest {
             compose.waitUntil(WAIT_MS) { buttons() == 0 }
 
             scenario.recreate()
+            // The new Home shows no button before its first read of the settings either: wait
+            // until it has been drawn from them.
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                var shown = false
+                scenario.onActivity { shown = it.testerReport.settingsShown }
+                shown
+            }
             compose.waitForIdle()
             assertEquals(ReportButton.HIDE, stored())
             assertEquals(0, buttons())

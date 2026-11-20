@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -130,7 +131,8 @@ class MainActivity : ComponentActivity() {
     }
 
     // What Home's tester report button reads (#452): what the app knows at the tap, never a key.
-    private val testerReport: TesterReportFeed by lazy {
+    @VisibleForTesting
+    internal val testerReport: TesterReportFeed by lazy {
         TesterReportFeed(
             settings = graph.settings.settings,
             // The menu's *Hide* (#518), saved in the process's scope.

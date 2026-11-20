@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.report
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -14,6 +15,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +55,15 @@ class TesterReportFeed(
     val hide: () -> Deferred<Boolean>,
     val reports: TesterReports,
     val mail: MailHandoff? = null,
-)
+) {
+    /**
+     * Whether Home has been drawn from the [settings] as read, not before their first read, when it
+     * shows no button either: for a test that checks the button is not there (#1479).
+     */
+    @VisibleForTesting
+    @Volatile
+    internal var settingsShown = false
+}
 
 /**
  * Home's report button as *Report button* has it (#518): [hideWhileScrolling] under *Auto*;
@@ -89,6 +99,7 @@ fun WithTesterReport(
     var hidden by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val scope = rememberCoroutineScope()
     val choice = settings?.takeIf { it.developerMode }?.reportButton ?: ReportButton.HIDE
+    SideEffect { if (settings != null) feed.settingsShown = true }
     content(
         if (choice == ReportButton.HIDE) {
             null
