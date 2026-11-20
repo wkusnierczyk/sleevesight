@@ -139,15 +139,26 @@ internal const val FILE_TEXT_SHOWN = 80
 /**
  * [text], taken from a settings file, as *Load settings?* shows it (#1482): without format
  * characters (Unicode's `Cf`: bidi overrides, zero-width marks), which could make a line read
- * otherwise than it is; and cut to [FILE_TEXT_SHOWN] characters, the last an ellipsis, if longer.
- * Counted by code points, so no character is cut in half.
+ * otherwise than it is; each control character (`Cc`: a line break, a tab) and line or paragraph
+ * separator (`Zl`, `Zp`) a space, so the line stays one and its words apart; and cut to
+ * [FILE_TEXT_SHOWN] characters, the last an ellipsis, if longer. Counted by code points, so no
+ * character is cut in half.
  */
 internal fun fileText(text: String): String {
-    val points = text.codePoints().filter { Character.getType(it) != Character.FORMAT.toInt() }.toArray()
+    val points =
+        text
+            .codePoints()
+            .filter { Character.getType(it) != Character.FORMAT.toInt() }
+            .map { if (Character.getType(it) in BREAKING) ' '.code else it }
+            .toArray()
     val kept = if (points.size > FILE_TEXT_SHOWN) points.copyOf(FILE_TEXT_SHOWN - 1) else points
     val shown = String(kept, 0, kept.size)
     return if (kept.size < points.size) "$shown\u2026" else shown
 }
+
+// The kinds of character [fileText] shows as a space: controls and line or paragraph separators.
+private val BREAKING =
+    setOf(Character.CONTROL, Character.LINE_SEPARATOR, Character.PARAGRAPH_SEPARATOR).map { it.toInt() }.toSet()
 
 /** A line under *Not loaded:* for a service the file switches on that stays off for want of its key. */
 @Composable

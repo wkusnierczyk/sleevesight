@@ -4,6 +4,7 @@ import app.sleevesight.core.settings.ReadAloudMusic
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -130,6 +131,35 @@ class ReadAloudVoicesTest {
         voices.load { told += it }
         // The phone's choice as the readings' language has it, not the engine's default language.
         assertEquals(listOf(VoicesLoad.Loaded(emptyList(), "default for en-GB"), VoicesLoad.NoEngine), told)
+    }
+
+    @Test
+    fun theEngineIsReleasedOnlyWhenItsLastHolderLetsGo() {
+        // An engine that opens later, and forgets who waits for it when closed, as Android's does.
+        val waiting = mutableListOf<(Boolean) -> Unit>()
+        var closes = 0
+        val slow =
+            object : Speech by speech {
+                override fun open(ready: (Boolean) -> Unit) {
+                    waiting += ready
+                }
+
+                override fun close() {
+                    closes++
+                    waiting.clear()
+                }
+            }
+        val shared = SystemReadAloudVoices(speechOf = { slow }, focus = focus, online = flowOf(true))
+        val told = mutableListOf<String>()
+        // *Voice*'s row and *Load settings?*' preview each load; the preview closes first.
+        shared.load { told += "row" }
+        shared.load { told += "preview" }
+        shared.close()
+        assertEquals(0, closes)
+        waiting.toList().forEach { it(true) }
+        assertTrue("row" in told)
+        shared.close()
+        assertEquals(1, closes)
     }
 
     // Samples through the readings' music focus (#803): music on another device whose volume the

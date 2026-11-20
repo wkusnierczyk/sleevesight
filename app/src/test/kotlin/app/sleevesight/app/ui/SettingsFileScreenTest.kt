@@ -472,4 +472,15 @@ class SettingsFileScreenTest {
             assertFalse(compose.onAllNodesWithText("\u202E", substring = true).fetchSemanticsNodes().isNotEmpty())
         }
     }
+
+    @Test
+    fun aKeyFromTheFileWithLineBreaksIsShownOnOneLine() {
+        // A line feed, a tab and a line separator: each a space (#1482).
+        val file =
+            """{"file": "Sleevesight settings", "format": 1, "settings": {"one\ntwo\tthree\u2028four": 1}}"""
+        screen {
+            openPreview(file)
+            assertTrue(shown("one two three four: not a setting this version knows"))
+        }
+    }
 }
