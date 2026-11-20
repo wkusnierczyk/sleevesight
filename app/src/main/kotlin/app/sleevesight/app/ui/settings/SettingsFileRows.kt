@@ -23,7 +23,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -171,7 +171,7 @@ private fun rememberSaver(
 ): ManagedActivityResultLauncher<String, Uri?> {
     val scope = rememberCoroutineScope()
     val messages = LocalMessages.current
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val current by rememberUpdatedState(settings)
     return rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri ?: return@rememberLauncherForActivityResult
@@ -181,12 +181,12 @@ private fun rememberSaver(
                 try {
                     access.files.write(uri, text)
                     val name = access.files.name(uri) ?: uri.lastPathSegment.orEmpty()
-                    context.getString(R.string.settings_save_file_done, name)
+                    resources.getString(R.string.settings_save_file_done, name)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
                     // An I/O error, or a file the picker no longer lets the app write.
-                    context.getString(R.string.settings_save_file_failed)
+                    resources.getString(R.string.settings_save_file_failed)
                 }
             messages?.show(said)
         }
@@ -204,7 +204,7 @@ private fun rememberLoader(
 ): ManagedActivityResultLauncher<Array<String>, Uri?> {
     val scope = rememberCoroutineScope()
     val messages = LocalMessages.current
-    val context = LocalContext.current
+    val resources = LocalResources.current
     return rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         scope.launch {
@@ -223,7 +223,7 @@ private fun rememberLoader(
                 } catch (_: Exception) {
                     R.string.settings_load_file_unreadable
                 }
-            failure?.let { messages?.show(context.getString(it)) }
+            failure?.let { messages?.show(resources.getString(it)) }
         }
     }
 }

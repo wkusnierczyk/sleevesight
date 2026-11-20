@@ -212,7 +212,7 @@ object SettingsFile {
                 null
             }
         val isOne =
-            (root?.get(KIND_KEY) as? JsonPrimitive)?.contentOrNull() == KIND && root?.get(SETTINGS_KEY) is JsonObject
+            (root?.get(KIND_KEY) as? JsonPrimitive)?.contentOrNull() == KIND && root[SETTINGS_KEY] is JsonObject
         return root.takeIf { isOne }
     }
 
