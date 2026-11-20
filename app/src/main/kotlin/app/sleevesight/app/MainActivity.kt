@@ -210,6 +210,7 @@ class MainActivity : ComponentActivity() {
                                         // Reactive's choice (#625): an automatic mode is the first action.
                                         chooseWritingMode = graph.chooseWritingMode,
                                         openRouter = OpenRouterAccess(graph.openRouterLogin, graph.keyRefusals),
+                                        readAloudVoices = graph.readAloudVoices,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
