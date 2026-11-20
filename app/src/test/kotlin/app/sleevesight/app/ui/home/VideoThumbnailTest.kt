@@ -1,0 +1,148 @@
+package app.sleevesight.app.ui.home
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * A video source's thumbnail without its black bars (#1257, [trimBars]): a 16:9 frame letterboxed in
+ * a 4:3 thumbnail comes out 16:9; a thumbnail without bars, one black all over, and one dark only at
+ * the top come out as they are.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class VideoThumbnailTest {
+    // A [width] by [height] thumbnail, black, with a grey picture between [bar] rows at the top and
+    // [bottom] at the bottom.
+    private fun thumbnail(
+        bar: Int,
+        bottom: Int = bar,
+        width: Int = WIDTH,
+        height: Int = HEIGHT,
+    ): Bitmap =
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+            val canvas = Canvas(this)
+            canvas.drawColor(Color.BLACK)
+            val grey = Paint().apply { color = GREY }
+            canvas.drawRect(0f, bar.toFloat(), width.toFloat(), (height - bottom).toFloat(), grey)
+        }
+
+    @Test
+    fun aFrameLetterboxedInAFourByThreeThumbnailComesOutSixteenByNine() {
+        val trimmed = trimBars(thumbnail(bar = 45))
+        assertEquals(WIDTH, trimmed.width)
+        assertEquals(270, trimmed.height)
+        assertEquals(16f / 9f, videoCoverRatio(trimmed), 0.001f)
+    }
+
+    @Test
+    fun aHardwareThumbnailIsReadFromACopyInMemory() {
+        // A hardware bitmap's pixels cannot be read (`getPixels` throws on the phone), and the player's
+        // art can be one (#1257). Robolectric makes no hardware bitmap, so the branch is taken by hand.
+        val art = thumbnail(bar = 45)
+        val copy = readablePixels(art, hardware = true)
+        assertNotSame(art, copy)
+        assertEquals(Bitmap.Config.ARGB_8888, copy?.config)
+        assertSame(art, readablePixels(art))
+    }
+
+    @Test
+    fun aThumbnailWhosePixelsCannotBeReadIsShownUntrimmed() {
+        val gone = thumbnail(bar = 45).apply { recycle() }
+        assertSame(gone, safeTrimBars(gone))
+    }
+
+    @Test
+    fun aWideThumbnailIsScannedNarrowAndCutAtItsFullWidth() {
+        val wide = trimBars(thumbnail(bar = 90, width = 1280, height = 900))
+        assertEquals(1280, wide.width)
+        assertEquals(720, wide.height)
+    }
+
+    @Test
+    fun aThumbnailWithoutBarsIsKeptAsItIs() {
+        val whole = thumbnail(bar = 0)
+        assertSame(whole, trimBars(whole))
+    }
+
+    @Test
+    fun anAllBlackThumbnailIsKeptAsItIs() {
+        val black = thumbnail(bar = HEIGHT / 2 + 1)
+        assertSame(black, trimBars(black))
+    }
+
+    @Test
+    fun aNightSceneDarkAtBothEdgesIsKeptAsItIs() {
+        // Dark rows at the top and the bottom alike, but what is left (480 by 300, 1.6:1) is no video's shape.
+        val night = thumbnail(bar = 30)
+        assertSame(night, trimBars(night))
+    }
+
+    @Test
+    fun aWidescreenFrameLetterboxedInAFourByThreeThumbnailComesOutAtItsOwnRatio() {
+        // 2.39:1 in 4:3: 480 by 200 left, within a few percent of 2.39.
+        val trimmed = trimBars(thumbnail(bar = 80))
+        assertEquals(200, trimmed.height)
+    }
+
+    @Test
+    fun aThumbnailAlreadySixteenByNineIsNotScanned() {
+        // As wide as the frame it would hold: dark edges there are the picture's.
+        val wide = thumbnail(bar = 60, width = 1280, height = 720)
+        assertSame(wide, trimBars(wide))
+    }
+
+    @Test
+    fun whileTrimmingAFourByThreeThumbnailShowsAtSixteenByNineAWideOneAtItsOwn() {
+        assertEquals(16f / 9f, untrimmedRatio(thumbnail(bar = 0)), 0.001f)
+        assertEquals(2f, untrimmedRatio(thumbnail(bar = 0, width = 720, height = 360)), 0.001f)
+    }
+
+    @Test
+    fun aFrameDarkOnlyAtTheTopIsKeptAsItIs() {
+        // A night sky, not a bar: no black rows at the bottom to match it.
+        val night = thumbnail(bar = 60, bottom = 0)
+        assertSame(night, trimBars(night))
+    }
+
+    @Test
+    fun unevenBarsAreTrimmedByTheShorterOfTheTwo() {
+        val trimmed = trimBars(thumbnail(bar = 50, bottom = 45))
+        assertEquals(HEIGHT - 90, trimmed.height)
+    }
+
+    @Test
+    fun barsLeavingTooThinAStripAreKept() {
+        // A thin line of picture in the middle: 30 of 360 rows, wider than the widest strip.
+        val thin = thumbnail(bar = 165)
+        assertSame(thin, trimBars(thin))
+    }
+
+    @Test
+    fun theBarHeightIsTheShorterOfTheBlackRowsAtTheTopAndAtTheBottom() {
+        assertEquals(3, barHeight(20) { it < 5 || it >= 17 })
+        assertEquals(0, barHeight(20) { it < 5 })
+        assertEquals(10, barHeight(20) { true })
+    }
+
+    @Test
+    fun theCoverIsSixteenByNineWithNoArtAndNeverNarrowerThanSquare() {
+        assertEquals(16f / 9f, videoCoverRatio(null), 0.001f)
+        // A Short's upright thumbnail: cropped square, as an album's cover.
+        assertEquals(1f, videoCoverRatio(thumbnail(bar = 0, width = 90, height = 160)), 0.001f)
+    }
+
+    private companion object {
+        const val WIDTH = 480
+        const val HEIGHT = 360
+        val GREY = Color.rgb(120, 130, 140)
+    }
+}
