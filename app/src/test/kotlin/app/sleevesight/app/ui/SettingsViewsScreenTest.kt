@@ -37,6 +37,7 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.LogoSpeed
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsView
 import app.sleevesight.core.settings.ThemeChoice
 import kotlinx.coroutines.CompletableDeferred
@@ -146,8 +147,7 @@ class SettingsViewsScreenTest {
             .config[SemanticsProperties.Text]
             .joinToString("") { it.text }
 
-    private fun set(transform: (app.sleevesight.core.settings.Settings) -> app.sleevesight.core.settings.Settings) =
-        runBlocking { settings.update(transform) }
+    private fun set(transform: (Settings) -> Settings) = runBlocking { settings.update(transform) }
 
     @Test
     fun eachViewShowsItsSettingsAndTheLargerOnesMore() {
@@ -239,6 +239,39 @@ class SettingsViewsScreenTest {
             compose.waitForIdle()
             assertEquals(0, count(SEARCH_NONE_TAG))
             assertEquals("1 more in All. Show\u00A0them", lineOf(SEARCH_MORE_TAG))
+        }
+    }
+
+    @Test
+    fun aShownSettingStaysWhileItIsSetBackToItsDefault() {
+        set { it.copy(settingsView = SettingsView.BASIC, musicBrainzWait = 30.seconds) }
+        show {
+            tap(SettingsSection.SOURCES.tag)
+            follow(HIDDEN_SHOW_TAG)
+            val wait = text(R.string.settings_musicbrainz_wait)
+            assertTrue(wait in rowsOf(SettingsSection.SOURCES))
+            // As a drag to the default stop saves it: the row stays, marked, and no line comes back.
+            set { it.copy(musicBrainzWait = Settings.DEFAULT_MUSICBRAINZ_WAIT) }
+            compose.waitForIdle()
+            assertTrue(wait in rowsOf(SettingsSection.SOURCES))
+            assertEquals(listOf("Not in Basic"), marks())
+            assertEquals(0, count(HIDDEN_LINE_TAG))
+        }
+    }
+
+    @Test
+    fun aLinkToAChangedSettingOutsideTheViewShowsItAndCountsItNoLongerHidden() {
+        set {
+            it.copy(
+                settingsView = SettingsView.BASIC,
+                aiModels = mapOf(ProviderId.ANTHROPIC to "claude-other"),
+            )
+        }
+        show(landOn = SettingsTarget.model(ProviderId.ANTHROPIC)) {
+            compose.waitUntil(WAIT_MS) { count(SettingsSection.AI_SERVICES.panelTag) == 1 }
+            val name = text(R.string.settings_ai_provider_anthropic)
+            assertTrue(app.getString(R.string.settings_ai_model_of, name) in rowsOf(SettingsSection.AI_SERVICES))
+            assertEquals(0, count(HIDDEN_LINE_TAG))
         }
     }
 

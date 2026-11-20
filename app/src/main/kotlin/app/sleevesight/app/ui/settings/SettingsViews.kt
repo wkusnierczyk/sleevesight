@@ -213,17 +213,15 @@ internal class RowView(
 
 /**
  * What [view] shows of the settings (#1447), by [views]: in each section, the rows in the view, and
- * those shown though outside it, marked: the changed ones of a section in [revealed] (its hidden
- * changes' *Show*), and those a link landed on ([landed], each by its section and title).
- * *Developer* has every row in every view. [index] has the rows each section draws now, which alone
- * count among its hidden changes.
+ * those [shown] though outside it, marked, each by its section and title: the hidden changes a
+ * *Show* showed and the rows a link landed on. *Developer* has every row in every view. [index] has
+ * the rows each section draws now, which alone count among its hidden changes.
  */
 internal class ViewShown(
     val view: SettingsView,
     private val views: SettingViews,
     private val index: List<IndexedSection>,
-    private val revealed: Set<SettingsSection> = emptySet(),
-    private val landed: Set<Pair<SettingsSection, String>> = emptySet(),
+    private val shown: Set<Pair<SettingsSection, String>> = emptySet(),
 ) {
     private fun rows(section: SettingsSection): Map<String, ViewedRow> = views[section].orEmpty()
 
@@ -239,17 +237,18 @@ internal class ViewShown(
             .orEmpty()
             .map { it.title }
 
-    /** [section]'s settings that differ from their defaults but are not in the view, revealed or not. */
-    fun hiddenChanges(section: SettingsSection): List<String> =
-        drawn(section).filter { !inView(section, it) && rows(section)[it]?.changed == true }
-
-    /** Whether [section]'s hidden changes are shown. */
-    fun revealed(section: SettingsSection): Boolean = section in revealed
+    /**
+     * [section]'s settings that differ from their defaults, not in the view and not shown: those its
+     * line says are hidden, and its *Show* shows.
+     */
+    fun hiddenChanges(section: SettingsSection): List<String> {
+        val outside = shownOutside(section)
+        return drawn(section).filter { !inView(section, it) && it !in outside && rows(section)[it]?.changed == true }
+    }
 
     // The rows of [section] shown though outside the view, but for a search's.
     private fun shownOutside(section: SettingsSection): Set<String> =
-        (if (section in revealed) hiddenChanges(section) else emptyList()).toSet() +
-            landed.filter { it.first == section }.map { it.second }
+        shown.filter { it.first == section }.map { it.second }.toSet()
 
     /** [section]'s rows as the view has them, [more] (a search's) shown too; null for *Developer*. */
     fun rowView(
@@ -299,24 +298,24 @@ internal class ViewSearch(
 }
 
 /**
- * What a visit to the settings shows outside the view (#1447), until the view changes: the
- * [sections] whose hidden changes are shown ([reveal]), and the rows a link landed on ([landed],
- * [land]). Saved with the screen, so a rotation keeps them.
+ * What a visit to the settings shows outside the view (#1447), until the view changes: the [rows],
+ * each by its section and title, a section's hidden changes' *Show* showed ([reveal]) and a link
+ * landed on ([land]). Kept by title, not by whether a row is still changed, so one set back to its
+ * default stays in sight while it is being changed. Saved with the screen, so a rotation keeps them.
  */
 @Stable
 internal class ViewReveals(
-    sections: Set<SettingsSection> = emptySet(),
-    landed: Set<Pair<SettingsSection, String>> = emptySet(),
+    rows: Set<Pair<SettingsSection, String>> = emptySet(),
 ) {
-    var sections by mutableStateOf(sections)
+    var rows by mutableStateOf(rows)
         private set
 
-    var landed by mutableStateOf(landed)
-        private set
-
-    /** Shows [section]'s hidden changes. */
-    fun reveal(section: SettingsSection) {
-        sections = sections + section
+    /** Shows [section]'s rows [titles], its hidden changes. */
+    fun reveal(
+        section: SettingsSection,
+        titles: List<String>,
+    ) {
+        rows = rows + titles.map { section to it }
     }
 
     /** Shows [section]'s row [title], which a link landed on. */
@@ -324,7 +323,7 @@ internal class ViewReveals(
         section: SettingsSection,
         title: String,
     ) {
-        landed = landed + (section to title)
+        rows = rows + (section to title)
     }
 
     /**
@@ -343,35 +342,26 @@ internal class ViewReveals(
             if (landing != null && title != null) land(landing.section, title)
         }
         val now = listOfNotNull(title?.let { landing.section to it })
-        return ViewShown(view, views, index, sections, landed + now)
+        return ViewShown(view, views, index, rows + now)
     }
 
     companion object {
-        /** Saved as a list: each section revealed by its name, each row landed on by its section's and its title. */
+        /** Saved as a list: each row by its section's name and its title. */
         val Saver: Saver<ViewReveals, ArrayList<String>> =
             Saver(
                 save = { reveals ->
-                    ArrayList(
-                        reveals.sections.map { "$SECTION${it.name}" } +
-                            reveals.landed.map { (section, title) -> "$ROW${section.name}$SEPARATOR$title" },
-                    )
+                    ArrayList(reveals.rows.map { (section, title) -> "${section.name}$SEPARATOR$title" })
                 },
                 restore = { saved ->
-                    val section = { name: String -> SettingsSection.entries.firstOrNull { it.name == name } }
                     ViewReveals(
-                        saved.filter { it.startsWith(SECTION) }.mapNotNull { section(it.drop(1)) }.toSet(),
                         saved
-                            .filter { it.startsWith(ROW) }
                             .mapNotNull { entry ->
-                                val (name, title) = entry.drop(1).split(SEPARATOR, limit = 2) + ""
-                                section(name)?.let { it to title }
+                                val (name, title) = entry.split(SEPARATOR, limit = 2) + ""
+                                SettingsSection.entries.firstOrNull { it.name == name }?.let { it to title }
                             }.toSet(),
                     )
                 },
             )
-
-        private const val SECTION = "s"
-        private const val ROW = "r"
 
         /** What parts a row's section and its title: the unit separator, never in a title. */
         private const val SEPARATOR = '\u001F'
@@ -387,17 +377,17 @@ internal fun rememberViewReveals(view: SettingsView): ViewReveals =
     rememberSaveable(view, saver = ViewReveals.Saver) { ViewReveals() }
 
 /**
- * At the top of [section]'s panel, its changed settings outside the view, while any are and they
- * are not shown yet ([HiddenChangesLine]); [onShow] shows them.
+ * At the top of [section]'s panel, its changed settings outside the view not shown yet, while any
+ * are ([HiddenChangesLine]); [onShow] is told them, to show.
  */
 @Composable
 internal fun HiddenChanges(
     byView: ViewShown,
     section: SettingsSection,
-    onShow: () -> Unit,
+    onShow: (List<String>) -> Unit,
 ) {
-    val hidden = byView.hiddenChanges(section).size
-    if (hidden > 0 && !byView.revealed(section)) HiddenChangesLine(hidden, onShow)
+    val hidden = byView.hiddenChanges(section)
+    if (hidden.isNotEmpty()) HiddenChangesLine(hidden.size) { onShow(hidden) }
 }
 
 /** The view, for the rows of the section drawn; null for none, as under *Developer*. */

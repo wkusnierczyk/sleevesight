@@ -701,7 +701,7 @@ private fun SettingsColumn(
         if (found != null && match == null) return
         FoldedSection(section, folds, chip, match, byView.rowView(section, shown.more(section))) {
             // Said only while not searching.
-            if (found == null) HiddenChanges(byView, section) { shown.reveal(section) }
+            if (found == null) HiddenChanges(byView, section) { shown.reveal(section, it) }
             content()
         }
     }
@@ -761,7 +761,7 @@ private class Found(
     val search: ViewSearch?,
     val byView: ViewShown,
     val showMore: Boolean,
-    val reveal: (SettingsSection) -> Unit,
+    val reveal: (SettingsSection, List<String>) -> Unit,
     val onShowMore: () -> Unit,
 ) {
     /** [section]'s matches outside the view once *Show them* shows them, else none. */

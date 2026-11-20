@@ -110,8 +110,10 @@ class SettingsViewsTest {
         val basic = ViewShown(SettingsView.BASIC, views, index)
         assertEquals(listOf(speed), basic.hiddenChanges(section))
         assertFalse(basic.rowView(section)!!.shows(speed))
-        val revealed = ViewShown(SettingsView.BASIC, views, index, revealed = setOf(section))
+        val revealed = ViewShown(SettingsView.BASIC, views, index, shown = setOf(section to speed))
         assertTrue(revealed.rowView(section)!!.marked(speed))
+        // Shown, it is no longer among the hidden ones.
+        assertEquals(emptyList<String>(), revealed.hiddenChanges(section))
         // In *All*, nothing is hidden, and nothing marked.
         val all = ViewShown(SettingsView.ALL, views, index)
         assertEquals(emptyList<String>(), all.hiddenChanges(section))
