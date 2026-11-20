@@ -117,6 +117,20 @@ class HeaderLogoFlashTest {
             iconShown(false)
         }
 
+    // Codex review of #1463: a stream's next song under one media id keeps the play tag
+    // (`TrackIdentity.merged`); its new title is a new track all the same.
+    @Test
+    fun aStreamsNextSongUnderTheSamePlayTagShowsTheLogo() =
+        paused {
+            change { home.track.value = song("Carefree Highway", play = 1) }
+            iconShown(true)
+            pastTheFlash()
+            iconShown(false)
+            // The same song again, its artists filled in: no change.
+            change { home.track.value = song("Carefree Highway", play = 1, artists = "Gordon Lightfoot, Band") }
+            iconShown(false)
+        }
+
     @Test
     fun aSkipWhilePausedShowsTheLogoToo() {
         home.playback.value = PlaybackInfo(SPOTIFY, PlaybackStatus.PAUSED, actions = ALL)

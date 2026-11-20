@@ -15,10 +15,11 @@ import kotlinx.coroutines.delay
 
 // The header symbol's flash of the player's logo (#1440, #1445): when it shows, and for how long.
 
-// A track as the flash tells one from another (#1445): its player and its play, which every report
-// of one play shares, else its title; none for no track.
+// A track as the flash tells one from another (#1445): its player, its play, which every report of
+// one play shares, and its title, since a stream's next song can keep the play of the one before
+// (`TrackIdentity.merged`, one media id); none for no track. Artists filled in are no change.
 internal fun trackOf(nowPlaying: NowPlaying?): Pair<String, Any>? =
-    nowPlaying?.let { it.player to (it.play ?: it.title) }
+    nowPlaying?.let { it.player to (it.play to it.title) }
 
 /**
  * The player whose own icon the symbol shows now, or null for the note (#1440, #1445): [player], for
