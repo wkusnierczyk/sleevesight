@@ -7,7 +7,9 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.LogoSpeed
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.ThemeChoice
+import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -81,7 +83,11 @@ class SettingsLoadTest {
                     }
                 val shown = store.settings.first()
                 val saved =
-                    load(shown, contents(Settings(writeAutomatically = WriteAutomatically.NEVER)), "1 setting loaded.")
+                    load(
+                        shown,
+                        contents(Settings(writeAutomatically = WriteAutomatically.NEVER)),
+                        LoadMessage("1 setting loaded."),
+                    )
                 assertEquals(listOf(WriteAutomatically.NEVER), told)
                 assertTrue(saved.await())
                 assertEquals(listOf<WriteAutomatically?>(WriteAutomatically.NEVER), settled)
@@ -109,7 +115,7 @@ class SettingsLoadTest {
                         {}
                     }
                 val noMode = """{"file": "Sleevesight settings", "format": 1, "settings": {"theme": "DARK"}}"""
-                assertTrue(load(store.settings.first(), SettingsFile.read(noMode)!!, "").await())
+                assertTrue(load(store.settings.first(), SettingsFile.read(noMode)!!, LoadMessage("")).await())
                 assertEquals(emptyList<WriteAutomatically>(), told)
             } finally {
                 saves.cancel()
@@ -143,7 +149,7 @@ class SettingsLoadTest {
                 val shown = store.settings.first()
                 assertEquals(WriteAutomatically.NEVER, shown.writeAutomatically)
                 val file = Settings(writeAutomatically = WriteAutomatically.NEVER, theme = ThemeChoice.DARK)
-                val saved = store.loader(saves, chosen = chosen)(shown, contents(file), "")
+                val saved = store.loader(saves, chosen = chosen)(shown, contents(file), LoadMessage(""))
                 // The file's mode is the last choice, as its save comes last.
                 assertEquals(listOf(WriteAutomatically.ON_EVERY_TRACK_CHANGE, WriteAutomatically.NEVER), told)
                 gate.complete(Unit)
@@ -191,4 +197,68 @@ class SettingsLoadTest {
             assertEquals(45.minutes, now.sessionGap)
             assertEquals(2.days, now.cacheLifetimes[SourceId.WEB])
         }
+
+    @Test
+    fun aLoadThatSavesOtherThanThePreviewSaysWhatItSaved() =
+        runBlocking {
+            val store = memorySettings()
+            store.update { it.copy(historyLifetime = 90.days) }
+            val saves = CoroutineScope(Job() + Dispatchers.Unconfined)
+            try {
+                val shown = store.settings.first()
+                val file = contents(Settings(historyLifetime = 180.days))
+                val previewed = loadPlan(file, shown, emptySet())
+                assertEquals(180.days, previewed.settings.historyLifetime)
+                // *Forever* chosen just before, its save held: the preview still shows 90 days.
+                val gate = CompletableDeferred<Unit>()
+                store.saving(saves) {
+                    gate.await()
+                    store.update { it.copy(historyLifetime = null) }
+                }
+                val message =
+                    LoadMessage("1 setting loaded.", SettingsFile.changes(shown, previewed.settings), 0) { n, k ->
+                        "$n loaded, $k skipped"
+                    }
+                val saved = store.loader(saves)(shown, file, message)
+                gate.complete(Unit)
+                assertTrue(saved.await())
+                // 180 days would shorten *Forever*: not loaded, and the message says so.
+                assertEquals(null, store.settings.first().historyLifetime)
+                // The preview's other changes, if any, all saved; *Keep history for* not.
+                assertEquals(
+                    "${message.expected!!.size - 1} loaded, 1 skipped",
+                    store.resets.pending.value
+                        ?.message,
+                )
+            } finally {
+                saves.cancel()
+            }
+        }
+
+    @Test
+    fun webSearchAndItsEnginesLoadOnlyAsTheirRowsShowThem() {
+        val web = SourceSwitch.WEB
+        val exa = WebEngine.EXA
+
+        fun at(
+            webOn: Boolean,
+            exaOn: Boolean,
+        ) = Settings(
+            enabledSources = Settings.DEFAULT_SOURCES.let { if (webOn) it + web else it - web },
+            webEngines = if (exaOn) setOf(exa) else emptySet(),
+        )
+        val all = listOf(false to false, false to true, true to false, true to true)
+        for ((nowWeb, nowExa) in all) {
+            for ((fileWeb, fileExa) in all) {
+                val now = at(nowWeb, nowExa)
+                val loaded = loadPlan(contents(at(fileWeb, fileExa)), now, emptySet()).settings
+                val rowNow = nowWeb && nowExa
+                val rowFile = fileWeb && fileExa
+                val case = "now $nowWeb/$nowExa, file $fileWeb/$fileExa"
+                // The row as the file has it; nothing else of web search changed unless the row did.
+                assertEquals(case, rowFile, web in loaded.enabledSources && exa in loaded.webEngines)
+                if (rowNow == rowFile) assertEquals(case, now, loaded)
+            }
+        }
+    }
 }

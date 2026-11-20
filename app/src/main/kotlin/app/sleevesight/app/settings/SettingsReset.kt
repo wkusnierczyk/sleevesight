@@ -152,9 +152,12 @@ class Resets {
      */
     class Pending(
         val saved: Deferred<Boolean>,
-        val message: String? = null,
+        private val said: () -> String? = { null },
     ) {
         internal val told = AtomicBoolean(false)
+
+        /** What to say once [saved]: a load's message as its save decided it (#815). */
+        val message: String? get() = said()
     }
 
     /** The last reset asked for, and each one after it. */
@@ -162,7 +165,7 @@ class Resets {
 
     internal fun saving(
         saved: Deferred<Boolean>,
-        message: String? = null,
+        message: () -> String? = { null },
     ) {
         last.value = Pending(saved, message)
     }

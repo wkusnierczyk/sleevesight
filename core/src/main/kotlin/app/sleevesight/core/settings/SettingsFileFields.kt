@@ -86,27 +86,42 @@ private fun switch(
     set: Settings.(Boolean) -> Settings,
 ) = one(name, of, ::JsonPrimitive, { parsed(boolOf(it)) }, set)
 
-private inline fun <reified E : Enum<E>> choice(
-    name: String,
-    noinline of: (Settings) -> E,
-    noinline set: Settings.(E) -> Settings,
-) = one(name, of, { JsonPrimitive(it.name) }, { parsed(enumNamed<E>(it)) }, set)
+// No inline functions with type parameters known at run time here: the lambdas of such a
+// function's own body are classes too, which ART initializes (`ClassInitializationTest`), and one
+// that calls such a function throws there.
 
-private inline fun <reified E : Enum<E>> enumNamed(value: JsonElement): E? {
+/** A choice, one of [entries] by its name. */
+private fun <E : Enum<E>> choice(
+    name: String,
+    entries: List<E>,
+    of: (Settings) -> E,
+    set: Settings.(E) -> Settings,
+) = one(name, of, { JsonPrimitive(it.name) }, { parsed(enumNamed(it, entries)) }, set)
+
+/** The one of [entries] that [value] names, or null. */
+private fun <E : Enum<E>> enumNamed(
+    value: JsonElement,
+    entries: Collection<E>,
+): E? {
     val text = (value as? JsonPrimitive)?.contentOrNull() ?: return null
-    return enumValues<E>().firstOrNull { it.name == text }
+    return enumKey(text, entries)
 }
 
-private inline fun <reified E : Enum<E>> enumKey(name: String): E? = enumValues<E>().firstOrNull { it.name == name }
+/** The one of [entries] named [name], or null. */
+private fun <E : Enum<E>> enumKey(
+    name: String,
+    entries: Collection<E>,
+): E? = entries.firstOrNull { it.name == name }
 
 private fun text(value: JsonElement): String? = (value as? JsonPrimitive)?.contentOrNull()
 
 private fun nullable(value: String?): JsonElement = value?.let(::JsonPrimitive) ?: JsonNull
 
 /**
- * A duration as a file has it (`90d`, `15s`), only where it is finite and a whole number of [unit]:
- * the store keeps milliseconds, and a slider's stops are whole days or minutes, so anything finer
- * would not read back as written, or not show as it is.
+ * A duration as a file has it (`90d`, `15s`), only where it is finite, at most
+ * [SettingsFile.MAX_TIME], and a whole number of [unit]: the store keeps milliseconds, and a
+ * slider's stops are whole days or minutes, so anything finer would not read back as written, or
+ * not show as it is.
  */
 private fun durationOf(
     value: JsonElement,
@@ -116,6 +131,7 @@ private fun durationOf(
         ?.let { Duration.parseOrNull(it) }
         ?.takeIf {
             it.isFinite() &&
+                it <= SettingsFile.MAX_TIME &&
                 it == it.inWholeMilliseconds.milliseconds &&
                 it.inWholeMilliseconds % unit.inWholeMilliseconds == 0L
         }
@@ -145,11 +161,11 @@ private fun duration(
  * unknown here or not offered is skipped, an offered one not named is off, and one not offered keeps
  * its value.
  */
-private inline fun <reified E : Enum<E>> switches(
+private fun <E : Enum<E>> switches(
     name: String,
     offered: Set<E>,
-    noinline of: (Settings) -> Set<E>,
-    noinline set: Settings.(Set<E>) -> Settings,
+    of: (Settings) -> Set<E>,
+    set: Settings.(Set<E>) -> Settings,
 ) = Field(
     name,
     write = { s -> JsonArray(of(s).filter { it in offered }.sortedBy { it.ordinal }.map { JsonPrimitive(it.name) }) },
@@ -158,11 +174,11 @@ private inline fun <reified E : Enum<E>> switches(
         if (items == null) {
             FieldRead(null, listOf(invalid(name, value)))
         } else {
-            val known = items.mapNotNull { enumNamed<E>(it)?.takeIf { e -> e in offered } }.toSet()
+            val known = items.mapNotNull { enumNamed(it, offered)?.takeIf { e -> e in offered } }.toSet()
             val skipped =
                 items
                     .filter {
-                        enumNamed<E>(it)?.takeIf { e ->
+                        enumNamed(it, offered)?.takeIf { e ->
                             e in offered
                         } == null
                     }.map { invalid(name, it, shown(it)) }
@@ -244,7 +260,7 @@ private fun players(): Field =
 internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
     val providers = offered.providers
     return listOf(
-        choice("layout", { it.layout }) { copy(layout = it) },
+        choice("layout", Layout.entries, { it.layout }) { copy(layout = it) },
         one(
             "aiProvider",
             { it.aiProvider?.takeIf { p -> p in providers } },
@@ -255,7 +271,7 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
                         null,
                     )
                 } else {
-                    enumNamed<ProviderId>(v)?.takeIf { it in providers }?.let { Parsed(it) }
+                    enumNamed(v, ProviderId.entries)?.takeIf { it in providers }?.let { Parsed(it) }
                 }
             },
         ) { copy(aiProvider = it) },
@@ -268,7 +284,11 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
                 }
             },
             { k, v ->
-                val provider = enumKey<ProviderId>(k)?.takeIf { it in providers && it in Settings.DEFAULT_MODELS }
+                val provider =
+                    enumKey(
+                        k,
+                        ProviderId.entries,
+                    )?.takeIf { it in providers && it in Settings.DEFAULT_MODELS }
                 val model = shortText(v)
                 if (provider != null && model != null) Parsed(provider to model) else null
             },
@@ -291,25 +311,33 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
                 }
             },
             { k, v ->
-                val provider = enumKey<ProviderId>(k)?.takeIf { it in providers }
+                val provider = enumKey(k, ProviderId.entries)?.takeIf { it in providers }
                 val levels = provider?.let { Settings.EFFORT_SCALES[it]?.levels }
                 when {
                     levels == null -> null
                     v is JsonNull -> Parsed(provider to null)
-                    else -> enumNamed<ReasoningEffort>(v)?.takeIf { it in levels }?.let { Parsed(provider to it) }
+                    else ->
+                        enumNamed(
+                            v,
+                            ReasoningEffort.entries,
+                        )?.takeIf { it in levels }?.let { Parsed(provider to it) }
                 }
             },
         ) { _, (provider, effort) -> withEffort(provider, effort) },
         players(),
         switch("onlyEnabledPlayersOnHome", { it.onlyEnabledPlayersOnHome }) { copy(onlyEnabledPlayersOnHome = it) },
         switch("showPlayerLogo", { it.showPlayerLogo }) { copy(showPlayerLogo = it) },
-        choice("symbolOpens", { it.symbolOpens }) { copy(symbolOpens = it) },
+        choice("symbolOpens", SymbolOpens.entries, { it.symbolOpens }) { copy(symbolOpens = it) },
         switches("enabledSources", offered.sourceSwitches, { it.enabledSources }) { copy(enabledSources = it) },
         switches("webEngines", WebEngine.entries.toSet(), { it.webEngines }) { copy(webEngines = it) },
         switches("labelSources", LabelSource.entries.toSet(), { it.labelSources }) { copy(labelSources = it) },
         switch("showGenres", { it.showGenres }) { copy(showGenres = it) },
         switch("writeInsights", { it.writeInsights }) { copy(writeInsights = it) },
-        choice("writeAutomatically", { it.writeAutomatically }) { copy(writeAutomatically = it) },
+        choice(
+            "writeAutomatically",
+            WriteAutomatically.entries,
+            { it.writeAutomatically },
+        ) { copy(writeAutomatically = it) },
         one(
             "pauseAutoWriteAfter",
             { it.pauseAutoWriteAfter },
@@ -340,7 +368,7 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
                 }
             },
         ) { copy(crossfade = it) },
-        choice("prepareNextTrack", { it.prepareNextTrack }) { copy(prepareNextTrack = it) },
+        choice("prepareNextTrack", PrepareNextTrack.entries, { it.prepareNextTrack }) { copy(prepareNextTrack = it) },
         switch("lookUpInBackground", { it.lookUpInBackground }) { copy(lookUpInBackground = it) },
         switch("artistFactsOncePerSession", { it.artistFactsOncePerSession }) { copy(artistFactsOncePerSession = it) },
         one(
@@ -365,12 +393,14 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
                 }
             },
         ) { copy(readAloudVoice = it) },
-        choice("readAloudMusic", { it.readAloudMusic }) { copy(readAloudMusic = it) },
+        choice("readAloudMusic", ReadAloudMusic.entries, { it.readAloudMusic }) { copy(readAloudMusic = it) },
         switch("readTrackLineFirst", { it.readTrackLineFirst }) { copy(readTrackLineFirst = it) },
         switch("readNewInsightsAloud", { it.readNewInsightsAloud }) { copy(readNewInsightsAloud = it) },
         switch("searchWithAi", { it.searchWithAi }) { copy(searchWithAi = it) },
-        choice("aiWebSearch", { it.aiWebSearch }) { copy(aiWebSearch = it) },
-        choice("trackLanguageSearch", { it.trackLanguageSearch }) { copy(trackLanguageSearch = it) },
+        choice("aiWebSearch", AiWebSearch.entries, { it.aiWebSearch }) { copy(aiWebSearch = it) },
+        choice("trackLanguageSearch", TrackLanguageSearch.entries, {
+            it.trackLanguageSearch
+        }) { copy(trackLanguageSearch = it) },
         duration("musicBrainzWait", { it.musicBrainzWait }, { it in Settings.MUSICBRAINZ_WAITS }) {
             copy(musicBrainzWait = it)
         },
@@ -386,7 +416,7 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
             },
             { k, v ->
                 val source =
-                    enumKey<SourceId>(k)?.takeIf {
+                    enumKey(k, SourceId.entries)?.takeIf {
                         it in offered.cacheSources &&
                             it in Settings.DEFAULT_CACHE_LIFETIMES
                     }
@@ -409,26 +439,28 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
                 }
             },
         ) { copy(historyLifetime = it) },
-        choice("lookUpAfterClear", { it.lookUpAfterClear }) { copy(lookUpAfterClear = it) },
+        choice("lookUpAfterClear", LookUpAfterClear.entries, { it.lookUpAfterClear }) { copy(lookUpAfterClear = it) },
         duration("sessionGap", { it.sessionGap }, { it.isPositive() }, 1.minutes) { copy(sessionGap = it) },
-        choice("sourcesOnNewTrack", { it.sourcesOnNewTrack }) { copy(sourcesOnNewTrack = it) },
-        choice("itemsOnNewTrack", { it.itemsOnNewTrack }) { copy(itemsOnNewTrack = it) },
+        choice("sourcesOnNewTrack", NewTrackFold.entries, { it.sourcesOnNewTrack }) { copy(sourcesOnNewTrack = it) },
+        choice("itemsOnNewTrack", NewTrackFold.entries, { it.itemsOnNewTrack }) { copy(itemsOnNewTrack = it) },
         switch("onePanel", { it.onePanel }) { copy(onePanel = it) },
         switch("lyricsLinks", { it.lyricsLinks }) { copy(lyricsLinks = it) },
         switch("lyricsSearch", { it.lyricsSearch }) { copy(lyricsSearch = it) },
         switch("showPhoneName", { it.showPhoneName }) { copy(showPhoneName = it) },
         switch("showDiagnostics", { it.showDiagnostics }) { copy(showDiagnostics = it) },
         switch("showGroundingDetails", { it.showGroundingDetails }) { copy(showGroundingDetails = it) },
-        choice("reportButton", { it.reportButton }) { copy(reportButton = it) },
-        choice("linkStyle", { it.linkStyle }) { copy(linkStyle = it) },
+        choice("reportButton", ReportButton.entries, { it.reportButton }) { copy(reportButton = it) },
+        choice("linkStyle", LinkStyle.entries, { it.linkStyle }) { copy(linkStyle = it) },
         switch("markDeveloperItems", { it.markDeveloperItems }) { copy(markDeveloperItems = it) },
         switch("foldDescriptions", { it.foldDescriptions }) { copy(foldDescriptions = it) },
-        choice("descriptionsOnReturn", { it.descriptionsOnReturn }) { copy(descriptionsOnReturn = it) },
-        choice("theme", { it.theme }) { copy(theme = it) },
+        choice("descriptionsOnReturn", DescriptionsOnReturn.entries, {
+            it.descriptionsOnReturn
+        }) { copy(descriptionsOnReturn = it) },
+        choice("theme", ThemeChoice.entries, { it.theme }) { copy(theme = it) },
         switch("themeButton", { it.themeButton }) { copy(themeButton = it) },
-        choice("font", { it.font }) { copy(font = it) },
+        choice("font", FontChoice.entries, { it.font }) { copy(font = it) },
         switch("introAtStart", { it.introAtStart }) { copy(introAtStart = it) },
         switch("spinLogo", { it.spinLogo }) { copy(spinLogo = it) },
-        choice("logoSpeed", { it.logoSpeed }) { copy(logoSpeed = it) },
+        choice("logoSpeed", LogoSpeed.entries, { it.logoSpeed }) { copy(logoSpeed = it) },
     )
 }

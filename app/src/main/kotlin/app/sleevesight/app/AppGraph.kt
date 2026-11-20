@@ -77,6 +77,7 @@ import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.ListedModelNames
+import app.sleevesight.app.settings.LoadMessage
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
@@ -874,7 +875,7 @@ class AppGraph internal constructor(
     val loadSettings: (
         Settings,
         SettingsFile.Contents,
-        String,
+        LoadMessage,
     ) -> Deferred<Boolean> by lazy { settings.loader(settingsSaves, { secrets.missing() }, pipeline::modeChosen) }
 
     /**

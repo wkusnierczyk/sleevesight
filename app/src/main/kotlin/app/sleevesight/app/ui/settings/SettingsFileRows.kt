@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.settings
 
 import android.content.ContentResolver
+import android.content.res.Resources
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -31,6 +32,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.settings.LoadMessage
 import app.sleevesight.app.settings.loadPlan
 import app.sleevesight.app.ui.theme.DialogPills
 import app.sleevesight.app.ui.theme.LocalMessages
@@ -118,7 +120,7 @@ internal class SettingsFileAccess(
     val files: SettingsFiles,
     val appVersion: String,
     val missing: Set<SecretId>,
-    val load: (shown: Settings, contents: SettingsFile.Contents, message: String) -> Deferred<Boolean>,
+    val load: (shown: Settings, contents: SettingsFile.Contents, message: LoadMessage) -> Deferred<Boolean>,
     val today: () -> LocalDate = LocalDate::now,
 )
 
@@ -253,12 +255,14 @@ private fun LoadPreview(
     val plan = loadPlan(contents, settings, access.missing)
     val changes = loadChanges(settings, plan.settings, modelName, playerLabel)
     val skipped = plan.skipped.map { skippedLine(it) } + plan.keyless.map { keylessLine(it) }
+    val resources = LocalResources.current
+    // As the preview has it, unless what is saved differs: a save ahead of it changed the settings.
     val message =
-        if (skipped.isEmpty()) {
-            pluralStringResource(R.plurals.settings_load_file_done, changes.size, changes.size)
-        } else {
-            pluralStringResource(R.plurals.settings_load_file_done_skipped, changes.size, changes.size, skipped.size)
-        }
+        LoadMessage(
+            loadedMessage(resources, changes.size, skipped.size),
+            SettingsFile.changes(settings, plan.settings),
+            skipped.size,
+        ) { loaded, notLoaded -> loadedMessage(resources, loaded, notLoaded) }
     LoadDialog(
         from =
             contents.appVersion?.let { stringResource(R.string.settings_load_file_from, name, it) }
@@ -273,6 +277,18 @@ private fun LoadPreview(
         onDismiss = onClose,
     )
 }
+
+/** *{n} settings loaded.*, or with [skipped] items not loaded, *…, {k} skipped.* */
+private fun loadedMessage(
+    resources: Resources,
+    loaded: Int,
+    skipped: Int,
+): String =
+    if (skipped == 0) {
+        resources.getQuantityString(R.plurals.settings_load_file_done, loaded, loaded)
+    } else {
+        resources.getQuantityString(R.plurals.settings_load_file_done_skipped, loaded, loaded, skipped)
+    }
 
 /**
  * *Load settings?* (#815): [from], the file and the version that saved it; [changes], each setting

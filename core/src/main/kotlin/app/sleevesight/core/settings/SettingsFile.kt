@@ -10,6 +10,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 /**
  * *Save to a file* and *Load from a file* (#815): the settings as a readable JSON file the user keeps
@@ -46,6 +47,11 @@ object SettingsFile {
      * most [MAX_TEXT] characters, a file of them all stays well under [MAX_BYTES].
      */
     const val MAX_PLAYERS: Int = 100
+
+    /** The longest time a file's setting holds: ten years, far beyond what any slider offers. */
+    val MAX_TIME: Duration = MAX_TIME_DAYS.days
+
+    private const val MAX_TIME_DAYS = 3650
 
     /** The longest text a file's setting holds: a player's package name, a model, a voice. */
     const val MAX_TEXT: Int = 255
@@ -271,4 +277,17 @@ object SettingsFile {
 
     /** The names of the settings a file holds, in their order. */
     val NAMES: List<String> = settingsFileFields(Offered()).map { it.name }
+
+    /**
+     * The settings [to] has off [from], each by its name with its value in [to] as a file has it (JSON): what
+     * a load changes, to tell whether the load saved is the one previewed.
+     */
+    fun changes(
+        from: Settings,
+        to: Settings,
+    ): Map<String, String> =
+        settingsFileFields(Offered())
+            .mapNotNull { field ->
+                field.write(to).takeIf { it != field.write(from) }?.let { field.name to it.toString() }
+            }.toMap()
 }

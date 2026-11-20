@@ -45,6 +45,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.secrets.missing
 import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
+import app.sleevesight.app.settings.LoadMessage
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.settings.loader
 import app.sleevesight.app.settings.resetOf
@@ -136,7 +137,7 @@ fun SettingsScreen(
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     openRouter: OpenRouterAccess? = null,
     resetSettings: ((Settings, Boolean) -> Deferred<Boolean>)? = null,
-    loadSettings: ((Settings, SettingsFile.Contents, String) -> Deferred<Boolean>)? = null,
+    loadSettings: ((Settings, SettingsFile.Contents, LoadMessage) -> Deferred<Boolean>)? = null,
     settingsFiles: SettingsFiles? = null,
     readAloudVoices: ReadAloudVoices? = null,
     playerLabel: (String) -> String,
@@ -357,7 +358,7 @@ private fun CoroutineScope.fileAccess(
     store: SettingsStore,
     secrets: SecretStore,
     missing: Set<SecretId>,
-    load: ((Settings, SettingsFile.Contents, String) -> Deferred<Boolean>)?,
+    load: ((Settings, SettingsFile.Contents, LoadMessage) -> Deferred<Boolean>)?,
     files: SettingsFiles?,
     saves: CoroutineScope,
     failed: (Boolean) -> Unit,

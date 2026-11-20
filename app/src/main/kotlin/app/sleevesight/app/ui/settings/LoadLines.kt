@@ -5,7 +5,6 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.settings.Keyless
 import app.sleevesight.core.model.ProviderId
-import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
 import kotlin.time.Duration
@@ -99,18 +98,23 @@ private val TIME_FIELDS = setOf("sessionGap", "historyLifetime", "cacheLifetimes
 
 /**
  * [value], as a file has it for [field], shown as the settings show such a value where it is a time
- * in whole seconds (*90 s*, *2 hours*); else as in the file.
+ * in whole seconds, up to [SettingsFile.MAX_TIME] (*90 s*, *2 hours*); else as in the file. Made
+ * from the time alone, never from a setting's value: a rejected one need not be valid (*Crossfade*
+ * at 20 s).
  */
 @Composable
 private fun fileValueLabel(
     field: String,
     value: String,
 ): String {
-    val time = Duration.parseOrNull(value)?.takeIf { it.isPositive() && it == it.inWholeSeconds.seconds }
+    val time =
+        Duration.parseOrNull(value)?.takeIf {
+            it.isPositive() && it <= SettingsFile.MAX_TIME && it == it.inWholeSeconds.seconds
+        }
     return when {
         time == null -> value
         field in STOP_FIELDS -> stopLabel(time, value)
-        field == "crossfade" -> crossfadeLabel(Crossfade.Fixed(time))
+        field == "crossfade" -> stringResource(R.string.settings_crossfade_seconds, time.inWholeSeconds.toInt())
         field in TIME_FIELDS -> durationLabel(time)
         else -> value
     }

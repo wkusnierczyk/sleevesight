@@ -387,4 +387,26 @@ class SettingsFileTest {
         assertEquals(settings.followedPlayers, loaded.settings.followedPlayers)
         assertEquals(worst, loaded.settings.model(ProviderId.ANTHROPIC))
     }
+
+    @Test
+    fun aTimeLongerThanTheMostAFileHoldsIsSkipped() {
+        val contents =
+            assertNotNull(
+                SettingsFile.read(
+                    file(
+                        "historyLifetime" to "\"3651d\"",
+                        "sessionGap" to "\"99999d\"",
+                    ),
+                ),
+            )
+        assertEquals(2, contents.skipped.size)
+        assertEquals(defaults, SettingsFile.load(contents, defaults, false).settings)
+    }
+
+    @Test
+    fun theChangesAreEachSettingThatDiffersWithItsNewValue() {
+        val changes = SettingsFile.changes(defaults, defaults.copy(theme = ThemeChoice.DARK, spinLogo = false))
+        assertEquals(mapOf("theme" to "\"DARK\"", "spinLogo" to "false"), changes)
+        assertEquals(emptyMap(), SettingsFile.changes(moved, moved))
+    }
 }
