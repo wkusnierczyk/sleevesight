@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -45,8 +46,29 @@ enum class SignInFailure {
     /** OpenRouter refused the code after its ten minutes. */
     EXPIRED,
 
-    /** OpenRouter refused the code, or answered with no key, or the key could not be saved. */
+    /**
+     * OpenRouter refused the code, or answered with no key, or the key could not be saved; or its
+     * answer carried another sign-in's state.
+     */
     REFUSED,
+}
+
+/** How an answer at the callback stood to the sign-in under way, for the log (#1396). */
+internal enum class StateMatch {
+    /** It carried the sign-in's state back (as `s`, as `state`, or as both, agreeing). */
+    MATCHED,
+
+    /** It carried no state, taken while one sign-in is under way: the code needs its verifier. */
+    MISSING,
+
+    /**
+     * It carried another state (as either parameter, or the two disagreeing): not taken, and the
+     * sign-in ends as not finished.
+     */
+    DIFFERED,
+
+    /** No sign-in was under way: ignored. */
+    NO_SIGN_IN,
 }
 
 /**
@@ -59,7 +81,10 @@ enum class SignInFailure {
  * The verifier is kept only here, in memory, and in the activity's saved state ([pending],
  * [restore]), so a process ended while the browser is open still finishes; it is dropped once a code
  * comes or the sign-in fails, so a code sent again, or with no sign-in under way, is ignored. One
- * sign-in at a time: a new one replaces the one before.
+ * sign-in at a time: a new one replaces the one before. An answer with no state is taken for the one
+ * under way (#1396: the redirect may drop the callback's own query): with PKCE, a code issued for
+ * another sign-in's challenge is refused at the exchange; one for this challenge needs the `/auth`
+ * URL, which carries the state too.
  *
  * @param signIn OpenRouter's sign-in.
  * @param save stores the key and switches OpenRouter on; false when the key could not be stored.
@@ -121,20 +146,42 @@ class OpenRouterLogin(
 
     /**
      * What came to the callback: a [code], or none (OpenRouter's page sent back no code: not
-     * approved), with the [state] it carried back. Ignored with no sign-in under way, or with another
-     * sign-in's state (or none), which the one under way still waits past.
+     * approved), with the [states] it carried back: the callback's own `s` and OpenRouter's `state`
+     * ([OPENROUTER_STATE]), each null when absent, compared as one. Ignored with no sign-in under
+     * way. With the sign-in's state, or with none at all (#1396: the fallback, should OpenRouter
+     * drop both), it is the sign-in's answer. With another state, in either parameter, it is not
+     * taken, and the sign-in ends as not finished ([SignInFailure.REFUSED]), not as closed: an
+     * answer did come, and the browser, its authorisation spent, has nothing more to send.
+     *
+     * @return how the answer stood to the sign-in under way, for the log.
      */
-    @Suppress("TooGenericExceptionCaught") // Any failure ends the sign-in as one not finished.
-    fun callback(
+    internal fun callback(
         code: String?,
-        state: String?,
-    ) {
-        val under = pending?.takeIf { it.state == state } ?: return
+        vararg states: String?,
+    ): StateMatch {
+        val under = pending ?: return StateMatch.NO_SIGN_IN
+        val carried = states.filterNot { it.isNullOrEmpty() }
+        val match =
+            when {
+                carried.isEmpty() -> StateMatch.MISSING
+                carried.all { it == under.state } -> StateMatch.MATCHED
+                else -> StateMatch.DIFFERED
+            }
         pending = null
-        if (code.isNullOrBlank()) {
-            now.value = SignInStep.Failed(SignInFailure.DECLINED)
-            return
+        when {
+            match == StateMatch.DIFFERED -> now.value = SignInStep.Failed(SignInFailure.REFUSED)
+            code.isNullOrBlank() -> now.value = SignInStep.Failed(SignInFailure.DECLINED)
+            else -> exchange(code, under)
         }
+        return match
+    }
+
+    // The key for [code] fetched and saved, for the sign-in [under] way.
+    @Suppress("TooGenericExceptionCaught") // Any failure ends the sign-in as one not finished.
+    private fun exchange(
+        code: String,
+        under: Pending,
+    ) {
         now.value = SignInStep.Exchanging
         scope.launch {
             now.value =
@@ -189,19 +236,95 @@ class OpenRouterLogin(
         /** The callback's parameter that carries a sign-in's state back (`OpenRouterSignIn.STATE`). */
         const val STATE: String = "s"
 
+        /** OpenRouter's own parameter for the state (`OpenRouterSignIn.OPENROUTER_STATE`). */
+        const val OPENROUTER_STATE: String = "state"
+
         /** How long OpenRouter takes a code: ten minutes from its issue. */
         val CODE_LIFETIME: Duration = 10.minutes
 
         /**
-         * The parameters of a callback's [query] (`s=…&code=…`), each value as given; split at `?`
-         * too, should OpenRouter add its own `?code=` after the state the callback already carries.
+         * The parameters of a callback's [query] (`s=…&code=…`), names and values percent-decoded;
+         * split at `?` too, should OpenRouter add its own `?code=` after the state the callback
+         * already carries. A part with no `=` that decodes to parameters (`s%3D…%26code%3D…`, the
+         * query encoded once more) is read as these. The first of a name counts.
          */
-        fun answerOf(query: String?): Map<String, String> =
-            query
-                .orEmpty()
-                .split('&', '?')
-                .filter { '=' in it }
-                .associate { it.substringBefore('=') to it.substringAfter('=') }
+        fun answerOf(query: String?): Map<String, String> {
+            val answer = LinkedHashMap<String, String>()
+
+            fun read(
+                text: String,
+                again: Boolean,
+            ) {
+                text.split('&', '?').forEach { part ->
+                    if ('=' in part) {
+                        val name = decoded(part.substringBefore('='))
+                        if (name !in answer) answer[name] = decoded(part.substringAfter('='))
+                    } else if (again) {
+                        decoded(part).takeIf { it != part && '=' in it }?.let { read(it, again = false) }
+                    }
+                }
+            }
+            read(query.orEmpty(), again = true)
+            return answer
+        }
+
+        /**
+         * The answer at a callback [uri] (as a string): the parameters of its query, and of its
+         * fragment, which OpenRouter may use instead (#1396).
+         */
+        internal fun answerAt(uri: String): Answer {
+            val beforeFragment = uri.substringBefore('#')
+            return Answer(
+                query = answerOf(beforeFragment.substringAfter('?', "")),
+                fragment = answerOf(uri.substringAfter('#', "")),
+            )
+        }
+
+        // [text] percent-decoded as UTF-8 (`+` kept as it is), or as given when a `%` is not followed
+        // by two ASCII hex digits or the bytes are not well-formed UTF-8. Text between escapes is
+        // encoded a span at a time, so a character outside the BMP (a surrogate pair) stays whole.
+        private fun decoded(text: String): String {
+            val bytes = ByteArrayOutputStream(text.length)
+            var at = 0
+            var wellFormed = true
+            while (at < text.length && wellFormed) {
+                val escape = text.indexOf('%', at).takeIf { it >= 0 } ?: text.length
+                val high = hexDigit(text.getOrNull(at + 1))
+                val low = hexDigit(text.getOrNull(at + 2))
+                when {
+                    escape > at -> {
+                        bytes.write(text.substring(at, escape).encodeToByteArray())
+                        at = escape
+                    }
+
+                    high == null || low == null -> {
+                        wellFormed = false
+                    }
+
+                    else -> {
+                        bytes.write(high * HEX + low)
+                        at += PERCENT_ESCAPE
+                    }
+                }
+            }
+            return bytes.toByteArray().takeIf { wellFormed }?.let(::utf8) ?: text
+        }
+
+        // [char]'s value as an ASCII hex digit, or null (not `４`, which `digitToIntOrNull` takes).
+        private fun hexDigit(char: Char?): Int? =
+            char?.takeIf { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }?.digitToInt(HEX)
+
+        // [bytes] as UTF-8, or null when they are not well formed.
+        private fun utf8(bytes: ByteArray): String? =
+            try {
+                bytes.decodeToString(throwOnInvalidSequence = true)
+            } catch (_: CharacterCodingException) {
+                null
+            }
+
+        // Hex digits, and the length of an escape (`%2F`).
+        private const val HEX = 16
+        private const val PERCENT_ESCAPE = 3
 
         /**
          * Whether [uri] (as a string) is a sign-in's callback at [callback]: the same address up to
@@ -212,6 +335,35 @@ class OpenRouterLogin(
             uri: String?,
             callback: String,
         ): Boolean = uri != null && uri.substringBefore('?').substringBefore('#') == callback
+    }
+}
+
+/**
+ * What came to a sign-in's callback (#1396): the parameters of its [query] and of its [fragment].
+ * Shown ([toString], for the log) by the names it expects only ([NAMES]), with a count of any
+ * others, never by values: the code and the state stay out of the log, and so does a name made of
+ * decoded text (`s%3D…%26code%3D…=`), which could carry them.
+ */
+internal class Answer(
+    val query: Map<String, String>,
+    val fragment: Map<String, String>,
+) {
+    /** The parameter [name]: from the query, or failing that from the fragment. */
+    operator fun get(name: String): String? = query[name] ?: fragment[name]
+
+    override fun toString(): String = "query ${names(query)}, fragment ${names(fragment)}"
+
+    private companion object {
+        // The names shown: the callback's state, OpenRouter's code, and what an OAuth answer may add.
+        val NAMES =
+            listOf(OpenRouterLogin.STATE, "code", OpenRouterLogin.OPENROUTER_STATE, "error", "error_description")
+
+        // [parameters]' expected names, in their order, and how many others came: `[s, code, 1 other]`.
+        fun names(parameters: Map<String, String>): String {
+            val known = parameters.keys.filter { it in NAMES }
+            val others = (parameters.size - known.size).takeIf { it > 0 }?.let { "$it other" }
+            return (known + listOfNotNull(others)).joinToString(prefix = "[", postfix = "]")
+        }
     }
 }
 

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import kotlin.time.Instant
 
@@ -78,17 +79,29 @@ class SignInCallbacks(
                 ?.data
                 ?.takeIf { OpenRouterLogin.isCallback(it.toString(), login.callback) }
                 ?: return
-        val answer = OpenRouterLogin.answerOf(data.encodedQuery)
-        login.callback(answer[CODE], answer[OpenRouterLogin.STATE])
+        val answer = OpenRouterLogin.answerAt(data.toString())
+        val match =
+            login.callback(answer[CODE], answer[OpenRouterLogin.STATE], answer[OpenRouterLogin.OPENROUTER_STATE])
+        // Which parameters came, and how the state stood: names only, never the code or the state.
+        Log.i(TAG, logLine(answer, match))
     }
 
-    private companion object {
+    internal companion object {
+        // The app's log tag.
+        const val TAG = "Sleevesight"
+
+        /** The log line for an [answer] at the callback, and how its state stood ([match]). */
+        fun logLine(
+            answer: Answer,
+            match: StateMatch,
+        ): String = "OpenRouter sign-in answer: $answer; state ${match.name.lowercase()}"
+
         // A sign-in under way, in the saved state: its verifier and when it began.
-        const val VERIFIER = "openrouter.verifier"
-        const val STARTED = "openrouter.started"
-        const val STATE = "openrouter.state"
+        private const val VERIFIER = "openrouter.verifier"
+        private const val STARTED = "openrouter.started"
+        private const val STATE = "openrouter.state"
 
         // The code in OpenRouter's answer.
-        const val CODE = "code"
+        private const val CODE = "code"
     }
 }

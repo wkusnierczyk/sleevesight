@@ -53,6 +53,16 @@ internal val NESTED = 16.dp
 /** The gap between what starts a row ([ROW_MARK]) and its title. */
 private val LEADING_GAP = 16.dp
 
+/** The gap before a [SwitchRow]'s switch. */
+private val SWITCH_GAP = 16.dp
+
+/**
+ * What a [SwitchRow]'s switch takes at the row's end: its gap and the switch (Material's 52 dp).
+ * Under the first line nothing else is there, so a [SwitchRow]'s `below` may reach into it
+ * ([reachingUnderSwitch]).
+ */
+internal val SWITCH_SIDE = SWITCH_GAP + 52.dp
+
 /** A [Hint]'s padding above and below it. */
 private val HINT_PADDING = 4.dp
 
@@ -191,7 +201,7 @@ internal fun SwitchRow(
         alpha = alpha,
         leading = leading,
         trailing = {
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(SWITCH_GAP))
             Switch(
                 checked = checked,
                 onCheckedChange = null,

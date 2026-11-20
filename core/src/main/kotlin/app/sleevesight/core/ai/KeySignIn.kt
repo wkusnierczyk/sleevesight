@@ -24,16 +24,19 @@ interface KeySignIn {
 
 /**
  * A sign-in begun ([KeySignIn.begin]): the [verifier] to keep; its [state], a random value the
- * callback carries back (`s`), so an answer is taken only for the sign-in that asked for it; and the
- * page to open ([url]).
+ * callback carries back (`s`, and OpenRouter's `state`), so an answer is taken only for the sign-in
+ * that asked for it; and the page to open ([url]).
  */
 class SignInStart(
     val verifier: String,
     val state: String,
     val url: String,
 ) {
-    /** Never the verifier. */
-    override fun toString(): String = "SignInStart(url=$url)"
+    /**
+     * Never the verifier, nor the state, which the [url]'s query carries (in `callback_url` and as
+     * `state`): only the page's address up to its query.
+     */
+    override fun toString(): String = "SignInStart(url=${url.substringBefore('?')})"
 }
 
 /** How an exchange of a code for a key ended ([KeySignIn.exchange]). */

@@ -3,15 +3,26 @@ package app.sleevesight.app.secrets
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.ComponentActivity
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.MainActivity
+import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.KeyExchange
+import app.sleevesight.core.ai.KeySignIn
+import app.sleevesight.core.ai.SignInStart
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowLog
 import org.w3c.dom.Element
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -21,6 +32,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * filter, which Android verifies against the site's `/.well-known/assetlinks.json`, and that file,
  * which names the app's packages and their signing certificates.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class OpenRouterAppLinkTest {
     /**
@@ -138,6 +150,105 @@ class OpenRouterAppLinkTest {
         assertTrue("script-src 'none'" in page)
         assertTrue("<script" !in page)
     }
+
+    /**
+     * The answer as Android hands it to the activity (#1396): taken with the sign-in's state, with
+     * none (the redirect dropped the callback's own query), or from the fragment; not with another
+     * state, which ends the sign-in as not finished rather than as closed. Each time the log says
+     * which parameters came and how the state stood, never the code or the state.
+     */
+    @Test
+    fun theAnswerReachingTheActivityIsTakenWithTheStateOrNoneAndLoggedByItsParametersNamesOnly() =
+        runTest {
+            fun answered(
+                url: String,
+                beforeTheAnswer: (OpenRouterLogin) -> Unit = { it.start() },
+            ): Pair<OpenRouterLogin, String> {
+                ShadowLog.clear()
+                val login =
+                    OpenRouterLogin(
+                        signIn,
+                        save = { true },
+                        scope = TestScope(UnconfinedTestDispatcher(testScheduler)),
+                    )
+                val callbacks = SignInCallbacks(handles = { true }, login = { login })
+                val controller =
+                    Robolectric.buildActivity(ComponentActivity::class.java, Intent(Intent.ACTION_VIEW)).create()
+                val activity = controller.get()
+                callbacks.onActivityCreated(activity, null)
+                beforeTheAnswer(login)
+                // The running activity gets the App Link as a new intent, then comes to the front.
+                controller.newIntent(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                callbacks.onActivityResumed(activity)
+                val lines = ShadowLog.getLogsForTag(SignInCallbacks.TAG).map { it.msg }
+                lines.forEach { assertTrue(it, "the-code" !in it && "state-" !in it) }
+                return login to lines.joinToString("\n")
+            }
+
+            val (matched, matchedLog) = answered("$CALLBACK?s=state-1&code=the-code")
+            assertEquals(SignInStep.Idle, matched.step.value)
+            assertEquals("OpenRouter sign-in answer: query [s, code], fragment []; state matched", matchedLog)
+
+            val (missing, missingLog) = answered("$CALLBACK?code=the-code")
+            assertEquals(SignInStep.Idle, missing.step.value)
+            assertEquals("OpenRouter sign-in answer: query [code], fragment []; state missing", missingLog)
+
+            val (fragment, fragmentLog) = answered("$CALLBACK#code=the-code&s=state-3")
+            assertEquals(SignInStep.Idle, fragment.step.value)
+            assertEquals("OpenRouter sign-in answer: query [], fragment [code, s]; state matched", fragmentLog)
+
+            val (openRouters, openRoutersLog) = answered("$CALLBACK?code=the-code&state=state-4")
+            assertEquals(SignInStep.Idle, openRouters.step.value)
+            assertEquals("OpenRouter sign-in answer: query [code, state], fragment []; state matched", openRoutersLog)
+
+            val (both, bothLog) = answered("$CALLBACK?s=state-5&code=the-code&state=state-5")
+            assertEquals(SignInStep.Idle, both.step.value)
+            assertEquals("OpenRouter sign-in answer: query [s, code, state], fragment []; state matched", bothLog)
+
+            val (disagreeing, disagreeingLog) = answered("$CALLBACK?s=state-6&code=the-code&state=state-other")
+            assertEquals(SignInStep.Failed(SignInFailure.REFUSED), disagreeing.step.value)
+            assertEquals(
+                "OpenRouter sign-in answer: query [s, code, state], fragment []; state differed",
+                disagreeingLog,
+            )
+
+            val (differed, differedLog) = answered("$CALLBACK?s=state-other&code=the-code")
+            assertEquals(SignInStep.Failed(SignInFailure.REFUSED), differed.step.value)
+            assertEquals(
+                "OpenRouter sign-in answer: query [s, code], fragment []; state differed",
+                differedLog,
+            )
+
+            val (none, noneLog) = answered("$CALLBACK?code=the-code") { }
+            assertEquals(SignInStep.Idle, none.step.value)
+            assertEquals("OpenRouter sign-in answer: query [code], fragment []; state no_sign_in", noneLog)
+
+            assertEquals(
+                listOf(1, 2, 3, 4, 5).map { "the-code" to "verifier-$it" },
+                signIn.exchanged,
+            )
+        }
+
+    // OpenRouter's sign-in, numbering each sign-in's verifier and state, and keeping each exchange.
+    private val signIn =
+        object : KeySignIn {
+            val exchanged = mutableListOf<Pair<String, String>>()
+            private var made = 0
+            override val callback = CALLBACK
+
+            override fun begin(): SignInStart {
+                made++
+                return SignInStart("verifier-$made", "state-$made", "https://openrouter.ai/auth")
+            }
+
+            override suspend fun exchange(
+                code: String,
+                verifier: String,
+            ): KeyExchange {
+                exchanged += code to verifier
+                return KeyExchange.Key(Secret("sk-or-v1-new"))
+            }
+        }
 
     private fun Element.data(attribute: String): List<String> =
         getElementsByTagName("data").let { nodes ->

@@ -21,7 +21,9 @@ import kotlin.io.encoding.Base64
  * (https://openrouter.ai/docs/guides/overview/auth/oauth): [begin] makes a new `code_verifier` of
  * [VERIFIER_BYTES] random bytes and a state of [STATE_BYTES], and the page to open, `/auth` with the
  * `callback_url` (the callback with the state, `?s=`, which OpenRouter's answer carries back), the
- * `code_challenge` (the verifier's SHA-256, base64url) and `code_challenge_method=S256`, and
+ * same state as OpenRouter's own `state` ([OPENROUTER_STATE], which its documentation says comes back
+ * unchanged as `?state=` on the callback; #1396: the phone check saw the answer arrive without a state
+ * that matched), the `code_challenge` (the verifier's SHA-256, base64url) and `code_challenge_method=S256`, and
  * `key_label` naming the key on the user's account; [exchange] trades the code OpenRouter sends to
  * the callback, with the verifier, for the key (`POST /api/v1/auth/keys`). The verifier goes only
  * into that request's body, which `:net` never logs; nor does it log the answer, which holds the key.
@@ -58,6 +60,7 @@ class OpenRouterSignIn(
         val query =
             listOf(
                 "callback_url" to "$callback?$STATE=$state",
+                OPENROUTER_STATE to state,
                 "code_challenge" to challengeOf(verifier, hasher),
                 "code_challenge_method" to METHOD,
                 "key_label" to KEY_LABEL,
@@ -112,6 +115,9 @@ class OpenRouterSignIn(
 
         /** The callback's parameter that carries the sign-in's state back. */
         const val STATE: String = "s"
+
+        /** OpenRouter's own parameter for the state, sent to `/auth` and returned on the callback. */
+        const val OPENROUTER_STATE: String = "state"
 
         /** 16 bytes of state: 22 characters, enough that no other sign-in's answer matches. */
         const val STATE_BYTES: Int = 16
