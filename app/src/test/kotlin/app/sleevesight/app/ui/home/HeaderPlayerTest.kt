@@ -261,6 +261,7 @@ class HeaderPlayerTest {
         show {
             symbolReads(text(R.string.home_player_symbol_nothing_playing_state))
             assertEquals(0, buttons(R.string.home_record_pause) + buttons(R.string.home_record_play))
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performClick()
             compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
             menuClosed()
@@ -277,12 +278,10 @@ class HeaderPlayerTest {
         nothingPlaying()
         lastPlayer.value = null
         show {
-            // The players load off the main thread.
-            compose.waitForIdle()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            compose.waitForIdle()
             // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
-            assertEquals(CASTBOX, shadowOf(app).nextStartedActivity?.`package`)
+            assertEquals(CASTBOX, compose.nextStarted())
             compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
         }
     }
@@ -291,10 +290,9 @@ class HeaderPlayerTest {
     fun aLongPressOnceAPlayerStoppedOpensTheLastPlayerFollowed() =
         show {
             nothingPlaying()
-            compose.waitForIdle()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            compose.waitForIdle()
-            assertEquals(SPOTIFY, shadowOf(app).nextStartedActivity?.`package`)
+            assertEquals(SPOTIFY, compose.nextStarted())
         }
 
     @Test
@@ -303,7 +301,9 @@ class HeaderPlayerTest {
         settings.value = Settings(followedPlayers = mapOf(SPOTIFY to false, YOUTUBE to false))
         val opened = mutableListOf<SettingsTarget>()
         show(openSettingsAt = { opened += it }) {
-            symbolReads(text(R.string.home_player_symbol_none_enabled_state))
+            // Said once the players have loaded, off the main thread (#1469).
+            symbolSays(noneEnabled())
+            symbolReads(noneEnabled())
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
             compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
             assertEquals(null, shadowOf(app).nextStartedActivity)
@@ -342,10 +342,9 @@ class HeaderPlayerTest {
             lastPlayer.value = YOUTUBE
             nothingPlaying()
             homeShown.value = true
-            compose.waitForIdle()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            compose.waitForIdle()
-            assertEquals(YOUTUBE, shadowOf(app).nextStartedActivity?.`package`)
+            assertEquals(YOUTUBE, compose.nextStarted())
         }
 
     @Test
@@ -371,12 +370,7 @@ class HeaderPlayerTest {
         settings.value = Settings()
         val phone = InstalledPlayers(icon = { null }, visible = { false }, seen = MutableStateFlow(emptySet()))
         show(shownFeed = feedOf(phone)) {
-            compose.waitUntil(WAIT_MS) {
-                compose
-                    .onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
-                    .fetchSemanticsNodes()
-                    .any { it.config.getOrElseNullable(SemanticsProperties.StateDescription) { null } == noneEnabled() }
-            }
+            symbolSays(noneEnabled())
             symbolReads(noneEnabled())
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
             compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
@@ -392,10 +386,9 @@ class HeaderPlayerTest {
         lastPlayer.value = YOUTUBE
         settings.value = Settings(followedPlayers = mapOf(SPOTIFY to true, YOUTUBE to false, CASTBOX to true))
         show {
-            compose.waitForIdle()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            compose.waitForIdle()
-            assertEquals(CASTBOX, shadowOf(app).nextStartedActivity?.`package`)
+            assertEquals(CASTBOX, compose.nextStarted())
         }
     }
 
@@ -407,15 +400,25 @@ class HeaderPlayerTest {
         lastPlayer.value = null
         val phone = InstalledPlayers(icon = { null }, visible = { false }, seen = MutableStateFlow(emptySet()))
         show(shownFeed = feedOf(phone)) {
-            compose.waitForIdle()
+            compose.symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            compose.waitForIdle()
-            assertEquals(null, shadowOf(app).nextStartedActivity)
+            // The panel that says none is enabled.
             compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
+            symbolReads(noneEnabled())
+            assertEquals(null, shadowOf(app).nextStartedActivity)
         }
     }
 
     private fun noneEnabled() = text(R.string.home_player_symbol_none_enabled_state)
+
+    // The symbol's state said as [state], waited for: the players load off the main thread.
+    private fun symbolSays(state: String) =
+        compose.waitUntil(WAIT_MS) {
+            compose
+                .onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
+                .fetchSemanticsNodes()
+                .any { it.config.getOrElseNullable(SemanticsProperties.StateDescription) { null } == state }
+        }
 
     @Test
     fun theSymbolIsReadAsPlayerMenuWithItsActionsAndOpensTheMenu() =
