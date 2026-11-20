@@ -11,7 +11,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ActivityScenario
@@ -111,9 +113,18 @@ internal class HeaderSymbolFixture(
     }
 
     /**
-     * The package of the next app started, waited for: the players load off the main thread, and a
-     * gesture made before they have is done once they have (#1469).
+     * Waits until the note symbol takes a gesture: while none plays, not before the players have
+     * loaded, off the main thread (#1469).
      */
+    fun symbolReady() =
+        compose.waitUntil(WAIT_MS) {
+            compose
+                .onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
+                .fetchSemanticsNodes()
+                .any { SemanticsProperties.Disabled !in it.config }
+        }
+
+    /** The package of the next app started, waited for. */
     fun nextStarted(): String? {
         var started: Intent? = null
         compose.waitUntil(WAIT_MS) {

@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -78,7 +79,7 @@ class SymbolOpensTest {
     fun withNothingPlayingATapOpensTheLastPlayerFollowed() {
         home.nothingPlaying()
         home.show {
-            compose.waitForIdle()
+            home.symbolReady()
             symbol().performClick()
             compose.waitForIdle()
             assertEquals(SPOTIFY, shadowOf(app).nextStartedActivity?.`package`)
@@ -91,32 +92,35 @@ class SymbolOpensTest {
         home.nothingPlaying()
         home.lastPlayer.value = null
         home.show {
+            home.symbolReady()
             symbol().performClick()
-            // Castbox, Spotify, YouTube Music, A to Z: Castbox first, once the players have loaded.
+            // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
             assertEquals(CASTBOX, home.nextStarted())
             symbol().performTouchInput { longClick(center) }
             compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
         }
     }
 
-    // #1469: a tap before the players have loaded opened the panel, as if none were switched on.
+    // #1469: a tap before the players have loaded opened the panel, as if none were switched on; it
+    // does nothing now, and the symbol says it takes none (disabled) until they have.
     @Test
-    fun aTapBeforeThePlayersHaveLoadedOpensTheFirstSwitchedOnOnceTheyHave() {
+    fun beforeThePlayersHaveLoadedATapDoesNothing() {
         home.nothingPlaying()
         home.lastPlayer.value = null
         val loading = CountDownLatch(1)
         home.loading = loading
         home.show {
             try {
-                symbol().performClick()
+                symbol().assertIsNotEnabled().performClick()
                 compose.waitForIdle()
                 compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
                 assertEquals(null, shadowOf(app).nextStartedActivity)
             } finally {
                 loading.countDown()
             }
+            home.symbolReady()
+            symbol().performClick()
             assertEquals(CASTBOX, home.nextStarted())
-            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
         }
     }
 

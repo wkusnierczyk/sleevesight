@@ -261,9 +261,8 @@ class HeaderPlayerTest {
         show {
             symbolReads(text(R.string.home_player_symbol_nothing_playing_state))
             assertEquals(0, buttons(R.string.home_record_pause) + buttons(R.string.home_record_play))
+            symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performClick()
-            // Opened once the players have loaded, off the main thread (#1469).
-            panelShown()
             compose.onNodeWithText(text(R.string.home_player_symbol_nothing_playing)).assertExists()
             menuClosed()
             compose.onNodeWithTag(SYMBOL_PANEL_DISMISS_TAG).performClick()
@@ -279,8 +278,9 @@ class HeaderPlayerTest {
         nothingPlaying()
         lastPlayer.value = null
         show {
+            symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            // Castbox, Spotify, YouTube Music, A to Z: Castbox first, once the players have loaded.
+            // Castbox, Spotify, YouTube Music, A to Z: Castbox first.
             assertEquals(CASTBOX, nextStarted())
             compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertDoesNotExist()
         }
@@ -290,10 +290,9 @@ class HeaderPlayerTest {
     fun aLongPressOnceAPlayerStoppedOpensTheLastPlayerFollowed() =
         show {
             nothingPlaying()
-            compose.waitForIdle()
+            symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            compose.waitForIdle()
-            assertEquals(SPOTIFY, shadowOf(app).nextStartedActivity?.`package`)
+            assertEquals(SPOTIFY, nextStarted())
         }
 
     @Test
@@ -343,10 +342,9 @@ class HeaderPlayerTest {
             lastPlayer.value = YOUTUBE
             nothingPlaying()
             homeShown.value = true
-            compose.waitForIdle()
+            symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            compose.waitForIdle()
-            assertEquals(YOUTUBE, shadowOf(app).nextStartedActivity?.`package`)
+            assertEquals(YOUTUBE, nextStarted())
         }
 
     @Test
@@ -388,6 +386,7 @@ class HeaderPlayerTest {
         lastPlayer.value = YOUTUBE
         settings.value = Settings(followedPlayers = mapOf(SPOTIFY to true, YOUTUBE to false, CASTBOX to true))
         show {
+            symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
             assertEquals(CASTBOX, nextStarted())
         }
@@ -401,9 +400,10 @@ class HeaderPlayerTest {
         lastPlayer.value = null
         val phone = InstalledPlayers(icon = { null }, visible = { false }, seen = MutableStateFlow(emptySet()))
         show(shownFeed = feedOf(phone)) {
+            symbolReady()
             compose.onNodeWithTag(PLAYER_SYMBOL_TAG).performTouchInput { longClick(center) }
-            // Once the players have loaded (#1469): the panel that says none is enabled.
-            panelShown()
+            // The panel that says none is enabled.
+            compose.onNodeWithTag(SYMBOL_PANEL_TAG).assertExists()
             symbolReads(noneEnabled())
             assertEquals(null, shadowOf(app).nextStartedActivity)
         }
@@ -420,13 +420,16 @@ class HeaderPlayerTest {
                 .any { it.config.getOrElseNullable(SemanticsProperties.StateDescription) { null } == state }
         }
 
-    // The symbol's panel open, waited for: a gesture before the players have loaded is done once they have.
-    private fun panelShown() =
+    // Waits until the symbol takes a gesture: while none plays, not before the players have loaded (#1469).
+    private fun symbolReady() =
         compose.waitUntil(WAIT_MS) {
-            compose.onAllNodes(hasTestTag(SYMBOL_PANEL_TAG)).fetchSemanticsNodes().isNotEmpty()
+            compose
+                .onAllNodes(hasTestTag(PLAYER_SYMBOL_TAG))
+                .fetchSemanticsNodes()
+                .any { SemanticsProperties.Disabled !in it.config }
         }
 
-    // The package of the next app started, waited for, as [panelShown].
+    // The package of the next app started, waited for.
     private fun nextStarted(): String? {
         var started: Intent? = null
         compose.waitUntil(WAIT_MS) {

@@ -51,37 +51,6 @@ import app.sleevesight.core.settings.SymbolOpens
 // The player symbol in Home's header (#1440): a neutral music note, in place of the followed
 // player's own icon (#1209), which looked foreign among the app's own marks.
 
-/** One of the symbol's two gestures, held until the players have loaded (#1469). */
-private enum class Gesture { MENU, PLAYER }
-
-/** What the symbol's two gestures do. */
-private class Gestures(
-    val toMenu: () -> Unit,
-    val toPlayer: () -> Unit,
-)
-
-// [toMenu] and [toPlayer], each held while the players are [loading] and done once they have (#1469),
-// rather than a panel for a state about to change; the player's not when its app is [known] already.
-@Composable
-private fun heldUntilLoaded(
-    loading: Boolean,
-    known: Boolean,
-    toMenu: () -> Unit,
-    toPlayer: () -> Unit,
-): Gestures {
-    var held by remember { mutableStateOf<Gesture?>(null) }
-    held?.takeIf { !loading }?.let { gesture ->
-        SideEffect {
-            held = null
-            if (gesture == Gesture.MENU) toMenu() else toPlayer()
-        }
-    }
-    return Gestures(
-        toMenu = { if (loading) held = Gesture.MENU else toMenu() },
-        toPlayer = { if (loading && !known) held = Gesture.PLAYER else toPlayer() },
-    )
-}
-
 /** What the header's player symbol stands for (#1440). */
 private enum class SymbolState {
     /** A followed player has a session: the symbol opens the player menu. */
@@ -105,7 +74,8 @@ private enum class SymbolState {
  * ([HeaderPlayerFeed.lastPlayer]), else the first one switched on. With no player switched on, it
  * is dimmed too, and either gesture opens a panel that says so and links to *Settings → Players*
  * ([onOpenPlayers]). A panel's *Dismiss*, a tap outside or Back closes it; the next tap opens it again.
- * A gesture made while none plays, before the players have loaded, is done once they have (#1469).
+ * While none plays, it takes no gesture until the players have loaded, which decide what one opens
+ * (#1469).
  *
  * For [FLASH_MS], when a followed player starts playing, Home switches to another player, or the
  * track changes, the symbol shows that player's own icon ([PlayerIcon]) in place of the note
@@ -148,8 +118,6 @@ internal fun PlayerSymbol(
             open(target, state == SymbolState.PLAYER)
         }
     }
-    // While none plays, the players decide what a gesture opens (#1469).
-    val gestures = heldUntilLoaded(loading = player == null && listed == null, target != null, toMenu, toPlayer)
     val flashing = flashesIcon(feed, player, playing(playback), trackOf(nowPlaying))
     // What the popup last showed, kept while it closes, so its content goes with it.
     var shown by remember { mutableStateOf<SymbolState?>(null) }
@@ -161,8 +129,10 @@ internal fun PlayerSymbol(
             icon = flashing,
             apps = apps,
             label = feed.label,
-            toMenu = gestures.toMenu,
-            toPlayer = gestures.toPlayer,
+            toMenu = toMenu,
+            toPlayer = toPlayer,
+            // While none plays, the players decide what a gesture opens: none before they have loaded (#1469).
+            enabled = player != null || listed != null,
         )
         DropdownMenu(expanded = opened != null, onDismissRequest = { opened = null }) {
             SymbolPopup(opened ?: shown, feed, apps, close = { opened = null }, onOpenPlayers)
@@ -239,7 +209,7 @@ private fun openApp(feed: HeaderPlayerFeed): (String, Boolean) -> Unit {
 // The symbol itself for [state]: the note, dimmed but for [SymbolState.PLAYER], or [icon]'s own icon
 // while it shows, faded in and out, or swapped at once with the phone's animations off (#1445);
 // [toMenu] on a tap and [toPlayer] on a long press, or the other way round as [opens] says, each
-// named for a screen reader, and the symbol named for what a tap opens.
+// named for a screen reader, and the symbol named for what a tap opens; neither unless [enabled].
 @Suppress("LongParameterList") // The state, the choice, what it draws, and its two gestures.
 @Composable
 private fun SymbolButton(
@@ -250,6 +220,7 @@ private fun SymbolButton(
     label: (String) -> String,
     toMenu: () -> Unit,
     toPlayer: () -> Unit,
+    enabled: Boolean,
 ) {
     val menuFirst = opens == SymbolOpens.PLAYER_MENU
     val name = stringResource(if (menuFirst) R.string.home_player_symbol else R.string.home_player_symbol_player)
@@ -268,6 +239,7 @@ private fun SymbolButton(
             .combinedClickable(
                 interactionSource = null,
                 indication = ripple(bounded = false, radius = TARGET / 2),
+                enabled = enabled,
                 role = Role.Button,
                 onClickLabel = if (menuFirst) menuLabel else playerLabel,
                 onLongClickLabel = if (menuFirst) playerLabel else menuLabel,
