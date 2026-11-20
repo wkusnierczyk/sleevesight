@@ -42,6 +42,7 @@ import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.missing
 import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
@@ -179,7 +180,9 @@ fun SettingsScreen(
     val reset = scope.resetting(settingsStore, resetSettings, saves, failed)
     // *Save to a file* and *Load from a file* (#815): a load through the app's loader, which tells
     // the pipeline of a mode it changes, its save announced as any change's is.
-    val files = scope.fileAccess(settingsStore, loadSettings, settingsFiles, saves, failed)
+    // The keys not saved, which keep their services off: what a load's preview leaves off (#667).
+    val missingKeys = secrets.filterValues { it == SecretState.ABSENT }.keys
+    val files = scope.fileAccess(settingsStore, secretStore, missingKeys, loadSettings, settingsFiles, saves, failed)
     // *Reactive*'s mode through the app's chooser (#625), its save announced as any change's is.
     val chooseMode: ((WriteAutomatically) -> Unit)? =
         chooseWritingMode?.let { choose ->
@@ -345,23 +348,28 @@ private fun CoroutineScope.resetting(
 /**
  * *Save to a file* and *Load from a file* (#815) on [store]: [load], or without one the store's own
  * loader saving in [saves], each load's save waited for in this scope, the screen's, telling [failed]
- * whether it could not be saved; the files through [files], or the app's content resolver.
+ * whether it could not be saved; the files through [files], or the app's content resolver. A load
+ * leaves off a service whose key is not saved: [missing] for the preview, [secrets] for the load.
  */
 @Composable
+@Suppress("LongParameterList") // The stores, the keys missing, the load, the files, and the saves.
 private fun CoroutineScope.fileAccess(
     store: SettingsStore,
+    secrets: SecretStore,
+    missing: Set<SecretId>,
     load: ((Settings, SettingsFile.Contents, String) -> Deferred<Boolean>)?,
     files: SettingsFiles?,
     saves: CoroutineScope,
     failed: (Boolean) -> Unit,
 ): SettingsFileAccess {
     val resolver = LocalContext.current.contentResolver
-    val loads = load ?: store.loader(saves)
+    val loads = load ?: store.loader(saves, { secrets.missing() })
     return SettingsFileAccess(
         files ?: SettingsFiles.of(
             resolver,
         ),
         BuildConfig.VERSION_NAME,
+        missing,
         { shown, contents, message ->
             loads(shown, contents, message).also { saved -> launch { failed(!saved.await()) } }
         },

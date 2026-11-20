@@ -26,9 +26,11 @@ import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.WAIT_MS
 import app.sleevesight.app.memorySettings
 import app.sleevesight.app.now
+import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.APP_OFFERED
 import app.sleevesight.app.ui.settings.LOAD_CONFIRM_TAG
 import app.sleevesight.app.ui.settings.LOAD_DIALOG_TAG
 import app.sleevesight.app.ui.settings.LOAD_FILE_TAG
@@ -38,6 +40,7 @@ import app.sleevesight.app.ui.settings.SettingsFiles
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.LogoSpeed
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
@@ -48,6 +51,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -223,7 +227,7 @@ class SettingsFileScreenTest {
             )
             assertTrue(shown("Not loaded:"))
             assertTrue(shown("pulseView: not a setting this version knows"))
-            assertTrue(shown(app.getString(R.string.settings_musicbrainz_wait) + ": 90s: not one of its choices"))
+            assertTrue(shown(app.getString(R.string.settings_musicbrainz_wait) + ": 90 s: not one of its choices"))
             assertTrue(shown("Your API keys and history are never in a settings file."))
             assertEquals(before, settings.settings.now())
             compose.onNodeWithTag(LOAD_CONFIRM_TAG).assertIsEnabled().performClick()
@@ -236,7 +240,7 @@ class SettingsFileScreenTest {
 
     @Test
     fun aLoadWithNothingSkippedSaysHowManyLoaded() {
-        val file = SettingsFile.write(Settings(theme = ThemeChoice.DARK, spinLogo = false), "0.10.0")
+        val file = SettingsFile.write(Settings(theme = ThemeChoice.DARK, spinLogo = false), "0.10.0", APP_OFFERED)
         screen {
             openPreview(file)
             assertTrue(shown("2 settings change:"))
@@ -251,7 +255,7 @@ class SettingsFileScreenTest {
     fun cancelLoadsNothing() {
         val before = settings.settings.now()
         screen {
-            openPreview(SettingsFile.write(Settings(theme = ThemeChoice.DARK), "0.10.0"))
+            openPreview(SettingsFile.write(Settings(theme = ThemeChoice.DARK), "0.10.0", APP_OFFERED))
             compose.onNodeWithText(app.getString(R.string.settings_cancel)).performClick()
             compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag(LOAD_DIALOG_TAG).fetchSemanticsNodes().isEmpty() }
             assertEquals(before, settings.settings.now())
@@ -261,7 +265,7 @@ class SettingsFileScreenTest {
     @Test
     fun aFileThatMatchesTheSettingsSaysSoAndLoadIsDisabled() {
         screen {
-            openPreview(SettingsFile.write(settings.settings.now(), "0.10.0"))
+            openPreview(SettingsFile.write(settings.settings.now(), "0.10.0", APP_OFFERED))
             assertTrue(shown("The file matches your settings; nothing changed."))
             compose.onNodeWithTag(LOAD_CONFIRM_TAG).assertIsNotEnabled()
         }
@@ -287,7 +291,12 @@ class SettingsFileScreenTest {
     @Test
     fun developerSettingsLoadInDeveloperMode() {
         move { it.copy(developerMode = true) }
-        val file = SettingsFile.write(Settings(developerMode = true, reportButton = ReportButton.SHOW), "0.10.0")
+        val file =
+            SettingsFile.write(
+                Settings(developerMode = true, reportButton = ReportButton.SHOW),
+                "0.10.0",
+                APP_OFFERED,
+            )
         screen {
             openPreview(file)
             assertFalse(shown("Developer settings (Developer mode is off)"))
@@ -311,6 +320,30 @@ class SettingsFileScreenTest {
         screen {
             tap(LOAD_FILE_TAG)
             compose.waitUntil(WAIT_MS) { shown("The file could not be read.") }
+        }
+    }
+
+    @Test
+    fun aServiceTheFileSwitchesOnWithoutItsKeyIsNamedAndTheGateKeepsItOff() {
+        saves.launch { KeyGate(settings, secrets).run() }
+        val file =
+            SettingsFile.write(
+                Settings(aiProvider = ProviderId.ANTHROPIC, theme = ThemeChoice.DARK),
+                "0.10.0",
+                APP_OFFERED,
+            )
+        val anthropic = app.getString(R.string.settings_ai_provider_anthropic)
+        screen {
+            openPreview(file)
+            assertTrue(shown("$anthropic: no API key on this phone"))
+            assertFalse(shown(app.getString(R.string.settings_reset_line, anthropic, "Off", "On")))
+            compose.onNodeWithTag(LOAD_CONFIRM_TAG).performClick()
+            compose.waitUntil(WAIT_MS) { settings.settings.now().theme == ThemeChoice.DARK }
+            assertEquals(null, settings.settings.now().aiProvider)
+            // The theme loaded; Anthropic, and the sources whose keys are missing here, skipped.
+            compose.waitUntil(WAIT_MS) {
+                compose.onAllNodesWithText("1 setting loaded, ", substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
         }
     }
 }

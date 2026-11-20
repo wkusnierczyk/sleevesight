@@ -329,3 +329,19 @@ internal fun sourceIndexRows(): List<IndexedRow> {
 
 /** *Sources*' rows in the order shown, each by its name, and whether it is on in the settings given (#960). */
 internal val SOURCE_SWITCHES: List<Pair<Int, (Settings) -> Boolean>> = SOURCE_ROWS.map { row -> row.name to row::on }
+
+/**
+ * The source switches *Sources* shows (#815: what a settings file holds of them): each source's
+ * row, and web search, which an engine's row switches with the engine.
+ */
+internal val OFFERED_SOURCE_SWITCHES: Set<SourceSwitch> =
+    SOURCE_ROWS.filterIsInstance<SourceRow.Source>().map { it.switch }.toSet() + SourceSwitch.WEB
+
+/** The title of each row of *Sources*, by its [SourceSwitch] or its [WebEngine]. */
+internal val SOURCE_ROW_NAMES: Map<Any, Int> =
+    SOURCE_ROWS.associate { row ->
+        when (row) {
+            is SourceRow.Source -> row.switch
+            is SourceRow.Engine -> row.engine
+        } to row.name
+    }

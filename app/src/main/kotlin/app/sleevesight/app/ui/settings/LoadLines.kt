@@ -3,9 +3,13 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.settings.Keyless
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 // The lines of *Load settings?* (#815): each setting a load changes, as a reset's lines are
 // ([RESET_LINES]), and what of the file is not loaded, and why.
@@ -76,6 +80,60 @@ internal fun loadChanges(
         }
 }
 
+/**
+ * What a settings file holds of the settings with several items (#815): the AI services, source
+ * switches and findings' lifetimes the settings show, so each one a load changes has its line.
+ */
+internal val APP_OFFERED: SettingsFile.Offered =
+    SettingsFile.Offered(
+        providers = OFFERED_PROVIDERS.toSet(),
+        sourceSwitches = OFFERED_SOURCE_SWITCHES,
+        cacheSources = SHOWN_LIFETIMES.map { it.first }.toSet(),
+    )
+
+/** The fields whose value is a time shown as a slider's stop (*15 s*, *1 min*). */
+private val STOP_FIELDS = setOf("musicBrainzWait", "aiRetry")
+
+/** The fields whose value is a time shown in words (*2 hours*, *30 days*). */
+private val TIME_FIELDS = setOf("sessionGap", "historyLifetime", "cacheLifetimes")
+
+/**
+ * [value], as a file has it for [field], shown as the settings show such a value where it is a time
+ * in whole seconds (*90 s*, *2 hours*); else as in the file.
+ */
+@Composable
+private fun fileValueLabel(
+    field: String,
+    value: String,
+): String {
+    val time = Duration.parseOrNull(value)?.takeIf { it.isPositive() && it == it.inWholeSeconds.seconds }
+    return when {
+        time == null -> value
+        field in STOP_FIELDS -> stopLabel(time, value)
+        field == "crossfade" -> crossfadeLabel(Crossfade.Fixed(time))
+        field in TIME_FIELDS -> durationLabel(time)
+        else -> value
+    }
+}
+
+/** A line under *Not loaded:* for a service the file switches on that stays off for want of its key. */
+@Composable
+internal fun keylessLine(keyless: Keyless): String {
+    val name =
+        when (keyless) {
+            is Keyless.Provider -> providerName(keyless.provider)
+            is Keyless.Source -> SOURCE_ROW_NAMES[keyless.switch]
+            is Keyless.Engine -> SOURCE_ROW_NAMES[keyless.engine]
+        }
+    val fallback =
+        when (keyless) {
+            is Keyless.Provider -> keyless.provider.name
+            is Keyless.Source -> keyless.switch.name
+            is Keyless.Engine -> keyless.engine.name
+        }
+    return stringResource(R.string.settings_load_file_no_key, name?.let { stringResource(it) } ?: fallback)
+}
+
 /** A line under *Not loaded:*: what of the file was not loaded, and why. */
 @Composable
 internal fun skippedLine(skipped: SettingsFile.Skipped): String =
@@ -87,8 +145,14 @@ internal fun skippedLine(skipped: SettingsFile.Skipped): String =
                 skipped.entry?.takeIf { it != skipped.value }?.let {
                     stringResource(R.string.settings_load_file_item, title, it)
                 } ?: title
-            stringResource(R.string.settings_load_file_invalid, named, skipped.value)
+            stringResource(R.string.settings_load_file_invalid, named, fileValueLabel(skipped.field, skipped.value))
         }
+        is SettingsFile.Skipped.TooMany ->
+            stringResource(
+                R.string.settings_load_file_too_many,
+                fileTitle(skipped.field)?.let { stringResource(it) } ?: skipped.field,
+                skipped.count,
+            )
         SettingsFile.Skipped.DeveloperModeOff -> stringResource(R.string.settings_load_file_developer)
         is SettingsFile.Skipped.ShortensHistory ->
             stringResource(

@@ -30,6 +30,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.settings.loadPlan
 import app.sleevesight.app.ui.theme.DialogPills
 import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.Settings
@@ -59,7 +61,7 @@ class SettingsFiles(
 ) {
     companion object {
         /** The most of a file read: a settings file is a few kilobytes. */
-        private const val MAX_BYTES = 64 * 1024
+        private const val MAX_BYTES = SettingsFile.MAX_BYTES
 
         /** The files the user picks, through [resolver], read and written off the main thread. */
         fun of(resolver: ContentResolver): SettingsFiles =
@@ -108,12 +110,14 @@ private const val BUFFER = 8 * 1024
 
 /**
  * What *Save to a file* and *Load from a file* work with: [files], the [appVersion] a file is saved
- * with, [today] for the name it suggests, and [load], which loads a file's contents from the settings
- * shown, saying the message given once saved.
+ * with, the keys [missing] (their services a load leaves off), [today] for the name it suggests,
+ * and [load], which loads a file's contents from the settings shown, saying the message given once
+ * saved.
  */
 internal class SettingsFileAccess(
     val files: SettingsFiles,
     val appVersion: String,
+    val missing: Set<SecretId>,
     val load: (shown: Settings, contents: SettingsFile.Contents, message: String) -> Deferred<Boolean>,
     val today: () -> LocalDate = LocalDate::now,
 )
@@ -175,11 +179,12 @@ private fun rememberSaver(
     val current by rememberUpdatedState(settings)
     return rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        val text = SettingsFile.write(current, access.appVersion)
+        val shown = current
         scope.launch {
             val said =
                 try {
-                    access.files.write(uri, text)
+                    // Fails rather than write a file too large to load ([SettingsFile.MAX_BYTES]).
+                    access.files.write(uri, SettingsFile.write(shown, access.appVersion, APP_OFFERED))
                     val name = access.files.name(uri) ?: uri.lastPathSegment.orEmpty()
                     resources.getString(R.string.settings_save_file_done, name)
                 } catch (cancelled: CancellationException) {
@@ -212,7 +217,7 @@ private fun rememberLoader(
                 try {
                     val text = access.files.read(uri)
                     val name = access.files.name(uri) ?: uri.lastPathSegment.orEmpty()
-                    if (SettingsFile.read(text) == null) {
+                    if (SettingsFile.read(text, APP_OFFERED) == null) {
                         R.string.settings_load_file_not_settings
                     } else {
                         onPicked(name to text)
@@ -243,10 +248,11 @@ private fun LoadPreview(
     playerLabel: (String) -> String,
     onClose: () -> Unit,
 ) {
-    val contents = SettingsFile.read(text) ?: return
-    val loaded = SettingsFile.load(contents, settings, settings.developerMode)
-    val changes = loadChanges(settings, loaded.settings, modelName, playerLabel)
-    val skipped = loaded.skipped.map { skippedLine(it) }
+    val contents = SettingsFile.read(text, APP_OFFERED) ?: return
+    // The load's own plan, the keys' gate included, so the preview promises only what it does.
+    val plan = loadPlan(contents, settings, access.missing)
+    val changes = loadChanges(settings, plan.settings, modelName, playerLabel)
+    val skipped = plan.skipped.map { skippedLine(it) } + plan.keyless.map { keylessLine(it) }
     val message =
         if (skipped.isEmpty()) {
             pluralStringResource(R.plurals.settings_load_file_done, changes.size, changes.size)

@@ -489,6 +489,10 @@
     <string name="settings_load_file_developer">Developer settings (Developer mode is off)</string>
     <!-- A line under Not loaded: %1$s Keep history for, %2$s the file's value, %3$s History. -->
     <string name="settings_load_file_history">%1$s: %2$s: it would delete history; choose it under %3$s</string>
+    <!-- A line under Not loaded: %1$s a service the file switches on, whose key is not saved here. -->
+    <string name="settings_load_file_no_key">%1$s: no API key on this phone</string>
+    <!-- A line under Not loaded: %1$s the setting's title (Players), %2$d the items beyond what a file holds. -->
+    <string name="settings_load_file_too_many">%1$s: %2$d more than a settings file holds</string>
     <string name="settings_load_file_unreadable">The file could not be read.</string>
     <string name="settings_load_file_not_settings">This file holds no Sleevesight settings.</string>
     <plurals name="settings_load_file_done">

@@ -58,6 +58,7 @@ import app.sleevesight.app.secrets.OpenRouterLogin
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.secrets.missing
 import app.sleevesight.app.secrets.saveAndSwitchOn
 import app.sleevesight.app.secrets.servicesOff
 import app.sleevesight.app.session.ArtLoader
@@ -874,7 +875,7 @@ class AppGraph internal constructor(
         Settings,
         SettingsFile.Contents,
         String,
-    ) -> Deferred<Boolean> by lazy { settings.loader(settingsSaves, pipeline::modeChosen) }
+    ) -> Deferred<Boolean> by lazy { settings.loader(settingsSaves, { secrets.missing() }, pipeline::modeChosen) }
 
     /**
      * *Read aloud* (#325): the insight, or a genre's reason, read by the phone's text-to-speech
