@@ -10,12 +10,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 // A video source's thumbnail on Home (#1257): the picture without the black bars above and below it.
 
 /**
  * [art] trimmed of its bars ([safeTrimBars]), worked out off the main thread once per bitmap; null
- * until then, while the cover shows [art] as it is, cropped to 16:9, which for a 16:9 frame
+ * until then, while the cover shows [art] as it is at [untrimmedRatio], which for a 16:9 frame
  * letterboxed in a 4:3 thumbnail already looks as the trimmed one will.
  */
 @Composable
@@ -26,6 +27,12 @@ internal fun trimmedThumbnail(art: Bitmap): Bitmap? {
 }
 
 /**
+ * Whether [turn]'s cover shows, or is turning to, its back: the album [CoverTurn.memory] keeps turned
+ * over is [CoverTurn.album]. A video's cover is square then, not a strip (#1257).
+ */
+internal fun turnedOver(turn: CoverTurn): Boolean = turn.memory.backOf.value == turn.album.orEmpty()
+
+/**
  * [trimBars], or [thumbnail] itself when its pixels cannot be read after all (recycled meanwhile, no
  * memory for a copy): the cover untrimmed then, never a crash.
  */
@@ -33,16 +40,18 @@ internal fun safeTrimBars(thumbnail: Bitmap): Bitmap = runCatching { trimBars(th
 
 /**
  * [thumbnail] without the black bars above and below the picture, as YouTube sends a 16:9 frame
- * letterboxed in a 4:3 thumbnail; [thumbnail] itself when it has none. Only bars of the same height
- * at the top and the bottom are trimmed ([barHeight]), so a dark sky at the top of a frame without
- * bars is kept. [thumbnail] itself, too, when trimming would leave less than [MIN_KEPT] of its height
- * or a strip wider than [MAX_RATIO] (an all-black or nearly black picture), or when its pixels cannot
- * be read ([readablePixels]). The rows are read from a copy at most [SCAN_WIDTH] wide, so even an all-black
+ * letterboxed in a 4:3 thumbnail; [thumbnail] itself when it has none. Only what looks like
+ * letterboxing is trimmed: bars of the same height at the top and the bottom ([barHeight]), so a
+ * dark sky at the top of a frame is kept, of a thumbnail taller than 16:9 ([LETTERBOXED_BELOW]),
+ * leaving a picture of a video's own width to height ([VIDEO_RATIOS]), so a night scene dark at both
+ * edges, or an all-black picture, is kept whole. [thumbnail] itself, too, when its pixels cannot be
+ * read ([readablePixels]). The rows are read from a copy at most [SCAN_WIDTH] wide, so even an all-black
  * thumbnail, every row of which is read, costs little; the trimmed thumbnail is cut from a copy whose
  * pixels can be read (a hardware bitmap's cannot).
  */
 internal fun trimBars(thumbnail: Bitmap): Bitmap {
-    val readable = readablePixels(thumbnail) ?: return thumbnail
+    val readable =
+        thumbnail.takeIf { it.width < it.height * LETTERBOXED_BELOW }?.let(::readablePixels) ?: return thumbnail
     val width = readable.width
     val height = readable.height
     val scan = if (width > SCAN_WIDTH) Bitmap.createScaledBitmap(readable, SCAN_WIDTH, height, true) else readable
@@ -54,7 +63,7 @@ internal fun trimBars(thumbnail: Bitmap): Bitmap {
         }
     if (scan !== readable) scan.recycle()
     val kept = height - 2 * bar
-    return if (bar == 0 || kept < height * MIN_KEPT || width > kept * MAX_RATIO) {
+    return if (bar == 0 || kept <= 0 || !isVideoRatio(width.toFloat() / kept)) {
         if (readable !== thumbnail) readable.recycle()
         thumbnail
     } else {
@@ -117,16 +126,33 @@ private const val NOISE = 0.02f
 /** The widest copy of a thumbnail whose rows are read for bars: enough to tell a bar from a picture. */
 private const val SCAN_WIDTH = 64
 
-/** The least share of a thumbnail's height that trimming keeps. */
-private const val MIN_KEPT = 0.4f
+/** Whether [ratio], a width to height, is within [RATIO_SLACK] of one of [VIDEO_RATIOS]. */
+private fun isVideoRatio(ratio: Float): Boolean = VIDEO_RATIOS.any { abs(ratio / it - 1f) <= RATIO_SLACK }
 
-/** The widest a trimmed thumbnail may be, width to height, or it is kept as it is. */
+/** The widths to heights of videos letterboxed in a thumbnail: 16:9, 1.85:1, 2:1 and 2.39:1. */
+private val VIDEO_RATIOS = listOf(VIDEO_RATIO, FLAT_RATIO, UNIVISIUM_RATIO, SCOPE_RATIO)
+
+/** Cinema's flat, 1.85:1. */
+private const val FLAT_RATIO = 1.85f
+
+/** 2:1, as some series are shot. */
+private const val UNIVISIUM_RATIO = 2f
+
+/** Cinema's scope, 2.39:1. */
+private const val SCOPE_RATIO = 2.39f
+
+/** How far a trimmed picture's width to height may be from a video's: a row or two of a JPEG's bar. */
+private const val RATIO_SLACK = 0.04f
+
+/** The widest a thumbnail can be, width to height, and still hold a letterboxed frame: under 16:9. */
+private const val LETTERBOXED_BELOW = 1.7f
+
+/** The widest a video source's cover is, width to height: a wider thumbnail is cropped to it. */
 private const val MAX_RATIO = 3f
 
 /**
  * The width to height of a video source's cover for [art] (trimmed, [trimBars]): its own, between
- * square and [MAX_RATIO]; 16:9 for no art, the placeholder's and the untrimmed thumbnail's while it is
- * being trimmed.
+ * square and [MAX_RATIO]; 16:9 for no art, the placeholder's.
  */
 internal fun videoCoverRatio(art: Bitmap?): Float =
     if (art == null || art.height <= 0) {
@@ -134,6 +160,14 @@ internal fun videoCoverRatio(art: Bitmap?): Float =
     } else {
         (art.width.toFloat() / art.height).coerceIn(1f, MAX_RATIO)
     }
+
+/**
+ * The width to height of a video source's cover while [art] is being trimmed ([trimmedThumbnail]):
+ * 16:9 for a thumbnail that may hold a letterboxed frame (taller than 16:9, a 4:3 one), so the
+ * frame shows as it will once trimmed; else its own ([videoCoverRatio]).
+ */
+internal fun untrimmedRatio(art: Bitmap): Float =
+    if (art.width < art.height * LETTERBOXED_BELOW) VIDEO_RATIO else videoCoverRatio(art)
 
 /** A video's width to height, 16:9: the placeholder's of a video source with no thumbnail. */
 private const val VIDEO_RATIO = 16f / 9f

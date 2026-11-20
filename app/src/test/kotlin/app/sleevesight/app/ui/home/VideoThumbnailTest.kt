@@ -80,6 +80,33 @@ class VideoThumbnailTest {
     }
 
     @Test
+    fun aNightSceneDarkAtBothEdgesIsKeptAsItIs() {
+        // Dark rows at the top and the bottom alike, but what is left (480 by 300, 1.6:1) is no video's shape.
+        val night = thumbnail(bar = 30)
+        assertSame(night, trimBars(night))
+    }
+
+    @Test
+    fun aWidescreenFrameLetterboxedInAFourByThreeThumbnailComesOutAtItsOwnRatio() {
+        // 2.39:1 in 4:3: 480 by 200 left, within a few percent of 2.39.
+        val trimmed = trimBars(thumbnail(bar = 80))
+        assertEquals(200, trimmed.height)
+    }
+
+    @Test
+    fun aThumbnailAlreadySixteenByNineIsNotScanned() {
+        // As wide as the frame it would hold: dark edges there are the picture's.
+        val wide = thumbnail(bar = 60, width = 1280, height = 720)
+        assertSame(wide, trimBars(wide))
+    }
+
+    @Test
+    fun whileTrimmingAFourByThreeThumbnailShowsAtSixteenByNineAWideOneAtItsOwn() {
+        assertEquals(16f / 9f, untrimmedRatio(thumbnail(bar = 0)), 0.001f)
+        assertEquals(2f, untrimmedRatio(thumbnail(bar = 0, width = 720, height = 360)), 0.001f)
+    }
+
+    @Test
     fun aFrameDarkOnlyAtTheTopIsKeptAsItIs() {
         // A night sky, not a bar: no black rows at the bottom to match it.
         val night = thumbnail(bar = 60, bottom = 0)
