@@ -187,7 +187,8 @@ private fun LoadPreview(
     // A voice the load changes, named as the engine lists it, never as the file names it (#1481).
     val voice = plan.settings.readAloudVoice?.takeIf { it.id != settings.readAloudVoice?.id }
     val shown = voice?.let { plan.settings.copy(readAloudVoice = engineNamed(it)) } ?: plan.settings
-    val changes = loadChanges(settings, shown, modelName, playerLabel)
+    // Every text taken from the file shown through [fileText]; the load keeps it as it is.
+    val changes = loadChanges(settings, shown, { fileText(modelName(it)) }, { fileText(playerLabel(it)) })
     val skipped = plan.skipped.map { skippedLine(it) } + plan.keyless.map { keylessLine(it) }
     val resources = LocalResources.current
     // As the preview has it, unless what is saved differs: a save ahead of it changed the settings.
@@ -203,8 +204,8 @@ private fun LoadPreview(
         }
     LoadDialog(
         from =
-            contents.appVersion?.let { stringResource(R.string.settings_load_file_from, name, it) }
-                ?: stringResource(R.string.settings_load_file_from_unknown, name),
+            contents.appVersion?.let { stringResource(R.string.settings_load_file_from, fileText(name), fileText(it)) }
+                ?: stringResource(R.string.settings_load_file_from_unknown, fileText(name)),
         changes = changes,
         skipped = skipped,
         onLoad = {

@@ -130,7 +130,7 @@ private fun fileValueLabel(
 @Composable
 internal fun engineNamed(voice: ReadAloudVoice): ReadAloudVoice {
     val entry = engineState(LocalReadAloudVoices.current).groups.entry(voice.id)
-    return voice.copy(name = entry?.let { voiceName(it) } ?: voice.id)
+    return voice.copy(name = entry?.let { voiceName(it) } ?: fileText(voice.id))
 }
 
 /** The most characters of a file's own text *Load settings?* shows (#1482). */

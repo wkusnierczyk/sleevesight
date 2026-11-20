@@ -418,4 +418,33 @@ class SettingsFileScreenTest {
             }
         }
     }
+
+    @Test
+    fun everyTextFromTheFileIsShownCutWithNoFormatCharacter() {
+        // A voice the engine lacks, a model, a player and the version, each long and with a bidi
+        // override; the version with a character outside the BMP (two UTF-16 units) at the cut.
+        val bidi = "\u202E"
+        val voice = bidi + "v".repeat(200)
+        val model = bidi + "m".repeat(200)
+        val player = "org." + "p".repeat(200)
+        val version = bidi + "9".repeat(78) + "\uD83D\uDE00" + "9".repeat(50)
+        val file =
+            """{"file": "Sleevesight settings", "format": 1, "appVersion": "$version", "settings": {
+                "readAloudVoice": {"id": "$voice"}, "aiModels": {"ANTHROPIC": "$model"},
+                "followedPlayers": {"$player": true}}}"""
+
+        fun has(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
+        screen {
+            openPreview(file)
+            assertTrue(has(voiceLine("v".repeat(79) + "\u2026")))
+            assertTrue(has("m".repeat(79) + "\u2026"))
+            assertTrue(has("org." + "p".repeat(75) + "\u2026"))
+            // Cut after the emoji, whole: 78 digits, the emoji, the ellipsis.
+            assertTrue(has("saved by Sleevesight " + "9".repeat(78) + "\uD83D\uDE00\u2026."))
+            assertFalse(has(bidi))
+            assertFalse(has("v".repeat(80)))
+            assertFalse(has("m".repeat(80)))
+            assertFalse(has("p".repeat(80)))
+        }
+    }
 }
