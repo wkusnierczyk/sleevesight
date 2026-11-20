@@ -1,5 +1,7 @@
 package app.sleevesight.core.settings
 
+import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.SettingsFile.Skipped
 import kotlinx.serialization.json.Json
@@ -36,7 +38,7 @@ class SettingsFileTest {
             unfoldedDescriptions = listOf("a", "b"),
         )
 
-    private val inFile = SettingsFile.FIELDS.map { it.name }
+    private val inFile = SettingsFile.NAMES
 
     private fun settingsOf(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject["settings"]!!.jsonObject
 
@@ -209,5 +211,180 @@ class SettingsFileTest {
         assertEquals(JsonPrimitive("90d"), settingsOf(text)["historyLifetime"])
         assertEquals(JsonPrimitive("auto"), settingsOf(text)["crossfade"])
         assertTrue(text.lines().size > inFile.size, "one setting a line, pretty printed")
+    }
+
+    @Test
+    fun aModelOrEffortNotReadKeepsItsValueAndADefaultInTheFileReplacesAChoice() {
+        val here =
+            defaults.copy(
+                aiModels = mapOf(ProviderId.ANTHROPIC to "claude-mine", ProviderId.OPENAI to "gpt-mine"),
+                aiEfforts =
+                    mapOf(
+                        ProviderId.ANTHROPIC to ReasoningEffort.HIGH,
+                        ProviderId.OPENAI to ReasoningEffort.MEDIUM,
+                    ),
+            )
+        val contents =
+            assertNotNull(
+                SettingsFile.read(
+                    file(
+                        "aiModels" to
+                            "{\"ANTHROPIC\": 12, \"OPENAI\": \"${Settings.DEFAULT_MODELS[ProviderId.OPENAI]}\"}",
+                        "aiEfforts" to "{\"ANTHROPIC\": \"MINIMAL\", \"OPENAI\": \"LOW\"}",
+                    ),
+                ),
+            )
+        assertEquals(
+            listOf<Skipped>(
+                Skipped.Invalid("aiModels", "ANTHROPIC", "12"),
+                Skipped.Invalid("aiEfforts", "ANTHROPIC", "MINIMAL"),
+            ),
+            contents.skipped,
+        )
+        val loaded = SettingsFile.load(contents, here, false).settings
+        // The invalid entries keep their values; the defaults in the file replace the choices.
+        assertEquals(mapOf(ProviderId.ANTHROPIC to "claude-mine"), loaded.aiModels)
+        assertEquals(mapOf(ProviderId.ANTHROPIC to ReasoningEffort.HIGH), loaded.aiEfforts)
+        // A provider the file does not name keeps its own.
+        val google = here.copy(aiModels = here.aiModels + (ProviderId.GOOGLE to "gemini-mine"))
+        assertEquals("gemini-mine", SettingsFile.load(contents, google, false).settings.aiModels[ProviderId.GOOGLE])
+    }
+
+    @Test
+    fun whatTheSettingsDoNotOfferIsNeitherWrittenNorLoaded() {
+        val offered =
+            SettingsFile.Offered(
+                sourceSwitches = SourceSwitch.entries.toSet() - SourceSwitch.DISCOGS,
+                cacheSources = Settings.DEFAULT_CACHE_LIFETIMES.keys - SourceId.DISCOGS,
+            )
+        val text =
+            SettingsFile.write(
+                defaults.copy(enabledSources = defaults.enabledSources + SourceSwitch.DISCOGS),
+                "0.10.0",
+                offered,
+            )
+        assertFalse("DISCOGS" in text, text)
+        val contents =
+            assertNotNull(
+                SettingsFile.read(
+                    file(
+                        "aiProvider" to "\"OLLAMA\"",
+                        "cacheLifetimes" to "{\"DISCOGS\": \"3d\"}",
+                        "enabledSources" to "[\"MUSICBRAINZ\", \"DISCOGS\"]",
+                    ),
+                    offered,
+                ),
+            )
+        assertEquals(
+            listOf<Skipped>(
+                Skipped.Invalid("aiProvider", null, "OLLAMA"),
+                Skipped.Invalid("cacheLifetimes", "DISCOGS", "3d"),
+                Skipped.Invalid("enabledSources", "DISCOGS", "DISCOGS"),
+            ),
+            contents.skipped,
+        )
+        // A switch the settings do not show keeps its value.
+        val here = defaults.copy(enabledSources = setOf(SourceSwitch.DISCOGS, SourceSwitch.LASTFM))
+        assertEquals(
+            setOf(SourceSwitch.DISCOGS, SourceSwitch.MUSICBRAINZ),
+            SettingsFile.load(contents, here, false).settings.enabledSources,
+        )
+    }
+
+    @Test
+    fun aFileHoldsAndALoadAddsAtMostMaxPlayersAndSavingAgainChangesNothing() {
+        val many = (1..3500).associate { "org.example.p$it" to (it % 2 == 0) }
+        val text = SettingsFile.write(defaults.copy(followedPlayers = many), "0.10.0")
+        assertTrue(text.toByteArray().size <= SettingsFile.MAX_BYTES)
+        val big = "{" + many.entries.joinToString(", ") { (k, v) -> "\"$k\": $v" } + "}"
+        val contents = assertNotNull(SettingsFile.read(file("followedPlayers" to big)))
+        val first = SettingsFile.load(contents, defaults, false)
+        assertTrue(
+            first.settings.followedPlayers.size <= SettingsFile.MAX_PLAYERS,
+            "${first.settings.followedPlayers.size}",
+        )
+        assertTrue(first.skipped.any { it is Skipped.TooMany })
+        // Saved and loaded again: nothing changes, nothing more is skipped.
+        val again = assertNotNull(SettingsFile.read(SettingsFile.write(first.settings, "0.10.0")))
+        val second = SettingsFile.load(again, first.settings, false)
+        assertEquals(first.settings, second.settings)
+        assertEquals(emptyList(), second.skipped)
+    }
+
+    @Test
+    fun aTimeThatWouldNotReadBackAsWrittenIsSkipped() {
+        val contents =
+            assertNotNull(
+                SettingsFile.read(
+                    file(
+                        "crossfade" to "\"1ns\"",
+                        "historyLifetime" to "\"200d 1h\"",
+                        "sessionGap" to "\"45s\"",
+                        "cacheLifetimes" to "{\"WEB\": \"36h\"}",
+                    ),
+                ),
+            )
+        assertEquals(
+            listOf<Skipped>(
+                Skipped.Invalid("crossfade", null, "1ns"),
+                Skipped.Invalid("historyLifetime", null, "200d 1h"),
+                Skipped.Invalid("sessionGap", null, "45s"),
+                Skipped.Invalid("cacheLifetimes", "WEB", "36h"),
+            ),
+            contents.skipped,
+        )
+        assertEquals(defaults, SettingsFile.load(contents, defaults, false).settings)
+    }
+
+    @Test
+    fun withDeveloperModeOffDeveloperSettingsAreNamedOnceWhateverTheirValues() {
+        val contents = assertNotNull(SettingsFile.read(file("reportButton" to "\"LOUD\"", "linkStyle" to "7")))
+        assertEquals(listOf<Skipped>(Skipped.DeveloperModeOff), SettingsFile.load(contents, defaults, false).skipped)
+        assertEquals(2, SettingsFile.load(contents, defaults, true).skipped.size)
+    }
+
+    @Test
+    fun aPlayerThatIsNoPackageNameIsSkipped() {
+        val long = "a".repeat(SettingsFile.MAX_TEXT + 1)
+        val contents =
+            assertNotNull(
+                SettingsFile.read(
+                    file(
+                        "followedPlayers" to "{\"org.example.ok\": true, \"two words\": true, \"$long\": true}",
+                    ),
+                ),
+            )
+        assertEquals(
+            listOf<Skipped>(
+                Skipped.Invalid("followedPlayers", "two words", "true"),
+                Skipped.Invalid("followedPlayers", long, "true"),
+            ),
+            contents.skipped,
+        )
+        assertEquals(true, SettingsFile.load(contents, defaults, false).settings.followedPlayers["org.example.ok"])
+    }
+
+    @Test
+    fun theLargestFileTheLimitsAllowStaysUnderWhatALoadReads() {
+        // Each text at its longest, each character one JSON writes as an escape.
+        val worst = "\u0001".repeat(SettingsFile.MAX_TEXT)
+        val players =
+            (1..SettingsFile.MAX_PLAYERS).associate {
+                "p$it." +
+                    "a".repeat(
+                        SettingsFile.MAX_TEXT - 6,
+                    ) to true
+            }
+        val settings =
+            Settings.DEFAULT_MODELS.keys.fold(
+                moved.copy(followedPlayers = players, readAloudVoice = ReadAloudVoice(worst, worst)),
+            ) { s, provider -> s.withModel(provider, worst) }
+        val text = SettingsFile.write(settings, "0.10.0")
+        assertTrue(text.toByteArray().size <= SettingsFile.MAX_BYTES, "${text.toByteArray().size}")
+        val here = defaults.copy(developerMode = true, followedPlayers = emptyMap())
+        val loaded = SettingsFile.load(assertNotNull(SettingsFile.read(text)), here, true)
+        assertEquals(emptyList(), loaded.skipped)
+        assertEquals(settings.followedPlayers, loaded.settings.followedPlayers)
+        assertEquals(worst, loaded.settings.model(ProviderId.ANTHROPIC))
     }
 }
