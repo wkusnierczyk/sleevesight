@@ -13,8 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -112,6 +114,21 @@ class AutoAskedLineTest {
             assertTrue("$link in $line", link.width > 0f)
             assertTrue("$link in $line", link.left >= line.left && link.right <= line.right)
             assertTrue("$link in $line", link.top >= line.top && link.bottom <= line.bottom)
+            // Over the words themselves: the box the text laid "asked automatically" out in, not mirrored.
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose
+                .onNodeWithTag(tag)
+                .fetchSemanticsNode()
+                .config[SemanticsActions.GetTextLayoutResult]
+                .action
+                ?.invoke(layouts)
+            val laid = layouts.single()
+            val start = laid.layoutInput.text.indexOf("asked automatically")
+            val boxes = (start until start + "asked automatically".length).map(laid::getBoundingBox)
+            val left = line.left + boxes.minOf { it.left }
+            val right = line.left + boxes.maxOf { it.right }
+            assertEquals(left, link.left, 1f)
+            assertEquals(right, link.right, 1f)
         }
 
     @Test

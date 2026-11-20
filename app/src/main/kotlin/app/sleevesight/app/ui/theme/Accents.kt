@@ -21,6 +21,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.getTextLayoutResult
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
@@ -147,6 +148,10 @@ internal fun NamedLinkText(
                 this.text = AnnotatedString(text.text)
                 testTag = tag
                 traversalIndex = 0f
+                // The text's layout, as a text's own node gives it (tests read where the words are).
+                getTextLayoutResult { results ->
+                    layout.value?.let(results::add) != null
+                }
             }
         MarkedText(text, links, style, ink, color, words) { layout.value = it }
         Box(

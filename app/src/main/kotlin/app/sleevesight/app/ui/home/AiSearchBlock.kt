@@ -196,6 +196,8 @@ private fun Answered(
     val credit = creditString(credited)
     val byTag = Modifier.testTag(texts.tag(AI_SEARCH_BY_TAG))
     // The prompt lab's variant that wrote it (#1003), in the debug build only, while the lab is on (#1388).
+    // Only *Explain the song*'s, which *Ask AI automatically* never asks: the lab's credit never needs
+    // the note on what it asked (#956).
     val variant =
         if (BuildConfig.DEBUG &&
             kind == SearchKind.EXPLAIN &&
