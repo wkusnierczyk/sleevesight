@@ -7,7 +7,7 @@ title: Security checks
 permalink: /docs/security/
 docs_version: 0.10.0
 nav:
-  - id: results-for-090
+  - id: results-for-0100
     label: Results
   - id: what-is-checked
     label: Checks
