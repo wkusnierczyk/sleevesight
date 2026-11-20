@@ -112,7 +112,9 @@ class ReportButtonWiringTest {
             hide()
             compose.waitUntil(WAIT_MS) { shown(TESTER_REPORT_HIDDEN_TAG) }
             assertEquals(ReportButton.HIDE, stored())
-            assertEquals(0, buttons())
+            // The message shows once the save ends; the button goes once Home's read of the
+            // settings hears of it, on DataStore's thread first (#1479).
+            compose.waitUntil(WAIT_MS) { buttons() == 0 }
 
             scenario.recreate()
             compose.waitForIdle()
@@ -138,8 +140,13 @@ class ReportButtonWiringTest {
                 shadowOf(Looper.getMainLooper()).idle()
                 stored() == ReportButton.HIDE
             }
-            compose.waitForIdle()
-            assertEquals(0, buttons())
+            // The file holds *Hide* before the new Home, which follows the settings, hears so: it
+            // is told on DataStore's thread before the main one, which `waitForIdle` does not wait
+            // for (#1479). So wait for the button to go, as for the file.
+            compose.waitUntil(WAIT_MS) {
+                shadowOf(Looper.getMainLooper()).idle()
+                buttons() == 0
+            }
             assertFalse("No message on the new Home", shown(TESTER_REPORT_HIDDEN_TAG))
         }
 }
