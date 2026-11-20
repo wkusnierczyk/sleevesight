@@ -54,7 +54,7 @@ enum class SignInFailure {
 }
 
 /** How an answer at the callback stood to the sign-in under way, for the log (#1396). */
-enum class StateMatch {
+internal enum class StateMatch {
     /** It carried the sign-in's state back (as `s`, as `state`, or as both, agreeing). */
     MATCHED,
 
@@ -82,8 +82,9 @@ enum class StateMatch {
  * [restore]), so a process ended while the browser is open still finishes; it is dropped once a code
  * comes or the sign-in fails, so a code sent again, or with no sign-in under way, is ignored. One
  * sign-in at a time: a new one replaces the one before. An answer with no state is taken for the one
- * under way (#1396: the redirect may drop the callback's own query): with PKCE, a code is of no use
- * without the verifier, which never leaves the phone but to OpenRouter.
+ * under way (#1396: the redirect may drop the callback's own query): with PKCE, a code issued for
+ * another sign-in's challenge is refused at the exchange; one for this challenge needs the `/auth`
+ * URL, which carries the state too.
  *
  * @param signIn OpenRouter's sign-in.
  * @param save stores the key and switches OpenRouter on; false when the key could not be stored.
@@ -154,7 +155,7 @@ class OpenRouterLogin(
      *
      * @return how the answer stood to the sign-in under way, for the log.
      */
-    fun callback(
+    internal fun callback(
         code: String?,
         vararg states: String?,
     ): StateMatch {
@@ -271,7 +272,7 @@ class OpenRouterLogin(
          * The answer at a callback [uri] (as a string): the parameters of its query, and of its
          * fragment, which OpenRouter may use instead (#1396).
          */
-        fun answerAt(uri: String): Answer {
+        internal fun answerAt(uri: String): Answer {
             val beforeFragment = uri.substringBefore('#')
             return Answer(
                 query = answerOf(beforeFragment.substringAfter('?', "")),
@@ -343,7 +344,7 @@ class OpenRouterLogin(
  * others, never by values: the code and the state stay out of the log, and so does a name made of
  * decoded text (`s%3D…%26code%3D…=`), which could carry them.
  */
-class Answer(
+internal class Answer(
     val query: Map<String, String>,
     val fragment: Map<String, String>,
 ) {
