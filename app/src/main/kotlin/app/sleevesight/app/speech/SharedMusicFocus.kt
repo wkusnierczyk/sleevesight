@@ -21,6 +21,19 @@ class SharedMusicFocus(
     private var held = false
     private var owner: Party? = null
 
+    // The focus taken by another app (a call): the party holding it stops, which gives it back; a
+    // hold kept for a party yet to take it is let go, so that party asks for the focus anew rather
+    // than speak over the call.
+    private fun focusLost() {
+        val holder = owner
+        if (holder != null) {
+            holder.lost?.invoke()
+        } else if (held) {
+            held = false
+            inner.release()
+        }
+    }
+
     /** A speaker's focus, which it takes and releases as it would [inner]. */
     fun party(): MusicFocus = Party()
 
@@ -31,7 +44,7 @@ class SharedMusicFocus(
             how: ReadAloudMusic,
             lost: () -> Unit,
         ): Boolean {
-            if (!held) held = inner.take(how) { owner?.lost?.invoke() }
+            if (!held) held = inner.take(how) { focusLost() }
             if (held) {
                 owner = this
                 this.lost = lost

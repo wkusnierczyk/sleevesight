@@ -357,7 +357,7 @@
     <string name="purge_keys_done_none">The phone’s key that sealed your keys has been deleted.</string>
     <string name="purge_keys_more">More about safe delete</string>
     <string name="purge_keys_more_explained">Purge keys removes every saved key from this phone’s storage, and deletes the key in the phone’s Android Keystore that encrypted them. Any copy left in the storage can then never be decrypted again (crypto-erasure). Sleevesight never sent your keys anywhere but to their own services, and never logged them. Purging keys from Sleevesight does not revoke them. You can still use your API keys elsewhere if you keep another copy.</string>
-    <!-- Read aloud (#325), at the end of Insights: a heading drawn as a setting's title, with what reads (#946), then its three settings. -->
+    <!-- Read aloud (#325), at the end of Insights: a heading drawn as a setting's title, with what reads (#946), then its settings. -->
     <string name="settings_read_aloud">Read aloud</string>
     <string name="settings_read_aloud_summary">The speaker button beside insights triggers your phone’s text-to-speech engine to read the text aloud. The engine is the one chosen in Android’s settings. Note: some, such as Google’s network voices, send the text to their server to be spoken.</string>
     <!-- Read aloud → Voice (#787), the first row under it: a row with its value, opening a dialog of radio buttons. %1$s in the summary is settings_read_aloud_voice_link, a link to Android's text-to-speech settings. -->

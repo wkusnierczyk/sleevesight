@@ -117,11 +117,14 @@ fun List<VoiceGroup>.entry(id: String?): VoiceEntry? =
         }
     }
 
+/** Whether [name] is Google's engine's alias for a language's default voice (`en-US-language`). */
+internal fun isLanguageAlias(name: String): Boolean = name.endsWith(LANGUAGE_SUFFIX, ignoreCase = true)
+
 // The English voices of [voices] as entries, each numbered 0 (unordered), its versions merged.
 private fun voiceEntries(voices: Collection<EngineVoice>): List<VoiceEntry> =
     voices
         .filter { it.locale.language == Locale.ENGLISH.language && it.installed }
-        .filterNot { it.name.endsWith(LANGUAGE_SUFFIX, ignoreCase = true) }
+        .filterNot { isLanguageAlias(it.name) }
         .groupBy { voiceId(it.name) }
         .map { (id, versions) ->
             val local = versions.filter { !it.network }.minByOrNull { it.name }

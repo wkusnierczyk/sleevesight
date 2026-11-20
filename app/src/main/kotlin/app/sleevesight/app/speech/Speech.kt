@@ -73,6 +73,9 @@ interface SpeechEngine {
     /** `TextToSpeech.getVoice`'s name (#787): the voice set now, by [setLanguage] or [setVoice], if any. */
     fun currentVoice(): String? = null
 
+    /** `TextToSpeech.getDefaultVoice`'s name (#787): the engine's default voice, of its own default language. */
+    val defaultVoiceName: String? get() = null
+
     /** `TextToSpeech.setVoice` with the voice the engine calls [name] (#787): whether it was set. */
     fun setVoice(name: String): Boolean = false
 
@@ -125,6 +128,9 @@ private class AndroidSpeechEngine(
         }
 
     override fun currentVoice(): String? = runCatching { tts.voice?.name }.getOrNull()
+
+    override val defaultVoiceName: String?
+        get() = runCatching { tts.defaultVoice?.name }.getOrNull()
 
     override fun setVoice(name: String): Boolean {
         val voice = engineVoices.firstOrNull { it.name == name } ?: return false
@@ -267,12 +273,23 @@ class SystemSpeech(
 
     override fun voices(): List<EngineVoice> = engine?.takeIf { opened }?.voices().orEmpty()
 
-    // The language set, as a reading in it sets it, and the voice that brings, read back.
-    override fun defaultVoice(locale: Locale): String? =
-        engine?.takeIf { opened }?.let {
-            it.setLanguage(locale)
-            it.currentVoice()
+    // The language set, as a reading in it sets it, and the voice that brings, read back. Google's
+    // engine may report its alias for the language (`en-GB-language`), which the list leaves out:
+    // then its default voice, where that is a voice of the same language and country; else none.
+    override fun defaultVoice(locale: Locale): String? {
+        val tts = engine?.takeIf { opened } ?: return null
+        tts.setLanguage(locale)
+        val current = tts.currentVoice()
+        val concrete = { name: String ->
+            !isLanguageAlias(name) &&
+                tts.voices().any {
+                    it.name == name &&
+                        it.locale.language == locale.language &&
+                        it.locale.country.equals(locale.country, ignoreCase = true)
+                }
         }
+        return if (current == null || !isLanguageAlias(current)) current else tts.defaultVoiceName?.takeIf(concrete)
+    }
 
     override fun close() {
         stop()

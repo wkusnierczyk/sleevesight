@@ -128,8 +128,8 @@ class SystemReadAloudVoices(
         speech.close()
     }
 
-    // The music lowered under the sample, as *Lower* does under a reading; another app taking the
-    // sound (a call) stops it.
+    // The music lowered or paused under the sample as *Music while reading aloud* says ([music]), as
+    // under a reading; another app taking the sound (a call) stops it.
     private fun take(): Boolean {
         held = focus.take(music()) { stopSample() }
         return held

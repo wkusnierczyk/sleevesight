@@ -3,6 +3,7 @@ package app.sleevesight.app.speech
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.app.ui.home.SpokenWords
+import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -123,5 +124,45 @@ class SharedMusicFocusTest {
         sample("b")
         sampleSpeech.start()
         givenBack()
+    }
+
+    @Test
+    fun theFocusLostDuringAHandOverIsAskedForAnewByTheNextTake() {
+        // The hold kept for a party yet to take it, as while a replacement's engine starts.
+        var busy = true
+        val audio = FakeFocus()
+        val focus = SharedMusicFocus(audio) { busy }
+        val first = focus.party()
+        val next = focus.party()
+        assertTrue(first.take(ReadAloudMusic.LOWER) {})
+        first.release()
+        assertEquals(0, audio.releases)
+        // A call takes the focus: the kept hold is let go, not granted to the next.
+        audio.lose()
+        assertEquals(1, audio.releases)
+        assertTrue(next.take(ReadAloudMusic.LOWER) {})
+        assertEquals(listOf(ReadAloudMusic.LOWER, ReadAloudMusic.LOWER), audio.taken)
+        audio.grants = false
+        busy = false
+        next.release()
+        // Refused now: no hold left to grant it from.
+        val third = focus.party()
+        busy = true
+        assertFalse(third.take(ReadAloudMusic.LOWER) {})
+    }
+
+    @Test
+    fun theFocusLostWhileHeldStopsTheHolder() {
+        val audio = FakeFocus()
+        val focus = SharedMusicFocus(audio) { false }
+        val party = focus.party()
+        var stopped = 0
+        party.take(ReadAloudMusic.LOWER) {
+            stopped++
+            party.release()
+        }
+        audio.lose()
+        assertEquals(1, stopped)
+        assertEquals(1, audio.releases)
     }
 }

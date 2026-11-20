@@ -7,7 +7,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
- * *Voice*'s samples (#787): a sample is read in the voice asked for, the music lowered under it, a
+ * *Voice*'s samples (#787): a sample is read in the voice asked for, the music lowered or paused
+ * under it as *Music while reading aloud* says, a
  * reading under way stopped first; it ends, the music given back, at its end, on a stop, when
  * another sample replaces it, when another app takes the sound, and when the engine is closed; one
  * that cannot be read (no engine, the focus refused) ends at once. And the engine's voices are
@@ -168,5 +169,18 @@ class ReadAloudVoicesTest {
         remoteVoices.close()
         assertEquals(listOf("pause", "play"), remote.asked)
         assertFalse(held.held)
+    }
+
+    @Test
+    fun aSampleHoldsTheMusicAsMusicWhileReadingAloudSays() {
+        val paused =
+            SystemReadAloudVoices(
+                speechOf = { recording },
+                focus = focus,
+                online = flowOf(true),
+                music = { ReadAloudMusic.PAUSE },
+            )
+        paused.sample("v", "line") {}
+        assertEquals(listOf(ReadAloudMusic.PAUSE), focus.taken)
     }
 }

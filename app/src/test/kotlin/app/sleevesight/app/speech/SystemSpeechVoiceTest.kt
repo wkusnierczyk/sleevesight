@@ -6,6 +6,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -36,14 +37,20 @@ class SystemSpeechVoiceTest {
         // The engine's default language is American English: its voice is set until a language is.
         var current: String? = "en-us-x-sfg-local"
 
+        // Whether it reports a language's voice by Google's alias for it.
+        var aliases = false
+
         override fun setLanguage(locale: Locale) {
             set += "language ${locale.toLanguageTag()}"
-            current = DEFAULTS[locale.toLanguageTag()]
+            current = if (aliases) "${locale.toLanguageTag()}-language" else DEFAULTS[locale.toLanguageTag()]
         }
 
         override fun voices(): List<EngineVoice> = voices
 
         override fun currentVoice(): String? = current
+
+        // Google's engine's default voice, of its own default language.
+        override var defaultVoiceName: String? = "en-us-x-sfg-local"
 
         override fun setVoice(name: String): Boolean {
             set += "voice $name"
@@ -142,6 +149,21 @@ class SystemSpeechVoiceTest {
         // The engine set to American English, the phone (and so the readings) to British English.
         assertEquals("en-us-x-sfg-local", engine.currentVoice())
         assertEquals("en-gb-x-gbb-local", speech.defaultVoice(gb))
+    }
+
+    @Test
+    fun thePhonesChoiceReportedAsGooglesAliasIsTheEnginesDefaultVoiceOfTheSameLanguageAndCountry() {
+        speech.open { }
+        engine.onInit(TextToSpeech.SUCCESS)
+        shadowOf(Looper.getMainLooper()).idle()
+        engine.aliases = true
+        engine.defaultVoiceName = "en-gb-x-gba-local"
+        assertEquals("en-gb-x-gba-local", speech.defaultVoice(gb))
+        // A default of another country, or an alias itself: none, and "Now …" is left out.
+        engine.defaultVoiceName = "en-us-x-sfg-local"
+        assertNull(speech.defaultVoice(gb))
+        engine.defaultVoiceName = "en-GB-language"
+        assertNull(speech.defaultVoice(gb))
     }
 
     private companion object {
