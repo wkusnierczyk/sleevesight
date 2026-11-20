@@ -473,6 +473,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
                 .joinToString { it.name }
                 .ifEmpty { NONE }
         },
+        "settingsView" to { it.settingsView.name },
     )
 
 private fun onOff(on: Boolean) = if (on) "on" else "off"

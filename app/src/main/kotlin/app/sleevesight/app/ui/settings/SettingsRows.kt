@@ -93,8 +93,9 @@ private class FirstLine {
 /**
  * A line of explanation in a section, [text], folded to one line as a row's description is
  * ([Description], #847). As a sub-heading over rows, [over] names them by
- * title: a search that shows only some rows shows it while any of them shows (#649); with none, it
- * is not a setting of its own, and such a search leaves it out. A blank line in [text] starts a
+ * title: a search that shows only some rows shows it while any of them shows (#649), and so does a
+ * view that leaves some out (#1447); with none, it is not a setting of its own, and such a search
+ * leaves it out ([overShown]). A blank line in [text] starts a
  * paragraph ([Paragraphs], #758). Not [foldable], a line saying a state rather than a description
  * (*No players yet*, #874), it shows in full.
  */
@@ -104,8 +105,7 @@ internal fun Hint(
     over: List<String> = emptyList(),
     foldable: Boolean = true,
 ) {
-    val search = LocalRowSearch.current
-    if (search?.filtering == true && over.none { search.shows(it) }) return
+    if (!overShown(over)) return
     if (!foldable) {
         Paragraphs(stringResource(text), Modifier.padding(vertical = HINT_PADDING))
         return
@@ -128,8 +128,7 @@ internal fun HeadingRow(
     summary: String,
     over: List<String>,
 ) {
-    val search = LocalRowSearch.current
-    if (search?.filtering == true && over.none { search.shows(it) }) return
+    if (!overShown(over)) return
     val color = MaterialTheme.colorScheme.onSurface
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
         Text(
@@ -305,6 +304,7 @@ private fun MarkedRow(
                 color = titleColor,
                 onTextLayout = { firstLine.middle = ((it.getLineTop(0) + it.getLineBottom(0)) / 2).roundToInt() },
             )
+            NotInViewMark(title)
             content()
         }
         trailing?.invoke(this)
@@ -424,6 +424,7 @@ internal fun <T> ChoiceButtonsRow(
             color = color,
             modifier = Modifier.testTag(ROW_TITLE_TAG),
         )
+        NotInViewMark(title)
         // Its tap reaches no further than the buttons' room above them, which is theirs (#874).
         summary?.let { Description(title, it, color = color, reach = ABOVE_GROUP) }
         summaryTable?.let { Description(title, it.text, color = color, reach = ABOVE_GROUP, table = it) }

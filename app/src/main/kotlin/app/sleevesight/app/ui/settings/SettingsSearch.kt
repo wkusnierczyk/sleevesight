@@ -33,6 +33,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.core.settings.SettingsView
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -112,9 +113,13 @@ internal val LocalRowSearch = staticCompositionLocalOf<RowSearch?> { null }
 @Composable
 internal fun searchMarked(text: String): AnnotatedString = LocalRowSearch.current?.marked(text) ?: AnnotatedString(text)
 
-/** Whether the row titled [title] shows: always, unless a search shows only other rows. */
+/**
+ * Whether the row titled [title] shows: always, unless a search shows only other rows, or the view
+ * (#1447, [LocalRowView]) leaves it out.
+ */
 @Composable
-internal fun shownInSearch(title: String): Boolean = LocalRowSearch.current?.shows(title) ?: true
+internal fun shownInSearch(title: String): Boolean =
+    (LocalRowSearch.current?.shows(title) ?: true) && (LocalRowView.current?.shows(title) ?: true)
 
 /** [text] with every place [query] is in it, whatever the case or the apostrophe ([folded]), set in [style]. */
 internal fun marked(
@@ -186,7 +191,8 @@ internal fun SearchField(
 
 /**
  * What a search for [query] found, said to a screen reader once the typing has paused
- * ([ANNOUNCE_AFTER]): how many sections match ([count]), or that none does. Drawn as a point, not
+ * ([ANNOUNCE_AFTER]): how many sections match ([count]), or that none does; and how many more match
+ * outside the view ([more], #1447), all in [home], while they are not shown. Drawn as a point, not
  * seen, above the list so it is on screen however far the list is scrolled; the screen shows what
  * it found.
  */
@@ -194,12 +200,17 @@ internal fun SearchField(
 internal fun SearchAnnouncement(
     query: String,
     count: Int,
+    more: Int? = null,
+    home: SettingsView = SettingsView.ALL,
 ) {
+    val outside = more?.takeIf { it > 0 }?.let { searchMoreText(it, home) }
     val message =
-        if (count == 0) {
-            stringResource(R.string.settings_search_none, query.trim())
-        } else {
-            pluralStringResource(R.plurals.settings_search_matches, count, count)
+        when {
+            count > 0 ->
+                listOfNotNull(pluralStringResource(R.plurals.settings_search_matches, count, count), outside)
+                    .joinToString(". ")
+            outside != null -> outside
+            else -> stringResource(R.string.settings_search_none, query.trim())
         }
     // Drawn from the search's first keystroke, empty, so the screen reader knows the live region
     // before its first change; said only once the typing pauses, whether or not the count changed,

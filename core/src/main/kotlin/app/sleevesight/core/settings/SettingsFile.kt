@@ -59,10 +59,18 @@ object SettingsFile {
     /**
      * The settings never in a file, and never loaded from one: *Developer mode* (seven taps on
      * *Version* turn it on), what is dismissed and which descriptions are unfolded (the screens'
-     * state, not choices), and the artists' cache lifetime and the cache's size, which have no row.
+     * state, not choices), the artists' cache lifetime and the cache's size, which have no row, and
+     * the view (#1447), how this phone shows the settings rather than a setting.
      */
     val LEFT_OUT: Set<String> =
-        setOf("developerMode", "dismissed", "unfoldedDescriptions", "artistCacheLifetime", "cacheSizeLimit")
+        setOf(
+            "developerMode",
+            "dismissed",
+            "unfoldedDescriptions",
+            "artistCacheLifetime",
+            "cacheSizeLimit",
+            "settingsView",
+        )
 
     /** The developer settings: in a file only from *Developer mode*, loaded only into it. */
     val DEVELOPER: Set<String> =

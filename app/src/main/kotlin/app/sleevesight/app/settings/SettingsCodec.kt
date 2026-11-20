@@ -112,6 +112,9 @@ internal object SettingsCodec {
     private val FOLD_DESCRIPTIONS = booleanPreferencesKey("display.fold_descriptions")
     private val DESCRIPTIONS_ON_RETURN = stringPreferencesKey("display.descriptions_on_return")
 
+    /** The settings screen's view (#1447); a new install's is set by [SettingsViewMigration]. */
+    internal val SETTINGS_VIEW = stringPreferencesKey("display.settings_view")
+
     // In order, oldest change first: one text, the ids apart by [UNFOLDED_SEPARATOR]. A key of its
     // own, not the first build's set under `display.unfolded_descriptions`, which reads as another
     // type.
@@ -199,6 +202,7 @@ internal object SettingsCodec {
                 prefs[UNFOLDED_DESCRIPTIONS]?.split(UNFOLDED_SEPARATOR)?.filter { it.isNotEmpty() }
                     ?: defaults.unfoldedDescriptions,
             dismissed = dismissedOf(prefs),
+            settingsView = enumOf(prefs[SETTINGS_VIEW]) ?: defaults.settingsView,
         )
 
     /**
@@ -378,6 +382,9 @@ internal object SettingsCodec {
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
         if (moved { it.spinLogo }) prefs.put(SPIN_LOGO, settings.spinLogo, defaults.spinLogo)
         if (moved { it.logoSpeed }) prefs.put(LOGO_SPEED, settings.logoSpeed.name, defaults.logoSpeed.name)
+        if (moved { it.settingsView }) {
+            prefs.put(SETTINGS_VIEW, settings.settingsView.name, defaults.settingsView.name)
+        }
         if (moved { it.foldDescriptions }) {
             prefs.put(FOLD_DESCRIPTIONS, settings.foldDescriptions, defaults.foldDescriptions)
         }

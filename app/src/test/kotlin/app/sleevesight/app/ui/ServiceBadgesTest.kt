@@ -36,6 +36,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * The services' badges (#537): each service row under *Sources*, *Genres* and *AI services* starts
@@ -43,6 +44,9 @@ import org.robolectric.RobolectricTestRunner
  * (each AI service's initial), and is read by a screen reader as before, the badge skipped.
  */
 @RunWith(RobolectricTestRunner::class)
+// Tall enough for a service's model and effort rows in view together under the title, the view's
+// buttons (#1447) and the search box, which stay above the list.
+@Config(qualifiers = "h640dp")
 class ServiceBadgesTest {
     @get:Rule
     val compose = createEmptyComposeRule()
