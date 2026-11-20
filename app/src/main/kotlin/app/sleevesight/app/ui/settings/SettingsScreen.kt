@@ -63,6 +63,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.LookUpAfterClear
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
+import app.sleevesight.core.settings.SettingsView
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -632,28 +633,34 @@ private fun SettingsContent(
                 landOn?.let { navigator?.go(it) }
             }
         }
-        // The title and the search box above the list, so the search stays in reach (#649).
+        // The title, the view (#1447) and the search box above the list, so they stay in reach (#649).
         Text(
             stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp),
         )
+        val view = settings.settingsView
+        // A view changes only what shows: saved as any setting.
+        val choose = { chosen: SettingsView -> update { it.copy(settingsView = chosen) } }
+        ViewSwitch(view, choose, Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
         SearchField(folds.query, folds::search, Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
         // Asked once, off the main thread, from the start: for *Players* and for a search, which finds
         // them as soon as it begins (#649).
         val listed = listedPlayers(settings.followedPlayers.keys, navigation.players)
-        val found =
-            if (folds.searching) {
-                val players = listed.orEmpty().map { it.name }
-                matches(settingsIndex(settings, keys, players, navigation.modelName, unavailable), folds.query)
-            } else {
-                null
-            }
-        found?.let { SearchAnnouncement(folds.query, it.size) }
+        val players = listed.orEmpty().map { it.name }
+        val index = settingsIndex(settings, keys, players, navigation.modelName, unavailable)
+        val reveals = rememberViewReveals(view)
+        val views = settingViews(settings, navigation.reset.defaults, players)
+        val byView = reveals.shown(view, views, index, navigator?.landing?.target)
+        // *Show them* (#1447) lasts for the search, in the view.
+        var showMore by rememberSaveable(folds.query, view) { mutableStateOf(false) }
+        val found = if (folds.searching) byView.search(matches(index, folds.query), showMore) else null
+        found?.let { SearchAnnouncement(folds.query, it.sections.size, it.more.takeIf { !showMore }, it.home) }
         CompositionLocalProvider(LocalDescriptionFolds provides descriptionsShown) {
             // Left for a page, the descriptions show on the way back as on opening the settings (#874).
             val leaving = navigation.leaving(descriptions::leave)
-            SettingsColumn(settings, keys, leaving, unavailable, Found(listed, found), folds, update, open)
+            val shown = Found(listed, found, byView, showMore, reveals::reveal) { showMore = true }
+            SettingsColumn(settings, keys, leaving, unavailable, shown, folds, update, open)
         }
     }
 }
@@ -678,9 +685,11 @@ private fun SettingsColumn(
     val secrets = keys.states
     val chip = sectionChipWidth()
     val listed = shown.players
-    val found = shown.sections
+    val found = shown.search?.sections
+    val byView = shown.byView
 
-    // [section], unless a search under way does not find it.
+    // [section], unless a search under way does not find it; its rows as the view has them (#1447),
+    // the changed ones it hides said at the top while not searching.
     @Composable
     fun Section(
         section: SettingsSection,
@@ -689,14 +698,20 @@ private fun SettingsColumn(
         // One call, searching or not, so starting or clearing a search keeps what the section's
         // content holds, as the players note's *Hide once* (#759).
         val match = found?.get(section)
-        if (found == null || match != null) FoldedSection(section, folds, chip, match, content)
+        if (found != null && match == null) return
+        FoldedSection(section, folds, chip, match, byView.rowView(section, shown.more(section))) {
+            // Said only while not searching.
+            if (found == null) HiddenChanges(byView, section) { shown.reveal(section) }
+            content()
+        }
     }
 
     SettingsScrollColumn(
         modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        if (found?.isEmpty() == true) NothingFound(folds.query)
+        val more = shown.search?.takeIf { !shown.showMore }?.more ?: 0
+        if (found?.isEmpty() == true && more == 0) NothingFound(folds.query)
         Section(SettingsSection.PLAYERS) {
             PlayersSection(settings, listed, navigation.players, update, navigation.dismissals)
         }
@@ -729,14 +744,27 @@ private fun SettingsColumn(
                 }
             }
         }
+        // The matches outside the view (#1447), after those in it.
+        shown.search?.let { search -> if (more > 0) SearchMoreLine(more, search.home, shown.onShowMore) }
     }
 }
 
 /**
- * The players listed under *Players* ([players], null until loaded), and, while searching, the
- * sections the search finds, each with what of it shows ([sections]; null while not searching).
+ * The players listed under *Players* ([players], null until loaded); while searching, what the search
+ * shows in the view ([search]; null while not searching), with the matches outside it too once
+ * [showMore] (*Show them*, [onShowMore]); and what the view shows ([byView], #1447), a section's
+ * hidden changes once [reveal]ed.
  */
+@Suppress("LongParameterList") // What shows, and the two ways to show more.
 private class Found(
     val players: List<ListedPlayer>?,
-    val sections: Map<SettingsSection, SectionMatch>?,
-)
+    val search: ViewSearch?,
+    val byView: ViewShown,
+    val showMore: Boolean,
+    val reveal: (SettingsSection) -> Unit,
+    val onShowMore: () -> Unit,
+) {
+    /** [section]'s matches outside the view once *Show them* shows them, else none. */
+    fun more(section: SettingsSection): Set<String> =
+        if (showMore) search?.outside?.get(section).orEmpty() else emptySet()
+}

@@ -35,9 +35,10 @@ object SettingsReset {
 
     /**
      * What a reset keeps, the one list of it: the players followed (*Players*' switches), which AI
-     * service is switched on, *Developer mode* and what is dismissed (*Restore dismissed messages*
-     * brings that back); and *Keep history for* when its default is shorter, since a shorter time
-     * deletes history, which a reset never does. The view (#1447) joins here when it comes.
+     * service is switched on, *Developer mode*, what is dismissed (*Restore dismissed messages*
+     * brings that back) and the settings screen's view (#1447), which changes no value; and *Keep
+     * history for* when its default is shorter, since a shorter time deletes history, which a reset
+     * never does.
      */
     val KEPT: List<Kept> =
         listOf(
@@ -45,6 +46,7 @@ object SettingsReset {
             Kept("aiProvider") { from, into -> into.copy(aiProvider = from.aiProvider) },
             Kept("developerMode") { from, into -> into.copy(developerMode = from.developerMode) },
             Kept("dismissed") { from, into -> into.copy(dismissed = from.dismissed) },
+            Kept("settingsView") { from, into -> into.copy(settingsView = from.settingsView) },
             // Kept only where its default is shorter: a reset deletes no history.
             Kept("historyLifetime") { from, into ->
                 if (shortens(from.historyLifetime, into.historyLifetime)) {

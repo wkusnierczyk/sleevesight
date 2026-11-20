@@ -116,7 +116,8 @@ class PlayerSettingsTest {
                 compose
                     .onNodeWithText(name)
                     .fetchSemanticsNode()
-                    .boundsInRoot.top
+                    // Where it is placed, wherever the list is scrolled: bounds are cut to the screen.
+                    .positionInRoot.y
             }
             assertTrue(top("Alpha") < top("Zulu"))
         }

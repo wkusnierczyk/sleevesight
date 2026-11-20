@@ -224,6 +224,11 @@ import kotlin.time.Duration.Companion.seconds
  *   *Dismiss* was tapped ([Dismissable]), not shown again until *Restore dismissed messages*, under
  *   *Appearance*, brings them all back. None by default: the guide to Home (#627) shows for someone
  *   new to the app, and *Players*' note (#758) for someone who looks for a player.
+ * @property settingsView the view of the settings screen (#1447): which of its options it shows
+ *   ([SettingsView]). It changes only what is shown, never a setting's value. *All* here, which
+ *   someone updating from a version before views keeps, since nothing they used disappears; a new
+ *   install starts in *Basic* (`:app`'s `SettingsViewMigration`). Never in a settings file, and kept
+ *   by a reset.
  */
 data class Settings(
     val layout: Layout = Layout.EXPANDABLE_BOXES,
@@ -283,6 +288,7 @@ data class Settings(
     val spinLogo: Boolean = true,
     val logoSpeed: LogoSpeed = LogoSpeed.RPM_33,
     val dismissed: Set<Dismissable> = emptySet(),
+    val settingsView: SettingsView = SettingsView.ALL,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
@@ -824,6 +830,25 @@ enum class SymbolOpens {
 
     /** The player's own app. */
     PLAYER,
+}
+
+/**
+ * A view of the settings screen (#1447): the options it shows. Each view shows what the one before
+ * it shows, and more: [includes].
+ */
+enum class SettingsView {
+    /** The everyday options. */
+    BASIC,
+
+    /** More control: [BASIC] and more. */
+    ADVANCED,
+
+    /** Every option. */
+    ALL,
+    ;
+
+    /** Whether this view shows an option whose smallest view is [smallest]. */
+    fun includes(smallest: SettingsView): Boolean = smallest <= this
 }
 
 /** *Theme* (#444): whether the app is light or dark. */

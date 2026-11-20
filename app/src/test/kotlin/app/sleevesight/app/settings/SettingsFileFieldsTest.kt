@@ -20,6 +20,7 @@ import app.sleevesight.core.settings.ReadAloudVoice
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
+import app.sleevesight.core.settings.SettingsView
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.SymbolOpens
 import app.sleevesight.core.settings.ThemeChoice
@@ -102,6 +103,7 @@ class SettingsFileFieldsTest {
             spinLogo = false,
             logoSpeed = LogoSpeed.RPM_45,
             dismissed = setOf(Dismissable.PLAYERS_NOTE),
+            settingsView = SettingsView.BASIC,
         )
 
     private val fields: List<Field> =

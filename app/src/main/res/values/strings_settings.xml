@@ -10,6 +10,27 @@
         <item quantity="one">%d section matches</item>
         <item quantity="other">%d sections match</item>
     </plurals>
+    <!-- The settings' views (#1447): the button group under the title, which has no label. -->
+    <string name="settings_view_basic">Basic</string>
+    <string name="settings_view_advanced">Advanced</string>
+    <string name="settings_view_all">All</string>
+    <!-- Not shown: what a screen reader reads the view's buttons with ("Settings view: Basic"). -->
+    <string name="settings_view_name">Settings view</string>
+    <!-- At the top of a section's panel: the settings of it that differ from their defaults but are not in the view. -->
+    <plurals name="settings_hidden_changes">
+        <item quantity="one">%1$d changed setting hidden.</item>
+        <item quantity="other">%1$d changed settings hidden.</item>
+    </plurals>
+    <string name="settings_hidden_changes_show">Show</string>
+    <!-- Under a setting shown though not in the view; %1$s is the view's name. -->
+    <string name="settings_not_in_view">Not in %1$s</string>
+    <!-- After a search's matches: %1$d more match in the view %2$s. -->
+    <plurals name="settings_search_more">
+        <item quantity="one">%1$d more in %2$s.</item>
+        <item quantity="other">%1$d more in %2$s.</item>
+    </plurals>
+    <!-- One piece: a link split over two lines is hard to tap. -->
+    <string name="settings_search_more_show">Show\u00A0them</string>
     <string name="settings_section_expanded">expanded</string>
     <!-- A setting's description folded to one line (#847): its state, and what a tap on it does, for a screen reader. -->
     <string name="settings_description_collapsed">collapsed</string>
@@ -456,6 +477,8 @@
     <!-- Shown while a developer setting differs from its default; ticked, a reset puts them back too. -->
     <string name="settings_reset_include_developer">Include developer settings</string>
     <!-- %1$s is settings_section_appearance, %2$s settings_restore_dismissed. -->
+    <!-- %1$s is the view's name: Basic, Advanced or All (#1447). -->
+    <string name="settings_reset_keeps_view">The view (%1$s)</string>
     <string name="settings_reset_keeps_dismissed">Dismissed messages; %1$s → %2$s brings them back</string>
     <!-- Save to a file and Load from a file (#815), under Save and reset. -->
     <string name="settings_save_file">Save to a file</string>
