@@ -46,7 +46,6 @@ import app.sleevesight.app.ui.lab.LabSubject
 import app.sleevesight.app.ui.lab.labCreditText
 import app.sleevesight.app.ui.lab.labOnNow
 import app.sleevesight.app.ui.logo.Busy
-import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.CHIP_PADDING
 import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.PanelRule
@@ -86,15 +85,14 @@ import app.sleevesight.core.synthesis.SearchKind
  *   *Stop* and back, as each takes the other's place;
  * - answered: a rule, the answer as the panel shows its source's ([answer]: from the web, each value
  *   with its page, [FromSite]), then "Written by {model}." (#1162) on a line of its own, in italics,
- *   by a tap, or "Written by {model}; asked automatically." asked by *Ask AI automatically* in
- *   *Dates*, *Genres* and *Lyrics* ([AutoAskedLine], #956), then from the model's knowledge "From
+ *   by a tap, or "Written by {model}; asked automatically." asked by *Ask AI automatically*
+ *   ([AutoAskedLine], #956), then from the model's knowledge "From
  *   the AI model's own knowledge, not verified", and,
  *   kept from before, when it was written ([KeptLine], #851); last, what the answer puts after
  *   these notes ([last], the explanation's *Read more*, #1067);
  * - nothing usable: a rule, and "{model} found nothing on the web." or "{model} couldn't say from
- *   its own knowledge." in the answer's place; asked by itself, "; asked automatically" at its end in
- *   *Dates*, *Genres* and *Lyrics* (#956: a link to the setting, [search]'s `openSettingsAt`), and
- *   "Asked automatically: " before it for a genre's definition;
+ *   its own knowledge." in the answer's place; asked by itself, "; asked automatically" at its end
+ *   (#956: a link to the setting, [search]'s `openSettingsAt`);
  * - failed: "Asking AI failed: {reason}.", or "AI web search failed." ([askFailedText]), in the
  *   error colour, with *Retry* at the right of the line,
  *   as a source that could not be reached has ([RetryLine]), which asks again, a paid call.
@@ -145,9 +143,8 @@ internal fun AiSearchBlock(
         handoff.moveTo(stop)
     }
     val searchButton = Modifier.handoffTarget(handoff, button)
-    // The note on what *Ask AI automatically* asked, a link to it (#956): in the panels, not for a
-    // genre's definition, which keeps "Asked automatically: " before its nothing line.
-    val note = search.openSettingsAt.takeIf { kind in AUTO_NOTED }?.let { AutoNote(it, texts.nothingWebAuto) }
+    // The note on what *Ask AI automatically* asked, a link to it (#956).
+    val note = autoNote(search, kind)
     when (val shown = state) {
         AiSearch.None -> Unit
         AiSearch.Unready -> SearchButton(texts, enabled = false, width, searchButton) {}
@@ -230,14 +227,13 @@ private fun Answered(
 }
 
 // Nothing found, under a rule: on the web or from the model's knowledge; for a question asked by
-// itself, with [note] (the panels'), "; asked automatically" at its end, a link to the setting (#956),
-// else after "Asked automatically: " (#801, #802: a genre's definition, the spelling check); kept from
+// itself, "; asked automatically" at its end, a link to the setting ([note], #956); kept from
 // before, when it was written (#851).
 @Composable
 internal fun NothingFound(
     texts: SearchTexts,
     shown: AiSearch.NothingFound,
-    note: AutoNote? = null,
+    note: AutoNote?,
 ) {
     PanelRule(Modifier.testTag(texts.tag(AI_SEARCH_RULE_TAG)))
     val tag = texts.tag(AI_SEARCH_NOTHING_TAG)
@@ -246,25 +242,10 @@ internal fun NothingFound(
         AutoAskedLine(autoNothingParts(line, shown.model, autoAskedLink(note.open)), italic = false, tag)
     } else {
         val nothing = stringResource(if (shown.way.web) texts.nothingWeb else R.string.home_ai_nothing, shown.model)
-        QuietLine(
-            if (shown.way.automatic) stringResource(R.string.home_ai_nothing_auto, nothing) else nothing,
-            Modifier.testTag(tag),
-        )
+        QuietLine(nothing, Modifier.testTag(tag))
     }
     shown.keptAt?.let { KeptLine(it) }
 }
-
-/**
- * The note on what *Ask AI automatically* asked (#956), in *Dates*, *Genres* and *Lyrics*: its link
- * opens the settings at it ([open]); [web] is the nothing line from the web that ends with it.
- */
-internal class AutoNote(
-    val open: (SettingsTarget) -> Unit,
-    @StringRes val web: Int,
-)
-
-// The panels whose answers asked automatically say so (#956); *Explain the song* is never asked so.
-private val AUTO_NOTED = setOf(SearchKind.DATES, SearchKind.GENRES, SearchKind.LYRICS)
 
 /**
  * The credit under what *Ask AI* found ([text]: "Written by {model}.", #1162), on a line of its own,
@@ -353,6 +334,7 @@ internal class SearchTexts(
                 R.string.home_spelling_checking,
                 R.string.home_spelling_none,
                 ::spellingTag,
+                nothingWebAuto = R.string.home_spelling_none_auto,
             )
 
         /**

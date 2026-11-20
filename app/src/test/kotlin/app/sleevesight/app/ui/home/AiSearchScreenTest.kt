@@ -276,7 +276,6 @@ class AiSearchScreenTest {
             app.getString(R.string.home_ai_nothing, model),
         )
         assertEquals("Claude Haiku 5.5 found nothing on the web.", app.getString(R.string.home_ai_nothing_web, model))
-        assertEquals("Asked automatically: x", app.getString(R.string.home_ai_nothing_auto, "x"))
         assertEquals("From discogs.com", app.getString(R.string.home_ai_from, "discogs.com"))
         assertEquals("From the AI model’s own knowledge, not verified", text(R.string.home_cite_model))
         assertEquals("The song’s page, from the web search for this track.", text(R.string.home_lyrics_web_note))

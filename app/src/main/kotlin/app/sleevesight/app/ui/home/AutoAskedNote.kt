@@ -11,9 +11,11 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.theme.NamedLinkText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.linkedParts
+import app.sleevesight.core.synthesis.SearchKind
 
-// What *Ask AI automatically* asked in *Dates*, *Genres* and *Lyrics* says so (#956), found or not:
-// "; asked automatically." at the end of the credit or the nothing line, a link to the setting.
+// What *Ask AI automatically* asked says so (#956), found or not: "; asked automatically." at the end
+// of the credit or the nothing line, a link to the setting. In *Dates*, *Genres* and *Lyrics*, under
+// a genre with no definition, and for the spelling check (#1293).
 
 /**
  * The note's link, "asked automatically", which opens the settings at *Ask AI automatically*
@@ -50,13 +52,16 @@ internal fun autoCreditParts(
     }
 }
 
-/** A nothing line asked automatically (#956), [line] (its model [model]) with [link] at its end. */
+/**
+ * A nothing line asked automatically (#956), [line] with [link] at its end; [words] its first
+ * argument (the model, or the spelling check's title).
+ */
 @Composable
 internal fun autoNothingParts(
     @StringRes line: Int,
-    model: String,
+    words: String,
     link: TextPart.Action,
-): List<TextPart> = linkedParts(stringResource(line), TextPart.Words(model), link)
+): List<TextPart> = linkedParts(stringResource(line), TextPart.Words(words), link)
 
 /**
  * [parts], a line with one link in it ([autoAskedLink]), in the quiet style of the notes under an
@@ -79,6 +84,26 @@ internal fun AutoAskedLine(
         MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
+
+/**
+ * The note on what *Ask AI automatically* asked (#956): its link opens the settings at it ([open]);
+ * [web] is the nothing line from the web that ends with it.
+ */
+internal class AutoNote(
+    val open: (SettingsTarget) -> Unit,
+    @StringRes val web: Int,
+)
+
+/**
+ * The note for [kind]'s answers asked automatically (#956), opening the settings as [search] does:
+ * for every search *Ask AI automatically* may ask, the panels', a genre's definition and the spelling
+ * check (#1293); none for *Explain the song*, never asked so.
+ */
+internal fun autoNote(
+    search: PanelSearch,
+    kind: SearchKind,
+): AutoNote? =
+    if (kind == SearchKind.EXPLAIN) null else AutoNote(search.openSettingsAt, SearchTexts.of(kind).nothingWebAuto)
 
 /** The test tag of the note's link, as a screen reader finds it (#956). */
 val AUTO_ASKED_LINK_TAG: String = SettingsTarget.searchWithAi.linkTag
