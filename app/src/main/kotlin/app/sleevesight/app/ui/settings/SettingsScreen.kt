@@ -47,6 +47,7 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.settings.resetOf
 import app.sleevesight.app.settings.resetter
 import app.sleevesight.app.settings.saving
+import app.sleevesight.app.speech.ReadAloudVoices
 import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.CameraQrScanner
@@ -105,6 +106,8 @@ import kotlinx.coroutines.launch
  * [resetSettings] makes *Reset to the defaults* (#960), telling the pipeline of a mode it changes;
  * null resets through [settingsStore] alone ([resetter]). Its message is said by whichever screen
  * shows once it is saved, after a recreation too ([ResetNotice]).
+ * [readAloudVoices] gives *Voice* under *Read aloud* (#787) the text-to-speech engine's voices and
+ * reads its samples; null for none (tests), the row then showing the voice stored.
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -126,6 +129,7 @@ fun SettingsScreen(
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     openRouter: OpenRouterAccess? = null,
     resetSettings: ((Settings) -> Deferred<Boolean>)? = null,
+    readAloudVoices: ReadAloudVoices? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -201,6 +205,7 @@ fun SettingsScreen(
                     CompositionLocalProvider(
                         LocalHistoryLifetime provides historyLifetime,
                         LocalOpenRouterSignIn provides signIn,
+                        LocalReadAloudVoices provides readAloudVoices,
                     ) {
                         SettingsContent(current, keys, navigation, unavailable, landOn, jump, { jump = null }, update) {
                             dialog = it

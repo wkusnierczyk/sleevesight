@@ -212,6 +212,7 @@ class MainActivity : ComponentActivity() {
                                         // Reset to the defaults (#960): a mode it changes reaches the pipeline.
                                         resetSettings = graph.resetSettings,
                                         openRouter = OpenRouterAccess(graph.openRouterLogin, graph.keyRefusals),
+                                        readAloudVoices = graph.readAloudVoices,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },

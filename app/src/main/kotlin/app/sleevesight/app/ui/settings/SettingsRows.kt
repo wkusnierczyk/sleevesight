@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.ChoiceButtonGroup
+import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
@@ -306,7 +307,10 @@ private fun MarkedRow(
  * ([UNDER_BADGE]) instead. [leading] goes at the row's start, before the title, [ROW_MARK] a side,
  * centred on the title's first line as a [SwitchRow]'s is: a source's badge (#670). The summary
  * folds ([Description], #847); [note], under it, says the setting's state (a model found
- * unavailable), or what the value chosen does (#874), and always shows in full.
+ * unavailable), or what the value chosen does (#874), and always shows in full. [summaryLink] and
+ * [noteLink] are links set in the summary and the note where they have the link's text, which work
+ * while the row is disabled too (*Voice*, #787). [trailing] goes at the row's end, lined up with the
+ * title's first line as a [SwitchRow]'s switch, a control of its own (*Voice*'s *Listen* pill).
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable
@@ -318,6 +322,9 @@ internal fun ValueRow(
     indent: Boolean = false,
     underBadge: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
+    summaryLink: TextPart.Linked? = null,
+    noteLink: TextPart.Linked? = null,
+    trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)?,
 ) {
     if (!shownInSearch(title)) return
@@ -333,6 +340,13 @@ internal fun ValueRow(
         titleColor = color,
         alpha = alpha,
         leading = leading,
+        trailing =
+            trailing?.let { end ->
+                {
+                    Spacer(Modifier.width(16.dp))
+                    Box(Modifier.alignBy(::middle)) { end() }
+                }
+            },
     ) {
         Text(
             value,
@@ -340,14 +354,17 @@ internal fun ValueRow(
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
         )
         // Its tap reaches into the row's padding where no note comes under it (#874).
-        summary?.let { Description(title, it, color = color, reach = if (note == null) TAP_BELOW else 0.dp) }
+        summary?.let {
+            Description(title, it, color = color, link = summaryLink, reach = if (note == null) TAP_BELOW else 0.dp)
+        }
         note?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodySmall,
-                color = color,
-                modifier = Modifier.testTag(ROW_NOTE_TAG),
-            )
+            val style = MaterialTheme.typography.bodySmall
+            val tagged = Modifier.testTag(ROW_NOTE_TAG)
+            if (noteLink != null) {
+                LinkedText(sentenceWith(it, noteLink), style, tagged, color)
+            } else {
+                Text(it, style = style, color = color, modifier = tagged)
+            }
         }
     }
 }
