@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import app.sleevesight.app.R
+import app.sleevesight.core.settings.SymbolOpens
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
@@ -39,6 +40,17 @@ internal enum class GuidePart(
     CITE(R.string.home_guide_note_cite, R.string.home_guide_part_cite, R.string.home_guide_about_cite),
     WRITE(R.string.home_guide_note_write, R.string.home_guide_part_write, R.string.home_guide_about_write),
     SOURCES(R.string.home_guide_note_sources, R.string.home_guide_part_sources, R.string.home_guide_about_sources),
+    ;
+
+    /** [note], for the player as a tap on the note symbol opens the player menu or the player ([opens], #1445). */
+    @StringRes
+    fun note(opens: SymbolOpens): Int =
+        if (this == PLAYER && opens == SymbolOpens.PLAYER) R.string.home_guide_note_player_app else note
+
+    /** [about], for the player as a tap on the note symbol opens the player menu or the player ([opens], #1445). */
+    @StringRes
+    fun about(opens: SymbolOpens): Int =
+        if (this == PLAYER && opens == SymbolOpens.PLAYER) R.string.home_guide_about_player_app else about
 }
 
 /**

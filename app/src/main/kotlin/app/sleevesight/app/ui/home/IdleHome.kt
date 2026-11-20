@@ -110,6 +110,7 @@ internal fun IdleHome(
             val failed = stringResource(R.string.settings_change_failed)
             val dismissals = actions.dismissals
             HomeGuide(
+                opens = settings.symbolOpens,
                 onHideOnce = actions.hideGuideOnce,
                 onDismiss = {
                     val saved = dismissals.dismiss(Dismissable.HOME_GUIDE)

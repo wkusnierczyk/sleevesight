@@ -81,6 +81,7 @@ import app.sleevesight.app.ui.theme.handoffTarget
 import app.sleevesight.app.ui.theme.rememberFocusHandoff
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.SymbolOpens
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -113,8 +114,12 @@ internal val ShantellSans: FontFamily = FontFamily(Font(R.font.shantell_sans_reg
  * The notes follow the font size, and the picture narrows as it grows, so the notes keep room; the
  * picture itself is drawn at the default font size, so it stays a picture of Home.
  */
+@Suppress("LongMethod") // The picture's parts, its notes, marks, magnifier and panel, laid out as one.
 @Composable
-internal fun GuidePicture(modifier: Modifier = Modifier) {
+internal fun GuidePicture(
+    opens: SymbolOpens,
+    modifier: Modifier = Modifier,
+) {
     var magnified by rememberSaveable { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf<GuidePart?>(null) }
     val handoff = rememberFocusHandoff()
@@ -135,10 +140,11 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
                     .pointerInput(Unit) { detectTapGestures { magnified = true } },
                 picture::report,
             )
-            for (part in GuidePart.entries) GuideNoteText(part, hand, Modifier.layoutId(GuideNoteSlot(part)))
+            for (part in GuidePart.entries) GuideNoteText(part, hand, opens, Modifier.layoutId(GuideNoteSlot(part)))
             for (part in GuidePart.entries) {
                 GuideNote(
                     part,
+                    opens,
                     Modifier
                         .layoutId(part)
                         .semantics { traversalIndex = part.ordinal.toFloat() }
@@ -159,6 +165,7 @@ internal fun GuidePicture(modifier: Modifier = Modifier) {
             open?.let { part ->
                 GuideNotePanel(
                     part,
+                    opens,
                     // Read right after its note.
                     Modifier.layoutId(GuideSlot.PANEL).semantics { traversalIndex = part.ordinal + PANEL_AFTER_NOTE },
                 ) {

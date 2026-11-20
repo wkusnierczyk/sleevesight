@@ -39,20 +39,25 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkLook
 import app.sleevesight.app.ui.theme.PillButton
+import app.sleevesight.core.settings.SymbolOpens
 
 // The guide's notes as buttons, each opening a panel about its part (#673), and the pen's marks.
 
 /**
  * The note on [part] (#627) as drawn, in the hand-drawn [style], marked as a link is ([LinkLook]),
  * since a tap on it opens its panel; its button is [GuideNote], laid over it. Not read on its own.
+ * The player's note follows what a tap on the symbol opens ([opens], #1445).
  */
 @Composable
 internal fun GuideNoteText(
     part: GuidePart,
     style: TextStyle,
+    opens: SymbolOpens,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.testTag(guideNoteTextTag(part)).clearAndSetSemantics {}) { LinkLook(stringResource(part.note), style) }
+    Box(modifier.testTag(guideNoteTextTag(part)).clearAndSetSemantics {}) {
+        LinkLook(stringResource(part.note(opens)), style)
+    }
 }
 
 /**
@@ -60,15 +65,18 @@ internal fun GuideNoteText(
  * 48 dp high, reaching halfway to the notes above and below ([guideLayout]), whose tap opens the
  * note's panel ([onClick]; a second tap closes it). A screen reader reads it as a button, the part's
  * name before the note ("Settings: tap to configure, button"). [modifier] goes on the outside: a
- * focus requester, so the focus can come back to it from the panel's *Close*.
+ * focus requester, so the focus can come back to it from the panel's *Close*. The player's note
+ * follows what a tap on the symbol opens ([opens], #1445).
  */
 @Composable
 internal fun GuideNote(
     part: GuidePart,
+    opens: SymbolOpens,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val named = stringResource(R.string.home_guide_named_note, stringResource(part.label), stringResource(part.note))
+    val note = stringResource(part.note(opens))
+    val named = stringResource(R.string.home_guide_named_note, stringResource(part.label), note)
     Box(
         modifier
             .testTag(guideNoteTag(part))
@@ -82,11 +90,13 @@ internal fun GuideNote(
  * heading, its fuller description in the app's own type, and *Close* ([onClose], with
  * [closeModifier]; #759: not *Dismiss*, which is for good). Opaque, so the drawn Home under it
  * does not show through, and taps on it stay in it. A screen reader reads the name and description
- * as one region as it opens.
+ * as one region as it opens. The player's description follows what a tap on the symbol opens
+ * ([opens], #1445).
  */
 @Composable
 internal fun GuideNotePanel(
     part: GuidePart,
+    opens: SymbolOpens,
     modifier: Modifier = Modifier,
     closeModifier: Modifier = Modifier,
     onClose: () -> Unit,
@@ -111,7 +121,7 @@ internal fun GuideNotePanel(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.semantics { heading() },
                 )
-                Text(stringResource(part.about), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(part.about(opens)), style = MaterialTheme.typography.bodyMedium)
             }
             PillButton(
                 stringResource(R.string.home_guide_note_close),

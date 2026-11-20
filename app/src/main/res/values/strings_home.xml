@@ -31,6 +31,8 @@
     <!-- The notes. -->
     <string name="home_guide_note_settings">tap to configure</string>
     <string name="home_guide_note_player">tap for controls</string>
+    <!-- home_guide_note_player with Settings → Players → What the symbol opens set to The player (#1445). -->
+    <string name="home_guide_note_player_app">tap to open the player</string>
     <string name="home_guide_note_cover">tap to see contents</string>
     <string name="home_guide_note_genres">tap to see the genres</string>
     <string name="home_guide_note_insight">read about what’s playing</string>
@@ -41,6 +43,8 @@
          name (home_guide_part_…). Each says what the app does; keep them in step with it. -->
     <string name="home_guide_about_settings">Opens Settings: the players Sleevesight follows, which sources it looks up, your AI service and the API keys, genres, when insights are written, history, and how the app looks (theme, font, layout).</string>
     <string name="home_guide_about_player">Tap the note symbol at the top for the player menu: play, pause, skip, or switch players. Hold it to open the player. A tap on the record after the logo plays or pauses.</string>
+    <!-- home_guide_about_player with Settings → Players → What the symbol opens set to The player (#1445). -->
+    <string name="home_guide_about_player_app">Tap the note symbol at the top to open the player. Hold it for the player menu: play, pause, skip, or switch players. A tap on the record after the logo plays or pauses.</string>
     <string name="home_guide_about_cover">The album’s cover. A tap turns it over to show the album’s tracklist from MusicBrainz: each track with its length, the playing song marked. An album of several discs has a page for each, swiped sideways, with the disc’s number at the top. A tap anywhere on the back turns it back. When there is no tracklist, the back says why: MusicBrainz is still looking, has no tracklist for the album, has several albums of that name, could not be reached, or is disabled.</string>
     <string name="home_guide_about_genres">The track’s genres, from MusicBrainz or Last.fm, behind the Genres button. A tap on one shows which of the track, the artist and the album carry it and where the label comes from; what the genre is, where Wikipedia has an article on it; and, where your AI service can explain it, Why is this …?, a paid call.</string>
     <string name="home_guide_about_insight">A few sentences about the track, written by your AI service from what the sources found, and checked against them.</string>
@@ -84,12 +88,15 @@
          a tap does, as a screen reader says it. -->
     <string name="home_record_play">Play</string>
     <string name="home_record_pause">Pause</string>
-    <!-- The header's player symbol (#1440), a music note, which opens the player menu: its name, what
-         a tap and a long press do ("Double-tap to …", "Double-tap and hold to …"), as a screen reader
-         says them, and its state while dimmed, with no player switched on or none playing. -->
+    <!-- The header's player symbol (#1440), a music note, which opens the player menu or the player
+         (#1445, Settings → Players → What the symbol opens): its name, Player menu or Player as a tap
+         opens either; what each gesture does ("Double-tap to …", "Double-tap and hold to …"), as a
+         screen reader says it, the tap one and the long press the other; and its state while dimmed,
+         with no player switched on or none playing. -->
     <string name="home_player_symbol">Player menu</string>
-    <string name="home_player_symbol_tap">open a play menu to control or switch the player</string>
-    <string name="home_player_symbol_hold">open the player</string>
+    <string name="home_player_symbol_player">Player</string>
+    <string name="home_player_symbol_open_menu">open a play menu to control or switch the player</string>
+    <string name="home_player_symbol_open_player">open the player</string>
     <string name="home_player_symbol_none_enabled_state">No player enabled</string>
     <string name="home_player_symbol_nothing_playing_state">Nothing playing</string>
     <!-- The panel a tap on the dimmed symbol opens (#1440), with Dismiss. With no player switched on,
