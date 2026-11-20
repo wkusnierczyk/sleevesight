@@ -73,13 +73,14 @@ internal fun voiceState(
     online: Boolean,
 ): VoiceState =
     when {
-        load == null || load == VoicesLoad.Loading -> VoiceState.Stored(chosen?.name)
+        // A name stored from a settings file is the file's text (its id): shown as [fileText] has it.
+        load == null || load == VoicesLoad.Loading -> VoiceState.Stored(chosen?.name?.let(::fileText))
         load == VoicesLoad.NoEngine -> VoiceState.NoEngine
         groups.isEmpty() -> VoiceState.NoVoice
         chosen == null -> VoiceState.PhoneChoice
         else ->
             groups.entry(chosen.id)?.let { VoiceState.Chosen(it, offline = !online && it.needsTheInternet) }
-                ?: VoiceState.Gone(chosen.name)
+                ?: VoiceState.Gone(fileText(chosen.name))
     }
 
 /** A country's name, by its ISO [code], in English as the app's texts are; a voice with none, "English". */
@@ -143,7 +144,7 @@ private class Samples(
 }
 
 /** What the engine has, as *Voice*'s row reads it: [load], its English voices ([groups]), and [online]. */
-private class EngineState(
+internal class EngineState(
     val load: VoicesLoad?,
     val groups: List<VoiceGroup>,
     val online: Boolean,
@@ -154,7 +155,7 @@ private class EngineState(
  * let go after, so a voice added in Android's settings shows on the way back.
  */
 @Composable
-private fun engineState(voices: ReadAloudVoices?): EngineState {
+internal fun engineState(voices: ReadAloudVoices?): EngineState {
     var load by remember(voices) { mutableStateOf<VoicesLoad?>(null) }
     if (voices != null) {
         LifecycleResumeEffect(voices) {

@@ -41,7 +41,9 @@ class SettingsLoadTest {
                     theme = ThemeChoice.DARK,
                     logoSpeed = LogoSpeed.RPM_45,
                     aiProvider = ProviderId.ANTHROPIC,
-                    followedPlayers = mapOf("org.example.tunes" to true),
+                    // A file holds only the players switched on (#1482): one switched off here would
+                    // keep, there, the switch it has.
+                    followedPlayers = mapOf("org.example.tunes" to true, Settings.SPOTIFY to true),
                     historyLifetime = null,
                 )
             }

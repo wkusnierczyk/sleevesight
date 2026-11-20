@@ -29,6 +29,9 @@ import app.sleevesight.app.now
 import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.speech.EngineVoice
+import app.sleevesight.app.speech.ReadAloudVoices
+import app.sleevesight.app.speech.VoicesLoad
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.APP_OFFERED
 import app.sleevesight.app.ui.settings.LOAD_CONFIRM_TAG
@@ -42,6 +45,7 @@ import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.LogoSpeed
+import app.sleevesight.core.settings.ReadAloudVoice
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
@@ -51,6 +55,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -63,6 +68,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
 import java.time.LocalDate
+import java.util.Locale
 
 /**
  * *Save to a file* and *Load from a file* (#815), under *Save and reset*: the file saved through the
@@ -113,6 +119,25 @@ class SettingsFileScreenTest {
             override val activityResultRegistry = registry
         }
 
+    /** The text-to-speech engine's voices, as *Voice* reads them: one British voice on the phone. */
+    private val voices =
+        object : ReadAloudVoices {
+            override val online = MutableStateFlow(true)
+
+            override fun load(loaded: (VoicesLoad) -> Unit) =
+                loaded(VoicesLoad.Loaded(listOf(EngineVoice("en-gb-x-gba-local", Locale.UK, 300, false)), null))
+
+            override fun sample(
+                id: String?,
+                text: String,
+                ended: () -> Unit,
+            ) = ended()
+
+            override fun stopSample() = Unit
+
+            override fun close() = Unit
+        }
+
     @After
     fun close() {
         saves.cancel()
@@ -138,6 +163,7 @@ class SettingsFileScreenTest {
                             { CompletableDeferred(true) },
                             saves,
                             settingsFiles = files,
+                            readAloudVoices = voices,
                         ) { it }
                     }
                 }
@@ -344,6 +370,117 @@ class SettingsFileScreenTest {
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText("1 setting loaded, ", substring = true).fetchSemanticsNodes().isNotEmpty()
             }
+        }
+    }
+
+    private fun voiceFile(id: String) =
+        """{"file": "Sleevesight settings", "format": 1, "settings": {
+            "readAloudVoice": {"id": "$id", "name": "Pick me"}}}"""
+
+    private fun voiceLine(loaded: String) =
+        app.getString(
+            R.string.settings_reset_line,
+            app.getString(R.string.settings_read_aloud_voice),
+            app.getString(R.string.settings_read_aloud_voice_phone),
+            loaded,
+        )
+
+    @Test
+    fun aVoiceInTheFileIsNamedAsTheEngineListsItNeverAsTheFileNamesIt() {
+        screen {
+            openPreview(voiceFile("en-gb-x-gba"))
+            assertTrue(shown(voiceLine("Voice 1 (United Kingdom)")))
+            assertFalse(compose.onAllNodesWithText("Pick me", substring = true).fetchSemanticsNodes().isNotEmpty())
+        }
+    }
+
+    @Test
+    fun aVoiceInTheFileTheEngineDoesNotHaveIsNamedByItsId() {
+        screen {
+            openPreview(voiceFile("en-gb-x-gone"))
+            assertTrue(shown(voiceLine("en-gb-x-gone")))
+            assertFalse(compose.onAllNodesWithText("Pick me", substring = true).fetchSemanticsNodes().isNotEmpty())
+        }
+    }
+
+    @Test
+    fun textFromTheFileIsShownCutTo80CharactersWithNoFormatCharacter() {
+        // A bidi override, and a key of 1,000 characters (#1482).
+        val key = "\u202E" + "k".repeat(1000)
+        val file =
+            """{"file": "Sleevesight settings", "format": 1, "settings": {
+                "$key": 1, "theme": "\u202ELIGHT\u200B"}}"""
+        screen {
+            openPreview(file)
+            assertTrue(shown("k".repeat(79) + "\u2026: not a setting this version knows"))
+            assertTrue(shown(app.getString(R.string.settings_theme) + ": LIGHT: not one of its choices"))
+            for (format in listOf("\u202E", "\u200B")) {
+                assertFalse(compose.onAllNodesWithText(format, substring = true).fetchSemanticsNodes().isNotEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun everyTextFromTheFileIsShownCutWithNoFormatCharacter() {
+        // A voice the engine lacks, a model, a player and the version, each long and with a bidi
+        // override; the version with a character outside the BMP (two UTF-16 units) at the cut.
+        val bidi = "\u202E"
+        val voice = bidi + "v".repeat(200)
+        val model = bidi + "m".repeat(200)
+        val player = "org." + "p".repeat(200)
+        val version = bidi + "9".repeat(78) + "\uD83D\uDE00" + "9".repeat(50)
+        val file =
+            """{"file": "Sleevesight settings", "format": 1, "appVersion": "$version", "settings": {
+                "readAloudVoice": {"id": "$voice"}, "aiModels": {"ANTHROPIC": "$model"},
+                "followedPlayers": {"$player": true}}}"""
+
+        fun has(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
+        screen {
+            openPreview(file)
+            assertTrue(has(voiceLine("v".repeat(79) + "\u2026")))
+            assertTrue(has("m".repeat(79) + "\u2026"))
+            assertTrue(has("org." + "p".repeat(75) + "\u2026"))
+            // Cut after the emoji, whole: 78 digits, the emoji, the ellipsis.
+            assertTrue(has("saved by Sleevesight " + "9".repeat(78) + "\uD83D\uDE00\u2026."))
+            assertFalse(has(bidi))
+            assertFalse(has("v".repeat(80)))
+            assertFalse(has("m".repeat(80)))
+            assertFalse(has("p".repeat(80)))
+        }
+    }
+
+    @Test
+    fun aVoiceLoadedFromAFileIsShownCutWhenTheNextFileChangesIt() {
+        // A first file's voice, stored as its load stores it (by its id, `SettingsFileTest`); the
+        // next file's preview names it as the voice now.
+        val id = "\u202E" + "v".repeat(200)
+        val first = """{"file": "Sleevesight settings", "format": 1, "settings": {"readAloudVoice": {"id": "$id"}}}"""
+        val loaded = SettingsFile.load(SettingsFile.read(first, APP_OFFERED)!!, settings.settings.now(), false)
+        move { loaded.settings }
+        assertEquals(ReadAloudVoice(id, id), settings.settings.now().readAloudVoice)
+        val second = """{"file": "Sleevesight settings", "format": 1, "settings": {"readAloudVoice": null}}"""
+        screen {
+            openPreview(second)
+            val line =
+                app.getString(
+                    R.string.settings_reset_line,
+                    app.getString(R.string.settings_read_aloud_voice),
+                    "v".repeat(79) + "\u2026",
+                    app.getString(R.string.settings_read_aloud_voice_phone),
+                )
+            assertTrue(shown(line))
+            assertFalse(compose.onAllNodesWithText("\u202E", substring = true).fetchSemanticsNodes().isNotEmpty())
+        }
+    }
+
+    @Test
+    fun aKeyFromTheFileWithLineBreaksIsShownOnOneLine() {
+        // A line feed, a tab and a line separator: each a space (#1482).
+        val file =
+            """{"file": "Sleevesight settings", "format": 1, "settings": {"one\ntwo\tthree\u2028four": 1}}"""
+        screen {
+            openPreview(file)
+            assertTrue(shown("one two three four: not a setting this version knows"))
         }
     }
 }

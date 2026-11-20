@@ -47,10 +47,16 @@ data class VoiceEntry(
     val needsTheInternet: Boolean get() = local == null
 
     /**
-     * The engine's name of the version that speaks it: the server's while [online], else the
-     * phone's; null offline for a voice with a server version only, which then cannot speak.
+     * The engine's name of the version that speaks it: the server's while [online] where it is marked
+     * [VoiceMark.HIGHER_QUALITY_ONLINE], or has a server version only; else the phone's (#1481), so
+     * text goes to the server only for a voice marked so. Null offline for a voice with a server
+     * version only, which then cannot speak.
      */
-    fun spokenBy(online: Boolean): String? = if (online && network != null) network else local
+    fun spokenBy(online: Boolean): String? = if (online && spokenOnTheServer) network else local
+
+    // Whether it is spoken by its server version while online: one marked better there, or the only one.
+    private val spokenOnTheServer: Boolean
+        get() = network != null && (local == null || VoiceMark.HIGHER_QUALITY_ONLINE in marks)
 }
 
 /** The voices of [country] (an ISO code; empty for those with none), in *Voice*'s list (#787). */

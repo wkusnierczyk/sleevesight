@@ -170,6 +170,10 @@ object SettingsFile {
             contents.changes
                 .filter { developerMode || it.field !in DEVELOPER }
                 .fold(current) { settings, change -> change.apply(settings) }
+        // The voice chosen here, by the file too, keeps the name it was chosen by (#1481).
+        if (loaded.readAloudVoice?.id == current.readAloudVoice?.id) {
+            loaded = loaded.copy(readAloudVoice = current.readAloudVoice)
+        }
         if (shortens(current.historyLifetime, loaded.historyLifetime)) {
             skipped += Skipped.ShortensHistory(loaded.historyLifetime)
             loaded = loaded.copy(historyLifetime = current.historyLifetime)

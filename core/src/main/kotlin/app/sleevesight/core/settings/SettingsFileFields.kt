@@ -218,8 +218,10 @@ private fun <V> perKey(
 
 /**
  * *Players*: a switch per player, its package name the key; one listed by default, or seen here,
- * that the file does not name keeps its switch. A file holds at most [SettingsFile.MAX_PLAYERS],
- * the followed first, so it always loads back; a load adds no more than that ([SettingsFile.load]).
+ * that the file does not name keeps its switch. A file holds only the players switched on (#1482),
+ * never the others seen here, which would list the phone's media apps; at most
+ * [SettingsFile.MAX_PLAYERS] of them, so it always loads back; a load adds no more than that
+ * ([SettingsFile.load]).
  */
 private fun players(): Field =
     Field(
@@ -227,8 +229,8 @@ private fun players(): Field =
         write = { s ->
             val kept =
                 s.followedPlayers.entries
-                    .filter { isPlayerName(it.key) }
-                    .sortedWith(compareBy({ !it.value }, { it.key }))
+                    .filter { it.value && isPlayerName(it.key) }
+                    .sortedBy { it.key }
                     .take(SettingsFile.MAX_PLAYERS)
             JsonObject(kept.associate { (k, v) -> k to JsonPrimitive(v) })
         },
@@ -387,9 +389,10 @@ internal fun settingsFileFields(offered: SettingsFile.Offered): List<Field> {
                     Parsed(null)
                 } else {
                     val voice = v as? JsonObject
+                    // Named by its id, never by the file's `name` (#1481): the app names it as the
+                    // engine lists it, or keeps the name of the voice chosen here ([SettingsFile.load]).
                     val id = voice?.get("id")?.let(::shortText)
-                    val name = voice?.get("name")?.let(::shortText)
-                    id?.let { Parsed(ReadAloudVoice(it, name ?: it)) }
+                    id?.let { Parsed(ReadAloudVoice(it, it)) }
                 }
             },
         ) { copy(readAloudVoice = it) },
