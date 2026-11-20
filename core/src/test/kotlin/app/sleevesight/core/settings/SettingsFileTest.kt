@@ -409,4 +409,16 @@ class SettingsFileTest {
         assertEquals(mapOf("theme" to "\"DARK\"", "spinLogo" to "false"), changes)
         assertEquals(emptyMap(), SettingsFile.changes(moved, moved))
     }
+
+    @Test
+    fun aKeyTwiceOrValuesNestedThousandsDeepFailNothing() {
+        val twice = file("theme" to "\"DARK\"", "theme" to "\"LIGHT\"")
+        val read = assertNotNull(SettingsFile.read(twice))
+        assertTrue(read.changes.all { it.field == "theme" })
+        val deep = "[".repeat(10_000) + "]".repeat(10_000)
+        assertNull(SettingsFile.read(file("theme" to deep)))
+        assertNull(SettingsFile.read(deep))
+        // Brackets inside a text are no nesting.
+        assertNotNull(SettingsFile.read(file("readAloudVoice" to "{\"id\": \"${"[".repeat(100)}\"}")))
+    }
 }

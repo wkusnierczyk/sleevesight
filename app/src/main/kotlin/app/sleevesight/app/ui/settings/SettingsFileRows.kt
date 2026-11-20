@@ -1,9 +1,7 @@
 package app.sleevesight.app.ui.settings
 
-import android.content.ContentResolver
 import android.content.res.Resources
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -31,7 +30,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
-import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.settings.LoadMessage
 import app.sleevesight.app.settings.loadPlan
 import app.sleevesight.app.ui.theme.DialogPills
@@ -39,90 +37,11 @@ import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SettingsFile
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.io.InputStream
 import java.time.LocalDate
 
 // *Save to a file* and *Load from a file* (#815), under *Save and reset*: the settings as a file the
 // user chooses through Android's file picker, and its preview before a load.
-
-/**
- * How the settings reach a file the user chose: [read] its text, [write] it, and [name] it as the
- * picker shows it (null if it cannot say). Through the [ContentResolver] in the app ([of]); a test
- * passes its own.
- */
-class SettingsFiles(
-    val read: suspend (Uri) -> String,
-    val write: suspend (Uri, String) -> Unit,
-    val name: suspend (Uri) -> String?,
-) {
-    companion object {
-        /** The most of a file read: a settings file is a few kilobytes. */
-        private const val MAX_BYTES = SettingsFile.MAX_BYTES
-
-        /** The files the user picks, through [resolver], read and written off the main thread. */
-        fun of(resolver: ContentResolver): SettingsFiles =
-            SettingsFiles(
-                read = { uri ->
-                    withContext(Dispatchers.IO) {
-                        val stream = resolver.openInputStream(uri) ?: throw IOException("No stream for $uri")
-                        val bytes = stream.use { readAtMost(it, MAX_BYTES) }
-                        bytes.toString(Charsets.UTF_8)
-                    }
-                },
-                write = { uri, text ->
-                    withContext(Dispatchers.IO) {
-                        // "wt": the file truncated, so a shorter text leaves nothing of an older one.
-                        val stream = resolver.openOutputStream(uri, "wt") ?: throw IOException("No stream for $uri")
-                        stream.use { it.write(text.toByteArray(Charsets.UTF_8)) }
-                    }
-                },
-                name = { uri ->
-                    withContext(Dispatchers.IO) {
-                        resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                            if (cursor.moveToFirst()) cursor.getString(0) else null
-                        }
-                    }
-                },
-            )
-    }
-}
-
-/** All of [stream], or an [IOException] if it is longer than [max] bytes. */
-private fun readAtMost(
-    stream: InputStream,
-    max: Int,
-): ByteArray {
-    val out = ByteArrayOutputStream()
-    val buffer = ByteArray(BUFFER)
-    while (true) {
-        val n = stream.read(buffer)
-        if (n < 0) return out.toByteArray()
-        out.write(buffer, 0, n)
-        if (out.size() > max) throw IOException("Larger than a settings file")
-    }
-}
-
-private const val BUFFER = 8 * 1024
-
-/**
- * What *Save to a file* and *Load from a file* work with: [files], the [appVersion] a file is saved
- * with, the keys [missing] (their services a load leaves off), [today] for the name it suggests,
- * and [load], which loads a file's contents from the settings shown, saying the message given once
- * saved.
- */
-internal class SettingsFileAccess(
-    val files: SettingsFiles,
-    val appVersion: String,
-    val missing: Set<SecretId>,
-    val load: (shown: Settings, contents: SettingsFile.Contents, message: LoadMessage) -> Deferred<Boolean>,
-    val today: () -> LocalDate = LocalDate::now,
-)
 
 /** The name a saved file is offered under, [date] in ISO form: `sleevesight-settings-2026-11-20.json`. */
 internal fun settingsFileName(date: LocalDate): String = "sleevesight-settings-$date.json"
@@ -144,7 +63,8 @@ internal fun SettingsFileRows(
     playerLabel: (String) -> String,
 ) {
     // The file picked to load, by name and text, kept over a rotation: parsed again as shown.
-    var picked by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
+    // A text too large for the saved state is not kept: a rotation then closes the preview.
+    var picked by rememberSaveable(stateSaver = PICKED_SAVER) { mutableStateOf<Pair<String, String>?>(null) }
     val saver = rememberSaver(settings, access)
     val loader = rememberLoader(access) { picked = it }
     ButtonRow(
@@ -187,8 +107,7 @@ private fun rememberSaver(
                 try {
                     // Fails rather than write a file too large to load ([SettingsFile.MAX_BYTES]).
                     access.files.write(uri, SettingsFile.write(shown, access.appVersion, APP_OFFERED))
-                    val name = access.files.name(uri) ?: uri.lastPathSegment.orEmpty()
-                    resources.getString(R.string.settings_save_file_done, name)
+                    resources.getString(R.string.settings_save_file_done, nameOf(access.files, uri))
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
@@ -199,6 +118,19 @@ private fun rememberSaver(
         }
     }
 }
+
+/** [uri]'s name as the picker shows it, else the last part of its path: a name not found fails nothing. */
+private suspend fun nameOf(
+    files: SettingsFiles,
+    uri: Uri,
+): String =
+    try {
+        files.name(uri)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        null
+    } ?: uri.lastPathSegment.orEmpty()
 
 /**
  * *Load from a file*'s picker: the file picked, read, is told to [onPicked] by its name and text if it
@@ -218,11 +150,10 @@ private fun rememberLoader(
             val failure =
                 try {
                     val text = access.files.read(uri)
-                    val name = access.files.name(uri) ?: uri.lastPathSegment.orEmpty()
                     if (SettingsFile.read(text, APP_OFFERED) == null) {
                         R.string.settings_load_file_not_settings
                     } else {
-                        onPicked(name to text)
+                        onPicked(nameOf(access.files, uri) to text)
                         null
                     }
                 } catch (cancelled: CancellationException) {
@@ -257,12 +188,16 @@ private fun LoadPreview(
     val skipped = plan.skipped.map { skippedLine(it) } + plan.keyless.map { keylessLine(it) }
     val resources = LocalResources.current
     // As the preview has it, unless what is saved differs: a save ahead of it changed the settings.
+    // The message counts settings, as the load saved them; the dialog lists their lines.
+    val expected = SettingsFile.changes(settings, plan.settings)
     val message =
         LoadMessage(
-            loadedMessage(resources, changes.size, skipped.size),
-            SettingsFile.changes(settings, plan.settings),
+            loadedMessage(resources, expected.size, skipped.size),
+            expected,
             skipped.size,
-        ) { loaded, notLoaded -> loadedMessage(resources, loaded, notLoaded) }
+        ) { loaded, notLoaded ->
+            loadedMessage(resources, loaded, notLoaded)
+        }
     LoadDialog(
         from =
             contents.appVersion?.let { stringResource(R.string.settings_load_file_from, name, it) }
@@ -328,7 +263,7 @@ internal fun LoadDialog(
                         style = body,
                         modifier = Modifier.padding(top = 12.dp),
                     )
-                    changes.forEach { LoadBullet(it) }
+                    Bullets(changes)
                 }
                 if (skipped.isNotEmpty()) {
                     Text(
@@ -336,7 +271,7 @@ internal fun LoadDialog(
                         style = body,
                         modifier = Modifier.padding(top = 12.dp),
                     )
-                    skipped.forEach { LoadBullet(it) }
+                    Bullets(skipped)
                 }
                 Text(
                     stringResource(R.string.settings_load_file_never),
@@ -357,6 +292,29 @@ internal fun LoadDialog(
         },
     )
 }
+
+/** [lines] as bullets, the first [SHOWN_LINES], then *and {n} more* for the rest. */
+@Composable
+private fun Bullets(lines: List<String>) {
+    lines.take(SHOWN_LINES).forEach { LoadBullet(it) }
+    val more = lines.size - SHOWN_LINES
+    if (more > 0) LoadBullet(pluralStringResource(R.plurals.settings_load_file_more, more, more))
+}
+
+/** The most lines of each list *Load settings?* shows. */
+internal const val SHOWN_LINES = 20
+
+/** The most characters of a file picked kept over a rotation (#815): more is read again by no one. */
+private const val SAVED_TEXT = 16 * 1024
+
+/** The file picked, by name and text, saved only while its text is small. */
+private val PICKED_SAVER =
+    Saver<Pair<String, String>?, ArrayList<String>>(
+        save = { picked ->
+            picked?.takeIf { it.second.length <= SAVED_TEXT }?.let { arrayListOf(it.first, it.second) }
+        },
+        restore = { saved -> saved[0] to saved[1] },
+    )
 
 /** One line of a list, after a bullet a screen reader does not read. */
 @Composable

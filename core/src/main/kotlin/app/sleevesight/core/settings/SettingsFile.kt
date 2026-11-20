@@ -260,8 +260,34 @@ object SettingsFile {
         )
     }
 
+    /** How deep a settings file's values go at most: its settings are in objects three deep. */
+    private const val MAX_NESTING = 16
+
+    /**
+     * How deep [text]'s arrays and objects go, outside its strings: read before parsing it, whose
+     * parser recurses, so a file nested thousands deep cannot overflow the stack.
+     */
+    private fun nesting(text: String): Int {
+        var depth = 0
+        var deepest = 0
+        var inString = false
+        var escaped = false
+        for (c in text) {
+            when {
+                escaped -> escaped = false
+                inString && c == '\\' -> escaped = true
+                c == '"' -> inString = !inString
+                inString -> Unit
+                c == '[' || c == '{' -> deepest = maxOf(deepest, ++depth)
+                c == ']' || c == '}' -> depth--
+            }
+        }
+        return deepest
+    }
+
     /** [text] as a settings file's root: JSON saying it is one, with its settings; else null. */
     private fun settingsFileOf(text: String): JsonObject? {
+        if (nesting(text) > MAX_NESTING) return null
         val root =
             try {
                 Json.parseToJsonElement(text) as? JsonObject

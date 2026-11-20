@@ -479,6 +479,11 @@
     </plurals>
     <string name="settings_load_file_same">The file matches your settings; nothing changed.</string>
     <string name="settings_load_file_skipped">Not loaded:</string>
+    <!-- The last line of a list in Load settings? past its first 20: %d the lines not shown. -->
+    <plurals name="settings_load_file_more">
+        <item quantity="one">and %d more</item>
+        <item quantity="other">and %d more</item>
+    </plurals>
     <string name="settings_load_file_never">Your API keys and history are never in a settings file.</string>
     <!-- A line under Not loaded: %1$s the name in the file, of a setting this version does not know. -->
     <string name="settings_load_file_unknown">%1$s: not a setting this version knows</string>
