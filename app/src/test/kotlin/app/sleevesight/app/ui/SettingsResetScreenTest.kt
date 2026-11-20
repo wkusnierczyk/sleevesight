@@ -278,4 +278,35 @@ class SettingsResetScreenTest {
             compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
         }
     }
+
+    @Test
+    fun developerSettingsAreNotListedWhileDeveloperModeIsOffThoughTheResetPutsThemBack() {
+        runBlocking {
+            settings.update {
+                it.copy(
+                    developerMode = false,
+                    showDiagnostics = true,
+                    theme = ThemeChoice.DARK,
+                )
+            }
+        }
+        screen {
+            openDialog()
+            val diagnostics =
+                line(R.string.settings_diagnostics, R.string.settings_reset_on, R.string.settings_reset_off)
+            assertTrue(!shown(diagnostics))
+            assertTrue(
+                shown(line(R.string.settings_theme, R.string.settings_theme_dark, R.string.settings_theme_system)),
+            )
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
+            compose.waitUntil(WAIT_MS) { !settings.settings.now().showDiagnostics }
+        }
+    }
+
+    @Test
+    fun thePanelSaysWhatTheSectionHolds() =
+        screen {
+            compose.openSection(SettingsSection.SAVE_AND_RESET)
+            compose.waitUntil(WAIT_MS) { shown("All settings: reset to defaults, or kept in a file") }
+        }
 }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.settings.Resets
 import app.sleevesight.app.settings.SettingsReset
+import app.sleevesight.app.ui.theme.DialogPills
 import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CancellationException
@@ -130,14 +130,16 @@ internal fun ResetDialog(
                 stays.forEach { Bullet(it) }
             }
         },
+        // *Cancel* and *Reset* as the settings' pills, in one row.
         confirmButton = {
-            TextButton(
-                onClick = onReset,
-                enabled = changes.isNotEmpty(),
-                modifier = Modifier.testTag(RESET_CONFIRM_TAG),
-            ) { Text(stringResource(R.string.settings_reset_button)) }
+            DialogPills(
+                dismiss = stringResource(R.string.settings_cancel),
+                onDismiss = onDismiss,
+                confirm = stringResource(R.string.settings_reset_button),
+                onConfirm = onReset.takeIf { changes.isNotEmpty() },
+                confirmModifier = Modifier.testTag(RESET_CONFIRM_TAG),
+            )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
 
@@ -185,14 +187,18 @@ internal fun resetStays(
 
 /**
  * The settings [current] has off what a reset leaves ([reset]), each as *Title: value now →
- * default*, in the order the settings show them ([RESET_LINES]).
+ * default*, in the order the settings show them ([RESET_LINES]); *Developer*'s only while developer
+ * mode is on, as the section shows only then, though the reset puts them back either way.
  */
 @Composable
 internal fun resetChanges(
     current: Settings,
     reset: Settings,
     modelName: (String) -> String,
-): List<String> = RESET_LINES.flatMap { it.lines(current, reset, modelName) }
+): List<String> =
+    RESET_LINES
+        .filter { current.developerMode || !it.developer }
+        .flatMap { it.lines(current, reset, modelName) }
 
 /** The test tag of *Reset to the defaults*' button. */
 internal const val RESET_TAG = "settings:reset"

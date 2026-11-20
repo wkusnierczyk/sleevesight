@@ -14,9 +14,11 @@ import app.sleevesight.core.settings.Settings
  * One or more settings as *Reset settings?* lists them: [fields] are their properties in [Settings];
  * [lines] gives a line for each that differs between the settings now and after the reset, as
  * *Title: value now → default*, a model named by the function given, as its row names it.
+ * [developer] for one under *Developer*, listed only while developer mode is on.
  */
 internal class ResetLine(
     val fields: List<String>,
+    val developer: Boolean = false,
     val lines: @Composable (now: Settings, reset: Settings, modelName: (String) -> String) -> List<String>,
 )
 
@@ -182,10 +184,12 @@ internal val RESET_LINES: List<ResetLine> =
         switch("introAtStart", R.string.settings_intro) { it.introAtStart },
         switch("spinLogo", R.string.settings_spin_logo) { it.spinLogo },
         choice("logoSpeed", R.string.settings_logo_speed, { it.logoSpeed }) { logoSpeeds() },
-        // Developer
-        switch("showDiagnostics", R.string.settings_diagnostics) { it.showDiagnostics },
-        switch("showGroundingDetails", R.string.settings_grounding_details) { it.showGroundingDetails },
-        choice("reportButton", R.string.settings_report_button, { it.reportButton }) { reportButtons() },
-        choice("linkStyle", R.string.settings_link_style, { it.linkStyle }) { linkStyles() },
-        switch("markDeveloperItems", R.string.settings_mark_developer) { it.markDeveloperItems },
-    )
+    ) +
+        // Developer: listed only while developer mode is on.
+        listOf(
+            switch("showDiagnostics", R.string.settings_diagnostics) { it.showDiagnostics },
+            switch("showGroundingDetails", R.string.settings_grounding_details) { it.showGroundingDetails },
+            choice("reportButton", R.string.settings_report_button, { it.reportButton }) { reportButtons() },
+            choice("linkStyle", R.string.settings_link_style, { it.linkStyle }) { linkStyles() },
+            switch("markDeveloperItems", R.string.settings_mark_developer) { it.markDeveloperItems },
+        ).map { ResetLine(it.fields, developer = true, lines = it.lines) }
