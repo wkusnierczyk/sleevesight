@@ -29,6 +29,9 @@ import app.sleevesight.app.now
 import app.sleevesight.app.secrets.KeyGate
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.speech.EngineVoice
+import app.sleevesight.app.speech.ReadAloudVoices
+import app.sleevesight.app.speech.VoicesLoad
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.APP_OFFERED
 import app.sleevesight.app.ui.settings.LOAD_CONFIRM_TAG
@@ -51,6 +54,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -63,6 +67,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
 import java.time.LocalDate
+import java.util.Locale
 
 /**
  * *Save to a file* and *Load from a file* (#815), under *Save and reset*: the file saved through the
@@ -113,6 +118,25 @@ class SettingsFileScreenTest {
             override val activityResultRegistry = registry
         }
 
+    /** The text-to-speech engine's voices, as *Voice* reads them: one British voice on the phone. */
+    private val voices =
+        object : ReadAloudVoices {
+            override val online = MutableStateFlow(true)
+
+            override fun load(loaded: (VoicesLoad) -> Unit) =
+                loaded(VoicesLoad.Loaded(listOf(EngineVoice("en-gb-x-gba-local", Locale.UK, 300, false)), null))
+
+            override fun sample(
+                id: String?,
+                text: String,
+                ended: () -> Unit,
+            ) = ended()
+
+            override fun stopSample() = Unit
+
+            override fun close() = Unit
+        }
+
     @After
     fun close() {
         saves.cancel()
@@ -138,6 +162,7 @@ class SettingsFileScreenTest {
                             { CompletableDeferred(true) },
                             saves,
                             settingsFiles = files,
+                            readAloudVoices = voices,
                         ) { it }
                     }
                 }
@@ -343,6 +368,53 @@ class SettingsFileScreenTest {
             // The theme loaded; Anthropic, and the sources whose keys are missing here, skipped.
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodesWithText("1 setting loaded, ", substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
+    }
+
+    private fun voiceFile(id: String) =
+        """{"file": "Sleevesight settings", "format": 1, "settings": {
+            "readAloudVoice": {"id": "$id", "name": "Pick me"}}}"""
+
+    private fun voiceLine(loaded: String) =
+        app.getString(
+            R.string.settings_reset_line,
+            app.getString(R.string.settings_read_aloud_voice),
+            app.getString(R.string.settings_read_aloud_voice_phone),
+            loaded,
+        )
+
+    @Test
+    fun aVoiceInTheFileIsNamedAsTheEngineListsItNeverAsTheFileNamesIt() {
+        screen {
+            openPreview(voiceFile("en-gb-x-gba"))
+            assertTrue(shown(voiceLine("Voice 1 (United Kingdom)")))
+            assertFalse(compose.onAllNodesWithText("Pick me", substring = true).fetchSemanticsNodes().isNotEmpty())
+        }
+    }
+
+    @Test
+    fun aVoiceInTheFileTheEngineDoesNotHaveIsNamedByItsId() {
+        screen {
+            openPreview(voiceFile("en-gb-x-gone"))
+            assertTrue(shown(voiceLine("en-gb-x-gone")))
+            assertFalse(compose.onAllNodesWithText("Pick me", substring = true).fetchSemanticsNodes().isNotEmpty())
+        }
+    }
+
+    @Test
+    fun textFromTheFileIsShownCutTo80CharactersWithNoFormatCharacter() {
+        // A bidi override, and a key of 1,000 characters (#1482).
+        val key = "\u202E" + "k".repeat(1000)
+        val file =
+            """{"file": "Sleevesight settings", "format": 1, "settings": {
+                "$key": 1, "theme": "\u202ELIGHT\u200B"}}"""
+        screen {
+            openPreview(file)
+            assertTrue(shown("k".repeat(79) + "\u2026: not a setting this version knows"))
+            assertTrue(shown(app.getString(R.string.settings_theme) + ": LIGHT: not one of its choices"))
+            for (format in listOf("\u202E", "\u200B")) {
+                assertFalse(compose.onAllNodesWithText(format, substring = true).fetchSemanticsNodes().isNotEmpty())
             }
         }
     }

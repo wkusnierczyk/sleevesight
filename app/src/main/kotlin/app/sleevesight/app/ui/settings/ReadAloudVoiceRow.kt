@@ -143,7 +143,7 @@ private class Samples(
 }
 
 /** What the engine has, as *Voice*'s row reads it: [load], its English voices ([groups]), and [online]. */
-private class EngineState(
+internal class EngineState(
     val load: VoicesLoad?,
     val groups: List<VoiceGroup>,
     val online: Boolean,
@@ -154,7 +154,7 @@ private class EngineState(
  * let go after, so a voice added in Android's settings shows on the way back.
  */
 @Composable
-private fun engineState(voices: ReadAloudVoices?): EngineState {
+internal fun engineState(voices: ReadAloudVoices?): EngineState {
     var load by remember(voices) { mutableStateOf<VoicesLoad?>(null) }
     if (voices != null) {
         LifecycleResumeEffect(voices) {

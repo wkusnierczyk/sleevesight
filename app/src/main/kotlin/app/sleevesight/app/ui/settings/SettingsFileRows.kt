@@ -184,7 +184,10 @@ private fun LoadPreview(
     val contents = SettingsFile.read(text, APP_OFFERED) ?: return
     // The load's own plan, the keys' gate included, so the preview promises only what it does.
     val plan = loadPlan(contents, settings, access.missing)
-    val changes = loadChanges(settings, plan.settings, modelName, playerLabel)
+    // A voice the load changes, named as the engine lists it, never as the file names it (#1481).
+    val voice = plan.settings.readAloudVoice?.takeIf { it.id != settings.readAloudVoice?.id }
+    val shown = voice?.let { plan.settings.copy(readAloudVoice = engineNamed(it)) } ?: plan.settings
+    val changes = loadChanges(settings, shown, modelName, playerLabel)
     val skipped = plan.skipped.map { skippedLine(it) } + plan.keyless.map { keylessLine(it) }
     val resources = LocalResources.current
     // As the preview has it, unless what is saved differs: a save ahead of it changed the settings.
