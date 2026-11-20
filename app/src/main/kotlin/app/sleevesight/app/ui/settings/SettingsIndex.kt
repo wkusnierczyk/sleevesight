@@ -36,6 +36,7 @@ internal fun settingsIndex(
         indexed(SettingsSection.INSIGHTS, insightRows(settings)),
         indexed(SettingsSection.HISTORY, historyRows(settings)),
         indexed(SettingsSection.APPEARANCE, appearanceRows()),
+        indexed(SettingsSection.SAVE_AND_RESET, saveAndResetRows()),
         indexed(SettingsSection.ABOUT, aboutRows()),
         if (settings.developerMode) indexed(SettingsSection.DEVELOPER, developerRows(settings)) else null,
     )

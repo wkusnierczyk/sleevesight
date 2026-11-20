@@ -31,6 +31,11 @@ class HistoryLifetimeAsked internal constructor(
         return if (last != null) last.lifetime else stored
     }
 
+    /** Drops the value last asked for, once a reset (#960) has stored another: [held] is then the stored one. */
+    internal fun forget() {
+        asked.set(null)
+    }
+
     /**
      * Saves [lifetime] with [save] (the screen's, in line, [saving]), noted as asked for first; its
      * result whether it was saved, awaited in [saves], which outlives the screen.

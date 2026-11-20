@@ -326,3 +326,6 @@ internal fun sourceIndexRows(): List<IndexedRow> {
         }
     return sources + musicBrainzWaitIndexRow() + trackLanguageIndexRow()
 }
+
+/** *Sources*' rows in the order shown, each by its name, and whether it is on in the settings given (#960). */
+internal val SOURCE_SWITCHES: List<Pair<Int, (Settings) -> Boolean>> = SOURCE_ROWS.map { row -> row.name to row::on }

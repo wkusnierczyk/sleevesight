@@ -66,7 +66,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 class SettingsStore(
     private val dataStore: DataStore<Preferences>,
-    private val defaults: Settings = Settings(),
+    internal val defaults: Settings = Settings(),
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val stored: Flow<Settings> =
