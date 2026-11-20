@@ -48,17 +48,21 @@ interface ReadAloudVoices {
     /** Stops the sample being read, if any. */
     fun stopSample()
 
+    /** Whether a sample is starting, waiting for its engine, or being read. */
+    val sampling: Boolean get() = false
+
     /** Stops the sample, and releases the engine, which [load] opens again. */
     fun close()
 }
 
 /**
  * [ReadAloudVoices] through an engine of its own ([speechOf], given the voice to read in), the
- * music lowered under a sample as under a reading ([focus]); [before] stops a reading under way
+ * music lowered or paused under a sample as under a reading ([focus], [music]), the hold handed
+ * over between them ([SharedMusicFocus], [sampling]); [before] stops a reading under way
  * ([ReadAloud]), so a sample is not read over it; a reading that starts stops a sample in turn
  * ([stopSample], [ReadAloud]'s `before`), one waiting for its engine too. Read in [locale], the
- * readings' language, whose default voice is the phone's choice. A sample's voice is chosen as a reading's is
- * ([SystemSpeech]): a voice gone, or one with a server version only while offline, reads as the
+ * readings' language, whose default voice is the phone's choice. A sample's voice is chosen as a
+ * reading's is ([SystemSpeech]): a voice gone, or one with a server version only while offline, reads as the
  * phone's choice.
  */
 class SystemReadAloudVoices(
@@ -67,6 +71,7 @@ class SystemReadAloudVoices(
     override val online: Flow<Boolean>,
     private val before: () -> Unit = {},
     private val locale: () -> Locale = ::insightLocale,
+    private val music: () -> ReadAloudMusic = { ReadAloudMusic.LOWER },
 ) : ReadAloudVoices {
     private var sampled: String? = null
     private val speech = speechOf { sampled }
@@ -74,6 +79,11 @@ class SystemReadAloudVoices(
     // What to call when the sample under way ends; null when none is.
     private var ended: (() -> Unit)? = null
     private var held = false
+
+    // A sample starting: stopping what it replaces, which hands it the hold on the music.
+    private var starting = false
+
+    override val sampling: Boolean get() = starting || ended != null
 
     override fun load(loaded: (VoicesLoad) -> Unit) =
         speech.open { opened ->
@@ -88,8 +98,10 @@ class SystemReadAloudVoices(
         text: String,
         ended: () -> Unit,
     ) {
+        starting = true
         stopSample()
         before()
+        starting = false
         sampled = id
         this.ended = ended
         speech.open { opened ->
@@ -119,17 +131,16 @@ class SystemReadAloudVoices(
     // The music lowered under the sample, as *Lower* does under a reading; another app taking the
     // sound (a call) stops it.
     private fun take(): Boolean {
-        held = focus.take(ReadAloudMusic.LOWER) { stopSample() }
+        held = focus.take(music()) { stopSample() }
         return held
     }
 
     private fun finish() {
         val told = ended
         ended = null
-        if (held) {
-            held = false
-            focus.release()
-        }
+        // Released even when not taken: a hold kept for this sample by another (#787) is let go.
+        held = false
+        focus.release()
         told?.invoke()
     }
 }

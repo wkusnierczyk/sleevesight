@@ -80,11 +80,11 @@ import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
-import app.sleevesight.app.speech.MusicFocus
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.ReadAloudMessages
 import app.sleevesight.app.speech.ReadAloudMusicFocus
 import app.sleevesight.app.speech.ReadAloudVoices
+import app.sleevesight.app.speech.SharedMusicFocus
 import app.sleevesight.app.speech.SystemMusicFocus
 import app.sleevesight.app.speech.SystemReadAloudVoices
 import app.sleevesight.app.speech.SystemRemoteMusic
@@ -109,6 +109,7 @@ import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
+import app.sleevesight.core.settings.ReadAloudMusic
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WriteAutomatically
@@ -868,7 +869,7 @@ class AppGraph internal constructor(
                     voice = { latestSettings.value?.readAloudVoice?.id },
                     online = { appContext.getSystemService(ConnectivityManager::class.java).onlineNow() },
                 ),
-            focus = readAloudFocus(),
+            focus = speechFocus.party(),
             settings = latestSettings,
             words =
                 SpokenWords(appContext.getString(R.string.read_aloud_unverified)) { title, artists ->
@@ -886,12 +887,15 @@ class AppGraph internal constructor(
     /**
      * The music while the app speaks (#325): its audio focus, and music on another device (Spotify
      * Connect) held through its session (#803), a followed player's only, as the settings now say.
-     * One for the readings, and one for *Voice*'s samples (#787), which hold it the same way.
+     * One hold shared by the readings and *Voice*'s samples (#787), handed over between them, so the
+     * music does not come back between a reading and a sample that replaces it, or the reverse.
      */
-    private val readAloudFocus: () -> MusicFocus = {
-        ReadAloudMusicFocus(SystemMusicFocus(appContext)) {
-            SystemRemoteMusic(appContext) { (latestSettings.value ?: Settings()).follows(it) }.playing()
-        }
+    private val speechFocus: SharedMusicFocus by lazy {
+        SharedMusicFocus(
+            ReadAloudMusicFocus(SystemMusicFocus(appContext)) {
+                SystemRemoteMusic(appContext) { (latestSettings.value ?: Settings()).follows(it) }.playing()
+            },
+        ) { readAloud.reading.value != null || readAloudVoices.sampling }
     }
 
     /**
@@ -902,9 +906,11 @@ class AppGraph internal constructor(
         val connectivity = appContext.getSystemService(ConnectivityManager::class.java)
         SystemReadAloudVoices(
             speechOf = { voice -> SystemSpeech(appContext, voice = voice, online = { connectivity.onlineNow() }) },
-            focus = readAloudFocus(),
+            focus = speechFocus.party(),
             online = connectivity.online(),
             before = { readAloud.stop() },
+            // As *Music while reading aloud* says, as for a reading: a hold handed over keeps its way.
+            music = { latestSettings.value?.readAloudMusic ?: ReadAloudMusic.LOWER },
         )
     }
 

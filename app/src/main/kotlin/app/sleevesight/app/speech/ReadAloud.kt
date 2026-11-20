@@ -89,8 +89,9 @@ enum class ReadAloudProblem {
  * ([insightLocale]). A problem (no engine, no voice for the language, no audio focus, the engine
  * failing) is told ([tell]), never read past. Called on the main thread.
  *
- * [before] runs as each reading starts, before the engine opens: it stops a sample of *Voice*
- * (#787) being read, or waiting for its engine, so the two are never heard together.
+ * [before] runs as each reading starts, once it is under way and before the engine opens: it
+ * stops a sample of *Voice* (#787) being read, or waiting for its engine, so the two are never
+ * heard together; their music focus is one ([SharedMusicFocus]), handed over between them.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // Its seams each a parameter; one set of rules.
 class ReadAloud(
@@ -212,11 +213,12 @@ class ReadAloud(
     /** Starts [reading], in place of the one under way. */
     fun read(reading: Reading) {
         if (reading.parts.isEmpty()) return stop()
-        before()
         // One under way is replaced, its focus kept: the music does not come up between the two.
         if (readingState.value != null) speech.stop()
         stopWatching()
         readingState.value = reading
+        // Under way from now, so a sample it stops hands its hold on the music over (#787).
+        before()
         speech.open { opened ->
             // Stopped, or replaced, while the engine opened.
             if (readingState.value !== reading) return@open
@@ -261,10 +263,9 @@ class ReadAloud(
     private fun end() {
         stopWatching()
         readingState.value = null
-        if (held) {
-            held = false
-            focus.release()
-        }
+        // Released even when not taken: a hold kept for this reading by another (#787) is let go.
+        held = false
+        focus.release()
     }
 
     /**

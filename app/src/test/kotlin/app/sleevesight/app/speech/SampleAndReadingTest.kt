@@ -14,29 +14,29 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Locale
 
+// An engine that starts only when told ([start]), as a real one starts on its own thread.
+internal class SlowSpeech(
+    val inner: FakeSpeech = FakeSpeech(),
+) : Speech by inner {
+    private val waiting = mutableListOf<(Boolean) -> Unit>()
+
+    override fun open(ready: (Boolean) -> Unit) {
+        waiting += ready
+    }
+
+    fun start() {
+        val callers = waiting.toList()
+        waiting.clear()
+        callers.forEach { inner.open(it) }
+    }
+}
+
 /**
  * A sample of *Voice* (#787) and a reading aloud are never heard together, as the app wires them
  * (`AppGraph`): whichever starts stops the other, while it is read or while its engine is still
  * starting, each engine starting late here ([SlowSpeech]); the one stopped gives its music back.
  */
 class SampleAndReadingTest {
-    // An engine that starts only when told ([start]), as a real one starts on its own thread.
-    private class SlowSpeech(
-        val inner: FakeSpeech = FakeSpeech(),
-    ) : Speech by inner {
-        private val waiting = mutableListOf<(Boolean) -> Unit>()
-
-        override fun open(ready: (Boolean) -> Unit) {
-            waiting += ready
-        }
-
-        fun start() {
-            val callers = waiting.toList()
-            waiting.clear()
-            callers.forEach { inner.open(it) }
-        }
-    }
-
     private val readingSpeech = SlowSpeech()
     private val sampleSpeech = SlowSpeech()
     private val readingFocus = FakeFocus()
@@ -61,7 +61,8 @@ class SampleAndReadingTest {
                 focus = sampleFocus,
                 online = flowOf(true),
                 before = { readAloud.stop() },
-            ) { Locale.UK }
+                locale = { Locale.UK },
+            )
     }
 
     private val insight = written("Sundown was recorded in 1973 [MB1].")

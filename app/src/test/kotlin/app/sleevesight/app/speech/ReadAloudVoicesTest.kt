@@ -45,7 +45,8 @@ class ReadAloudVoicesTest {
             focus = focus,
             online = flowOf(true),
             before = { readingsStopped++ },
-        ) { java.util.Locale.UK }
+            locale = { java.util.Locale.UK },
+        )
 
     private var ends = 0
 
