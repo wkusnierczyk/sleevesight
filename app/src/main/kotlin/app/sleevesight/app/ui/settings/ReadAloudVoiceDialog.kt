@@ -15,8 +15,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +32,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.speech.VoiceEntry
 import app.sleevesight.app.speech.VoiceGroup
 import app.sleevesight.app.speech.VoiceMark
+import app.sleevesight.app.ui.theme.PillButton
 import app.sleevesight.core.settings.ReadAloudVoice
 
 // *Voice*'s dialog (#787): the phone's choice and the engine's English voices, each with a play
@@ -122,7 +123,8 @@ internal fun VoiceDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
+        // A black pill, as Settings' buttons (#1387); the other dialogs follow separately.
+        confirmButton = { PillButton(label = stringResource(R.string.settings_cancel), onClick = onDismiss) },
     )
 }
 
@@ -154,7 +156,16 @@ private fun VoiceOption(
                     .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RadioButton(selected = selected, onClick = null)
+            // Black, as the app's controls (#1387), chosen or not.
+            RadioButton(
+                selected = selected,
+                onClick = null,
+                colors =
+                    RadioButtonDefaults.colors(
+                        selectedColor = MaterialTheme.colorScheme.onSurface,
+                        unselectedColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+            )
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(label, style = MaterialTheme.typography.bodyLarge)
                 detail?.let {
