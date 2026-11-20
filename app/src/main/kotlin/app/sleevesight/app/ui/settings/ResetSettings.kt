@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -21,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.settings.Resets
 import app.sleevesight.app.settings.SettingsReset
 import app.sleevesight.app.ui.theme.LocalMessages
 import app.sleevesight.core.settings.Settings
@@ -30,7 +33,7 @@ import app.sleevesight.core.settings.Settings
 
 /**
  * *Save and reset*'s rows: *Reset to the defaults*, whose button opens [ResetDialog] for
- * [settings]; once the reset is saved, a message says so ([LocalMessages]). [modelName] names a
+ * [settings]; once the reset is saved, [ResetNotice] says so. [modelName] names a
  * model as its row does.
  */
 @Composable
@@ -40,8 +43,6 @@ internal fun SaveAndResetSection(
     modelName: (String) -> String,
 ) {
     var asking by rememberSaveable { mutableStateOf(false) }
-    val messages = LocalMessages.current
-    val done = stringResource(R.string.settings_reset_done)
     ButtonRow(
         title = stringResource(R.string.settings_reset),
         summary = stringResource(R.string.settings_reset_summary),
@@ -55,11 +56,27 @@ internal fun SaveAndResetSection(
             stays = resetStays(settings, resetter.preview(settings)),
             onReset = {
                 asking = false
-                val saved = resetter.reset()
-                messages?.showOnceSaved(saved, done)
+                // Its message comes from [ResetNotice], which outlives a recreation.
+                resetter.reset()
             },
             onDismiss = { asking = false },
         )
+    }
+}
+
+/**
+ * Says *Settings reset to the defaults.* ([LocalMessages]) once the last reset asked for ([resets])
+ * is saved, once only: on this screen, or on the one made after a recreation, as when the reset
+ * changed the theme and Android restarted the activity.
+ */
+@Composable
+internal fun ResetNotice(resets: Resets) {
+    val pending by resets.pending.collectAsState()
+    val messages = LocalMessages.current
+    val done = stringResource(R.string.settings_reset_done)
+    LaunchedEffect(pending, messages) {
+        val reset = pending ?: return@LaunchedEffect
+        if (messages != null && reset.saved.await() && resets.take(reset)) messages.show(done)
     }
 }
 

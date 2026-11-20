@@ -45,7 +45,7 @@ import app.sleevesight.app.settings.Dismissals
 import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.settings.resetOf
-import app.sleevesight.app.settings.resetToDefaults
+import app.sleevesight.app.settings.resetter
 import app.sleevesight.app.settings.saving
 import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
@@ -102,6 +102,9 @@ import kotlinx.coroutines.launch
  * mode as any setting.
  * [openRouter] runs the sign-in with OpenRouter under *AI services* (#1157), and says whether
  * OpenRouter refused the key saved since; null for neither (tests).
+ * [resetSettings] makes *Reset to the defaults* (#960), telling the pipeline of a mode it changes;
+ * null resets through [settingsStore] alone ([resetter]). Its message is said by whichever screen
+ * shows once it is saved, after a recreation too ([ResetNotice]).
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -122,6 +125,7 @@ fun SettingsScreen(
     landOn: SettingsTarget? = null,
     chooseWritingMode: ((WriteAutomatically) -> Deferred<Boolean>)? = null,
     openRouter: OpenRouterAccess? = null,
+    resetSettings: (() -> Deferred<Boolean>)? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -158,8 +162,9 @@ fun SettingsScreen(
             undo = { item -> save { settingsStore.undismiss(item) } },
         )
     val restoreDismissed = { save { settingsStore.restoreDismissed() } }
-    // *Reset to the defaults* (#960): its dialog's preview, and the reset, saved as any change is.
-    val reset = SettingsResetter(settingsStore::resetOf) { save { settingsStore.resetToDefaults() } }
+    // *Reset to the defaults* (#960): its dialog's preview, and the reset through the app's resetter,
+    // which tells the pipeline of a mode it changes, its save announced as any change's is.
+    val reset = scope.resetting(settingsStore, resetSettings, saves, failed)
     // *Reactive*'s mode through the app's chooser (#625), its save announced as any change's is.
     val chooseMode: ((WriteAutomatically) -> Unit)? =
         chooseWritingMode?.let { choose ->
@@ -179,6 +184,7 @@ fun SettingsScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 // Above the list, so it shows wherever the list is scrolled to.
                 Notices(changeFailures, clearing.ended, clearing.looksUp)
+                ResetNotice(settingsStore.resets)
                 settings?.let { current ->
                     val navigation =
                         Navigation(
@@ -301,6 +307,23 @@ private fun CoroutineScope.saver(
         launch { failed(!saved.await()) }
         saved
     }
+
+/**
+ * *Reset to the defaults* (#960) on [store]: its dialog's preview, and [reset], or without one the
+ * store's own reset saved in [saves], each one's save waited for in this scope, the screen's,
+ * telling [failed] whether it could not be saved.
+ */
+private fun CoroutineScope.resetting(
+    store: SettingsStore,
+    reset: (() -> Deferred<Boolean>)?,
+    saves: CoroutineScope,
+    failed: (Boolean) -> Unit,
+): SettingsResetter {
+    val resets = reset ?: store.resetter(saves)
+    return SettingsResetter(store::resetOf) {
+        resets().also { saved -> launch { failed(!saved.await()) } }
+    }
+}
 
 /**
  * How the last *Clear history* ended: [ended] is null until one does. Its result is awaited in

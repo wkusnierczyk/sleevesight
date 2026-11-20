@@ -1,6 +1,10 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -223,6 +227,33 @@ class SettingsResetScreenTest {
             val diagnostics =
                 line(R.string.settings_diagnostics, R.string.settings_reset_on, R.string.settings_reset_off)
             assertTrue(shown(diagnostics))
+        }
+    }
+
+    @Test
+    fun theMessageIsSaidOnceByTheScreenShownWhenTheResetIsSavedAfterARecreation() {
+        moveSome()
+        // A recreation, as when the reset changes the theme: a new screen in place of the first.
+        var screens by mutableIntStateOf(0)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    key(screens) {
+                        SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                    }
+                }
+            }
+            openDialog()
+            // The reset's save held until the first screen is gone.
+            val gate = CompletableDeferred<Unit>()
+            settings.saveOrder.launch(saves) { gate.await() }
+            compose.onNodeWithTag(RESET_CONFIRM_TAG).performClick()
+            compose.runOnUiThread { screens++ }
+            compose.waitForIdle()
+            gate.complete(Unit)
+            compose.waitUntil(WAIT_MS) { settings.settings.now().theme == ThemeChoice.SYSTEM }
+            compose.waitUntil(WAIT_MS) { shown("Settings reset to the defaults.") }
+            assertEquals(1, compose.onAllNodesWithText("Settings reset to the defaults.").fetchSemanticsNodes().size)
         }
     }
 }

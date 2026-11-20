@@ -79,6 +79,7 @@ import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.RefusedModelPrefs
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.settings.resetter
 import app.sleevesight.app.speech.ReadAloud
 import app.sleevesight.app.speech.ReadAloudMessages
 import app.sleevesight.app.speech.ReadAloudMusicFocus
@@ -848,6 +849,12 @@ class AppGraph internal constructor(
     val chooseWritingMode: (WriteAutomatically) -> Deferred<Boolean> by lazy {
         settings.writingModeChooser(settingsSaves, pipeline::modeChosen)
     }
+
+    /**
+     * *Reset to the defaults* (#960), saved in [settingsSaves], in line with the other saves; a mode
+     * it changes is told to the pipeline as a choice of the mode is, so the pipeline writes by it.
+     */
+    val resetSettings: () -> Deferred<Boolean> by lazy { settings.resetter(settingsSaves, pipeline::modeChosen) }
 
     /**
      * *Read aloud* (#325): the insight, or a genre's reason, read by the phone's text-to-speech

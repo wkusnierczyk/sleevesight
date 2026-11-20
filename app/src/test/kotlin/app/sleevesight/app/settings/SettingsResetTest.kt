@@ -25,7 +25,12 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.TrackLanguageSearch
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -215,5 +220,29 @@ class SettingsResetTest {
             store.resetToDefaults()
             assertEquals(defaults.historyLifetime, asked.held(store.settings.first().historyLifetime))
             assertNotEquals(7.days, store.settings.first().historyLifetime)
+        }
+
+    @Test
+    fun aKeepHistoryForAskedForAfterAResetIsAskedForStaysHeldOnceTheResetIsSaved() =
+        runBlocking<Unit> {
+            val store = memorySettings(defaults = defaults)
+            val saves = CoroutineScope(Job() + Dispatchers.Unconfined)
+            try {
+                // Saves held behind two gates: the reset waits for the first, the choice for the second.
+                val first = CompletableDeferred<Unit>()
+                val second = CompletableDeferred<Unit>()
+                store.saveOrder.launch(saves) { first.await() }
+                val reset = store.resetter(saves)()
+                store.saveOrder.launch(saves) { second.await() }
+                val asked = store.historyLifetimeAsked
+                asked.save(7.days, { change -> store.saving(saves, change) }, saves)
+                first.complete(Unit)
+                assertTrue(reset.await())
+                // The choice, still waiting its turn, is what a shorter time is judged against.
+                assertEquals(7.days, asked.held(store.settings.first().historyLifetime))
+                second.complete(Unit)
+            } finally {
+                saves.cancel()
+            }
         }
 }

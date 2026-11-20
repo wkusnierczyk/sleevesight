@@ -75,6 +75,9 @@ class SettingsStore(
     /** Every writer of the settings, one after another, in the order asked for (#1146; [saving]). */
     internal val saveOrder = SaveOrder()
 
+    /** The last *Reset to the defaults* asked for (#960), so its message outlives the screen. */
+    val resets = Resets()
+
     /** *Keep history for* as last asked for, while its save may still wait its turn (#1126). */
     val historyLifetimeAsked = HistoryLifetimeAsked(this)
 
