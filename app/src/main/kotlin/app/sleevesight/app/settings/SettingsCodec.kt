@@ -11,6 +11,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Dismissable
 import app.sleevesight.core.settings.NewTrackFold
+import app.sleevesight.core.settings.ReadAloudVoice
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
@@ -78,6 +79,10 @@ internal object SettingsCodec {
     // *Retry when the AI fails* (#1164), in milliseconds: zero is *Don’t retry*.
     private val AI_RETRY_MS = longPreferencesKey("ai.retry_ms")
     private val READ_ALOUD_MUSIC = stringPreferencesKey("read_aloud.music")
+
+    // *Voice* (#787): the voice's id, and its name when chosen; neither for *The phone's choice*.
+    private val READ_ALOUD_VOICE = stringPreferencesKey("read_aloud.voice")
+    private val READ_ALOUD_VOICE_NAME = stringPreferencesKey("read_aloud.voice_name")
     private val READ_TRACK_LINE = booleanPreferencesKey("read_aloud.track_line_first")
     private val READ_NEW_INSIGHTS = booleanPreferencesKey("read_aloud.new_insights")
     private val KEEP_ARTIST_RESULTS = booleanPreferencesKey("cache.keep_artist_results")
@@ -154,6 +159,7 @@ internal object SettingsCodec {
             musicBrainzWait = prefs[MUSICBRAINZ_WAIT_MS]?.takeIf { it >= 0 }?.milliseconds ?: defaults.musicBrainzWait,
             // Only one of the setting's stops (#1196): any other stored value reads as the default.
             aiRetry = prefs[AI_RETRY_MS]?.milliseconds?.takeIf { it in Settings.AI_RETRIES } ?: defaults.aiRetry,
+            readAloudVoice = voiceOf(prefs[READ_ALOUD_VOICE], prefs[READ_ALOUD_VOICE_NAME]) ?: defaults.readAloudVoice,
             readAloudMusic = enumOf(prefs[READ_ALOUD_MUSIC]) ?: defaults.readAloudMusic,
             readTrackLineFirst = prefs[READ_TRACK_LINE] ?: defaults.readTrackLineFirst,
             readNewInsightsAloud = prefs[READ_NEW_INSIGHTS] ?: defaults.readNewInsightsAloud,
@@ -283,6 +289,10 @@ internal object SettingsCodec {
         }
         if (moved { it.aiRetry }) {
             prefs.put(AI_RETRY_MS, settings.aiRetry.inWholeMilliseconds, defaults.aiRetry.inWholeMilliseconds)
+        }
+        if (moved { it.readAloudVoice }) {
+            prefs.put(READ_ALOUD_VOICE, settings.readAloudVoice?.id, defaults.readAloudVoice?.id)
+            prefs.put(READ_ALOUD_VOICE_NAME, settings.readAloudVoice?.name, defaults.readAloudVoice?.name)
         }
         if (moved { it.readAloudMusic }) {
             prefs.put(READ_ALOUD_MUSIC, settings.readAloudMusic.name, defaults.readAloudMusic.name)
@@ -551,6 +561,20 @@ private fun pauseOf(
     when (stored) {
         NEVER_PAUSE -> null
         else -> stored?.takeIf { it > 0 } ?: default
+    }
+
+/** *Voice* (#787) as stored: its [id], named by its stored [name], else by the id; none without an id. */
+private fun voiceOf(
+    id: String?,
+    name: String?,
+): ReadAloudVoice? =
+    id?.takeIf { it.isNotBlank() }?.let {
+        ReadAloudVoice(
+            it,
+            name?.takeIf { n ->
+                n.isNotBlank()
+            } ?: it,
+        )
     }
 
 /** Stores [value], or removes the key when it is the default or null. */
