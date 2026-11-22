@@ -239,14 +239,33 @@ class PromptEvidenceTest {
         val counts = EvidenceDraft(SourceId.LASTFM, Scope.ARTIST, "Last.fm counts 9 listeners.", null, RETRIEVED, true)
         val first = firstRelease("Sundown")
 
-        assertEquals(listOf("Song fact 2.", counts.text), sent(set(first, song(2), counts, player("Sundown"))))
+        assertEquals(listOf("Song fact 2."), sent(set(first, song(2), counts, player("Sundown"))))
         assertEquals(listOf(formed.text), sent(set(first, formed, player("Sundown"))), "an artist's line")
         // Nothing else to tell, a count aside: they stay, and the prompt says so (`InsightPrompt.NOTHING_BEYOND`);
-        // the player's line goes as a restated release alone (#424).
-        assertEquals(listOf(first.text, counts.text), sent(set(first, counts, player("Sundown"))))
+        // the player's line goes as a restated release alone (#424), and the count as every count (#1477).
+        assertEquals(listOf(first.text), sent(set(first, counts, player("Sundown"))))
         // A first release on another album, a compilation's song: the player's line stays (#424).
         val reissue = set(firstRelease("Sundown"), song(2), player("Gord's Gold"))
         val kept = PromptEvidence.of(reissue, "Gord's Gold", emptySet(), JvmHasher) { it.source == SourceId.PLAYER }
         assertEquals(listOf("MB1", "MB2", "P1"), kept.ids)
+    }
+
+    @Test
+    fun `counts, tags and similar artists are never sent, unless nothing else is left (#1477)`() {
+        // On the phone (#272), thin tracks' cards told the artist's tags or similar artists beside the release,
+        // whatever the rule against them said; the song's, artist's and album's insights leave them out too.
+        val counted = { text: String -> EvidenceDraft(SourceId.LASTFM, Scope.ARTIST, text, null, RETRIEVED, true) }
+        val tags = counted("Last.fm listeners tag A as: dubstep.")
+        val similar = counted("Last.fm lists artists similar to A: B.")
+        val bio = line(SourceId.LASTFM, "The Last.fm biography of A says: \"A is a producer.\"", Scope.ARTIST)
+
+        // The release the one line left: sent alone.
+        assertEquals(listOf("P1"), sent(set(tags, similar, player("Lovely"))))
+        // With more to tell, as for any other line.
+        assertEquals(listOf("MB1", "L3"), sent(set(song(1), tags, similar, bio)))
+        // With enough of the track's own, every artist line is left out anyway.
+        assertEquals(listOf("MB1", "MB2", "MB3", "MB4"), sent(set(song(1), song(2), song(3), song(4), tags)))
+        // Nothing but them: sent, so the prompt is not empty.
+        assertEquals(listOf("L1", "L2"), sent(set(tags, similar)))
     }
 }
