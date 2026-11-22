@@ -50,6 +50,15 @@ import app.sleevesight.core.resolution.MusicBrainzEvidence
  * album stays, as above: left out, the model told the compilation uncited ("a reissue on this
  * best-of collection, whose title is shown in the player").
  *
+ * The counts and lists of what many listeners did ([EvidenceLine.aggregate]: Last.fm's listeners, tags
+ * and similar artists) are left out always (#1477), as the song's, artist's and album's insights leave
+ * them out (`ItemInsights`), unless nothing else is left. The rule against them
+ * (`InsightPrompt.COUNTS_RULE`) did not keep them out of thinly documented tracks' cards: on the phone
+ * (#272, Gemma 4 E4B, prompt version 13), 8 of 77 replies told the artist's tags or similar artists
+ * where the release was the one line left to tell, and no rewording measured on the Mac (#1477) moved
+ * it; with the lines not sent, none did. The prompt says the lines left hold only facts Home shows
+ * when they do (`InsightPrompt.NOTHING_BEYOND`), so such a track's card is its release alone.
+ *
  * Which lines are left out depends on the session, so the synthesis cache keys a card by the whole
  * evidence's fingerprint, not the one sent: a track played again finds the card it was given.
  */
@@ -91,7 +100,9 @@ object PromptEvidence {
                     }
             }
         // Decided on the retrieved lines alone: the artists' report does not matter with model knowledge off.
-        val narrated = if (sent.nothingToNarrate(allowModel = false, artistsKnown = true)) evidence else sent
+        val whole = if (sent.nothingToNarrate(allowModel = false, artistsKnown = true)) evidence else sent
+        val counted = whole.without(hasher) { it.aggregate }
+        val narrated = if (counted.isEmpty()) whole else counted
         val beyond = narrated.lines.any { !it.aggregate && !restatesHome(it) }
         if (!beyond) return narrated
         val elsewhere = firstReleasedElsewhere(evidence, restatesHome)
