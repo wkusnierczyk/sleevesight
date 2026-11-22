@@ -1,5 +1,6 @@
 package app.sleevesight.app.pipeline
 
+import android.util.Log
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.ai.ReasoningEffort
@@ -17,6 +18,7 @@ import app.sleevesight.core.pipeline.QuestionCost
 import app.sleevesight.core.pipeline.SearchState
 import app.sleevesight.core.pipeline.SearchWay
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.pipeline.UnreadReply
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.pastKeepHistory
 import app.sleevesight.core.synthesis.AiSearchAnswers
@@ -250,13 +252,18 @@ interface AiSearchFeed {
  * answer shown again for the track its call was made for is not told again. None is told for work
  * started before a *Clear history*, whose clear drops the log.
  *
+ * A reply that ended as asked but held no JSON object that parses (#1446: blank, no braces, or braces
+ * that do not parse), of every kind, is logged to [developerLog] (logcat, tag `Sleevesight`) with its
+ * shape, what it was read as and its first 200 characters ([UnreadReply.line]), in developer mode
+ * only, as the settings last read say: the reply's text, never the request, its key or its headers.
+ *
  * An answer is shown as kept from before (#851, `AiSearch.Answered.keptAt`) when it was written
  * before the play of the track it is shown for began ([plays], `Plays`: observed, so it is worked out
  * again when the play changes); for a track not playing
  * (no time), when it was read from the cache or written for another track.
  */
 @Suppress(
-    "LongParameterList", // Where searches are made and checked, where they run, the names, the time, the log.
+    "LongParameterList", // Where searches are made and checked, where they run, the names, the time, the logs.
     "TooManyFunctions", // Each step of a search, its cache, and what the log is told (#851).
 )
 class AppAiSearches(
@@ -271,6 +278,7 @@ class AppAiSearches(
     private val deferred: (TrackState, SearchKind, String?) -> Unit = { _, _, _ -> },
     private val events: (PipelineEvent) -> Unit = {},
     private val plays: StateFlow<Play?> = MutableStateFlow(null),
+    private val developerLog: (String) -> Unit = { Log.i(TAG, it) },
 ) : AiSearchFeed {
     // A search's key, null with no AI service ready; and whether it is offered at all (the pipeline
     // and settings in, *Show insights* on).
@@ -333,7 +341,7 @@ class AppAiSearches(
         kind: SearchKind,
         genre: String?,
     ): Pair<AiSearches, CardKey>? {
-        val searches = parts.value?.searches(answers, clock)
+        val searches = parts.value?.searches(answers, clock, ::logUnread)
         val key = settings.value?.let { now -> searches?.key(track, kind, now, genre) }
         return if (searches == null || key == null) null else searches to key
     }
@@ -358,7 +366,7 @@ class AppAiSearches(
     ): Flow<AiSearch> {
         val offers =
             combine(parts, settings) { made, now ->
-                val searches = made?.searches(answers, clock)
+                val searches = made?.searches(answers, clock, ::logUnread)
                 // Not offered at all: *Show insights* off, or what the song is about with no web search (#908).
                 val ready = now?.takeIf { it.writeInsights && searches?.offered(kind, it) == true }
                 if (ready == null || searches == null) {
@@ -652,7 +660,7 @@ class AppAiSearches(
         track: TrackState,
     ) {
         if (key in shown.entries.value || !looked.add(key)) return
-        val searches = parts.value?.searches(answers, clock) ?: return
+        val searches = parts.value?.searches(answers, clock, ::logUnread) ?: return
         scope.launch(epoch.mark() + shown.mark()) {
             val work = coroutineContext
             val kept = searches.kept(key, kind, track)?.takeIf { !expired(it.writtenAt) }
@@ -712,8 +720,15 @@ class AppAiSearches(
         }
     }
 
+    // [reply], which held no JSON object that parses, logged in developer mode only (#1446).
+    private fun logUnread(reply: UnreadReply) {
+        if (settings.value?.developerMode == true) developerLog(reply.line())
+    }
+
     private companion object {
         const val FAILED = "failed"
+
+        const val TAG = "Sleevesight"
 
         /** The stops remembered: those of the panels of the last tracks played, a few hundred. */
         const val STOPS_KEPT = 256
@@ -806,11 +821,13 @@ internal class ShownSearches {
 }
 
 // The searches these parts make, their answers read by [answers], their times by [clock], searching
-// the web with their engine (#801), their prompts' dates in the parts' form (#957).
+// the web with their engine (#801), their prompts' dates in the parts' form (#957), a reply with no JSON
+// object told to [unread] (#1446).
 private fun PipelineParts.searches(
     answers: AiSearchAnswers,
     clock: Clock,
-): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch, dateForm)
+    unread: (UnreadReply) -> Unit,
+): AiSearches = AiSearches(ai, cache, hasher, answers, clock, webSearch, dateForm, unread)
 
 // A kept answer of [key], in [state], written at [writtenAt], served for [track] (#851).
 private fun keptServed(

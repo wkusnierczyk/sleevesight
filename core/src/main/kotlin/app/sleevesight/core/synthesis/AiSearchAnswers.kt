@@ -161,7 +161,8 @@ sealed interface SearchReading {
  *   MusicBrainz's lyrics whitelist, or a subdomain of one, look-alikes rejected; one per site, the
  *   one whose path names the track's artist where there are several, as `lyricsLinks` chooses
  *   MusicBrainz's ([pages], with [accentFolder]). No request is made to a link: the app links to
- *   lyrics, it never fetches them (#728).
+ *   lyrics, it never fetches them (#728). A reply in words alone, with no braces, is nothing found
+ *   rather than malformed (#1446): a model that will not point to lyrics often says so in prose.
  * - **A genre's definition** ([SearchKind.DEFINITION], #786): plain text, on one line (line breaks
  *   and runs of spaces made one space), at most [DEFINITION_MAX] characters, and none with a link or
  *   a web address, or markup (Markdown's or HTML's marks, [MARKUP]): it stands in for Wikipedia's
@@ -199,6 +200,8 @@ class AiSearchAnswers(
      * the web searches found, the answer is one from the web, each value with its page among them.
      * An explanation ([SearchKind.EXPLAIN], #908) is read against the pages its prompt numbered
      * ([sources]); none, nothing usable. Its [artists]' names are no web address ("will.i.am").
+     * A reply with no JSON object is malformed, but a lyrics reply in words alone, nothing usable
+     * (#1446: a model declining in prose).
      */
     fun read(
         kind: SearchKind,
@@ -207,7 +210,7 @@ class AiSearchAnswers(
         pages: Collection<String>? = null,
         sources: List<CitedPage>? = null,
     ): SearchReading {
-        val answer = objectIn(reply) ?: JsonReplies.oneTextIn(reply, kind) ?: return SearchReading.Malformed
+        val answer = objectIn(reply) ?: JsonReplies.oneTextIn(reply, kind) ?: return unread(kind, reply)
         val found =
             if (kind == SearchKind.EXPLAIN) {
                 explanationIn(answer, sources.orEmpty(), artists)
@@ -636,3 +639,17 @@ private fun spellingIn(
 
 // The quotation marks a spelled title may come in, which are not part of it (#1293).
 private const val QUOTES = "\"“”„«»'‘’"
+
+// A [reply] to [kind] with no JSON object read in it: malformed, but for lyrics in words alone, with
+// no braces at all (#1446), which is a model declining to point to lyrics in prose ("I can't share
+// lyrics, but…"): nothing found, as `{}` is. A link in such prose is not taken: it is as likely the
+// site's home page as the song's. Braces that do not parse stay malformed, a reply gone wrong.
+private fun unread(
+    kind: SearchKind,
+    reply: String,
+): SearchReading =
+    if (kind == SearchKind.LYRICS && JsonReplies.shapeOf(reply) == ReplyShape.NO_BRACES) {
+        SearchReading.NothingUsable
+    } else {
+        SearchReading.Malformed
+    }

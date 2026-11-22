@@ -109,6 +109,15 @@ object AiSearchPrompt {
     const val VERSION: Int = 1
 
     /**
+     * The lyrics rule that the question is for addresses only (#1446), from the model's knowledge and
+     * from the web: a model reading "lyrics" may decline for copyright in prose. Not a reason to raise
+     * [VERSION] or [WEB_VERSION]: a lyrics answer kept is as good.
+     */
+    const val LYRICS_ADDRESSES_ONLY: String =
+        "- Only the pages' addresses are asked for: never write the lyrics or any line of them. " +
+            "If you know no such page, reply {}."
+
+    /**
      * The version of [SearchKind.DEFINITION]'s prompt (#786), its own: a definition is kept by the
      * genre, not the track, and its prompt changes apart from the track's three. Not raised for the
      * rule on dates ([InsightPrompt.dateRule], #957), as `InsightPrompt.VERSION` was not, nor for the
@@ -288,6 +297,7 @@ object AiSearchPrompt {
                     "- At most one page per site: the page for this artist's version where there is one.",
                     "- Give only addresses you have seen. Never make one up from the title or the artist's " +
                         "name; leave the field out instead.",
+                    LYRICS_ADDRESSES_ONLY,
                 )
             SearchKind.DEFINITION ->
                 listOf(
@@ -597,6 +607,7 @@ object WebPrompt {
                         LyricsSite.entries.joinToString(", ") { "${it.siteName} (${it.domain})" } + ".",
                     "- At most one page per site: the page for this artist's version where there is one.",
                     "- Only addresses of pages found; never one made up from the title or the artist's name.",
+                    AiSearchPrompt.LYRICS_ADDRESSES_ONLY,
                 )
             else -> AiSearchPrompt.rules(kind, genres)
         }

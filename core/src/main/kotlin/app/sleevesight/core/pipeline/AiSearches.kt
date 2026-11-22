@@ -15,6 +15,8 @@ import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.AiSearchPrompt
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.CitedPage
+import app.sleevesight.core.synthesis.JsonReplies
+import app.sleevesight.core.synthesis.ReplyShape
 import app.sleevesight.core.synthesis.SearchAnswer
 import app.sleevesight.core.synthesis.SearchFacts
 import app.sleevesight.core.synthesis.SearchKind
@@ -116,6 +118,10 @@ data class KeptSearch(
  * [ExplainQuestion] asks it, from the track's evidence about the song and the pages its searches
  * find, all numbered as the prompt gave them, which are kept with it ([Kept.sources]) so a kept
  * explanation is read against the same pages.
+ *
+ * A reply that ended as asked but held no JSON object that parses, blank included (#1446), goes to
+ * [unread] as it is read, whatever it was read as, for a developer-mode log line ([UnreadReply]); a
+ * kept one is not told again.
  */
 @Suppress("LongParameterList") // Where answers are asked, kept and read, the time, the web, and the dates' form.
 class AiSearches(
@@ -126,6 +132,7 @@ class AiSearches(
     private val clock: Clock = Clock.System,
     private val web: WebSearcher? = null,
     private val dates: () -> DateForm = { DateForm.APP },
+    private val unread: (UnreadReply) -> Unit = {},
 ) {
     /**
      * The key of [track]'s search of [kind] under [settings], or null when no AI service is ready;
@@ -292,6 +299,7 @@ class AiSearches(
                 (end as? CompletionEvent.Done)?.stopReason == StopReason.END -> read(kind, kept, track).first
                 else -> null
             }
+        tell(unread, kind, reply.text, end, reading)
         val way = SearchWay(asking.automatic, web = pages != null, reply.cost)
         val state =
             stateOf(reading?.let { it to way })
@@ -472,6 +480,28 @@ class AiSearches(
     }
 }
 
+// [reply] to [kind], which ended as [end] and was read as [reading], told to [unread] (#1446) when it
+// ended as asked and held no JSON object that parses; an [unread] that throws costs the line, not the
+// search.
+private fun tell(
+    unread: (UnreadReply) -> Unit,
+    kind: SearchKind,
+    reply: String,
+    end: CompletionEvent?,
+    reading: SearchReading?,
+) {
+    if (reading == null || (end as? CompletionEvent.Done)?.stopReason != StopReason.END) return
+    val shape = JsonReplies.shapeOf(reply)
+    if (shape == ReplyShape.OBJECT) return
+    try {
+        unread(UnreadReply(kind, shape, reply, reading))
+    } catch (
+        @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
+    ) {
+        // Nothing logged: the search goes on as read.
+    }
+}
+
 // The spelling [reading] names (#1293), as nothing usable when it is the player's own for [track], as
 // [names] read them: its title the player's (as reported, or as cleaned for the sources). The check
 // corrects the title only, so its artists are not read.
@@ -487,4 +517,50 @@ private fun spelled(
             names.key(it) == names.key(spelling.title)
         }
     return if (sameTitle) SearchReading.NothingUsable else reading
+}
+
+/**
+ * A search's reply that ended as asked but held no JSON object that parses (#1446): of [kind], its
+ * [shape], the [reply] itself, and what it was read as ([reading]: malformed, a failure; nothing
+ * usable, for lyrics in prose; or an answer recovered from it, `JsonReplies.oneTextIn`). For a
+ * developer-mode log line ([line]), so such a reply can be read off logcat.
+ */
+data class UnreadReply(
+    val kind: SearchKind,
+    val shape: ReplyShape,
+    val reply: String,
+    val reading: SearchReading,
+) {
+    /**
+     * One log line: the kind, the shape, what it was read as, the reply's length and its first
+     * [START] characters, with line breaks and backslashes escaped (`\n`, `\r`, `\\`), so it is one line.
+     * The reply's text only: nothing of the request, its key or its headers.
+     */
+    fun line(): String {
+        val read =
+            when (reading) {
+                SearchReading.Malformed -> "failed"
+                SearchReading.NothingUsable -> "nothing_found"
+                is SearchReading.Found -> "found"
+            }
+        return "Unread AI reply: kind=${kind.key} shape=${shape.label} read=$read length=${reply.length} " +
+            "start=${escaped(start(reply))}"
+    }
+
+    companion object {
+        /** How much of the reply a [line] shows, in characters. */
+        const val START: Int = 200
+
+        // The first [START] characters of [reply], not cutting a character in two.
+        private fun start(reply: String): String {
+            val cut = reply.take(START)
+            return if (cut.length == START && cut.last().isHighSurrogate()) cut.dropLast(1) else cut
+        }
+
+        private fun escaped(text: String): String =
+            text
+                .replace("\\", "\\\\")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+    }
 }
