@@ -27,7 +27,7 @@ import org.junit.Test
 
 /**
  * A reply with no JSON object that parses (#1446) is logged with its shape and start in developer
- * mode only, and a lyrics reply in prose shows as nothing found, not a failure.
+ * mode only, and a lyrics reply in prose shows as nothing found, not a failure, and is not kept.
  */
 class AppAiSearchesUnreadTest {
     private val provider = CountingProvider().apply { reply = { DECLINE } }
@@ -70,6 +70,41 @@ class AppAiSearchesUnreadTest {
         }
 
     @Test
+    fun `a lyrics reply in prose is not kept, so a later session asks again`() =
+        runTest {
+            val first = searches()
+            first.ask(track, SearchKind.LYRICS, facts)
+            advanceUntilIdle()
+            assertTrue(first.search(track, SearchKind.LYRICS).first() is AiSearch.NothingFound)
+            // One by itself does not pay again for the same reply in this session.
+            first.ask(track, SearchKind.LYRICS, facts, automatic = true)
+            advanceUntilIdle()
+            assertEquals(1, provider.requests)
+            // A later session: nothing kept, so it is offered and asked again, and shows the real answer.
+            provider.reply = { GENIUS_REPLY }
+            val later = searches()
+            assertEquals(AiSearch.Offered, later.search(track, SearchKind.LYRICS).first())
+            later.ask(track, SearchKind.LYRICS, facts)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            assertTrue(later.search(track, SearchKind.LYRICS).first() is AiSearch.Answered)
+        }
+
+    @Test
+    fun `a tap asks again over a lyrics reply in prose in the same session`() =
+        runTest {
+            val searches = searches()
+            searches.ask(track, SearchKind.LYRICS, facts)
+            advanceUntilIdle()
+            assertTrue(searches.search(track, SearchKind.LYRICS).first() is AiSearch.NothingFound)
+            provider.reply = { GENIUS_REPLY }
+            searches.ask(track, SearchKind.LYRICS, facts)
+            advanceUntilIdle()
+            assertEquals(2, provider.requests)
+            assertTrue(searches.search(track, SearchKind.LYRICS).first() is AiSearch.Answered)
+        }
+
+    @Test
     fun `a reply that cannot be read is logged in developer mode only`() =
         runTest {
             provider.reply = { "{\"album_date\": " }
@@ -86,6 +121,7 @@ class AppAiSearchesUnreadTest {
         }
 
     private companion object {
+        const val GENIUS_REPLY = "{\"lyrics_urls\": [\"https://genius.com/Indila-derniere-danse-lyrics\"]}"
         const val DECLINE = "I can't share song lyrics, but you can find them on licensed lyrics sites."
     }
 }

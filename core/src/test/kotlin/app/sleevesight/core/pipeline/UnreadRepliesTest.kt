@@ -1,13 +1,19 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.CompletionEvent
+import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.ToolCall
+import app.sleevesight.core.ai.ToolTurn
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.settings.AiWebSearch
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.WebSearchOutcome
 import app.sleevesight.core.synthesis.AiSearchAnswers
 import app.sleevesight.core.synthesis.AiSearchPrompt
 import app.sleevesight.core.synthesis.JsonReplies
@@ -87,17 +93,30 @@ class UnreadRepliesTest {
     }
 
     @Test
-    fun aLyricsDeclineInProseIsNothingFoundKeptAndTold() =
+    fun aLyricsDeclineInProseIsNothingFoundNotKeptAndTold() =
         runTest {
             provider.reply = { FakeProvider.done(DECLINE) }
+            val way = SearchWay(cost = QuestionCost(calls = 1))
+            assertEquals(SearchState.NothingFound(way, lasting = false), search(SearchKind.LYRICS))
+            val key = checkNotNull(searches.key(track, SearchKind.LYRICS, settings))
+            assertEquals(null, cache.cards[key])
+            assertEquals(listOf(UnreadReply(SearchKind.LYRICS, ReplyShape.NO_BRACES, DECLINE, NOTHING)), told)
+            // Asked again later: nothing kept to read, so the next answer is the provider's.
+            assertEquals(null, searches.kept(key, SearchKind.LYRICS, track))
+            provider.reply = { FakeProvider.done("{\"lyrics_urls\": [\"$GENIUS\"]}") }
+            val again = search(SearchKind.LYRICS)
+            assertTrue(again is SearchState.Answered, "$again")
+            assertTrue(searches.kept(key, SearchKind.LYRICS, track)?.state is SearchState.Answered)
+            assertEquals(1, told.size)
+        }
+
+    @Test
+    fun nothingFoundFromAnObjectIsStillKept() =
+        runTest {
+            provider.reply = { FakeProvider.done("{}") }
             assertEquals(SearchState.NothingFound(SearchWay(cost = QuestionCost(calls = 1))), search(SearchKind.LYRICS))
             val key = checkNotNull(searches.key(track, SearchKind.LYRICS, settings))
-            assertEquals(DECLINE, AiSearches.Kept.of(checkNotNull(cache.cards[key])).reply)
-            val expected = UnreadReply(SearchKind.LYRICS, ReplyShape.NO_BRACES, DECLINE, SearchReading.NothingUsable)
-            assertEquals(listOf(expected), told)
-            // Read again from the cache as it was first read, and not told again.
             assertTrue(searches.kept(key, SearchKind.LYRICS, track)?.state is SearchState.NothingFound)
-            assertEquals(1, told.size)
         }
 
     @Test
@@ -116,7 +135,7 @@ class UnreadRepliesTest {
                 val state = search(kind)
                 assertTrue(state is SearchState.Failed, "$kind $reply")
                 val one = told.single()
-                assertEquals(kind to SearchReading.Malformed, one.kind to one.reading)
+                assertEquals(kind to UnreadReply.Read.FAILED, one.kind to one.read)
                 assertEquals(JsonReplies.shapeOf(reply), one.shape)
             }
         }
@@ -133,23 +152,56 @@ class UnreadRepliesTest {
     fun theLogLineNamesTheKindShapeAndReadingAndShowsTheStartOnOneLine() {
         val head = "No.\nI can't\\won't share lyrics.\r"
         val reply = head + "x".repeat(300)
-        val line = UnreadReply(SearchKind.LYRICS, ReplyShape.NO_BRACES, reply, SearchReading.NothingUsable).line()
+        val line = UnreadReply(SearchKind.LYRICS, ReplyShape.NO_BRACES, reply, NOTHING).line()
         val start = "No.\\nI can't\\\\won't share lyrics.\\r" + "x".repeat(UnreadReply.START - head.length)
         assertEquals(
             "Unread AI reply: kind=lyrics shape=no_braces read=nothing_found length=${reply.length} start=$start",
             line,
         )
         assertTrue('\n' !in line && '\r' !in line)
-        val failed = UnreadReply(SearchKind.DATES, ReplyShape.BLANK, "", SearchReading.Malformed).line()
+        val failed = UnreadReply(SearchKind.DATES, ReplyShape.BLANK, "", UnreadReply.Read.FAILED).line()
         assertEquals("Unread AI reply: kind=dates shape=blank read=failed length=0 start=", failed)
     }
 
     @Test
     fun theLogLineDoesNotCutACharacterInTwo() {
         val reply = "a".repeat(UnreadReply.START - 1) + "🎵" + "b"
-        val line = UnreadReply(SearchKind.LYRICS, ReplyShape.NO_BRACES, reply, SearchReading.NothingUsable).line()
+        val line = UnreadReply(SearchKind.LYRICS, ReplyShape.NO_BRACES, reply, NOTHING).line()
         assertTrue(line.endsWith("start=" + "a".repeat(UnreadReply.START - 1)), line)
     }
+
+    @Test
+    fun aProseReplyAfterEveryWebSearchOfItsOwnFailedIsToldOnce() =
+        runTest {
+            // The model searched with its tool, every search failed, and it then ended in words alone.
+            val loop =
+                FakeProvider(usesTools = true) { request ->
+                    if (request.exchanges.isEmpty()) {
+                        listOf(
+                            CompletionEvent.ToolUse(ToolTurn(listOf(ToolCall("c", "exa_search", QUERY)), "[]")),
+                            CompletionEvent.Done(FakeProvider.USAGE, StopReason.TOOL_USE),
+                        )
+                    } else {
+                        FakeProvider.done(UNABLE)
+                    }
+                }
+            val made =
+                AiSearches(
+                    AiAccess(loop, Secret("k")),
+                    cache,
+                    JvmHasher,
+                    answers,
+                    web = { _, _ -> WebSearchOutcome.Failed },
+                    unread = { told += it },
+                )
+            val key = checkNotNull(made.key(track, SearchKind.LYRICS, settings))
+            val upTo = AiSearches.Asking(AiWebSearch.UP_TO, 3)
+            val last = made.search(key, SearchKind.LYRICS, track, facts, { _, _ -> }, asking = upTo)
+            assertEquals(SearchState.Failed(AiSearches.WEB_SEARCH_FAILED), last)
+            val expected = UnreadReply(SearchKind.LYRICS, ReplyShape.NO_BRACES, UNABLE, UnreadReply.Read.NOT_READ)
+            assertEquals(listOf(expected), told)
+            assertTrue(cache.cards.isEmpty())
+        }
 
     @Test
     fun theLyricsPromptsSayOnlyTheAddressesAreAskedFor() {
@@ -161,6 +213,10 @@ class UnreadRepliesTest {
         const val DECLINE =
             "I can't share the lyrics of \"Dernière danse\", as they are under copyright, but you can " +
                 "find them on licensed lyrics sites."
+        const val QUERY = "{\"query\":\"x\"}"
+        const val UNABLE = "I'm temporarily unable to search for lyrics pages right now."
+        const val GENIUS = "https://genius.com/Indila-derniere-danse-lyrics"
+        val NOTHING = UnreadReply.Read.NOTHING_FOUND
         const val LINKED_DECLINE = "I can't help with lyrics; try https://genius.com or https://www.musixmatch.com."
     }
 }

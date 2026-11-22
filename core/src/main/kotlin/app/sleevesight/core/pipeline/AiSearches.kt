@@ -50,10 +50,13 @@ sealed interface SearchState {
 
     /**
      * The answer had nothing usable: empty, or nothing in it passed the checks; or, from the web, the
-     * search found no page. Kept, as an answer is.
+     * search found no page. Kept, as an answer is ([lasting]); but a lyrics reply in words alone
+     * (#1446: a model declining in prose, or saying it cannot search now) is shown and not kept, so
+     * it is asked again in a later session, and a tap may ask again in this one.
      */
     data class NothingFound(
         val way: SearchWay = SearchWay(),
+        val lasting: Boolean = true,
     ) : SearchState
 
     /** The call failed, for [reason] (a `ReplyFailures` label, or [AiSearches.MALFORMED]); not kept. */
@@ -120,8 +123,9 @@ data class KeptSearch(
  * explanation is read against the same pages.
  *
  * A reply that ended as asked but held no JSON object that parses, blank included (#1446), goes to
- * [unread] as it is read, whatever it was read as, for a developer-mode log line ([UnreadReply]); a
- * kept one is not told again.
+ * [unread] as it is read, whatever it was read as or whether it was read at all, for a developer-mode
+ * log line ([UnreadReply]); a kept one is not told again. A lyrics reply in words alone is shown as
+ * nothing found and not kept ([SearchState.NothingFound.lasting]).
  */
 @Suppress("LongParameterList") // Where answers are asked, kept and read, the time, the web, and the dates' form.
 class AiSearches(
@@ -229,7 +233,8 @@ class AiSearches(
         track: TrackState,
     ): KeptSearch? {
         val card = attempt { cache.keptCard(key) }
-        val state = card?.let { stateOf(read(kind, Kept.of(it.text), track)) }
+        val kept = card?.let { Kept.of(it.text) }
+        val state = kept?.let { stateOf(read(kind, it, track), JsonReplies.shapeOf(it.reply)) }
         return state?.let { KeptSearch(it, card.writtenAt) }
     }
 
@@ -299,15 +304,16 @@ class AiSearches(
                 (end as? CompletionEvent.Done)?.stopReason == StopReason.END -> read(kind, kept, track).first
                 else -> null
             }
-        tell(unread, kind, reply.text, end, reading)
+        val shape = JsonReplies.shapeOf(reply.text)
+        tell(unread, UnreadReply.Read.of(reading), kind, reply.text, end, shape)
         val way = SearchWay(asking.automatic, web = pages != null, reply.cost)
         val state =
-            stateOf(reading?.let { it to way })
+            stateOf(reading?.let { it to way }, shape)
                 ?: SearchState.Failed(if (reply.searchFailed) WEB_SEARCH_FAILED else failure(end, reply.text, reading))
         if (!settle()) return null
         return withContext(NonCancellable) {
             val at = now()
-            if (state !is SearchState.Failed) attempt { cache.keep(key, kept.text(), at) }
+            if (state.keepsInCache) attempt { cache.keep(key, kept.text(), at) }
             show(state, at)
             state
         }
@@ -455,10 +461,15 @@ class AiSearches(
         fun maxTokensFor(effort: ReasoningEffort?): Int = CompletionRequest.maxTokensFor(effort) / 2
 
         // The state [read] shows, asked as its way says; null for none read, or one that is not an answer.
-        private fun stateOf(read: Pair<SearchReading, SearchWay>?): SearchState? =
+        // Nothing usable from a reply with no brace at all ([shape]: lyrics in words alone, #1446) is
+        // not lasting.
+        private fun stateOf(
+            read: Pair<SearchReading, SearchWay>?,
+            shape: ReplyShape,
+        ): SearchState? =
             when (val reading = read?.first) {
                 is SearchReading.Found -> SearchState.Answered(reading.answer, read.second)
-                SearchReading.NothingUsable -> SearchState.NothingFound(read.second)
+                SearchReading.NothingUsable -> SearchState.NothingFound(read.second, shape != ReplyShape.NO_BRACES)
                 SearchReading.Malformed, null -> null
             }
 
@@ -480,27 +491,31 @@ class AiSearches(
     }
 }
 
-// [reply] to [kind], which ended as [end] and was read as [reading], told to [unread] (#1446) when it
-// ended as asked and held no JSON object that parses; an [unread] that throws costs the line, not the
-// search.
+// [reply] to [kind], of [shape], which ended as [end] and was [read] so, told to [unread] (#1446) when
+// it ended as asked and held no JSON object that parses, whatever came before it (every web search of
+// its own failed included); an [unread] that throws costs the line, not the search.
+@Suppress("LongParameterList") // The reply, how it ended and was read, and where it is told.
 private fun tell(
     unread: (UnreadReply) -> Unit,
+    read: UnreadReply.Read,
     kind: SearchKind,
     reply: String,
     end: CompletionEvent?,
-    reading: SearchReading?,
+    shape: ReplyShape,
 ) {
-    if (reading == null || (end as? CompletionEvent.Done)?.stopReason != StopReason.END) return
-    val shape = JsonReplies.shapeOf(reply)
-    if (shape == ReplyShape.OBJECT) return
+    if ((end as? CompletionEvent.Done)?.stopReason != StopReason.END || shape == ReplyShape.OBJECT) return
     try {
-        unread(UnreadReply(kind, shape, reply, reading))
+        unread(UnreadReply(kind, shape, reply, read))
     } catch (
         @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
     ) {
         // Nothing logged: the search goes on as read.
     }
 }
+
+// Whether this state is kept in the synthesis cache: an answer, or nothing found but in words alone (#1446).
+private val SearchState.keepsInCache: Boolean
+    get() = this is SearchState.Answered || (this is SearchState.NothingFound && lasting)
 
 // The spelling [reading] names (#1293), as nothing usable when it is the player's own for [track], as
 // [names] read them: its title the player's (as reported, or as cleaned for the sources). The check
@@ -521,31 +536,52 @@ private fun spelled(
 
 /**
  * A search's reply that ended as asked but held no JSON object that parses (#1446): of [kind], its
- * [shape], the [reply] itself, and what it was read as ([reading]: malformed, a failure; nothing
- * usable, for lyrics in prose; or an answer recovered from it, `JsonReplies.oneTextIn`). For a
- * developer-mode log line ([line]), so such a reply can be read off logcat.
+ * [shape], the [reply] itself, and what it was read as ([read]). For a developer-mode log line
+ * ([line]), so such a reply can be read off logcat.
  */
 data class UnreadReply(
     val kind: SearchKind,
     val shape: ReplyShape,
     val reply: String,
-    val reading: SearchReading,
+    val read: Read,
 ) {
+    /** What a reply was read as, as a [line] names it ([label]). */
+    enum class Read(
+        val label: String,
+    ) {
+        /** Malformed: the search failed. */
+        FAILED("failed"),
+
+        /** Nothing usable: for lyrics in words alone. */
+        NOTHING_FOUND("nothing_found"),
+
+        /** An answer recovered from it (`JsonReplies.oneTextIn`). */
+        FOUND("found"),
+
+        /** Not read at all: the question failed before it (every web search of its own failed). */
+        NOT_READ("not_read"),
+        ;
+
+        companion object {
+            /** What [reading] makes of a reply; null, one not read. */
+            fun of(reading: SearchReading?): Read =
+                when (reading) {
+                    null -> NOT_READ
+                    SearchReading.Malformed -> FAILED
+                    SearchReading.NothingUsable -> NOTHING_FOUND
+                    is SearchReading.Found -> FOUND
+                }
+        }
+    }
+
     /**
      * One log line: the kind, the shape, what it was read as, the reply's length and its first
      * [START] characters, with line breaks and backslashes escaped (`\n`, `\r`, `\\`), so it is one line.
      * The reply's text only: nothing of the request, its key or its headers.
      */
-    fun line(): String {
-        val read =
-            when (reading) {
-                SearchReading.Malformed -> "failed"
-                SearchReading.NothingUsable -> "nothing_found"
-                is SearchReading.Found -> "found"
-            }
-        return "Unread AI reply: kind=${kind.key} shape=${shape.label} read=$read length=${reply.length} " +
+    fun line(): String =
+        "Unread AI reply: kind=${kind.key} shape=${shape.label} read=${read.label} length=${reply.length} " +
             "start=${escaped(start(reply))}"
-    }
 
     companion object {
         /** How much of the reply a [line] shows, in characters. */

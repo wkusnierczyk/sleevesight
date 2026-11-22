@@ -416,7 +416,7 @@ class AppAiSearches(
             synchronized(lock) {
                 if (automatic) Declined.of(key) in declined else declined.remove(Declined.of(key)).let { false }
             }
-        if (!declines && open(key) && !asking.containsKey(key)) {
+        if (!declines && open(key, automatic) && !asking.containsKey(key)) {
             val job =
                 scope.launch(
                     epoch.mark() + shown.mark(),
@@ -492,10 +492,16 @@ class AppAiSearches(
     // Whether [track] is the one the session layer took back last ([withdraw]).
     private fun isGone(track: TrackState): Boolean = gone?.let { sameInsightTrack(it, track.nowPlaying) } == true
 
-    // Whether [key]'s search may be asked: not shown, shown as failed, or past *Keep history for*.
-    private fun open(key: CardKey): Boolean {
+    // Whether [key]'s search may be asked: not shown, shown as failed, or past *Keep history for*; or,
+    // not [automatic], shown as nothing found that is not kept (#1446: lyrics in words alone), so a tap
+    // asks again while one by itself does not keep paying for the same reply.
+    private fun open(
+        key: CardKey,
+        automatic: Boolean,
+    ): Boolean {
         val entry = shown.entries.value[key]
-        return entry == null || entry.state is SearchState.Failed || expired(entry.writtenAt)
+        val passing = !automatic && (entry?.state as? SearchState.NothingFound)?.lasting == false
+        return entry == null || entry.state is SearchState.Failed || passing || expired(entry.writtenAt)
     }
 
     // [key]'s search, kept meanwhile (another panel's), with no call, or asked; each state shown while
