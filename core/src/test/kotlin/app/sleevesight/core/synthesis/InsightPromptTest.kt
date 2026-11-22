@@ -35,7 +35,7 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
-    fun `the stored prompts are version 13's`() {
+    fun `the stored prompts are version 17's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
         // synthesis cache keys cards by it): update both together. Version 7 (#722) added the rule
         // on the track's length, version 8 (#800) the rule on a genre from a web page, version 9
@@ -44,8 +44,9 @@ class InsightPromptTest {
         // on a line found in the track's language (#902) came without a version: the lines'
         // languages are in the evidence fingerprint, part of every card's key. Nor did the rule on
         // dates (#957): a card kept keeps its dates as written. Version 13 (#1142): what Home shows,
-        // and the story beyond it.
-        assertEquals(13, InsightPrompt.VERSION)
+        // and the story beyond it. Version 17 (#1477): a web page's view of a song, an artist or an album
+        // kept to the page, and nothing said of what a page lacks; 14 to 16 were taken.
+        assertEquals(17, InsightPrompt.VERSION)
     }
 
     @Test
@@ -64,17 +65,19 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `a composer-led track's prompt has its own version, any other track's is version 13's (#1195)`() {
-        // Never 11: the rejected variant kept in `design/prompts/` has it; 12 was version 10's (#1142).
-        assertEquals(14, InsightPrompt.RECORDING_VERSION)
+    fun `a composer-led track's prompt has its own version, any other track's is version 17's (#1195)`() {
+        // Never 11: the rejected variant kept in `design/prompts/` has it; 12 was version 10's (#1142), 14
+        // version 13's (#1477).
+        assertEquals(18, InsightPrompt.RECORDING_VERSION)
         assertEquals(InsightPrompt.RECORDING_VERSION, InsightPrompt.version(composed = true))
         assertEquals(InsightPrompt.VERSION, InsightPrompt.version(composed = false))
     }
 
     @Test
     fun `a prompt naming an uncredited composer has its own version, composer-led or not (#1376)`() {
-        assertEquals(15, InsightPrompt.UNCREDITED_VERSION)
-        assertEquals(16, InsightPrompt.RECORDING_UNCREDITED_VERSION)
+        // 15 and 16 were version 13's (#1477).
+        assertEquals(19, InsightPrompt.UNCREDITED_VERSION)
+        assertEquals(20, InsightPrompt.RECORDING_UNCREDITED_VERSION)
         assertEquals(InsightPrompt.UNCREDITED_VERSION, InsightPrompt.version(composed = false, uncredited = true))
         assertEquals(
             InsightPrompt.RECORDING_UNCREDITED_VERSION,
@@ -336,8 +339,10 @@ class InsightPromptTest {
             val contract = InsightPrompt.rules(allowModel).lines()
             // The rule on a gap (#46, #193): no gap sentence, and every sentence is cited.
             val gap = contract.single { it.startsWith("- If the evidence supports fewer") }
-            assertEquals(InsightPrompt.GAP_RULE, gap)
+            assertEquals(InsightPrompt.INSIGHT_GAP_RULE, gap)
             assertTrue("Write no sentence without a citation." in gap, gap)
+            // Version 17 (#1477): nor what a page leaves out, though a line says so ("has no biography").
+            assertTrue("or a page leaves out, even where a line says so" in gap, gap)
             assertTrue("one good sentence is enough" in gap, "version 9's (#767)")
             assertFalse(contract.any { GroundingCheck.GAP_SENTENCE in it }, "version 2's gap sentence is gone")
             // No usable evidence: the exact reply the app turns into its own text, and a date or a
@@ -347,10 +352,13 @@ class InsightPromptTest {
             assertTrue("reply with exactly: ${GroundingCheck.NO_EVIDENCE}." in contract.last(), contract.last())
             // No exception to it (#1142): the model argued with "only when the evidence holds nothing else".
             assertTrue(contract.last().endsWith("A credit or a date is enough for a sentence."), contract.last())
-            // A web page's reading is the page's, its facts stated plainly, ids only in citations (#767).
+            // A web page's reading is the page's, its facts stated plainly, ids only in citations (#767);
+            // since version 17 (#1477) its view of a song, an artist or an album ("a yacht rock standard").
             assertTrue(InsightPrompt.WEB_FACT_RULE in contract, "the rule on a web page's facts")
             val webFact = InsightPrompt.WEB_FACT_RULE
-            assertTrue(webFact.startsWith(InsightPrompt.WEB_READING_RULE), "the shared rule, extended")
+            assertTrue("a song, artist or album means, sounds like or is considered" in webFact, webFact)
+            val facts = "State a web page's facts plainly with their citation, and never name an id outside one."
+            assertTrue(webFact.endsWith(facts), webFact)
             assertFalse(InsightPrompt.WEB_READING_RULE in contract, "in place of the shared rule")
             val knowledge = if (allowModel) MODEL_RULE else "- Do not use your own knowledge."
             assertTrue(knowledge in contract, knowledge)

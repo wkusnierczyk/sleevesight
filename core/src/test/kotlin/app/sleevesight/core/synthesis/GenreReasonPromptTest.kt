@@ -122,7 +122,8 @@ class GenreReasonPromptTest {
         // is one), its rule on counts, which leaves out tags and similar artists (they explain a genre),
         // its rule on no usable evidence (the reason keeps the shared one, its LABEL_RULE beside it),
         // and its rule on a web page's facts (#767, version 10), judged on insights only: the reason
-        // keeps the shared rule on a web page's reading, which it extends.
+        // keeps the shared rule on a web page's reading, which it extends; and its rule on a gap (#1477,
+        // version 17), the reason keeping the shared one.
         val insight = InsightPrompt.rules(allowModel = false).lines()
         val left =
             setOf(
@@ -130,10 +131,12 @@ class GenreReasonPromptTest {
                 InsightPrompt.COUNTS_RULE,
                 InsightPrompt.NOTHING_TO_TELL_RULE,
                 InsightPrompt.WEB_FACT_RULE,
+                InsightPrompt.INSIGHT_GAP_RULE,
             )
         val rules = GenreReasonPrompt.contract(allowModel = false).lines()
         assertEquals(insight - left, rules.filter { it in insight })
         assertTrue(InsightPrompt.WEB_READING_RULE in rules)
+        assertTrue(InsightPrompt.GAP_RULE in rules)
         assertTrue(GenreReasonPrompt.COUNTS_RULE in rules)
         assertTrue(rules.indexOf(GenreReasonPrompt.LABEL_RULE) < rules.indexOf(InsightPrompt.CITATION_RULE))
     }

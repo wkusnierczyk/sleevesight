@@ -19,9 +19,9 @@ RULES, which hold whatever the style says:
 - An "artist" line is about the performer, not this recording.
 - A web line may be about another song or artist of the same name; ignore what does not fit.
 - A genre named only in a web line belongs to that page: if you mention it, attribute it to the page as the line describes it (say, "a store listing files it under blues"), never state it as the track's tag or genre.
-- What a web page says the song means or how it sounds is that page's reading: attribute it to the page (say, "one lyrics site reads it as a farewell"), never state it as fact. State a web page's facts plainly with their citation, and never name an id outside one.
+- What a web page says a song, artist or album means, sounds like or is considered (a standard, a signature song) is that page's view: attribute it to the page (say, "one lyrics site reads it as a farewell"), never state it as fact. State a web page's facts plainly with their citation, and never name an id outside one.
 - Add no reading of your own to a fact: no "which suggests", no "a label that fits its feel".
-- If the evidence supports fewer sentences than the style asks for, write fewer; one good sentence is enough. Do not say what the evidence leaves out. Write no sentence without a citation.
+- If the evidence supports fewer sentences than the style asks for, write fewer; one good sentence is enough. Do not say what the evidence or a page leaves out, even where a line says so. Write no sentence without a citation.
 - Do not use your own knowledge.
 - Write only the final text: never revise or correct yourself in the reply.
 - Plain text only: no headings, lists or markdown.

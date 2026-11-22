@@ -152,8 +152,18 @@ object InsightPrompt {
      * rule has an exception: one preference, worded once in the role, and the thin case told in the
      * user message, as the app knows it before the call. 13, not 11 or 12, which are taken. Raised so
      * that every kept card is written afresh from it.
+     *
+     * Version 17 (#1477): two rules worded for what Gemma 4 E4B broke on the phone (#272, version 13,
+     * 17 of 77 replies). A web page's view of a song, an artist or an album (what it means, how it
+     * sounds, what it is considered: "a yacht rock standard") is the page's ([WEB_FACT_RULE]), not only
+     * what a song means or how it sounds; and nothing is said of what a page lacks either, even where a
+     * line says so ([INSIGHT_GAP_RULE]: "The artist's page has no biography"). The tags and similar
+     * artists that thin tracks' cards told are kept out of the prompt instead (`PromptEvidence`): no
+     * wording of [COUNTS_RULE] tried moved them. Measured on the 77 fixture tracks on the Mac (#1477's
+     * PR). 17, not 14: 14 to 16 are the composer-led and uncredited-composer versions of 13, and a
+     * number is never reused.
      */
-    const val VERSION: Int = 13
+    const val VERSION: Int = 17
 
     /**
      * The version in the card's key for a track whose title leads with its composer
@@ -162,9 +172,9 @@ object InsightPrompt {
      * version 10, written without the rule, is written afresh, once, when next shown, and no other
      * track's card is (as `ItemPrompt.ONLY_LISTINGS_VERSION` does for the song's). 12, not 11: 11 is
      * the rejected variant kept in `design/prompts/`, never shipped, and a number is never reused.
-     * 14 since version 13 (#1142): version 13 with the rule, raised with it.
+     * 14 since version 13 (#1142): version 13 with the rule, raised with it; 18 since version 17 (#1477).
      */
-    const val RECORDING_VERSION: Int = 14
+    const val RECORDING_VERSION: Int = 18
 
     /**
      * The version in the card's key for a track whose `<track>` block names a composer the player does
@@ -172,12 +182,16 @@ object InsightPrompt {
      * Pavarotti alone, where the block said `Primary artist: Luciano Pavarotti`): [VERSION]'s prompt
      * with that line. Its own number, so a card such a track kept from before is written afresh, once,
      * when next shown, and no other track's card is; a card written before MusicBrainz named the composer
-     * (unreached on that play) is keyed by [VERSION] and stays that play's.
+     * (unreached on that play) is keyed by [VERSION] and stays that play's. 19 since version 17 (#1477), 15
+     * before.
      */
-    const val UNCREDITED_VERSION: Int = 15
+    const val UNCREDITED_VERSION: Int = 19
 
-    /** [RECORDING_VERSION]'s counterpart for a composer-led track that names an uncredited composer too (#1376). */
-    const val RECORDING_UNCREDITED_VERSION: Int = 16
+    /**
+     * [RECORDING_VERSION]'s counterpart for a composer-led track that names an uncredited composer too (#1376):
+     * 20 since version 17 (#1477), 16 before.
+     */
+    const val RECORDING_UNCREDITED_VERSION: Int = 20
 
     /**
      * The version in the card's key for a track whose title leads with its composer or not ([composed]),
@@ -400,7 +414,8 @@ object InsightPrompt {
      * 9's on counts ([COUNTS_RULE]), a web page's reading ([WEB_READING_RULE]), readings of the
      * model's own ([NO_READING_RULE]) and the final text ([FINAL_TEXT_RULE]); and version 10's on
      * a web page's facts ([WEB_FACT_RULE]), in place of the shared [WEB_READING_RULE], which it
-     * extends, so the genre reason stays as it was judged. With [composed], [RECORDING_RULE] after
+     * extends, so the genre reason stays as it was judged; and version 17's on a gap ([INSIGHT_GAP_RULE],
+     * #1477), in place of the shared [GAP_RULE], for the same reason. With [composed], [RECORDING_RULE] after
      * [SAME_NAME_RULE] (#1195).
      */
     fun rules(
@@ -420,7 +435,7 @@ object InsightPrompt {
             WEB_GENRE_RULE,
             WEB_FACT_RULE,
             NO_READING_RULE,
-            GAP_RULE,
+            INSIGHT_GAP_RULE,
             if (allowModel) MODEL_RULE else NO_MODEL_RULE,
             FINAL_TEXT_RULE,
             PLAIN_TEXT_RULE,
@@ -522,6 +537,11 @@ object InsightPrompt {
      * card's.
      * Version 10 (#767): distributors and codes such as the ISRC too, which version 9 fell back on
      * where the evidence was thin ("distributed by FUGA"), read in the blind A/B as very dry.
+     * Not changed in version 17 (#1477), though on the phone (#272, version 13) 8 of 77 replies on thinly
+     * documented tracks told the tags or the similar artists ("This Chilean producer is tagged with
+     * dubstep"): "even when little else is left" and "Not usable: … Never mention them, even when the
+     * release is all that is left" left as many on the Mac. Last.fm's such lines are left out of the
+     * prompt instead (`PromptEvidence`); the rule stays for a web page's counts and a bio's tags.
      */
     const val COUNTS_RULE: String =
         "- Leave out listener, play and view counts, tags, lists of similar artists, distributors and codes " +
@@ -568,9 +588,19 @@ object InsightPrompt {
      * of 155 sentences uncited against two of 147, nearly all "The evidence here is thin." opening a
      * thinly documented track's card; naming what to leave out drew it in. Its system prompt is kept
      * in `design/prompts/`.
+     *
+     * Version 17 (#1477): no longer [WEB_READING_RULE] word for word but its own, widened from what a page
+     * says the song means or how it sounds to what it says a song, an artist or an album means, sounds like
+     * or is considered, with two such views as examples. On the phone (#272, version 13), 6 sentences
+     * stated a page's view as fact: "This track is a yacht rock standard [S1]", "is considered the band's
+     * signature song", "He is known for his intense, dark, and atmospheric music". [WEB_READING_RULE]
+     * stays as it was for the genre reason and the explanation, which share it.
      */
     const val WEB_FACT_RULE: String =
-        WEB_READING_RULE + " State a web page's facts plainly with their citation, and never name an id outside one."
+        "- What a web page says a song, artist or album means, sounds like or is considered (a standard, a " +
+            "signature song) is that page's view: attribute it to the page (say, \"one lyrics site reads it as a " +
+            "farewell\"), never state it as fact. State a web page's facts plainly with their citation, and never " +
+            "name an id outside one."
 
     /**
      * The rule on readings of the model's own (version 9, #767): on thin evidence, version 8 padded
@@ -613,6 +643,17 @@ object InsightPrompt {
     const val GAP_RULE: String =
         "- If the evidence supports fewer sentences than the style asks for, write fewer; one good sentence " +
             "is enough. Do not say what the evidence leaves out. Write no sentence without a citation."
+
+    /**
+     * The insight's rule on a gap (version 17, #1477): [GAP_RULE], which the genre reason shares and keeps
+     * as it was judged, with what a page leaves out as well as the evidence, even where a line says so. On
+     * the phone (#272, version 13), 3 of 77 replies told a line saying a page lacks something as a fact
+     * ("The artist's page has no biography but links to …", "Little is known about …").
+     */
+    const val INSIGHT_GAP_RULE: String =
+        "- If the evidence supports fewer sentences than the style asks for, write fewer; one good sentence " +
+            "is enough. Do not say what the evidence or a page leaves out, even where a line says so. Write no " +
+            "sentence without a citation."
 
     /**
      * The rule on the reply's text (version 9, #798): the final text only, with no revision or

@@ -96,8 +96,8 @@ class TranslationPromptTest {
 
     @Test
     fun `the rule raises no prompt's version, the lines' languages being in the fingerprint`() {
-        // The insight's raised since for its own rules (#1142), not for this one.
-        assertEquals(13, InsightPrompt.VERSION)
+        // The insight's raised since for its own rules (#1142, #1477), not for this one.
+        assertEquals(17, InsightPrompt.VERSION)
         assertEquals(1, ItemPrompt.VERSION)
         assertEquals(6, GenreReasonPrompt.VERSION)
     }
