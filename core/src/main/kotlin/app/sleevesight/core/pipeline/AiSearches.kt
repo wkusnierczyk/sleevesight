@@ -52,7 +52,7 @@ sealed interface SearchState {
      * The answer had nothing usable: empty, or nothing in it passed the checks; or, from the web, the
      * search found no page. Kept, as an answer is ([lasting]); but a lyrics reply in words alone
      * (#1446: a model declining in prose, or saying it cannot search now) is shown and not kept, so
-     * it is asked again in a later session, and a tap may ask again in this one.
+     * it is asked again in a later session.
      */
     data class NothingFound(
         val way: SearchWay = SearchWay(),
@@ -234,7 +234,7 @@ class AiSearches(
     ): KeptSearch? {
         val card = attempt { cache.keptCard(key) }
         val kept = card?.let { Kept.of(it.text) }
-        val state = kept?.let { stateOf(read(kind, it, track), JsonReplies.shapeOf(it.reply)) }
+        val state = kept?.let { stateOf(kind, read(kind, it, track), JsonReplies.shapeOf(it.reply)) }
         return state?.let { KeptSearch(it, card.writtenAt) }
     }
 
@@ -308,7 +308,7 @@ class AiSearches(
         tell(unread, UnreadReply.Read.of(reading), kind, reply.text, end, shape)
         val way = SearchWay(asking.automatic, web = pages != null, reply.cost)
         val state =
-            stateOf(reading?.let { it to way }, shape)
+            stateOf(kind, reading?.let { it to way }, shape)
                 ?: SearchState.Failed(if (reply.searchFailed) WEB_SEARCH_FAILED else failure(end, reply.text, reading))
         if (!settle()) return null
         return withContext(NonCancellable) {
@@ -461,15 +461,20 @@ class AiSearches(
         fun maxTokensFor(effort: ReasoningEffort?): Int = CompletionRequest.maxTokensFor(effort) / 2
 
         // The state [read] shows, asked as its way says; null for none read, or one that is not an answer.
-        // Nothing usable from a reply with no brace at all ([shape]: lyrics in words alone, #1446) is
+        // Nothing usable from a [kind] of lyrics with no brace at all ([shape]: words alone, #1446) is
         // not lasting.
         private fun stateOf(
+            kind: SearchKind,
             read: Pair<SearchReading, SearchWay>?,
             shape: ReplyShape,
         ): SearchState? =
             when (val reading = read?.first) {
                 is SearchReading.Found -> SearchState.Answered(reading.answer, read.second)
-                SearchReading.NothingUsable -> SearchState.NothingFound(read.second, shape != ReplyShape.NO_BRACES)
+                SearchReading.NothingUsable ->
+                    SearchState.NothingFound(
+                        read.second,
+                        lasting = !(kind == SearchKind.LYRICS && shape == ReplyShape.NO_BRACES),
+                    )
                 SearchReading.Malformed, null -> null
             }
 

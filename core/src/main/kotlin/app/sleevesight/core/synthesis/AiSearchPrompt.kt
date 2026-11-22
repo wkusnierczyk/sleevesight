@@ -115,7 +115,7 @@ object AiSearchPrompt {
      */
     const val LYRICS_ADDRESSES_ONLY: String =
         "- Only the pages' addresses are asked for: never write the lyrics or any line of them. " +
-            "If you know no such page, reply {}."
+            "If there is no such page, reply {}."
 
     /**
      * The version of [SearchKind.DEFINITION]'s prompt (#786), its own: a definition is kept by the

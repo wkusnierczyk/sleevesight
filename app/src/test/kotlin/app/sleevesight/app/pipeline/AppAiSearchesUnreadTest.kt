@@ -24,10 +24,12 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * A reply with no JSON object that parses (#1446) is logged with its shape and start in developer
- * mode only, and a lyrics reply in prose shows as nothing found, not a failure, and is not kept.
+ * mode only, and a lyrics reply in prose shows as nothing found, not a failure, and is not kept,
+ * nor shown as kept from before.
  */
 class AppAiSearchesUnreadTest {
     private val provider = CountingProvider().apply { reply = { DECLINE } }
@@ -91,17 +93,27 @@ class AppAiSearchesUnreadTest {
         }
 
     @Test
-    fun `a tap asks again over a lyrics reply in prose in the same session`() =
+    fun `a lyrics reply in prose never shows as kept from before, even when the track plays again`() =
         runTest {
-            val searches = searches()
+            val plays = MutableStateFlow<Play?>(null)
+            val searches =
+                AppAiSearches(parts, settings, answers, this, clock = clock, plays = plays, developerLog = {})
             searches.ask(track, SearchKind.LYRICS, facts)
             advanceUntilIdle()
-            assertTrue(searches.search(track, SearchKind.LYRICS).first() is AiSearch.NothingFound)
-            provider.reply = { GENIUS_REPLY }
-            searches.ask(track, SearchKind.LYRICS, facts)
+            // The track plays again later in the session: a play that began after the reply was written.
+            clock.at += 10.minutes
+            plays.value = Play(track.nowPlaying, clock.now())
+            val shown = searches.search(track, SearchKind.LYRICS).first()
+            assertTrue("$shown", shown is AiSearch.NothingFound && shown.keptAt == null)
+            assertEquals(1, provider.requests)
+            // A lasting one does show as kept from before then.
+            provider.reply = { "{}" }
+            searches.ask(track, SearchKind.DATES, facts)
             advanceUntilIdle()
-            assertEquals(2, provider.requests)
-            assertTrue(searches.search(track, SearchKind.LYRICS).first() is AiSearch.Answered)
+            clock.at += 10.minutes
+            plays.value = Play(track.nowPlaying, clock.now())
+            val dates = searches.search(track, SearchKind.DATES).first()
+            assertTrue("$dates", dates is AiSearch.NothingFound && dates.keptAt != null)
         }
 
     @Test
