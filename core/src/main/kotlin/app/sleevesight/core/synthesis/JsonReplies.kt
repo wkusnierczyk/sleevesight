@@ -79,6 +79,18 @@ internal object JsonReplies {
             }
         }
 
+    /**
+     * What [reply] holds, as [objectIn] reads it (#1446): nothing, no brace at all, braces that hold
+     * no JSON object that parses, or one that does.
+     */
+    fun shapeOf(reply: String): ReplyShape =
+        when {
+            reply.isBlank() -> ReplyShape.BLANK
+            '{' !in reply && '}' !in reply -> ReplyShape.NO_BRACES
+            objectIn(reply) == null -> ReplyShape.UNPARSED
+            else -> ReplyShape.OBJECT
+        }
+
     // The text of the JSON object in [reply] ([objectIn]), or null when it has no `{ … }`.
     private fun objectText(reply: String): String? {
         var text = reply.trim()
@@ -103,4 +115,24 @@ internal object JsonReplies {
         ) {
             null
         }
+}
+
+/**
+ * What a model's reply holds where a JSON object was asked for (#1446, [JsonReplies.shapeOf]), as a
+ * developer-mode log line names it ([label]).
+ */
+enum class ReplyShape(
+    val label: String,
+) {
+    /** No text, or white space alone. */
+    BLANK("blank"),
+
+    /** Text with no brace at all: prose, a list, a bare array. */
+    NO_BRACES("no_braces"),
+
+    /** Text with a brace that does not hold a JSON object that parses: one cut off, or broken. */
+    UNPARSED("unparsed"),
+
+    /** A JSON object that parses. */
+    OBJECT("object"),
 }

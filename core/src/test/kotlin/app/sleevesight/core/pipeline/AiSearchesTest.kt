@@ -209,9 +209,11 @@ class AiSearchesTest {
             val kept = assertNotNull(searches.kept(key, SearchKind.LYRICS, track)).state
             assertIs<SearchState.Answered>(kept)
             assertEquals(1, (kept.answer as SearchAnswer.Lyrics).links.size)
-            // A kept reply that is no answer is none.
-            cache.keep(key, "nonsense")
+            // A kept reply that is no answer is none; one in words alone is nothing found (#1446).
+            cache.keep(key, "{nonsense")
             assertNull(searches.kept(key, SearchKind.LYRICS, track))
+            cache.keep(key, "nonsense")
+            assertIs<SearchState.NothingFound>(assertNotNull(searches.kept(key, SearchKind.LYRICS, track)).state)
         }
 
     @Test
