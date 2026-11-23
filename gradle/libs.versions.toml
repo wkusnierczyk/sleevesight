@@ -8,11 +8,11 @@ ktlint-gradle = "14.2.0"
 ktlint = "1.5.0"
 ktor = "3.6.1"
 okhttp = "5.5.1"
-kotlinx-serialization = "1.12.0"
+kotlinx-serialization = "1.13.0"
 kotlinx-coroutines = "1.11.0"
 asm = "9.11.1"
 sqldelight = "2.4.1"
-androidx-compose-bom = "2026.09.00"
+androidx-compose-bom = "2026.11.01"
 androidx-activity = "1.13.0"
 androidx-navigation = "2.10.2"
 androidx-lifecycle = "2.11.0"
@@ -24,7 +24,7 @@ zxing = "3.5.4"
 junit4 = "4.13.2"
 # The instrumented tests' runner, on an emulator in CI (#1114).
 androidx-test-runner = "1.7.0"
-robolectric = "4.17"
+robolectric = "4.18.1"
 # Mutation testing of the code that stores, parses and moves the API keys (`sleevesight.mutation`):
 # the Gradle plugin, Pitest itself and its JUnit 5 runner, which the plugin fetches by these versions.
 pitest-gradle = "1.19.0"
@@ -52,15 +52,15 @@ pitest-gradle-plugin = { module = "info.solidsoft.gradle.pitest:gradle-pitest-pl
 # lockfiles) alone. `build-logic/build.gradle.kts` and `sleevesight.locking` apply every
 # `build-floor-*` entry.
 build-floor-guava = "com.google.guava:guava:33.8.0-jre"
-build-floor-bcprov = "org.bouncycastle:bcprov-jdk18on:1.86"
-build-floor-bcpkix = "org.bouncycastle:bcpkix-jdk18on:1.86"
-build-floor-bcutil = "org.bouncycastle:bcutil-jdk18on:1.86"
+build-floor-bcprov = "org.bouncycastle:bcprov-jdk18on:1.87"
+build-floor-bcpkix = "org.bouncycastle:bcpkix-jdk18on:1.87"
+build-floor-bcutil = "org.bouncycastle:bcutil-jdk18on:1.87"
 build-floor-jose4j = "org.bitbucket.b_c:jose4j:0.9.7"
 build-floor-jdom2 = "org.jdom:jdom2:2.0.6.1"
-build-floor-commons-lang3 = "org.apache.commons:commons-lang3:3.21.0"
+build-floor-commons-lang3 = "org.apache.commons:commons-lang3:3.22.0"
 build-floor-httpclient = "org.apache.httpcomponents:httpclient:4.5.14"
-build-floor-logback-core = "ch.qos.logback:logback-core:1.6.6"
-build-floor-logback-classic = "ch.qos.logback:logback-classic:1.6.6"
+build-floor-logback-core = "ch.qos.logback:logback-core:1.6.8"
+build-floor-logback-classic = "ch.qos.logback:logback-classic:1.6.8"
 
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
